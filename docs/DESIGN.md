@@ -286,7 +286,8 @@ Viva **补位**的是：在对话/IDE **内联**里，用**极小可编译语言
 | H5 | **handbook 按次注入 API** | 否则无法在汇报风 / 期刊风 / 仪表盘风间单次切换 |
 | H6 | **导出或快照**（SVG 必达；PDF/mm 理想） | 否则「汇报」留不下可带走件 |
 
-**可选增强（拉开数量级，非 MVP）：** 直播 state 订阅、旁路数据绑定（CSV/arrow）、与分析代码的双向：Python 算→Viva 演，Viva 交互→回写参数。
+**一等接口（拉开数量级；契约见 `PLAN.md`）：**  
+流水线 `PipelinePort`、领域视图 `DomainView` 槽位、可追溯 `ProvenanceWriter`，以及宿主无关的 `VivaAgentHost`。这些不是「可选小增强」，而是对外宣称超过常见代理内联前的 **§胜利条件 4–6**。
 
 ### 8.5.4 对 Claude Science 的正确关系
 
@@ -337,15 +338,18 @@ const messages = [
 
 ## 10. 演进路线（有序，可砍）
 
+详细接口与验收以 **`docs/PLAN.md`** 为准。摘要：
+
 | 阶段 | 交付 | 完成定义 |
 | --- | --- | --- |
 | **A 已完成** | World 交互 + Paint 基础 + layer + handbooks 约定 | Arena/Atelier 可跑；手册目录存在 |
 | **B 下一步** | Space：`frame` + linear scale + 文档/一例 | 数据坐标点图无需手写 `* 2.4`（门槛 H1） |
 | **C** | `chart.scatter/line/bar` widgets + 实手册 | 可生成结构完整的汇报图（H2） |
-| **D** | 宿主内联 Runtime + 热替换/state 策略 + handbook API | 对标 Cursor 面板的可嵌体验（H3–H5） |
-| **E** | unit 导出（SVG/PDF pt/mm）+ figure 面板 | 可带走的汇报件（H6） |
+| **D0–D2** | `VivaAgentHost` / Session / Handbook / Provenance | 宿主无关内联 + 热替换 + 可复盘（H3–H5，H6 部分） |
+| **E–F** | Pipeline Port + Domain View 槽位 | 分析回流 + 领域互链（胜利条件 4–5） |
+| **G–H** | 导出 + 各家 Host Adapter 文档 | 可带走件 + 外部按文档接入（H6 + 全面内联） |
 
-砍优先级：B → C → D；没有 B/C 的「内联」赢不了脚本出图；没有 D 则赢面只存在于本仓库 playground。
+砍优先级：B → C → D0；**E/F 不得先于 D0**（禁止两套挂载路径）。没有 B/C 的「内联」赢不了脚本出图；没有 D0 则赢面只存在于本仓库 playground。
 
 ---
 
@@ -376,6 +380,7 @@ const messages = [
 | 文档 | 角色 |
 | --- | --- |
 | `docs/DESIGN.md`（本文） | 完整设计真源 |
+| `docs/PLAN.md` | 超越计划：Agent Host / Pipeline / Domain / Provenance 接口与阶段验收 |
 | `docs/ARCHITECTURE.md` | 流水线与实现要点 |
 | `docs/LANGUAGE.md` | 语法速查 |
 | `docs/handbooks/` | 风格插件 |
