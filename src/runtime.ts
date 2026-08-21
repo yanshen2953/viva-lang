@@ -10,6 +10,12 @@ import {
   resolveFill,
   resolveFilter,
 } from "./paint.js";
+import {
+  applyFrameToProps,
+  linearMap,
+  scalesFromFrameProps,
+  type FrameScales,
+} from "./space.js";
 
 export type RuntimeOptions = {
   mount: HTMLElement;
@@ -112,6 +118,38 @@ export class Runtime {
     return { state: this.state, data: this.data };
   }
 
+  exportSvg(): string {
+    return this.svg?.outerHTML ?? "";
+  }
+
+  setData(path: string, value: unknown): void {
+    setDeep(this.data, path.split(".").filter(Boolean), value);
+  }
+
+  setState(path: string, value: unknown): void {
+    setDeep(this.state, path.split(".").filter(Boolean), value);
+  }
+
+  replaceWorld(next: {
+    state?: Record<string, unknown>;
+    data?: Record<string, unknown>;
+  }): void {
+    if (next.state) {
+      clearRecord(this.state);
+      Object.assign(this.state, cloneValue(next.state));
+    }
+    if (next.data) {
+      clearRecord(this.data);
+      Object.assign(this.data, cloneValue(next.data));
+    }
+  }
+
+  private frameScales(): FrameScales[] {
+    return (this.ir.frames ?? []).map((frame) =>
+      scalesFromFrameProps(frame.name, evalProps(frame.props, this.scopes())),
+    );
+  }
+
   private loop = (now: number): void => {
     if (!this.running) return;
     this.time = now;
@@ -190,13 +228,16 @@ export class Runtime {
   ): void {
     for (const item of items) {
       if (item.kind === "node") {
+        const raw = evalProps(item.props, scopes);
+        const framed = applyFrameToProps(raw, this.frameScales());
+        const props = layoutChartBar(framed, this.frameScales());
         out.push({
           id: `${prefix}:${item.id}`,
           name: item.name,
           group: item.group,
           layerId,
           layerName,
-          props: evalProps(item.props, scopes),
+          props,
           item: currentItem,
         });
         continue;
@@ -484,6 +525,8 @@ export class Runtime {
       const sceneNode: RenderNode = {
         id: "scene",
         name: "scene",
+        layerId: "",
+        layerName: "",
         props: {},
         item: null,
       };
@@ -787,3 +830,56 @@ function css(value: string): string {
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
+
+function clearRecord(target: Record<string, unknown>): void {
+  for (const key of Object.keys(target)) delete target[key];
+}
+
+function setDeep(root: Record<string, unknown>, path: string[], value: unknown): void {
+  if (path.length === 0) return;
+  let cur: Record<string, unknown> = root;
+  for (let i = 0; i < path.length - 1; i++) {
+    const key = path[i]!;
+    const next = cur[key];
+    if (!isRecord(next)) {
+      cur[key] = {};
+    }
+    cur = cur[key] as Record<string, unknown>;
+  }
+  cur[path[path.length - 1]!] = value;
+}
+
+/**
+ * Chart bars: after frame maps x/y to scene, convert (centerX, valueY, width in data…)
+ * into a scene-space rect sitting on the frame baseline.
+ */
+function layoutChartBar(
+  props: Record<string, unknown>,
+  frames: FrameScales[],
+): Record<string, unknown> {
+  if (!props.__chartBar) return props;
+  const frameName = props.frame !== undefined ? String(props.frame) : "";
+  const frame = frames.find((f) => f.name === frameName);
+  if (!frame) return props;
+
+  // Incoming x/y are already scene-mapped from data domain by applyFrameToProps.
+  // We need width in scene units from data-domain bar width.
+  const dataX = typeof props.x === "number" ? props.x : 0;
+  const dataYTop = typeof props.y === "number" ? props.y : 0;
+  // Re-read raw: actually applyFrame already mapped. For bar width, map domain width:
+  const barWData = num(props.w, 0.6);
+  const sceneW = Math.abs(
+    linearMap(barWData, [0, frame.xmax - frame.xmin], [0, frame.x1 - frame.x0], false),
+  );
+  const baseline = linearMap(frame.ymin, [frame.ymin, frame.ymax], [frame.y0, frame.y1], true);
+  const top = dataYTop;
+  const height = Math.max(0, baseline - top);
+  return {
+    ...props,
+    x: dataX - sceneW / 2,
+    y: top,
+    w: sceneW,
+    h: height,
+  };
+}
+

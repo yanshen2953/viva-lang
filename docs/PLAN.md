@@ -539,12 +539,13 @@ Playground：`playground/adapter.ts` + `main.ts` 只调 Host。
 
 ### 8.1 D0「接口冻结」检查清单
 
-- [ ] `CreateSessionOptions` / `StatePolicy` / `CompileMeta` 字段定稿（改需 RFC）  
-- [ ] `PipelineDef` / `DomainView` / `ProvenanceRecord` 的 `kind` 联合类型定稿  
-- [ ] playground 删除直连 `new Runtime`  
-- [ ] 无头测试：`createSession({ mount: null })` + compile + snapshot  
+- [x] `CreateSessionOptions` / `StatePolicy` / `CompileMeta` 字段定稿（改需 RFC）  
+- [x] `PipelineDef` / `DomainView` / `ProvenanceRecord` 的 `kind` 联合类型定稿  
+- [x] playground 删除直连 `new Runtime`  
+- [x] 无头测试：`createSession({ mount: null })` + compile + snapshot  
 
----
+> 实现落点：`src/agent/`、`src/space.ts`、`examples/scatter.viva`、`examples/charts.viva`、`docs/hosts/minimal-host.md`。  
+> 仍欠：PDF/mm unit 导出、heat/figure widgets、外置 mol/genome 插件本体（接口已就绪）。
 
 ## 9. 每阶段验收演示（对内）
 

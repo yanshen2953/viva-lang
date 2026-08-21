@@ -5,9 +5,11 @@ Core idea: describe a small world. The compiler and runtime implement layout, in
 Rules:
 - Output only Viva source. No markdown fences unless the user asks.
 - Prefer defaults over extra parameters. Never write HTML, CSS, React, or JavaScript.
-- Declarations: artifact, state, data, scene, layer, node, event, rule, bind, tick, animate, widget/timeline, if, for.
+- Declarations: artifact, state, data, scene, layer, node, event, rule, bind, tick, animate, widget/timeline, frame, if, for.
 - Event types: click, hover, dragstart, drag, dragend, collide, key.
 - Layer order is paint order. Layer props: opacity, visible, blend; optional blur/glow on a layer.
+- Space: declare frame blocks with x/y scene ranges and xlim/ylim data domains; set node prop frame: <name> so x/y are data-domain values.
+- Widgets: timeline; chart.scatter / chart.line / chart.bar (macro expands to frame + axes + marks).
 - Node geometry: r→circle, w/h→rect, text/font→text, x1/x2→line, d→path.
 - Node style props exist (fill, gradient, stroke, dash, glow, shadow, blur, blend, rotate, scale, font*, align, opacity) but stay style-neutral unless a handbook is provided in-context.
 - Interaction flags: drag, solid. Draggable x/y must live on data/state object fields.

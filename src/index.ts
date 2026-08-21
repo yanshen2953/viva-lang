@@ -8,3 +8,12 @@ export { SYSTEM_PROMPT } from "./llm/system-prompt.js";
 export { VivaError, formatDiagnostic } from "./diagnostics.js";
 export type { Artifact } from "./ast.js";
 export type { VisualIR } from "./ir.js";
+export {
+  createVivaAgentHost,
+  createPromptService,
+  promptServiceWithHandbooks,
+  createMemoryProvenance,
+  createInlinePipeline,
+  fingerprint,
+} from "./agent/index.js";
+export type { VivaAgentHost, VivaSession, ProvenanceBundle } from "./agent/index.js";

@@ -1,17 +1,22 @@
-import { compileSource } from "../src/pipeline";
-import { Runtime } from "../src/runtime";
+import { createVivaAgentHost, promptServiceWithHandbooks } from "../src/agent";
+import type { VivaSession } from "../src/agent";
 import arena from "../examples/arena.viva?raw";
 import atelier from "../examples/atelier.viva?raw";
 import cells from "../examples/cells.viva?raw";
+import charts from "../examples/charts.viva?raw";
 import cities from "../examples/cities.viva?raw";
 import dashboard from "../examples/dashboard.viva?raw";
 import hello from "../examples/hello.viva?raw";
 import paper from "../examples/paper.viva?raw";
+import scatter from "../examples/scatter.viva?raw";
 import twin from "../examples/twin.viva?raw";
+import printNature from "../docs/handbooks/print-nature.md?raw";
 import "./style.css";
 
 const examples: Record<string, string> = {
   Hello: hello,
+  Scatter: scatter,
+  Charts: charts,
   Cities: cities,
   Cells: cells,
   Paper: paper,
@@ -28,7 +33,18 @@ const statusEl = document.querySelector("#status") as HTMLElement;
 const navEl = document.querySelector("#examples") as HTMLElement;
 const runEl = document.querySelector("#run") as HTMLButtonElement;
 
-let runtime: Runtime | null = null;
+const host = createVivaAgentHost({
+  prompt: promptServiceWithHandbooks({
+    "print-nature": printNature,
+  }),
+});
+
+let session: VivaSession = host.createSession({
+  mount: stageEl,
+  statePolicy: "preserve-data",
+  handbooks: [],
+});
+
 let timer: number | null = null;
 let current = "Hello";
 
@@ -49,7 +65,7 @@ runEl.addEventListener("click", run);
 function load(name: string): void {
   current = name;
   sourceEl.value = examples[name] ?? "";
-  for (const button of navEl.querySelectorAll("button")) {
+  for (const button of Array.from(navEl.querySelectorAll("button"))) {
     button.classList.toggle("active", button.textContent === name);
   }
   run();
@@ -57,11 +73,9 @@ function load(name: string): void {
 
 function run(): void {
   const started = performance.now();
-  const result = compileSource(sourceEl.value, `${current}.viva`);
-  runtime?.stop();
-  stageEl.innerHTML = "";
+  const result = session.patch(sourceEl.value, { reason: "user-edit" });
 
-  if (!result.ir) {
+  if (!result.ok) {
     errorEl.hidden = false;
     errorEl.textContent = result.error ?? "compile failed";
     statusEl.textContent = "编译失败";
@@ -70,10 +84,9 @@ function run(): void {
   }
 
   errorEl.hidden = true;
-  runtime = new Runtime({ mount: stageEl, ir: result.ir });
-  runtime.start();
   const ms = Math.round(performance.now() - started);
-  statusEl.textContent = `${result.ir.name} · ${ms}ms`;
+  const irName = result.ir?.name ?? current;
+  statusEl.textContent = `${irName} · ${ms}ms · ${session.id}`;
   statusEl.style.color = "#34d399";
 }
 

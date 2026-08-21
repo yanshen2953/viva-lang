@@ -35,6 +35,10 @@ export function compile(artifact: Artifact): VisualIR {
       props: scene.props,
       layers: scene.layers.map(compileLayer),
     },
+    frames: expanded.frames.map((frame) => ({
+      name: frame.name,
+      props: frame.props,
+    })),
     state,
     data,
     events: expanded.events.map((event) => ({

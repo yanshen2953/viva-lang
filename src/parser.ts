@@ -77,6 +77,9 @@ class Parser {
       case "timeline":
         artifact.widgets.push(this.parseWidget());
         return;
+      case "frame":
+        artifact.frames.push(this.parseFrame());
+        return;
       case "function":
         artifact.functions.push(this.parseFunction());
         return;
@@ -232,13 +235,26 @@ class Parser {
     return { name, props: this.parsePropBlock(), span: start.span };
   }
 
+  private parseFrame(): Artifact["frames"][number] {
+    const start = this.expectKeyword("frame");
+    const name = this.expectOneOf(["IDENT", "KEYWORD", "STRING"]).value;
+    this.eat("NEWLINE");
+    return { name, props: this.parsePropBlock(), span: start.span };
+  }
+
   private parseWidget(): Artifact["widgets"][number] {
     if (this.isKeyword("timeline")) {
       const start = this.expectKeyword("timeline");
       this.eat("NEWLINE");
       return { name: "timeline", props: this.parsePropBlock(), span: start.span };
     }
-    return this.parseNamedBlock("widget");
+    const start = this.expectKeyword("widget");
+    const parts = [this.expectOneOf(["IDENT", "KEYWORD", "STRING"]).value];
+    while (this.eat("DOT")) {
+      parts.push(this.expectOneOf(["IDENT", "KEYWORD"]).value);
+    }
+    this.eat("NEWLINE");
+    return { name: parts.join("."), props: this.parsePropBlock(), span: start.span };
   }
 
   private parseFunction(): Artifact["functions"][number] {

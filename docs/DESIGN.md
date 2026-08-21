@@ -172,7 +172,7 @@ layer marks
 - IR：FrameIR + ScaleIR  
 - Compiler：解析 frame；widget `chart.*` 展开为 axes + marks + legend  
 - Runtime：scale 求值；命中测试可在场景空间；导出时 unit 变换  
-- 状态：❌ 未实现（明确债务）
+- 状态：✅ 线性 frame/scale + `chart.scatter|line|bar` MVP（见 `examples/scatter.viva`、`charts.viva`）
 
 ---
 
@@ -181,7 +181,8 @@ layer marks
 | Widget | 角色 | 状态 |
 | --- | --- | --- |
 | `timeline` | 时间 scrub 宏 | ✅ |
-| `chart.line` / `bar` / `scatter` / `heat` | 展开 frame+axis+marks | 规划 |
+| `chart.line` / `bar` / `scatter` | 展开 frame+axis+marks | ✅ MVP |
+| `chart.heat` | 热力 | 规划 |
 | `figure` 多面板 | 边距、对齐、(a)(b) 标签 | 规划（结构在 widget，外观在 handbook） |
 
 规则：**结构展开 = widget；审美纪律 = handbook。**
@@ -343,11 +344,12 @@ const messages = [
 | 阶段 | 交付 | 完成定义 |
 | --- | --- | --- |
 | **A 已完成** | World 交互 + Paint 基础 + layer + handbooks 约定 | Arena/Atelier 可跑；手册目录存在 |
-| **B 下一步** | Space：`frame` + linear scale + 文档/一例 | 数据坐标点图无需手写 `* 2.4`（门槛 H1） |
-| **C** | `chart.scatter/line/bar` widgets + 实手册 | 可生成结构完整的汇报图（H2） |
-| **D0–D2** | `VivaAgentHost` / Session / Handbook / Provenance | 宿主无关内联 + 热替换 + 可复盘（H3–H5，H6 部分） |
-| **E–F** | Pipeline Port + Domain View 槽位 | 分析回流 + 领域互链（胜利条件 4–5） |
-| **G–H** | 导出 + 各家 Host Adapter 文档 | 可带走件 + 外部按文档接入（H6 + 全面内联） |
+| **B 已完成** | Space：`frame` + linear scale + 文档/一例 | `examples/scatter.viva`（门槛 H1） |
+| **C 已完成** | `chart.scatter/line/bar` widgets | `examples/charts.viva`（H2） |
+| **D0–D2 已完成** | `src/agent/` Host / Session / Handbook / Provenance | playground dogfood；单测覆盖 |
+| **E–F 已完成** | Pipeline Port + Domain View 槽位（image/iframe） | inline + local-command 适配器 |
+| **G 部分** | `exportSvg` + provenance `exportBundle` | PDF/mm 仍规划 |
+| **H 已完成** | `docs/hosts/minimal-host.md` | 外部按文档接入 |
 
 砍优先级：B → C → D0；**E/F 不得先于 D0**（禁止两套挂载路径）。没有 B/C 的「内联」赢不了脚本出图；没有 D0 则赢面只存在于本仓库 playground。
 

@@ -34,9 +34,15 @@ export type SceneIR = {
   layers: LayerIR[];
 };
 
+export type FrameIR = {
+  name: string;
+  props: Record<string, Expr>;
+};
+
 export type VisualIR = {
   name: string;
   scene: SceneIR;
+  frames: FrameIR[];
   state: Record<string, unknown>;
   data: Record<string, unknown>;
   events: { type: string; target: string; body: Statement[] }[];

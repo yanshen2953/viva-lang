@@ -9,10 +9,45 @@ Viva 只描述世界：对象、状态、关系和变化。布局、事件、碰
 ```
 artifact data state entity scene layer node
 resource rule event function animate timeline
-tick bind if for
+tick bind if for frame widget
 ```
 
 事件：`click hover dragstart drag dragend collide key`
+
+## Space（frame / scale）
+
+```viva
+frame plot
+  x: 80 720
+  y: 70 400
+  xlim: 0 10
+  ylim: 0 100
+
+layer marks
+  for d in series
+    node p as points
+      frame: plot
+      x: d.t
+      y: d.p
+      r: 3
+```
+
+节点上的 `frame:` 表示 x/y（及 x1/y1/x2/y2）是**数据域**坐标，由线性 scale 映射到 frame 的场景矩形（y 轴向上）。
+
+## 图表 widgets
+
+```viva
+widget chart.scatter
+  data: series
+  xField: t
+  yField: p
+  xlim: 0 10
+  ylim: 0 100
+  areaX: 80 720
+  areaY: 70 400
+```
+
+`chart.line` / `chart.bar` 同理。结构展开为 frame + 轴 + marks；审美仍走 handbook。
 
 ## 图层（z-order = 声明顺序）
 

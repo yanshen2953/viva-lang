@@ -1,0 +1,73 @@
+artifact "Chart Widgets"
+
+data lineSeries = [
+  { x: 0, y: 12 }
+  { x: 1, y: 18 }
+  { x: 2, y: 15 }
+  { x: 3, y: 28 }
+  { x: 4, y: 22 }
+  { x: 5, y: 35 }
+  { x: 6, y: 30 }
+]
+
+data bars = [
+  { x: 1, y: 40 }
+  { x: 2, y: 65 }
+  { x: 3, y: 50 }
+  { x: 4, y: 80 }
+]
+
+data dots = [
+  { x: 0.5, y: 20 }
+  { x: 1.5, y: 45 }
+  { x: 2.8, y: 38 }
+  { x: 4.2, y: 70 }
+  { x: 5.5, y: 55 }
+]
+
+scene
+  size: 880 520
+  background: #070b14
+
+  layer note
+    node hint
+      x: 40
+      y: 500
+      text: "chart.line + chart.bar + chart.scatter via widgets"
+      font: 13
+      fill: #64748b
+
+widget chart.line
+  data: lineSeries
+  xField: x
+  yField: y
+  xlim: 0 6
+  ylim: 0 40
+  areaX: 40 400
+  areaY: 50 240
+  title: "LINE"
+  color: #34d399
+
+widget chart.bar
+  data: bars
+  xField: x
+  yField: y
+  xlim: 0 5
+  ylim: 0 100
+  areaX: 460 840
+  areaY: 50 240
+  title: "BAR"
+  color: #38bdf8
+  barWidth: 0.55
+
+widget chart.scatter
+  data: dots
+  xField: x
+  yField: y
+  xlim: 0 6
+  ylim: 0 80
+  areaX: 40 840
+  areaY: 280 460
+  title: "SCATTER"
+  color: #f59e0b
+  r: 4
