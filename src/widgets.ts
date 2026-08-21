@@ -157,6 +157,13 @@ function expandChart(
       ? props.title.value
       : kind.replace("chart.", "").toUpperCase();
 
+  const titleX = pairAt(props.areaX ?? props.x, 0, 72);
+  const titleYExpr = (() => {
+    const top = pairAt(props.areaY ?? props.y, 0, 60);
+    if (top.kind === "number") return literal(Math.max(24, top.value - 24));
+    return literal(36);
+  })();
+
   const axisLayer: LayerDecl = {
     name: `__${frameName}_axes`,
     span,
@@ -181,10 +188,10 @@ function expandChart(
         strokeWidth: literal(1.5),
       }),
       node(`${frameName}_title`, {
-        x: literal(72),
-        y: literal(36),
+        x: titleX,
+        y: titleYExpr,
         text: literal(title),
-        font: literal(18),
+        font: literal(16),
         fill: literal("#e2e8f0"),
       }),
     ],
