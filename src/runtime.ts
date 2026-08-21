@@ -15,6 +15,32 @@ type RenderNode = {
   item?: unknown;
 };
 
+type PointerScene = {
+  x: number;
+  y: number;
+  t: number;
+  px: number;
+  py: number;
+};
+
+type DragState = {
+  node: RenderNode;
+  pointerId: number;
+  grabDx: number;
+  grabDy: number;
+  moved: boolean;
+  originX: number;
+  originY: number;
+};
+
+type HitShape =
+  | { kind: "circle"; x: number; y: number; r: number }
+  | { kind: "rect"; x: number; y: number; w: number; h: number };
+
+/**
+ * Game-oriented runtime: click/hover/drag/dragend/collide/key + tick.
+ * Scene coordinates are always in viewBox space (Godot-like local space).
+ */
 export class Runtime {
   private readonly ir: VisualIR;
   private readonly mount: HTMLElement;
@@ -26,6 +52,10 @@ export class Runtime {
   private running = false;
   private hoverId: string | null = null;
   private time = 0;
+  private drag: DragState | null = null;
+  private activeCollisions = new Set<string>();
+  private keyHandler: ((event: KeyboardEvent) => void) | null = null;
+  private lastNodes: RenderNode[] = [];
 
   constructor(options: RuntimeOptions) {
     this.ir = options.ir;
@@ -39,9 +69,12 @@ export class Runtime {
     this.mount.innerHTML = "";
     this.svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     this.svg.setAttribute("class", "viva-scene");
+    this.svg.style.touchAction = "none";
+    this.svg.tabIndex = 0;
     this.applySceneBox();
     this.mount.appendChild(this.svg);
     this.bindPointer();
+    this.bindKeys();
     this.applyBinds();
     this.applyRules();
     this.render();
@@ -49,12 +82,19 @@ export class Runtime {
     this.running = true;
     this.lastTick = performance.now();
     this.loop(this.lastTick);
+    this.svg.focus({ preventScroll: true });
   }
 
   stop(): void {
     this.running = false;
     if (this.animFrame) cancelAnimationFrame(this.animFrame);
     this.animFrame = 0;
+    if (this.keyHandler) {
+      window.removeEventListener("keydown", this.keyHandler);
+      this.keyHandler = null;
+    }
+    this.drag = null;
+    this.activeCollisions.clear();
   }
 
   getWorld(): { state: Record<string, unknown>; data: Record<string, unknown> } {
@@ -74,6 +114,7 @@ export class Runtime {
     this.applyBinds();
     this.applyRules();
     this.render();
+    this.resolveCollisions();
     this.animFrame = requestAnimationFrame(this.loop);
   };
 
@@ -113,8 +154,9 @@ export class Runtime {
   private flatten(): RenderNode[] {
     const nodes: RenderNode[] = [];
     for (const layer of this.ir.scene.layers) {
-      this.flattenItems(layer.items, this.scopes(), nodes, layer.name);
+      this.flattenItems(layer.items, this.scopes(), nodes, layer.name, undefined);
     }
+    this.lastNodes = nodes;
     return nodes;
   }
 
@@ -123,6 +165,7 @@ export class Runtime {
     scopes: Scope[],
     out: RenderNode[],
     prefix: string,
+    currentItem: unknown,
   ): void {
     for (const item of items) {
       if (item.kind === "node") {
@@ -131,13 +174,13 @@ export class Runtime {
           name: item.name,
           group: item.group,
           props: evalProps(item.props, scopes),
-          item: scopes[0]?.[Object.keys(scopes[0] ?? {})[0] ?? ""] ?? null,
+          item: currentItem,
         });
         continue;
       }
       if (item.kind === "if") {
         if (truthy(evaluate(item.cond, scopes))) {
-          this.flattenItems(item.body, scopes, out, `${prefix}:${item.id}`);
+          this.flattenItems(item.body, scopes, out, `${prefix}:${item.id}`, currentItem);
         }
         continue;
       }
@@ -149,6 +192,7 @@ export class Runtime {
           [{ [item.item]: entry }, ...scopes],
           out,
           `${prefix}:${item.id}:${index}`,
+          entry,
         );
       });
     }
@@ -184,7 +228,7 @@ export class Runtime {
     el.setAttribute("data-viva-id", node.id);
     el.setAttribute("data-viva-name", node.name);
     if (node.group) el.setAttribute("data-viva-group", node.group);
-    el.style.cursor = "pointer";
+    el.style.cursor = this.isDraggable(node) ? "grab" : "pointer";
     return el;
   }
 
@@ -198,6 +242,8 @@ export class Runtime {
     el.setAttribute("opacity", String(opacity));
     el.setAttribute("data-viva-name", node.name);
     if (node.group) el.setAttribute("data-viva-group", node.group);
+    el.style.cursor =
+      this.drag?.node.id === node.id ? "grabbing" : this.isDraggable(node) ? "grab" : "pointer";
 
     if (el.tagName === "circle") {
       el.setAttribute("cx", String(x));
@@ -214,6 +260,7 @@ export class Runtime {
       el.setAttribute("rx", String(num(p.radius, 0)));
       el.setAttribute("fill", str(p.fill ?? p.color, "#1e293b"));
       if (p.stroke) el.setAttribute("stroke", String(p.stroke));
+      if (p.strokeWidth) el.setAttribute("stroke-width", String(p.strokeWidth));
     } else if (el.tagName === "text") {
       el.setAttribute("x", String(x));
       el.setAttribute("y", String(y));
@@ -237,6 +284,7 @@ export class Runtime {
       el.setAttribute("d", str(p.d ?? p.path, ""));
       el.setAttribute("fill", str(p.fill, "none"));
       el.setAttribute("stroke", str(p.stroke, "#94a3b8"));
+      if (p.strokeWidth) el.setAttribute("stroke-width", String(p.strokeWidth));
     }
 
     if (this.hoverId === node.id && p.hoverFill) {
@@ -246,33 +294,228 @@ export class Runtime {
 
   private bindPointer(): void {
     if (!this.svg) return;
+
     this.svg.addEventListener("pointermove", (event) => {
+      if (this.drag && event.pointerId === this.drag.pointerId) {
+        this.onDragMove(event);
+        return;
+      }
       const target = this.targetOf(event);
       this.hoverId = target?.id ?? null;
       if (target) this.fire("hover", target, event);
+      else {
+        this.applyBinds();
+        this.applyRules();
+        this.render();
+      }
     });
+
     this.svg.addEventListener("pointerdown", (event) => {
       const target = this.targetOf(event);
-      if (target) this.fire("click", target, event);
+      if (!target) return;
+      this.svg?.setPointerCapture(event.pointerId);
+      this.fire("click", target, event);
+
+      if (this.isDraggable(target) || this.hasHandler("drag", target) || this.hasHandler("dragend", target)) {
+        const scene = this.pointerToScene(event);
+        const anchor = this.anchorOf(target);
+        this.drag = {
+          node: target,
+          pointerId: event.pointerId,
+          grabDx: scene.x - anchor.x,
+          grabDy: scene.y - anchor.y,
+          moved: false,
+          originX: anchor.x,
+          originY: anchor.y,
+        };
+        this.fire("dragstart", target, event, {
+          x: anchor.x,
+          y: anchor.y,
+          px: scene.x,
+          py: scene.y,
+          t: scene.t,
+          dx: 0,
+          dy: 0,
+        });
+      }
+    });
+
+    const endDrag = (event: PointerEvent) => {
+      if (!this.drag || event.pointerId !== this.drag.pointerId) return;
+      const target = this.refreshNode(this.drag.node.id) ?? this.drag.node;
+      const scene = this.pointerToScene(event);
+      const x = scene.x - this.drag.grabDx;
+      const y = scene.y - this.drag.grabDy;
+      this.fire("dragend", target, event, {
+        x,
+        y,
+        px: scene.x,
+        py: scene.y,
+        t: scene.t,
+        dx: x - this.drag.originX,
+        dy: y - this.drag.originY,
+        moved: this.drag.moved,
+      });
+      // Allow a fresh collide enter after the grab ends.
+      for (const key of [...this.activeCollisions]) {
+        if (key.includes(target.id)) this.activeCollisions.delete(key);
+      }
+      this.drag = null;
+      try {
+        this.svg?.releasePointerCapture(event.pointerId);
+      } catch {
+        /* already released */
+      }
+    };
+
+    this.svg.addEventListener("pointerup", endDrag);
+    this.svg.addEventListener("pointercancel", endDrag);
+  }
+
+  private bindKeys(): void {
+    this.keyHandler = (event: KeyboardEvent) => {
+      if (!this.running) return;
+      const sceneNode: RenderNode = {
+        id: "scene",
+        name: "scene",
+        props: {},
+        item: null,
+      };
+      const extra: Scope = {
+        __event: {
+          key: event.key,
+          code: event.code,
+          repeat: event.repeat,
+          x: 0,
+          y: 0,
+          t: 0,
+        },
+      };
+      let handled = false;
+      for (const handler of this.ir.events) {
+        if (handler.type !== "key") continue;
+        if (handler.target !== "scene" && handler.target !== "world") continue;
+        execute(handler.body, this.scopes(extra));
+        handled = true;
+      }
+      // Also allow key handlers on currently dragged / hovered node names.
+      const focus = this.drag?.node ?? this.lastNodes.find((n) => n.id === this.hoverId);
+      if (focus) {
+        for (const handler of this.ir.events) {
+          if (handler.type !== "key") continue;
+          if (handler.target !== focus.name && handler.target !== focus.group) continue;
+          execute(handler.body, this.scopes({ ...extra, [focus.name]: focus.item }));
+          handled = true;
+        }
+      }
+      if (handled) {
+        event.preventDefault();
+        this.applyBinds();
+        this.applyRules();
+        this.render();
+      }
+    };
+    window.addEventListener("keydown", this.keyHandler);
+  }
+
+  private onDragMove(event: PointerEvent): void {
+    if (!this.drag) return;
+    const target = this.refreshNode(this.drag.node.id) ?? this.drag.node;
+    const scene = this.pointerToScene(event);
+    const x = scene.x - this.drag.grabDx;
+    const y = scene.y - this.drag.grabDy;
+    const dx = x - this.drag.originX;
+    const dy = y - this.drag.originY;
+    if (Math.hypot(dx, dy) > 2) this.drag.moved = true;
+
+    if (this.isDraggable(target) && isRecord(target.item)) {
+      target.item.x = x;
+      target.item.y = y;
+    }
+
+    this.fire("drag", target, event, {
+      x,
+      y,
+      px: scene.x,
+      py: scene.y,
+      t: scene.t,
+      dx,
+      dy,
     });
   }
 
-  private targetOf(event: PointerEvent): RenderNode | null {
-    const el = (event.target as Element | null)?.closest("[data-viva-id]");
-    if (!el) return null;
-    const id = el.getAttribute("data-viva-id");
-    return this.flatten().find((node) => node.id === id) ?? null;
+  private resolveCollisions(): void {
+    // Godot-like: the actively dragged body does not generate new contacts mid-grab.
+    const dragId = this.drag?.node.id;
+    const solids = this.lastNodes.filter(
+      (node) => this.isSolid(node) && node.id !== dragId,
+    );
+    const next = new Set<string>();
+
+    for (let i = 0; i < solids.length; i++) {
+      for (let j = i + 1; j < solids.length; j++) {
+        const a = solids[i]!;
+        const b = solids[j]!;
+        if (!overlaps(this.shapeOf(a), this.shapeOf(b))) continue;
+        const key = a.id < b.id ? `${a.id}|${b.id}` : `${b.id}|${a.id}`;
+        next.add(key);
+        if (!this.activeCollisions.has(key)) {
+          this.fireCollision(a, b);
+          this.fireCollision(b, a);
+        }
+      }
+    }
+    this.activeCollisions = next;
   }
 
-  private fire(type: string, node: RenderNode, event: PointerEvent): void {
-    const box = this.svg?.viewBox.baseVal;
-    const t = box && box.width ? (event.offsetX / (this.svg?.clientWidth || 1)) : 0;
+  private fireCollision(node: RenderNode, other: RenderNode): void {
     const extra: Scope = {
       __event: {
-        x: event.offsetX,
-        y: event.offsetY,
-        t: Math.min(1, Math.max(0, t)),
+        x: num(node.props.x, 0),
+        y: num(node.props.y, 0),
+        t: 0,
+        other: other.item ?? { name: other.name, id: other.id },
+        otherName: other.name,
+        otherGroup: other.group ?? null,
       },
+      [node.name]: node.item,
+    };
+    if (isRecord(node.item)) {
+      for (const [key, value] of Object.entries(node.item)) extra[key] = value;
+    }
+    let matched = false;
+    for (const handler of this.ir.events) {
+      if (handler.type !== "collide") continue;
+      if (handler.target !== node.name && handler.target !== node.group) continue;
+      execute(handler.body, this.scopes(extra));
+      matched = true;
+    }
+    if (matched) {
+      this.applyBinds();
+      this.applyRules();
+      this.render();
+    }
+  }
+
+  private fire(
+    type: string,
+    node: RenderNode,
+    event: PointerEvent,
+    override?: Record<string, unknown>,
+  ): void {
+    const scene = this.pointerToScene(event);
+    const payload = {
+      x: scene.x,
+      y: scene.y,
+      px: scene.x,
+      py: scene.y,
+      t: scene.t,
+      dx: 0,
+      dy: 0,
+      ...override,
+    };
+    const extra: Scope = {
+      __event: payload,
       [node.name]: node.item,
     };
     if (isRecord(node.item)) {
@@ -287,6 +530,80 @@ export class Runtime {
     this.applyBinds();
     this.applyRules();
     this.render();
+  }
+
+  private pointerToScene(event: PointerEvent): PointerScene {
+    const svg = this.svg!;
+    const pt = svg.createSVGPoint();
+    pt.x = event.clientX;
+    pt.y = event.clientY;
+    const ctm = svg.getScreenCTM();
+    if (ctm) {
+      const local = pt.matrixTransform(ctm.inverse());
+      const vb = svg.viewBox.baseVal;
+      const t = Math.min(1, Math.max(0, local.x / Math.max(vb.width || 1, 1)));
+      return { x: local.x, y: local.y, t, px: local.x, py: local.y };
+    }
+    // Fallback if CTM unavailable (rare headless edge case).
+    const rect = svg.getBoundingClientRect();
+    const vb = svg.viewBox.baseVal;
+    const width = Math.max(rect.width, 1);
+    const height = Math.max(rect.height, 1);
+    const vbW = vb.width || 1;
+    const vbH = vb.height || 1;
+    const x = ((event.clientX - rect.left) / width) * vbW;
+    const y = ((event.clientY - rect.top) / height) * vbH;
+    const t = Math.min(1, Math.max(0, (event.clientX - rect.left) / width));
+    return { x, y, t, px: x, py: y };
+  }
+
+  private targetOf(event: PointerEvent): RenderNode | null {
+    const el = (event.target as Element | null)?.closest("[data-viva-id]");
+    if (!el) return null;
+    const id = el.getAttribute("data-viva-id");
+    return this.lastNodes.find((node) => node.id === id) ?? this.flatten().find((node) => node.id === id) ?? null;
+  }
+
+  private refreshNode(id: string): RenderNode | null {
+    return this.flatten().find((node) => node.id === id) ?? null;
+  }
+
+  private hasHandler(type: string, node: RenderNode): boolean {
+    return this.ir.events.some(
+      (handler) =>
+        handler.type === type && (handler.target === node.name || handler.target === node.group),
+    );
+  }
+
+  private isDraggable(node: RenderNode): boolean {
+    return Boolean(node.props.drag ?? node.props.draggable);
+  }
+
+  private isSolid(node: RenderNode): boolean {
+    return Boolean(node.props.solid ?? node.props.collide ?? this.hasHandler("collide", node));
+  }
+
+  private anchorOf(node: RenderNode): { x: number; y: number } {
+    return { x: num(node.props.x, 0), y: num(node.props.y, 0) };
+  }
+
+  private shapeOf(node: RenderNode): HitShape {
+    const p = node.props;
+    if (p.w !== undefined || p.width !== undefined || p.h !== undefined || p.height !== undefined) {
+      return {
+        kind: "rect",
+        x: num(p.x, 0),
+        y: num(p.y, 0),
+        w: num(p.w ?? p.width, 80),
+        h: num(p.h ?? p.height, 24),
+      };
+    }
+    return {
+      kind: "circle",
+      x: num(p.x, 0),
+      y: num(p.y, 0),
+      r: num(p.r ?? p.size, 16),
+    };
   }
 
   private applyEnterAnimations(): void {
@@ -307,6 +624,19 @@ export class Runtime {
       }
     }
   }
+}
+
+function overlaps(a: HitShape, b: HitShape): boolean {
+  if (a.kind === "circle" && b.kind === "circle") {
+    return Math.hypot(a.x - b.x, a.y - b.y) <= a.r + b.r;
+  }
+  const ar = a.kind === "rect" ? a : circleToRect(a);
+  const br = b.kind === "rect" ? b : circleToRect(b);
+  return ar.x < br.x + br.w && ar.x + ar.w > br.x && ar.y < br.y + br.h && ar.y + ar.h > br.y;
+}
+
+function circleToRect(c: Extract<HitShape, { kind: "circle" }>): Extract<HitShape, { kind: "rect" }> {
+  return { kind: "rect", x: c.x - c.r, y: c.y - c.r, w: c.r * 2, h: c.r * 2 };
 }
 
 function evalProps(props: Record<string, Expr>, scopes: Scope[]): Record<string, unknown> {

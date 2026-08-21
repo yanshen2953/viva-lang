@@ -1,0 +1,320 @@
+artifact "Tactics Arena"
+
+state paused = false
+state score = 0
+state lives = 3
+state wave = 1
+state selected = none
+state message = "拖拽多单位到基地 · 闪避红敌撞击 · 空格暂停 · R重置"
+state drops = 0
+
+data units = [
+  { id: "u1", name: "Alpha", x: 120, y: 360, hp: 100, team: "blue" }
+  { id: "u2", name: "Bravo", x: 200, y: 390, hp: 100, team: "blue" }
+  { id: "u3", name: "Charlie", x: 280, y: 360, hp: 100, team: "blue" }
+]
+
+data bases = [
+  { id: "b1", name: "北基地", x: 70, y: 90, w: 140, h: 80, owner: "空", score: 0 }
+  { id: "b2", name: "东基地", x: 320, y: 90, w: 140, h: 80, owner: "空", score: 0 }
+  { id: "b3", name: "枢纽", x: 190, y: 200, w: 140, h: 80, owner: "空", score: 0 }
+]
+
+data enemies = [
+  { id: "e1", x: 420, y: 300, vx: -1.6, vy: 1.2, r: 16 }
+  { id: "e2", x: 480, y: 180, vx: -2.0, vy: -1.4, r: 18 }
+  { id: "e3", x: 360, y: 340, vx: 1.5, vy: -1.7, r: 14 }
+]
+
+data sparks = [
+  { x: 580, y: 430, v: 12 }
+  { x: 620, y: 430, v: 28 }
+  { x: 660, y: 430, v: 18 }
+  { x: 700, y: 430, v: 40 }
+  { x: 740, y: 430, v: 24 }
+  { x: 780, y: 430, v: 36 }
+]
+
+scene
+  size: 880 520
+  background: #050814
+
+  layer world
+    node map
+      x: 40
+      y: 70
+      w: 500
+      h: 340
+      radius: 18
+      fill: #0b1220
+      stroke: #1e293b
+      strokeWidth: 2
+
+    for base in bases
+      node base as bases
+        x: base.x
+        y: base.y
+        w: base.w
+        h: base.h
+        radius: 14
+        fill: #111827
+        stroke: #334155
+        strokeWidth: 2
+
+      node baseLabel as baseLabels
+        x: base.x + 16
+        y: base.y + 28
+        text: base.name
+        font: 14
+        fill: #94a3b8
+
+      node baseOwner as baseOwners
+        x: base.x + 16
+        y: base.y + 56
+        text: base.owner
+        font: 18
+        fill: #38bdf8
+
+  layer actors
+    for enemy in enemies
+      node enemy as enemies
+        x: enemy.x
+        y: enemy.y
+        r: enemy.r
+        fill: #f43f5e
+        stroke: #fecdd3
+        strokeWidth: 2
+        solid: true
+        hoverFill: #fb7185
+
+    for unit in units
+      node unit as units
+        x: unit.x
+        y: unit.y
+        r: 18
+        fill: #38bdf8
+        stroke: #e0f2fe
+        strokeWidth: 3
+        drag: true
+        solid: true
+        hoverFill: #7dd3fc
+
+      node unitTag as unitTags
+        x: unit.x
+        y: unit.y + 32
+        text: unit.name
+        font: 11
+        fill: #cbd5e1
+        align: center
+
+  layer hud
+    node title
+      x: 36
+      y: 40
+      text: "战术竞技场 · Godot级交互探针"
+      font: 22
+      fill: #f8fafc
+
+    node status
+      x: 36
+      y: 445
+      text: message
+      font: 14
+      fill: #64748b
+
+    node scoreLabel
+      x: 560
+      y: 40
+      text: "SCORE"
+      font: 12
+      fill: #64748b
+
+    node scoreValue
+      x: 560
+      y: 72
+      text: score
+      font: 36
+      fill: #f8fafc
+
+    node livesLabel
+      x: 700
+      y: 40
+      text: "LIVES"
+      font: 12
+      fill: #64748b
+
+    node livesValue
+      x: 700
+      y: 72
+      text: lives
+      font: 36
+      fill: #fb7185
+
+    node waveLabel
+      x: 560
+      y: 120
+      text: "WAVE"
+      font: 12
+      fill: #64748b
+
+    node waveValue
+      x: 560
+      y: 150
+      text: wave
+      font: 28
+      fill: #34d399
+
+    node dropLabel
+      x: 700
+      y: 120
+      text: "DROPS"
+      font: 12
+      fill: #64748b
+
+    node dropValue
+      x: 700
+      y: 150
+      text: drops
+      font: 28
+      fill: #f59e0b
+
+    if paused
+      node pauseBanner
+        x: 140
+        y: 250
+        text: "PAUSED · SPACE"
+        font: 28
+        fill: #fbbf24
+
+    if selected != none
+      node selectedInfo
+        x: 560
+        y: 200
+        text: selected.name
+        font: 22
+        fill: #7dd3fc
+
+      node selectedHp
+        x: 560
+        y: 232
+        text: selected.hp
+        font: 18
+        fill: #94a3b8
+
+  layer charts
+    node chartTitle
+      x: 560
+      y: 280
+      text: "实时战力柱"
+      font: 14
+      fill: #64748b
+
+    for s in sparks
+      node spark as sparks
+        x: s.x
+        y: 420 - s.v * 3
+        w: 28
+        h: s.v * 3
+        radius: 6
+        fill: #22d3ee
+        hoverFill: #a5f3fc
+
+    node chartBase
+      x1: 560
+      y1: 420
+      x2: 820
+      y2: 420
+      stroke: #334155
+      strokeWidth: 2
+
+event click on units
+  selected = unit
+  message = unit.name
+
+event dragstart on units
+  selected = unit
+  message = "拖拽中"
+
+event drag on units
+  unit.x = __event.x
+  unit.y = __event.y
+  if unit.x < 60
+    unit.x = 60
+  if unit.x > 520
+    unit.x = 520
+  if unit.y < 90
+    unit.y = 90
+  if unit.y > 390
+    unit.y = 390
+
+event dragend on units
+  message = "松手检测落点"
+  for base in bases
+    if unit.x > base.x
+      if unit.x < base.x + base.w
+        if unit.y > base.y
+          if unit.y < base.y + base.h
+            base.owner = unit.name
+            base.score = base.score + 1
+            score = score + 10
+            drops = drops + 1
+            message = base.name
+
+event collide on units
+  if __event.otherGroup == "enemies"
+    unit.hp = unit.hp - 20
+    lives = lives - 1
+    score = score - 5
+    message = "遭敌撞击"
+    unit.x = 140
+    unit.y = 380
+    if lives < 0
+      lives = 0
+
+event collide on enemies
+  if __event.otherGroup == "units"
+    enemy.vx = 0 - enemy.vx
+    enemy.vy = 0 - enemy.vy
+
+event key on scene
+  if __event.key == " "
+    paused = not paused
+    if paused
+      message = "已暂停"
+    if not paused
+      message = "继续作战"
+  if __event.key == "r"
+    lives = 3
+    score = 0
+    drops = 0
+    wave = 1
+    message = "战局重置"
+
+tick 20
+  if not paused
+    for enemy in enemies
+      enemy.x = enemy.x + enemy.vx * 2.2
+      enemy.y = enemy.y + enemy.vy * 2.2
+      if enemy.x < 70
+        enemy.vx = 0 - enemy.vx
+        enemy.x = 70
+      if enemy.x > 520
+        enemy.vx = 0 - enemy.vx
+        enemy.x = 520
+      if enemy.y < 100
+        enemy.vy = 0 - enemy.vy
+        enemy.y = 100
+      if enemy.y > 390
+        enemy.vy = 0 - enemy.vy
+        enemy.y = 390
+    for s in sparks
+      s.v = s.v + 0.8
+      if s.v > 48
+        s.v = 10
+    wave = wave + 0.01
+
+animate fade
+  target: title
+  from: 0
+  to: 1
+  duration: 700ms

@@ -46,7 +46,15 @@ state ok = x > 10 and true
   });
 
   it("compiles every bundled example", () => {
-    const files = ["hello.viva", "cities.viva", "cells.viva", "paper.viva", "twin.viva"];
+    const files = [
+      "hello.viva",
+      "cities.viva",
+      "cells.viva",
+      "paper.viva",
+      "twin.viva",
+      "dashboard.viva",
+      "arena.viva",
+    ];
     for (const file of files) {
       const source = readFileSync(path.join(examplesDir, file), "utf8");
       const result = compileSource(source, file);
