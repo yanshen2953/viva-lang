@@ -1,0 +1,538 @@
+artifact "Ops Dashboard"
+
+state mode = "explore"
+state playing = true
+state selected = none
+state compare = none
+state threshold = 55
+state dragging = false
+state pulse = 0
+state alerts = 0
+state hoverLabel = "悬停柱体预览 · 点击选中 · 拖阈值条改阈值"
+
+data metrics = [
+  { name: "华北", code: "N", v: 48, base: 48, x: 100 }
+  { name: "华东", code: "E", v: 72, base: 72, x: 190 }
+  { name: "华南", code: "S", v: 61, base: 61, x: 280 }
+  { name: "西部", code: "W", v: 39, base: 39, x: 370 }
+  { name: "海外", code: "O", v: 84, base: 84, x: 460 }
+]
+
+data trend = [
+  { t: 0, y: 320, x: 560 }
+  { t: 1, y: 290, x: 610 }
+  { t: 2, y: 250, x: 660 }
+  { t: 3, y: 270, x: 710 }
+  { t: 4, y: 210, x: 760 }
+  { t: 5, y: 180, x: 810 }
+]
+
+scene
+  size: 880 520
+  background: #070b14
+
+  layer backdrop
+    node panelLeft
+      x: 24
+      y: 72
+      w: 500
+      h: 300
+      radius: 14
+      fill: #0f172a
+
+    node panelRight
+      x: 540
+      y: 72
+      w: 316
+      h: 300
+      radius: 14
+      fill: #0f172a
+
+    node axisX
+      x1: 70
+      y1: 340
+      x2: 500
+      y2: 340
+      stroke: #334155
+      strokeWidth: 2
+
+    node axisY
+      x1: 70
+      y1: 100
+      x2: 70
+      y2: 340
+      stroke: #334155
+      strokeWidth: 2
+
+    node threshGuide
+      x1: 70
+      y1: 340 - threshold * 2.4
+      x2: 500
+      y2: 340 - threshold * 2.4
+      stroke: #f43f5e
+      strokeWidth: 2
+
+  layer bars
+    for m in metrics
+      node bar as bars
+        x: m.x
+        y: 340 - m.v * 2.4
+        w: 48
+        h: m.v * 2.4
+        radius: 6
+        fill: #38bdf8
+        hoverFill: #f59e0b
+
+      node barLabel as barLabels
+        x: m.x + 24
+        y: 360
+        text: m.name
+        font: 12
+        fill: #94a3b8
+        align: center
+
+      node barValue as barValues
+        x: m.x + 24
+        y: 340 - m.v * 2.4 - 12
+        text: m.v
+        font: 12
+        fill: #e2e8f0
+        align: center
+
+  layer sparks
+    for p in trend
+      node point as points
+        x: p.x
+        y: p.y
+        r: 7
+        fill: #34d399
+        hoverFill: #a7f3d0
+
+    node sparkA
+      x1: 560
+      y1: 320
+      x2: 610
+      y2: 290
+      stroke: #22d3ee
+      strokeWidth: 3
+
+    node sparkB
+      x1: 610
+      y1: 290
+      x2: 660
+      y2: 250
+      stroke: #22d3ee
+      strokeWidth: 3
+
+    node sparkC
+      x1: 660
+      y1: 250
+      x2: 710
+      y2: 270
+      stroke: #22d3ee
+      strokeWidth: 3
+
+    node sparkD
+      x1: 710
+      y1: 270
+      x2: 760
+      y2: 210
+      stroke: #22d3ee
+      strokeWidth: 3
+
+    node sparkE
+      x1: 760
+      y1: 210
+      x2: 810
+      y2: 180
+      stroke: #22d3ee
+      strokeWidth: 3
+
+  layer chrome
+    node title
+      x: 36
+      y: 40
+      text: "多区域运营驾驶舱"
+      font: 24
+      fill: #f8fafc
+
+    node subtitle
+      x: 280
+      y: 40
+      text: hoverLabel
+      font: 13
+      fill: #64748b
+
+    node modeExplore
+      x: 540
+      y: 20
+      w: 88
+      h: 28
+      radius: 8
+      fill: #1e293b
+
+    node modeCompare
+      x: 638
+      y: 20
+      w: 88
+      h: 28
+      radius: 8
+      fill: #1e293b
+
+    node modeAlert
+      x: 736
+      y: 20
+      w: 88
+      h: 28
+      radius: 8
+      fill: #1e293b
+
+    node modeExploreT
+      x: 584
+      y: 39
+      text: "探索"
+      font: 13
+      fill: #e2e8f0
+      align: center
+
+    node modeCompareT
+      x: 682
+      y: 39
+      text: "对比"
+      font: 13
+      fill: #e2e8f0
+      align: center
+
+    node modeAlertT
+      x: 780
+      y: 39
+      text: "告警"
+      font: 13
+      fill: #e2e8f0
+      align: center
+
+    node playBtn
+      x: 36
+      y: 400
+      w: 110
+      h: 32
+      radius: 8
+      fill: #064e3b
+
+    node playText
+      x: 91
+      y: 421
+      text: "播放/暂停"
+      font: 13
+      fill: #d1fae5
+      align: center
+
+    node resetBtn
+      x: 160
+      y: 400
+      w: 90
+      h: 32
+      radius: 8
+      fill: #312e81
+
+    node resetText
+      x: 205
+      y: 421
+      text: "复位"
+      font: 13
+      fill: #e0e7ff
+      align: center
+
+    node clearBtn
+      x: 264
+      y: 400
+      w: 90
+      h: 32
+      radius: 8
+      fill: #3f1d2e
+
+    node clearText
+      x: 309
+      y: 421
+      text: "清空选择"
+      font: 13
+      fill: #fecdd3
+      align: center
+
+  layer slider
+    node sliderTrack
+      x: 380
+      y: 410
+      w: 320
+      h: 18
+      radius: 9
+      fill: #1e293b
+
+    node sliderFill
+      x: 380
+      y: 410
+      w: threshold * 3.2
+      h: 18
+      radius: 9
+      fill: #f43f5e
+
+    node sliderKnob
+      x: 380 + threshold * 3.2 - 8
+      y: 407
+      w: 16
+      h: 24
+      radius: 8
+      fill: #fda4af
+      hoverFill: #fff1f2
+
+    node sliderLabel
+      x: 380
+      y: 398
+      text: "阈值拖拽/点按轨道"
+      font: 12
+      fill: #94a3b8
+
+    node sliderValue
+      x: 710
+      y: 422
+      text: threshold
+      font: 14
+      fill: #fecdd3
+
+  layer readout
+    node detailTitle
+      x: 560
+      y: 110
+      text: "选中区域"
+      font: 14
+      fill: #64748b
+
+    if selected != none
+      node detailName
+        x: 560
+        y: 150
+        text: selected.name
+        font: 28
+        fill: #f8fafc
+
+      node detailValue
+        x: 560
+        y: 190
+        text: selected.v
+        font: 42
+        fill: #38bdf8
+
+    if selected == none
+      node detailEmpty
+        x: 560
+        y: 160
+        text: "点击柱体开始连续交互"
+        font: 16
+        fill: #475569
+
+    if compare != none
+      node compareTitle
+        x: 560
+        y: 250
+        text: "对比对象"
+        font: 14
+        fill: #64748b
+
+      node compareName
+        x: 560
+        y: 280
+        text: compare.name
+        font: 22
+        fill: #f59e0b
+
+      node compareValue
+        x: 560
+        y: 316
+        text: compare.v
+        font: 28
+        fill: #fbbf24
+
+    if mode == "alert"
+      node alertBanner
+        x: 560
+        y: 350
+        text: "告警模式：超阈值自动计数"
+        font: 13
+        fill: #fb7185
+
+    node pulseText
+      x: 560
+      y: 380
+      text: pulse
+      font: 12
+      fill: #334155
+
+    node alertCount
+      x: 620
+      y: 380
+      text: alerts
+      font: 12
+      fill: #7f1d1d
+
+    if dragging
+      node dragHint
+        x: 36
+        y: 455
+        text: "拖拽中：在红色轨道上连续滑动以改写阈值线"
+        font: 13
+        fill: #fda4af
+
+    if mode == "explore"
+      node modeHint
+        x: 36
+        y: 480
+        text: "模式=探索：单击选中 · Hover 预览"
+        font: 13
+        fill: #64748b
+
+    if mode == "compare"
+      node modeHint2
+        x: 36
+        y: 480
+        text: "模式=对比：先点主对象，再点对比对象"
+        font: 13
+        fill: #64748b
+
+    if mode == "alert"
+      node modeHint3
+        x: 36
+        y: 480
+        text: "模式=告警：播放时超阈值区域会累加 alerts"
+        font: 13
+        fill: #64748b
+
+event click on modeExplore
+  mode = "explore"
+  hoverLabel = "探索模式：单击选中柱体"
+
+event click on modeExploreT
+  mode = "explore"
+  hoverLabel = "探索模式：单击选中柱体"
+
+event click on modeCompare
+  mode = "compare"
+  compare = none
+  hoverLabel = "对比模式：依次点击两个柱体"
+
+event click on modeCompareT
+  mode = "compare"
+  compare = none
+  hoverLabel = "对比模式：依次点击两个柱体"
+
+event click on modeAlert
+  mode = "alert"
+  hoverLabel = "告警模式：拖阈值 + 播放观察累加"
+
+event click on modeAlertT
+  mode = "alert"
+  hoverLabel = "告警模式：拖阈值 + 播放观察累加"
+
+event click on playBtn
+  playing = not playing
+
+event click on playText
+  playing = not playing
+
+event click on resetBtn
+  playing = false
+  pulse = 0
+  alerts = 0
+  for m in metrics
+    m.v = m.base
+
+event click on resetText
+  playing = false
+  pulse = 0
+  alerts = 0
+  for m in metrics
+    m.v = m.base
+
+event click on clearBtn
+  selected = none
+  compare = none
+  dragging = false
+
+event click on clearText
+  selected = none
+  compare = none
+  dragging = false
+
+event click on bars
+  if mode == "explore"
+    selected = m
+    hoverLabel = m.name
+  if mode == "compare"
+    if selected == none
+      selected = m
+    if selected != none
+      if compare == none
+        if selected.name != m.name
+          compare = m
+  if mode == "alert"
+    selected = m
+    threshold = m.v
+
+event hover on bars
+  hoverLabel = m.name
+
+event click on sliderTrack
+  dragging = true
+  threshold = 10 + __event.t * 80
+
+event hover on sliderTrack
+  if dragging
+    threshold = 10 + __event.t * 80
+
+event click on sliderFill
+  dragging = true
+  threshold = 10 + __event.t * 80
+
+event hover on sliderFill
+  if dragging
+    threshold = 10 + __event.t * 80
+
+event click on sliderKnob
+  dragging = true
+
+event hover on sliderKnob
+  if dragging
+    threshold = 10 + __event.t * 80
+
+event click on panelLeft
+  dragging = false
+
+event click on panelRight
+  dragging = false
+
+rule when threshold < 10
+  threshold = 10
+
+rule when threshold > 90
+  threshold = 90
+
+tick 12
+  if playing
+    pulse = pulse + 1
+    for m in metrics
+      m.v = m.v + 0.35
+      if m.v > m.base + 18
+        m.v = m.base - 4
+      if mode == "alert"
+        if m.v > threshold
+          alerts = alerts + 1
+
+animate fade
+  target: title
+  from: 0
+  to: 1
+  duration: 900ms
+
+timeline
+  from: 0
+  to: 100
+  bind: pulse
