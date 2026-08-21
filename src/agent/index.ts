@@ -17,7 +17,7 @@ export {
   createInlinePipeline,
   type PipelineDefFull,
 } from "./pipeline/port.js";
-export { createLocalCommandPipeline } from "./pipeline/adapters/local-command.js";
+// Node-only adapter: import from `./pipeline/adapters/local-command.js` (not bundled into playground).
 export {
   createDomainViewRegistry,
   suggestViewForArtifact,

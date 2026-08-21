@@ -93,6 +93,29 @@ scene
     expect(ir.frames[0]?.name).toBe("plot");
   });
 
+  it("coerces frame: name to a string (not a variable lookup)", () => {
+    const artifact = parse(`artifact F
+frame plot
+  x: 0 100
+  y: 0 100
+  xlim: 0 10
+  ylim: 0 100
+scene
+  layer m
+    node p
+      frame: plot
+      x: 5
+      y: 50
+      r: 3
+`);
+    const node = artifact.scene!.layers[0]!.items[0]!;
+    expect(node.kind).toBe("node");
+    if (node.kind === "node") {
+      expect(node.props.frame?.kind).toBe("string");
+      if (node.props.frame?.kind === "string") expect(node.props.frame.value).toBe("plot");
+    }
+  });
+
   it("expands chart.scatter widget", () => {
     const result = compileSource(
       `artifact C

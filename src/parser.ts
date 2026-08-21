@@ -344,6 +344,7 @@ class Parser {
       "baseline",
       "fontStyle",
       "align",
+      "frame",
     ]);
     const coerce = (expr: Expr): Expr => {
       if (
