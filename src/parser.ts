@@ -125,7 +125,21 @@ class Parser {
     const start = this.expectKeyword("layer");
     const name = this.expectOneOf(["IDENT", "KEYWORD", "STRING"]).value;
     this.eat("NEWLINE");
-    return { name, items: this.parseSceneBlock(), span: start.span };
+    const props: Record<string, Expr> = {};
+    const items: SceneItem[] = [];
+    if (this.eat("INDENT")) {
+      while (!this.check("DEDENT") && !this.check("EOF")) {
+        this.skipNewlines();
+        if (this.check("DEDENT") || this.check("EOF")) break;
+        if (this.isKeyword("for") || this.isKeyword("if") || this.isKeyword("node")) {
+          items.push(this.parseSceneItem());
+        } else {
+          Object.assign(props, this.parsePropLine());
+        }
+      }
+      this.expect("DEDENT");
+    }
+    return { name, props, items, span: start.span };
   }
 
   private parseSceneBlock(): SceneItem[] {
@@ -304,9 +318,31 @@ class Parser {
     if (values.length === 0) {
       throw this.error(`missing value for '${key}'`, this.peek().span);
     }
-    if (values.length === 1) return { [key]: values[0]! };
+    // Style enums like blend: screen / gradientDir: y should be strings, not lookups.
+    const styleEnums = new Set([
+      "blend",
+      "blendMode",
+      "gradientDir",
+      "gradientAxis",
+      "strokeLinecap",
+      "baseline",
+      "fontStyle",
+      "align",
+    ]);
+    const coerce = (expr: Expr): Expr => {
+      if (
+        styleEnums.has(key) &&
+        expr.kind === "ident" &&
+        expr.path.length === 1 &&
+        expr.path[0]
+      ) {
+        return { kind: "string", value: expr.path[0], span: expr.span };
+      }
+      return expr;
+    };
+    if (values.length === 1) return { [key]: coerce(values[0]!) };
     return {
-      [key]: { kind: "array", items: values, span: values[0]!.span },
+      [key]: { kind: "array", items: values.map(coerce), span: values[0]!.span },
     };
   }
 

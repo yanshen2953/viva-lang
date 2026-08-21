@@ -24,6 +24,7 @@ function expandTimeline(artifact: Artifact, props: Record<string, Expr>): void {
   const layer: LayerDecl = {
     name: "__timeline",
     span,
+    props: {},
     items: [
       node("timelineTrack", {
         x: literal(40),

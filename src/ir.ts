@@ -25,6 +25,7 @@ export type SceneNodeIR =
 export type LayerIR = {
   id: string;
   name: string;
+  props: Record<string, Expr>;
   items: SceneNodeIR[];
 };
 

@@ -50,6 +50,7 @@ export type SceneItem =
 
 export type LayerDecl = {
   name: string;
+  props: Record<string, Expr>;
   items: SceneItem[];
   span: Span;
 };

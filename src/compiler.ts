@@ -60,10 +60,15 @@ export function compile(artifact: Artifact): VisualIR {
   };
 }
 
-function compileLayer(layer: { name: string; items: SceneItem[] }): LayerIR {
+function compileLayer(layer: {
+  name: string;
+  props?: Record<string, import("./ast.js").Expr>;
+  items: SceneItem[];
+}): LayerIR {
   return {
     id: id("layer"),
     name: layer.name,
+    props: layer.props ?? {},
     items: layer.items.map(compileItem),
   };
 }

@@ -23,6 +23,8 @@ Visual IR 拆成五块：
 | 碰撞 | `solid: true` 或 `event collide`；进入接触时触发；拖拽中的物体不参与接触 |
 | 键盘 | `event key on scene`（`__event.key`） |
 | 时间 | `tick` 仿真步进 + `animate` 呈现动画 |
+| 图层 | 每个 `layer` 编译为 SVG `<g>`；声明顺序即 z-order；支持 `opacity` / `blend` / 整层滤镜 |
+| 视觉 | `src/paint.ts`：渐变、glow/shadow/blur、dash、rotate/scale、字重字距多行 |
 
 Widget 不是语言核心，而是编译期宏。例如 `timeline` 会展开成轨道、填充条、标签和点击赋值。
 

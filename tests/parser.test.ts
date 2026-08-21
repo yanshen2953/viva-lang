@@ -54,6 +54,7 @@ state ok = x > 10 and true
       "twin.viva",
       "dashboard.viva",
       "arena.viva",
+      "atelier.viva",
     ];
     for (const file of files) {
       const source = readFileSync(path.join(examplesDir, file), "utf8");

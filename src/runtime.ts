@@ -1,6 +1,15 @@
 import type { Expr } from "./ast.js";
 import { cloneValue, evaluate, execute, truthy, type Scope } from "./eval.js";
 import type { SceneNodeIR, VisualIR } from "./ir.js";
+import {
+  applyBlend,
+  applyDash,
+  applyTransform,
+  applyTypography,
+  ensureDefs,
+  resolveFill,
+  resolveFilter,
+} from "./paint.js";
 
 export type RuntimeOptions = {
   mount: HTMLElement;
@@ -11,6 +20,8 @@ type RenderNode = {
   id: string;
   name: string;
   group?: string;
+  layerId: string;
+  layerName: string;
   props: Record<string, unknown>;
   item?: unknown;
 };
@@ -154,7 +165,15 @@ export class Runtime {
   private flatten(): RenderNode[] {
     const nodes: RenderNode[] = [];
     for (const layer of this.ir.scene.layers) {
-      this.flattenItems(layer.items, this.scopes(), nodes, layer.name, undefined);
+      this.flattenItems(
+        layer.items,
+        this.scopes(),
+        nodes,
+        layer.name,
+        layer.id,
+        layer.name,
+        undefined,
+      );
     }
     this.lastNodes = nodes;
     return nodes;
@@ -165,6 +184,8 @@ export class Runtime {
     scopes: Scope[],
     out: RenderNode[],
     prefix: string,
+    layerId: string,
+    layerName: string,
     currentItem: unknown,
   ): void {
     for (const item of items) {
@@ -173,6 +194,8 @@ export class Runtime {
           id: `${prefix}:${item.id}`,
           name: item.name,
           group: item.group,
+          layerId,
+          layerName,
           props: evalProps(item.props, scopes),
           item: currentItem,
         });
@@ -180,7 +203,15 @@ export class Runtime {
       }
       if (item.kind === "if") {
         if (truthy(evaluate(item.cond, scopes))) {
-          this.flattenItems(item.body, scopes, out, `${prefix}:${item.id}`, currentItem);
+          this.flattenItems(
+            item.body,
+            scopes,
+            out,
+            `${prefix}:${item.id}`,
+            layerId,
+            layerName,
+            currentItem,
+          );
         }
         continue;
       }
@@ -192,6 +223,8 @@ export class Runtime {
           [{ [item.item]: entry }, ...scopes],
           out,
           `${prefix}:${item.id}:${index}`,
+          layerId,
+          layerName,
           entry,
         );
       });
@@ -201,24 +234,65 @@ export class Runtime {
   private render(): void {
     if (!this.svg) return;
     this.applySceneBox();
+    const defs = ensureDefs(this.svg);
     const nodes = this.flatten();
     const used = new Set<string>();
+    const usedLayers = new Set<string>();
+
+    // Ensure layer groups exist in scene order (z-order = declaration order).
+    for (const layer of this.ir.scene.layers) {
+      usedLayers.add(layer.id);
+      let group = this.svg.querySelector(
+        `:scope > g[data-viva-layer-id="${css(layer.id)}"]`,
+      ) as SVGGElement | null;
+      if (!group) {
+        group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        group.setAttribute("data-viva-layer-id", layer.id);
+        group.setAttribute("data-viva-layer", layer.name);
+        this.svg.appendChild(group);
+      }
+      group.setAttribute("data-viva-layer", layer.name);
+      const layerProps = evalProps(layer.props ?? {}, this.scopes());
+      const opacity = layerProps.opacity === undefined ? 1 : num(layerProps.opacity, 1);
+      const visible = layerProps.visible === undefined ? true : Boolean(layerProps.visible);
+      group.style.display = visible ? "" : "none";
+      group.setAttribute("opacity", String(opacity));
+      applyBlend(group, layerProps);
+      if (layerProps.blur !== undefined || layerProps.glow !== undefined) {
+        const filter = resolveFilter(defs, `layer_${layer.id}`, layerProps);
+        if (filter) group.setAttribute("filter", filter);
+        else group.removeAttribute("filter");
+      } else {
+        group.removeAttribute("filter");
+      }
+    }
 
     for (const node of nodes) {
       used.add(node.id);
-      let el = this.svg.querySelector(`[data-viva-id="${css(node.id)}"]`) as SVGElement | null;
+      const layerGroup = this.svg.querySelector(
+        `:scope > g[data-viva-layer-id="${css(node.layerId)}"]`,
+      ) as SVGGElement | null;
+      const parent = layerGroup ?? this.svg;
+      let el = parent.querySelector(`[data-viva-id="${css(node.id)}"]`) as SVGElement | null;
       if (!el) {
+        // Node may have moved layers — remove stale copy then recreate.
+        const stale = this.svg.querySelector(`[data-viva-id="${css(node.id)}"]`);
+        stale?.remove();
         el = this.createElement(node);
-        this.svg.appendChild(el);
+        parent.appendChild(el);
+      } else if (el.parentElement !== parent) {
+        parent.appendChild(el);
       }
-      this.updateElement(el, node);
+      this.updateElement(el, node, defs);
     }
 
-    for (const child of Array.from(this.svg.children)) {
+    for (const child of Array.from(this.svg.querySelectorAll("[data-viva-id]"))) {
       const id = child.getAttribute("data-viva-id");
-      if (id && !used.has(id) && child.tagName.toLowerCase() !== "style") {
-        child.remove();
-      }
+      if (id && !used.has(id)) child.remove();
+    }
+    for (const group of Array.from(this.svg.querySelectorAll(":scope > g[data-viva-layer-id]"))) {
+      const id = group.getAttribute("data-viva-layer-id");
+      if (id && !usedLayers.has(id)) group.remove();
     }
   }
 
@@ -232,12 +306,13 @@ export class Runtime {
     return el;
   }
 
-  private updateElement(el: SVGElement, node: RenderNode): void {
+  private updateElement(el: SVGElement, node: RenderNode, defs: SVGDefsElement): void {
     const p = node.props;
     const x = num(p.x, 0);
     const y = num(p.y, 0);
     const opacity = p.opacity === undefined ? 1 : num(p.opacity, 1);
     const visible = p.visible === undefined ? true : Boolean(p.visible);
+    const hovered = this.hoverId === node.id;
     el.style.display = visible ? "" : "none";
     el.setAttribute("opacity", String(opacity));
     el.setAttribute("data-viva-name", node.name);
@@ -245,51 +320,82 @@ export class Runtime {
     el.style.cursor =
       this.drag?.node.id === node.id ? "grabbing" : this.isDraggable(node) ? "grab" : "pointer";
 
+    const fill = resolveFill(
+      defs,
+      node.id,
+      p,
+      hovered,
+      el.tagName === "rect" ? "#1e293b" : el.tagName === "text" ? "#e2e8f0" : "#38bdf8",
+    );
+    const filter = resolveFilter(defs, node.id, p);
+    if (filter) el.setAttribute("filter", filter);
+    else el.removeAttribute("filter");
+    applyBlend(el, p);
+    applyDash(el, p);
+
+    let anchorX = x;
+    let anchorY = y;
+
     if (el.tagName === "circle") {
       el.setAttribute("cx", String(x));
       el.setAttribute("cy", String(y));
       el.setAttribute("r", String(num(p.r ?? p.size, 16)));
-      el.setAttribute("fill", str(p.fill ?? p.color, "#38bdf8"));
+      el.setAttribute("fill", fill);
       if (p.stroke) el.setAttribute("stroke", String(p.stroke));
+      else el.removeAttribute("stroke");
       if (p.strokeWidth) el.setAttribute("stroke-width", String(p.strokeWidth));
+      else el.removeAttribute("stroke-width");
+      anchorX = x;
+      anchorY = y;
     } else if (el.tagName === "rect") {
+      const w = num(p.w ?? p.width, 80);
+      const h = num(p.h ?? p.height, 24);
       el.setAttribute("x", String(x));
       el.setAttribute("y", String(y));
-      el.setAttribute("width", String(num(p.w ?? p.width, 80)));
-      el.setAttribute("height", String(num(p.h ?? p.height, 24)));
+      el.setAttribute("width", String(w));
+      el.setAttribute("height", String(h));
       el.setAttribute("rx", String(num(p.radius, 0)));
-      el.setAttribute("fill", str(p.fill ?? p.color, "#1e293b"));
+      el.setAttribute("fill", fill);
       if (p.stroke) el.setAttribute("stroke", String(p.stroke));
+      else el.removeAttribute("stroke");
       if (p.strokeWidth) el.setAttribute("stroke-width", String(p.strokeWidth));
+      else el.removeAttribute("stroke-width");
+      anchorX = x + w / 2;
+      anchorY = y + h / 2;
     } else if (el.tagName === "text") {
       el.setAttribute("x", String(x));
       el.setAttribute("y", String(y));
-      el.setAttribute("fill", str(p.fill ?? p.color, "#e2e8f0"));
-      el.setAttribute("font-size", String(num(p.font ?? p.fontSize, 16)));
-      el.setAttribute("font-family", str(p.fontFamily, "IBM Plex Sans, sans-serif"));
-      const align = str(p.align, "start");
-      el.setAttribute(
-        "text-anchor",
-        align === "center" ? "middle" : align === "right" ? "end" : "start",
-      );
-      el.textContent = String(p.text ?? p.label ?? node.name);
+      el.setAttribute("fill", hovered && p.hoverFill ? String(p.hoverFill) : str(p.fill ?? p.color, "#e2e8f0"));
+      applyTypography(el as SVGTextElement, {
+        ...p,
+        text: p.text ?? p.label ?? node.name,
+      });
+      anchorX = x;
+      anchorY = y;
     } else if (el.tagName === "line") {
-      el.setAttribute("x1", String(num(p.x1, x)));
-      el.setAttribute("y1", String(num(p.y1, y)));
-      el.setAttribute("x2", String(num(p.x2, x + 40)));
-      el.setAttribute("y2", String(num(p.y2, y)));
+      const x1 = num(p.x1, x);
+      const y1 = num(p.y1, y);
+      const x2 = num(p.x2, x + 40);
+      const y2 = num(p.y2, y);
+      el.setAttribute("x1", String(x1));
+      el.setAttribute("y1", String(y1));
+      el.setAttribute("x2", String(x2));
+      el.setAttribute("y2", String(y2));
       el.setAttribute("stroke", str(p.stroke ?? p.fill, "#64748b"));
       el.setAttribute("stroke-width", String(num(p.strokeWidth, 2)));
+      if (p.strokeLinecap) el.setAttribute("stroke-linecap", String(p.strokeLinecap));
+      anchorX = (x1 + x2) / 2;
+      anchorY = (y1 + y2) / 2;
     } else if (el.tagName === "path") {
       el.setAttribute("d", str(p.d ?? p.path, ""));
-      el.setAttribute("fill", str(p.fill, "none"));
+      el.setAttribute("fill", p.gradient || p.fill ? fill : str(p.fill, "none"));
       el.setAttribute("stroke", str(p.stroke, "#94a3b8"));
       if (p.strokeWidth) el.setAttribute("stroke-width", String(p.strokeWidth));
+      anchorX = x;
+      anchorY = y;
     }
 
-    if (this.hoverId === node.id && p.hoverFill) {
-      el.setAttribute("fill", String(p.hoverFill));
-    }
+    applyTransform(el, p, { x: anchorX, y: anchorY });
   }
 
   private bindPointer(): void {

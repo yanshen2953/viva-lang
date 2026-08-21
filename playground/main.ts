@@ -1,6 +1,7 @@
 import { compileSource } from "../src/pipeline";
 import { Runtime } from "../src/runtime";
 import arena from "../examples/arena.viva?raw";
+import atelier from "../examples/atelier.viva?raw";
 import cells from "../examples/cells.viva?raw";
 import cities from "../examples/cities.viva?raw";
 import dashboard from "../examples/dashboard.viva?raw";
@@ -17,6 +18,7 @@ const examples: Record<string, string> = {
   Twin: twin,
   Dashboard: dashboard,
   Arena: arena,
+  Atelier: atelier,
 };
 
 const sourceEl = document.querySelector("#source") as HTMLTextAreaElement;
