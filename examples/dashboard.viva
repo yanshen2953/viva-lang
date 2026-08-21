@@ -464,21 +464,21 @@ event click on clearText
 
 event click on bars
   if mode == "explore"
-    selected = m
-    hoverLabel = m.name
+    selected = bar
+    hoverLabel = bar.name
   if mode == "compare"
     if selected == none
-      selected = m
+      selected = bar
     if selected != none
       if compare == none
-        if selected.name != m.name
-          compare = m
+        if selected.name != bar.name
+          compare = bar
   if mode == "alert"
-    selected = m
-    threshold = m.v
+    selected = bar
+    threshold = bar.v
 
 event hover on bars
-  hoverLabel = m.name
+  hoverLabel = bar.name
 
 event click on sliderTrack
   dragging = true
