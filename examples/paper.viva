@@ -1,0 +1,102 @@
+artifact "Interactive Paper"
+
+state section = "abstract"
+
+scene
+  size: 880 480
+  background: #101318
+
+  layer page
+    node abstractTab
+      x: 40
+      y: 36
+      w: 110
+      h: 32
+      radius: 8
+      fill: #1e293b
+
+    node methodTab
+      x: 162
+      y: 36
+      w: 110
+      h: 32
+      radius: 8
+      fill: #1e293b
+
+    node resultTab
+      x: 284
+      y: 36
+      w: 110
+      h: 32
+      radius: 8
+      fill: #1e293b
+
+    node t1
+      x: 95
+      y: 58
+      text: "摘要"
+      fill: #e2e8f0
+      align: center
+
+    node t2
+      x: 217
+      y: 58
+      text: "方法"
+      fill: #e2e8f0
+      align: center
+
+    node t3
+      x: 339
+      y: 58
+      text: "结果"
+      fill: #e2e8f0
+      align: center
+
+    node body
+      x: 48
+      y: 140
+      text: "点击上方章节切换交互论文内容"
+      font: 20
+      fill: #cbd5e1
+
+    if section == "abstract"
+      node p1
+        x: 48
+        y: 190
+        text: "Viva 用极小 DSL 描述可计算的小世界，而不是网页结构。"
+        font: 16
+        fill: #94a3b8
+
+    if section == "method"
+      node p2
+        x: 48
+        y: 190
+        text: "Parser → Visual IR → Runtime。模型只写意图，编译器展开复杂性。"
+        font: 16
+        fill: #94a3b8
+
+    if section == "result"
+      node p3
+        x: 48
+        y: 190
+        text: "同一套语言可生成报告、数字孪生、模拟和轻量交互。"
+        font: 16
+        fill: #94a3b8
+
+event click on abstractTab
+  section = "abstract"
+
+event click on t1
+  section = "abstract"
+
+event click on methodTab
+  section = "method"
+
+event click on t2
+  section = "method"
+
+event click on resultTab
+  section = "result"
+
+event click on t3
+  section = "result"

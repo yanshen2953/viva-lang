@@ -1,0 +1,63 @@
+artifact "City Atlas"
+
+state selected = none
+state year = 2026
+
+data cities = [
+  { name: "Beijing", x: 220, y: 180, pop: 21.8 }
+  { name: "Shanghai", x: 520, y: 260, pop: 24.9 }
+  { name: "Shenzhen", x: 430, y: 360, pop: 17.7 }
+  { name: "Chengdu", x: 160, y: 320, pop: 21.2 }
+]
+
+scene
+  size: 880 480
+  background: #070b14
+
+  layer map
+    for city in cities
+      node city as cities
+        x: city.x
+        y: city.y
+        r: city.pop * 2.1
+        fill: #38bdf8
+        hoverFill: #f59e0b
+
+      node label as labels
+        x: city.x
+        y: city.y - city.pop * 2.1 - 14
+        text: city.name
+        font: 13
+        fill: #cbd5e1
+        align: center
+
+  layer ui
+    node heading
+      x: 36
+      y: 42
+      text: "东亚城市人口"
+      font: 26
+      fill: #f8fafc
+
+    node yearLabel
+      x: 36
+      y: 72
+      text: year
+      font: 16
+      fill: #94a3b8
+
+    if selected != none
+      node detail
+        x: 36
+        y: 430
+        text: selected.name
+        font: 20
+        fill: #f59e0b
+
+event click on cities
+  selected = city
+
+timeline
+  from: 2020
+  to: 2030
+  bind: year

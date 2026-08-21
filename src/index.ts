@@ -1,0 +1,10 @@
+export { parse } from "./parser.js";
+export { tokenize } from "./lexer.js";
+export { compile } from "./compiler.js";
+export { compileSource } from "./pipeline.js";
+export { Runtime } from "./runtime.js";
+export { evaluate, execute } from "./eval.js";
+export { SYSTEM_PROMPT } from "./llm/system-prompt.js";
+export { VivaError, formatDiagnostic } from "./diagnostics.js";
+export type { Artifact } from "./ast.js";
+export type { VisualIR } from "./ir.js";

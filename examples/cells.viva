@@ -1,0 +1,69 @@
+artifact "Cell Culture"
+
+state running = true
+state tickCount = 0
+
+data cells = [
+  { id: "c1", x: 180, y: 220, energy: 40 }
+  { id: "c2", x: 320, y: 180, energy: 55 }
+  { id: "c3", x: 470, y: 250, energy: 35 }
+  { id: "c4", x: 610, y: 200, energy: 62 }
+  { id: "c5", x: 400, y: 340, energy: 28 }
+]
+
+scene
+  size: 880 480
+  background: #081018
+
+  layer culture
+    for cell in cells
+      node cell as cells
+        x: cell.x
+        y: cell.y
+        r: 8 + cell.energy / 4
+        fill: #34d399
+
+  layer ui
+    node title
+      x: 36
+      y: 40
+      text: "细胞培养数字孪生"
+      font: 24
+      fill: #ecfdf5
+
+    node status
+      x: 36
+      y: 70
+      text: tickCount
+      font: 14
+      fill: #6ee7b7
+
+    node toggle
+      x: 36
+      y: 430
+      w: 120
+      h: 32
+      radius: 8
+      fill: #064e3b
+
+    node toggleText
+      x: 96
+      y: 452
+      text: "暂停 / 继续"
+      font: 13
+      fill: #d1fae5
+      align: center
+
+event click on toggle
+  running = not running
+
+event click on toggleText
+  running = not running
+
+tick 8
+  if running
+    tickCount = tickCount + 1
+    for cell in cells
+      cell.energy = cell.energy + 0.4
+      if cell.energy > 80
+        cell.energy = 24

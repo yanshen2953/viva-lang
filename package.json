@@ -1,0 +1,40 @@
+{
+  "name": "viva-lang",
+  "version": "0.1.0",
+  "description": "LLM-native interactive artifact language — small DSL, large runtime",
+  "type": "module",
+  "bin": {
+    "viva": "./dist/cli.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "examples",
+    "docs"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -p tsconfig.build.json && vite build",
+    "test": "vitest run",
+    "preview": "vite preview"
+  },
+  "keywords": [
+    "dsl",
+    "llm",
+    "visualization",
+    "artifact",
+    "compiler",
+    "runtime"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.10",
+    "typescript": "^5.8.2",
+    "vite": "^6.2.2",
+    "vitest": "^3.0.9"
+  }
+}

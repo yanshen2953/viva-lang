@@ -1,0 +1,92 @@
+artifact "Pump Twin"
+
+state pressure = 42
+state valve = 0.4
+state alarm = false
+
+scene
+  size: 880 480
+  background: #0a0f18
+
+  layer machine
+    node tank
+      x: 160
+      y: 120
+      w: 160
+      h: 220
+      radius: 16
+      fill: #1e293b
+      stroke: #334155
+
+    node fluid
+      x: 172
+      y: 332 - pressure * 2.4
+      w: 136
+      h: pressure * 2.4
+      radius: 10
+      fill: #0ea5e9
+
+    node pump
+      x: 460
+      y: 230
+      r: 46
+      fill: #f59e0b
+
+    node pipe
+      x1: 320
+      y1: 230
+      x2: 414
+      y2: 230
+      stroke: #64748b
+      strokeWidth: 10
+
+    node title
+      x: 40
+      y: 40
+      text: "泵组数字孪生"
+      font: 24
+      fill: #e2e8f0
+
+    node readout
+      x: 600
+      y: 180
+      text: pressure
+      font: 42
+      fill: #f8fafc
+
+    node unit
+      x: 600
+      y: 220
+      text: "kPa · 点击泵增加压力，点击罐体泄压"
+      font: 14
+      fill: #94a3b8
+
+    if alarm
+      node warn
+        x: 600
+        y: 280
+        text: "高压告警"
+        font: 20
+        fill: #f43f5e
+
+event click on pump
+  pressure = pressure + 6
+
+event click on tank
+  pressure = pressure - 8
+
+event click on fluid
+  pressure = pressure - 8
+
+rule when pressure > 70
+  alarm = true
+
+rule when pressure <= 70
+  alarm = false
+
+tick 10
+  pressure = pressure + valve - 0.35
+  if pressure < 8
+    pressure = 8
+  if pressure > 90
+    pressure = 90

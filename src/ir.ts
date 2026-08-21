@@ -1,0 +1,46 @@
+import type { Expr, Statement } from "./ast.js";
+
+export type SceneNodeIR =
+  | {
+      kind: "node";
+      id: string;
+      name: string;
+      group?: string;
+      props: Record<string, Expr>;
+    }
+  | {
+      kind: "for";
+      id: string;
+      item: string;
+      source: Expr;
+      body: SceneNodeIR[];
+    }
+  | {
+      kind: "if";
+      id: string;
+      cond: Expr;
+      body: SceneNodeIR[];
+    };
+
+export type LayerIR = {
+  id: string;
+  name: string;
+  items: SceneNodeIR[];
+};
+
+export type SceneIR = {
+  props: Record<string, Expr>;
+  layers: LayerIR[];
+};
+
+export type VisualIR = {
+  name: string;
+  scene: SceneIR;
+  state: Record<string, unknown>;
+  data: Record<string, unknown>;
+  events: { type: string; target: string; body: Statement[] }[];
+  rules: { cond: Expr; body: Statement[] }[];
+  binds: { target: string[]; source: Expr }[];
+  ticks: { fps: number; body: Statement[] }[];
+  animates: { name: string; props: Record<string, unknown> }[];
+};

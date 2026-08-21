@@ -1,0 +1,42 @@
+artifact "Hello Viva"
+
+state count = 0
+
+scene
+  size: 880 480
+  background: #0b1220
+
+  layer main
+    node title
+      x: 440
+      y: 150
+      text: "模型负责意图，编译器负责复杂性"
+      font: 22
+      fill: #94a3b8
+      align: center
+
+    node counter
+      x: 440
+      y: 250
+      text: count
+      font: 72
+      fill: #f8fafc
+      align: center
+
+    node hint
+      x: 440
+      y: 330
+      text: "点击数字 +1"
+      font: 16
+      fill: #f59e0b
+      align: center
+
+event click on counter
+  count = count + 1
+
+animate fade
+  target: title
+  prop: opacity
+  from: 0
+  to: 1
+  duration: 800ms

@@ -1,0 +1,156 @@
+:root {
+  color-scheme: dark;
+  --ink: #070b14;
+  --panel: #0e1624;
+  --line: #1e293b;
+  --text: #e2e8f0;
+  --muted: #93a4bb;
+  --amber: #f5a524;
+  --ok: #34d399;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  margin: 0;
+  height: 100%;
+  background: var(--ink);
+  color: var(--text);
+  font-family: "IBM Plex Sans", sans-serif;
+}
+
+.top {
+  height: 64px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 220px;
+}
+
+.mark {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--amber);
+  color: #1a1205;
+  font-weight: 600;
+}
+
+.brand small {
+  display: block;
+  color: var(--muted);
+}
+
+.examples {
+  display: flex;
+  gap: 8px;
+  flex: 1;
+}
+
+.examples button,
+.actions button {
+  border: 1px solid var(--line);
+  background: #111827;
+  color: var(--text);
+  border-radius: 999px;
+  padding: 7px 12px;
+  cursor: pointer;
+  font: 500 13px/1 "IBM Plex Sans", sans-serif;
+}
+
+.examples button.active,
+.actions button {
+  background: var(--amber);
+  color: #1a1205;
+  border-color: transparent;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.status {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.workspace {
+  height: calc(100% - 64px);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.pane {
+  min-width: 0;
+  min-height: 0;
+}
+
+.editor-pane {
+  border-right: 1px solid var(--line);
+}
+
+#source {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  resize: none;
+  padding: 20px 22px;
+  background: var(--panel);
+  color: #dbe7f3;
+  font: 14px/1.6 "IBM Plex Mono", monospace;
+  outline: none;
+}
+
+.preview-pane {
+  position: relative;
+  background:
+    radial-gradient(circle at top, rgb(245 165 36 / 0.08), transparent 28%),
+    var(--ink);
+}
+
+.stage {
+  height: 100%;
+  padding: 24px;
+}
+
+.error {
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  bottom: 24px;
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #3f1d1d;
+  color: #fecaca;
+  white-space: pre-wrap;
+  font: 13px/1.5 "IBM Plex Mono", monospace;
+}
+
+@media (max-width: 960px) {
+  .workspace {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr 1fr;
+  }
+
+  .editor-pane {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+}

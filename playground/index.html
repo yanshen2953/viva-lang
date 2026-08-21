@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Viva · LLM-Native Artifact Language</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div id="app">
+      <header class="top">
+        <div class="brand">
+          <span class="mark">V</span>
+          <div>
+            <strong>Viva</strong>
+            <small>模型写意图，编译器做世界</small>
+          </div>
+        </div>
+        <nav id="examples" class="examples"></nav>
+        <div class="actions">
+          <button id="run" type="button">运行</button>
+          <span id="status" class="status">就绪</span>
+        </div>
+      </header>
+      <main class="workspace">
+        <section class="pane editor-pane">
+          <textarea id="source" spellcheck="false"></textarea>
+        </section>
+        <section class="pane preview-pane">
+          <div id="stage" class="stage"></div>
+          <pre id="error" class="error" hidden></pre>
+        </section>
+      </main>
+    </div>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
