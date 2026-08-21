@@ -1,5 +1,9 @@
 # LLM-Native Universal Interactive Artifact Language 设计思路
 
+> **注意（2026）：** 完整、与实现对齐的设计真源已迁移至  
+> [`docs/DESIGN.md`](./docs/DESIGN.md)。  
+> 下文保留为最初动机与原则草稿；若与 `DESIGN.md` 冲突，以 `DESIGN.md` 为准。
+
 ## 1. 项目定位
 
 目标不是设计一个新的前端框架，而是设计一种面向大语言模型生成的声明式交互视觉语言（LLM-native
