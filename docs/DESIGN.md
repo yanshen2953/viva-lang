@@ -236,6 +236,77 @@ core system prompt     # 永远加载，短
 
 ---
 
+## 8.5 竞品推演：相对内联透视 / 汇报，何时才算「强得多」
+
+对标对象不是「另一个画图库」，而是编码代理里的**内联透视与汇报面**：
+
+| 表面 | 典型产出 | 强项 | 弱项 |
+| --- | --- | --- | --- |
+| Cursor 内联面板 | Markdown、代码块、偶发预览/图 | 工程上下文近、改代码快 | 交互世界弱；多为静态或外挂 HTML |
+| Codex / Claude Code | 终端 + 文件 + 跑脚本出图 | 任意库（matplotlib/plotly） | 生成的是**代码**，不是稳定的世界模型；多轮易漂 |
+| Claude Artifacts 类 | React/HTML 小应用 | 表现力上限高 | Token 重、细节碎、难在 prompt 里稳态复现 |
+| Claude Science | 分析沙箱 + 领域产物（蛋白/基因组等）+ 可追溯 | **科研执行与 provenance** 极强 | 重工作台；内联「活世界」叙事不是其主战场 |
+
+### 8.5.1 我们绝不该赢的战场（认栽，避免假目标）
+
+- 生命科学领域专用渲染（3D 蛋白、genome track）→ Claude Science  
+- 任意统计包一次性出图 → Python/R 生态  
+- 完整可重复分析流水线 + HPC → Science workbench  
+
+Viva **补位**的是：在对话/IDE **内联**里，用**极小可编译语言**生成**可交互、可演化、可多轮改意图**的视觉世界与报告件。
+
+### 8.5.2 我们必须赢的战场（做完后应明显更强）
+
+相对 Cursor / Codex / Claude Code 的内联汇报，以及相对「生成一段 React/matplotlib」的路径：
+
+| 能力轴 | 代理内联现状 | Viva 做完后（A–D） |
+| --- | --- | --- |
+| **生成稳定性** | 模型写 HTML/JS/Plot 代码，易碎 | 小 DSL + 确定性编译；失败有 diagnostics |
+| **Token / Prompt 适配** | 长代码 | 短意图；手册按次注入 |
+| **交互深度** | 多为静态图或浅交互 | World：拖拽/碰撞/键盘/tick 同一套 |
+| **时间与状态** | 难描述演化世界 | `tick` + `state` + `rule` 一等公民 |
+| **图数同体** | 图是附件，交互是另一坨 | 同一 artifact：孪生 + 图表 + HUD |
+| **多轮改法** | 「改代码」 | 「改世界意图」；IR/runtime 承接 |
+| **科学可读** | 靠脚本库 | Space + chart widget + print handbook |
+| **风格切换** | 重写代码 | 换 handbook，不换语法 |
+
+**一句话差异：**  
+别人内联的是「代码跑出来的图」；我们内联的是「可编译的活世界」。表现力强在 **交互×状态×时间×度量** 的乘积，不是单帧像素精度。
+
+### 8.5.3 要使「强得多」成立，交付物必须齐（否则宣称无效）
+
+仅有现在的 Arena/Atelier **不够**赢过 Claude Science，也只是部分赢过 Cursor 面板。下面是**硬门槛**：
+
+| # | 门槛 | 为何必须 |
+| --- | --- | --- |
+| H1 | **Space：frame + scale** | 否则科学透视仍是魔法数，输给 matplotlib |
+| H2 | **chart.* widgets**（scatter/line/bar 起步） | 否则「汇报」结构靠手拼，输给现成绘图库 |
+| H3 | **宿主内联运行时**（IDE/对话侧可挂载 `Runtime`） | 否则再强也只是仓库玩具，进不了 Cursor 级面板体验 |
+| H4 | **多轮补丁契约**（改一段 Viva / 重编译热替换，保留 state 策略明确） | 否则改图体验不如「改 Python 重跑」直观 |
+| H5 | **handbook 按次注入 API** | 否则无法在汇报风 / 期刊风 / 仪表盘风间单次切换 |
+| H6 | **导出或快照**（SVG 必达；PDF/mm 理想） | 否则「汇报」留不下可带走件 |
+
+**可选增强（拉开数量级，非 MVP）：** 直播 state 订阅、旁路数据绑定（CSV/arrow）、与分析代码的双向：Python 算→Viva 演，Viva 交互→回写参数。
+
+### 8.5.4 对 Claude Science 的正确关系
+
+- **不替代**其分析工作台与领域产物。  
+- **可嵌入**其「结果讲解 / 交互答辩 / 机制示意」层：Science 产出数据与静态图，Viva 产出可操作的机制世界与读者向交互报告。  
+- 若强行比「谁更能出投稿主图」：在 H1+H2+导出完成前 **不许对外宣称更强**；完成后也是「交互报告件 + 可打印图」双轨，而非取代 BioNeMo/结构生物学视图。
+
+### 8.5.5 成功验收（可演示脚本）
+
+做完 H1–H5 后，应用同一宿主面板连续演示：
+
+1. **一句话**生成含 frame 的散点+回归线报告（print-nature handbook）。  
+2. **不改语法**，只换 dashboard handbook，重生成/补丁为可点击系列的仪表盘。  
+3. 在同一 artifact 内：**拖拽参数点 → tick 仿真 → 旁路图表即时变**。  
+4. 多轮只改意图（「加误差棒」「暂停演化」），源码 diff 短、编译必过。  
+
+若 3 做不到，则相对 Claude Code「写 plotly 仪表盘」**没有**质变优势。
+
+---
+
 ## 9. LLM 集成契约
 
 ### 9.1 Core prompt 职责
@@ -269,12 +340,12 @@ const messages = [
 | 阶段 | 交付 | 完成定义 |
 | --- | --- | --- |
 | **A 已完成** | World 交互 + Paint 基础 + layer + handbooks 约定 | Arena/Atelier 可跑；手册目录存在 |
-| **B 下一步** | Space：`frame` + linear scale + 文档/一例 | 数据坐标点图无需手写 `* 2.4` |
-| **C** | `chart.scatter/line/bar` widgets + `print-nature` 实手册 | 可生成可打印的多系列图 |
-| **D** | unit 导出（SVG/PDF pt/mm）+ figure 面板 | 接近投稿图流程 |
-| **E** | 宿主 handbook 注册表与按次注入 API | 多轮产品化 |
+| **B 下一步** | Space：`frame` + linear scale + 文档/一例 | 数据坐标点图无需手写 `* 2.4`（门槛 H1） |
+| **C** | `chart.scatter/line/bar` widgets + 实手册 | 可生成结构完整的汇报图（H2） |
+| **D** | 宿主内联 Runtime + 热替换/state 策略 + handbook API | 对标 Cursor 面板的可嵌体验（H3–H5） |
+| **E** | unit 导出（SVG/PDF pt/mm）+ figure 面板 | 可带走的汇报件（H6） |
 
-砍优先级：先 B 再 C；没有 B 做 C 仍是魔法数。
+砍优先级：B → C → D；没有 B/C 的「内联」赢不了脚本出图；没有 D 则赢面只存在于本仓库 playground。
 
 ---
 
@@ -294,7 +365,9 @@ const messages = [
 1. 任意合法示例可在无 handbook 下编译运行（风格可变差，语义不变）。  
 2. 注入 `print-nature` 不改变语法，只改变生成选择偏好。  
 3. 未实现 Space 前，**不宣称**具备 Science/Nature 论文图完备性。  
-4. 语言关键字表不因「再来一个图类型」而增长；图类型只增 widget/handbook。
+4. 语言关键字表不因「再来一个图类型」而增长；图类型只增 widget/handbook。  
+5. 未达到 §8.5.3 门槛 H1–H5 前，**不宣称**相对 Cursor/Codex/Claude Code 内联面板「表现力强得多」。  
+6. **永不宣称**替代 Claude Science 的领域分析工作台；只宣称在「可编译交互世界 / 内联活报告」轴上更强（且须 H1–H5 成立）。
 
 ---
 
