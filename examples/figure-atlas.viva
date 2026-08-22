@@ -1,0 +1,508 @@
+artifact "Figure Atlas"
+
+state selGene = "CD8A"
+state hint = "六联图 · 虚拟队列 n=248 · handbook:dashboard"
+
+# ── 虚拟临床队列数据 ─────────────────────────────────────────
+
+data cohortBars = [
+  { visit: 0.75, pct: 38, grp: "placebo" }
+  { visit: 1.0, pct: 38, grp: "drug-A" }
+  { visit: 1.25, pct: 38, grp: "drug-B" }
+  { visit: 1.75, pct: 41, grp: "placebo" }
+  { visit: 2.0, pct: 52, grp: "drug-A" }
+  { visit: 2.25, pct: 48, grp: "drug-B" }
+  { visit: 2.75, pct: 44, grp: "placebo" }
+  { visit: 3.0, pct: 61, grp: "drug-A" }
+  { visit: 3.25, pct: 58, grp: "drug-B" }
+  { visit: 3.75, pct: 46, grp: "placebo" }
+  { visit: 4.0, pct: 68, grp: "drug-A" }
+  { visit: 4.25, pct: 63, grp: "drug-B" }
+  { visit: 4.75, pct: 48, grp: "placebo" }
+  { visit: 5.0, pct: 74, grp: "drug-A" }
+  { visit: 5.25, pct: 70, grp: "drug-B" }
+  { visit: 5.75, pct: 50, grp: "placebo" }
+  { visit: 6.0, pct: 79, grp: "drug-A" }
+  { visit: 6.25, pct: 76, grp: "drug-B" }
+]
+
+data vitals = [
+  { wk: 0, hr: 74, grp: "control" }
+  { wk: 2, hr: 73, grp: "control" }
+  { wk: 4, hr: 72, grp: "control" }
+  { wk: 6, hr: 71, grp: "control" }
+  { wk: 8, hr: 70, grp: "control" }
+  { wk: 10, hr: 69, grp: "control" }
+  { wk: 12, hr: 68, grp: "control" }
+  { wk: 0, hr: 74, grp: "treatment" }
+  { wk: 2, hr: 70, grp: "treatment" }
+  { wk: 4, hr: 66, grp: "treatment" }
+  { wk: 6, hr: 62, grp: "treatment" }
+  { wk: 8, hr: 60, grp: "treatment" }
+  { wk: 10, hr: 58, grp: "treatment" }
+  { wk: 12, hr: 56, grp: "treatment" }
+]
+
+data biomarkers = [
+  { il6: 1.2, crp: 8, grp: "low" }
+  { il6: 1.8, crp: 12, grp: "low" }
+  { il6: 2.1, crp: 15, grp: "low" }
+  { il6: 2.4, crp: 18, grp: "low" }
+  { il6: 2.8, crp: 22, grp: "low" }
+  { il6: 3.2, crp: 28, grp: "low" }
+  { il6: 3.5, crp: 32, grp: "mid" }
+  { il6: 4.1, crp: 38, grp: "mid" }
+  { il6: 4.8, crp: 45, grp: "mid" }
+  { il6: 5.2, crp: 52, grp: "mid" }
+  { il6: 5.8, crp: 58, grp: "mid" }
+  { il6: 6.4, crp: 65, grp: "high" }
+  { il6: 7.2, crp: 72, grp: "high" }
+  { il6: 8.1, crp: 82, grp: "high" }
+  { il6: 9.0, crp: 95, grp: "high" }
+  { il6: 10.2, crp: 108, grp: "high" }
+  { il6: 11.5, crp: 120, grp: "high" }
+  { il6: 2.6, crp: 20, grp: "low" }
+  { il6: 4.5, crp: 48, grp: "mid" }
+  { il6: 7.8, crp: 88, grp: "high" }
+]
+
+data heatCells = [
+  { col: 0, row: 0, tier: 0 } { col: 1, row: 0, tier: 1 } { col: 2, row: 0, tier: 2 }
+  { col: 3, row: 0, tier: 3 } { col: 4, row: 0, tier: 4 } { col: 5, row: 0, tier: 3 }
+  { col: 6, row: 0, tier: 2 } { col: 7, row: 0, tier: 1 }
+  { col: 0, row: 1, tier: 1 } { col: 1, row: 1, tier: 2 } { col: 2, row: 1, tier: 3 }
+  { col: 3, row: 1, tier: 4 } { col: 4, row: 1, tier: 4 } { col: 5, row: 1, tier: 3 }
+  { col: 6, row: 1, tier: 2 } { col: 7, row: 1, tier: 1 }
+  { col: 0, row: 2, tier: 2 } { col: 1, row: 2, tier: 3 } { col: 2, row: 2, tier: 4 }
+  { col: 3, row: 2, tier: 3 } { col: 4, row: 2, tier: 2 } { col: 5, row: 2, tier: 1 }
+  { col: 6, row: 2, tier: 2 } { col: 7, row: 2, tier: 3 }
+  { col: 0, row: 3, tier: 0 } { col: 1, row: 3, tier: 1 } { col: 2, row: 3, tier: 2 }
+  { col: 3, row: 3, tier: 3 } { col: 4, row: 3, tier: 2 } { col: 5, row: 3, tier: 1 }
+  { col: 6, row: 3, tier: 0 } { col: 7, row: 3, tier: 1 }
+  { col: 0, row: 4, tier: 1 } { col: 1, row: 4, tier: 2 } { col: 2, row: 4, tier: 1 }
+  { col: 3, row: 4, tier: 0 } { col: 4, row: 4, tier: 1 } { col: 5, row: 4, tier: 2 }
+  { col: 6, row: 4, tier: 3 } { col: 7, row: 4, tier: 2 }
+  { col: 0, row: 5, tier: 2 } { col: 1, row: 5, tier: 1 } { col: 2, row: 5, tier: 0 }
+  { col: 3, row: 5, tier: 1 } { col: 4, row: 5, tier: 2 } { col: 5, row: 5, tier: 3 }
+  { col: 6, row: 5, tier: 4 } { col: 7, row: 5, tier: 3 }
+]
+
+data flowV = [
+  { ox: 1, oy: 1, ux: 1.4, uy: 0.6, grp: "inflow" }
+  { ox: 2.5, oy: 2, ux: 0.8, uy: 1.2, grp: "inflow" }
+  { ox: 4, oy: 1.2, ux: -0.6, uy: 1.4, grp: "shear" }
+  { ox: 5.5, oy: 3, ux: -1.2, uy: -0.8, grp: "shear" }
+  { ox: 7, oy: 2.2, ux: 0.4, uy: 1.6, grp: "inflow" }
+  { ox: 8, oy: 4, ux: 1.6, uy: 0.2, grp: "vortex" }
+  { ox: 3, oy: 4.5, ux: -0.9, uy: -1.1, grp: "vortex" }
+  { ox: 6.2, oy: 0.8, ux: 1.1, uy: 0.9, grp: "inflow" }
+]
+
+data stages = [
+  { i: 0, label: "Screen", n: 248, grp: "all" }
+  { i: 1, label: "Enroll", n: 186, grp: "all" }
+  { i: 2, label: "Week-4", n: 162, grp: "all" }
+  { i: 3, label: "Week-12", n: 148, grp: "all" }
+  { i: 4, label: "Complete", n: 131, grp: "all" }
+]
+
+data stageSplit = [
+  { i: 0, n: 124, grp: "arm-A" }
+  { i: 0, n: 124, grp: "arm-B" }
+  { i: 1, n: 94, grp: "arm-A" }
+  { i: 1, n: 92, grp: "arm-B" }
+  { i: 2, n: 82, grp: "arm-A" }
+  { i: 2, n: 80, grp: "arm-B" }
+  { i: 3, n: 76, grp: "arm-A" }
+  { i: 3, n: 72, grp: "arm-B" }
+  { i: 4, n: 68, grp: "arm-A" }
+  { i: 4, n: 63, grp: "arm-B" }
+]
+
+frame microFlow
+  x: 500 820
+  y: 520 748
+  xlim: 0 10
+  ylim: 0 6
+
+scene
+  size: 1360 920
+
+  layer backdrop
+    node bgGrad
+      role: atmosphere
+      x: 0
+      y: 0
+      w: 1360
+      h: 920
+      gradient: #050810 #0b1220 #070b14
+      gradientDir: y
+
+    node washTL
+      role: atmosphere
+      x: 200
+      y: 180
+      r: 220
+      gradient: #1d4ed8 #38bdf8
+      blur: 56
+      opacity: 0.22
+
+    node washBR
+      role: atmosphere
+      x: 1100
+      y: 720
+      r: 260
+      gradient: #be123c #f59e0b
+      blur: 64
+      opacity: 0.18
+
+  layer typography
+    node docTitle
+      role: title
+      x: 40
+      y: 36
+      text: "多面板综合图 · 虚拟临床队列"
+      font: 26
+
+    node docSub
+      role: subtitle
+      x: 40
+      y: 72
+      text: "Figure 2 · n=248 · IL-6 / CRP 生物标志物 · 六类子图组合"
+
+    node docCap
+      role: caption
+      x: 40
+      y: 896
+      text: hint
+
+  layer figureChrome
+    node figMain
+      role: panel
+      x: 28
+      y: 100
+      w: 1304
+      h: 784
+      radius: 16
+      strokeWidth: 2
+      shadow: 0 20 40
+      shadowOpacity: 0.4
+
+    node panelLblA
+      role: panel-label
+      x: 48
+      y: 118
+      text: "(a)"
+
+    node panelAdeck
+      role: subpanel
+      x: 44
+      y: 136
+      w: 408
+      h: 348
+
+    node panelLblB
+      role: panel-label
+      x: 472
+      y: 118
+      text: "(b)"
+
+    node panelBdeck
+      role: subpanel
+      x: 468
+      y: 136
+      w: 408
+      h: 348
+
+    node panelLblC
+      role: panel-label
+      x: 896
+      y: 118
+      text: "(c)"
+
+    node panelCdeck
+      role: subpanel
+      x: 892
+      y: 136
+      w: 408
+      h: 348
+
+    node panelLblD
+      role: panel-label
+      x: 48
+      y: 498
+      text: "(d)"
+
+    node panelDdeck
+      role: subpanel
+      x: 44
+      y: 516
+      w: 408
+      h: 348
+
+    node panelLblE
+      role: panel-label
+      x: 472
+      y: 498
+      text: "(e)"
+
+    node panelEdeck
+      role: subpanel
+      x: 468
+      y: 516
+      w: 408
+      h: 348
+
+    node panelLblF
+      role: panel-label
+      x: 896
+      y: 498
+      text: "(f)"
+
+    node panelFdeck
+      role: subpanel
+      x: 892
+      y: 516
+      w: 408
+      h: 348
+
+    node heatTitle
+      role: title
+      x: 60
+      y: 528
+      text: "GENE MODULE"
+      font: 12
+      letterSpacing: 1
+
+    node heatPlotBg
+      role: plot
+      x: 60
+      y: 552
+      w: 376
+      h: 296
+      radius: 6
+
+    for c in heatCells
+      node heatCell as heatTiles
+        role: mark-area
+        x: 72 + c.col * 44
+        y: 568 + c.row * 44
+        w: 40
+        h: 40
+        radius: 3
+        colorBy: tier
+        palette: sequential
+
+    node heatGeneLbl
+      role: annotation
+      x: 60
+      y: 848
+      text: selGene
+      font: 11
+      fontWeight: 600
+
+    node flowTitle
+      role: title
+      x: 484
+      y: 528
+      text: "MICROFLUIDIC FLOW"
+      font: 12
+      letterSpacing: 1
+
+    node flowPlotBg
+      role: plot
+      x: 484
+      y: 552
+      w: 376
+      h: 296
+      radius: 6
+
+    node flowGrid1
+      role: grid
+      frame: microFlow
+      x1: 0
+      y1: 2
+      x2: 10
+      y2: 2
+
+    node flowGrid2
+      role: grid
+      frame: microFlow
+      x1: 0
+      y1: 4
+      x2: 10
+      y2: 4
+
+    node flowAxisX
+      role: axis
+      frame: microFlow
+      x1: 0
+      y1: 0
+      x2: 10
+      y2: 0
+
+    node flowAxisY
+      role: axis
+      frame: microFlow
+      x1: 0
+      y1: 0
+      x2: 0
+      y2: 6
+
+    for v in flowV
+      node flowShaft as flowLines
+        role: mark-line
+        frame: microFlow
+        x1: v.ox
+        y1: v.oy
+        x2: v.ox + v.ux
+        y2: v.oy + v.uy
+        colorBy: grp
+        palette: categorical
+        strokeWidth: 2.5
+
+      node flowHead as flowTips
+        role: mark
+        frame: microFlow
+        x: v.ox + v.ux
+        y: v.oy + v.uy
+        r: 4
+        colorBy: grp
+        palette: categorical
+
+    node funnelTitle
+      role: title
+      x: 908
+      y: 528
+      text: "TRIAL FUNNEL"
+      font: 12
+      letterSpacing: 1
+
+    node funnelPlotBg
+      role: plot
+      x: 908
+      y: 552
+      w: 376
+      h: 296
+      radius: 6
+
+    for s in stageSplit
+      node funnelBar as funnelBars
+        role: mark-area
+        x: 920
+        y: 568 + s.i * 52
+        w: s.n * 1.45
+        h: 22
+        radius: 4
+        colorBy: grp
+        palette: categorical
+
+    node funnelLegA
+      role: legend
+      x: 920
+      y: 840
+      w: 10
+      h: 10
+      radius: 2
+      fill: palette("arm-A", "categorical")
+      styleSkip: true
+
+    node funnelLegALbl
+      role: legend-label
+      x: 936
+      y: 850
+      text: "arm-A"
+
+    node funnelLegB
+      role: legend
+      x: 1000
+      y: 840
+      w: 10
+      h: 10
+      radius: 2
+      fill: palette("arm-B", "categorical")
+      styleSkip: true
+
+    node funnelLegBLbl
+      role: legend-label
+      x: 1016
+      y: 850
+      text: "arm-B"
+
+  layer hud
+    node geneBtnA
+      role: chrome
+      x: 280
+      y: 842
+      w: 52
+      h: 22
+      radius: 6
+
+    node geneBtnALbl
+      role: label
+      x: 306
+      y: 856
+      text: "CD8A"
+      font: 10
+      align: center
+
+    node geneBtnB
+      role: chrome
+      x: 340
+      y: 842
+      w: 52
+      h: 22
+      radius: 6
+
+    node geneBtnBLbl
+      role: label
+      x: 366
+      y: 856
+      text: "IL6"
+      font: 10
+      align: center
+
+event click on geneBtnA
+  selGene = "CD8A"
+
+event click on geneBtnB
+  selGene = "IL6"
+
+tick 40
+  hint = "六联图 · 点击切换基因标签"
+
+# ── Widget 子图 (a)(b)(c) ─────────────────────────────────────
+
+widget chart.bar
+  data: cohortBars
+  xField: visit
+  yField: pct
+  group: grp
+  xlim: 0 7
+  ylim: 0 100
+  areaX: 60 436
+  areaY: 168 468
+  title: "RESPONSE BY VISIT"
+
+widget chart.line
+  data: vitals
+  xField: wk
+  yField: hr
+  group: grp
+  xlim: 0 12
+  ylim: 50 80
+  areaX: 484 856
+  areaY: 168 468
+  title: "HEART RATE · 12 WEEKS"
+
+widget chart.scatter
+  data: biomarkers
+  xField: il6
+  yField: crp
+  group: grp
+  xlim: 0 12
+  ylim: 0 130
+  areaX: 908 1280
+  areaY: 168 468
+  title: "IL-6 vs CRP"
+  r: 5.5

@@ -131,4 +131,35 @@ widget chart.bar
     const marks = ir.scene.layers.find((l) => l.name.endsWith("_marks"));
     expect(marks).toBeDefined();
   });
+
+  it("resolves sequential palette by numeric tier", () => {
+    const preset = resolveStylePresets(["dashboard"]);
+    setStyleContext({ meta: { handbookIds: ["dashboard"], preset: preset! } });
+    const low = evaluate(
+      {
+        kind: "call",
+        callee: "palette",
+        args: [
+          { kind: "number", value: 0, span: { line: 1, column: 1 } },
+          { kind: "string", value: "sequential", span: { line: 1, column: 1 } },
+        ],
+        span: { line: 1, column: 1 },
+      },
+      [{}],
+    );
+    const high = evaluate(
+      {
+        kind: "call",
+        callee: "palette",
+        args: [
+          { kind: "number", value: 4, span: { line: 1, column: 1 } },
+          { kind: "string", value: "sequential", span: { line: 1, column: 1 } },
+        ],
+        span: { line: 1, column: 1 },
+      },
+      [{}],
+    );
+    expect(low).not.toBe(high);
+    setStyleContext(null);
+  });
 });

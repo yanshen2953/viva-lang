@@ -270,6 +270,7 @@ function expandChart(
         frameName,
         explicitStroke ?? explicitFill,
         span,
+        seriesField,
       ),
     );
   } else if (kind === "chart.bar") {
@@ -319,13 +320,71 @@ function expandLineSegments(
   xField: string,
   yField: string,
   frameName: string,
-  stroke: Expr,
-  _span: unknown,
+  stroke: Expr | undefined,
+  span: { line: number; column: number },
+  seriesField?: string | null,
 ): SceneItem[] {
   const decl = artifact.data.find((d) => d.name === dataName);
   if (!decl || decl.value.kind !== "array") return [];
-  const items: SceneItem[] = [];
   const rows = decl.value.items;
+
+  if (seriesField) {
+    const groups = new Map<string, Extract<Expr, { kind: "object" }>[]>();
+    for (const row of rows) {
+      if (row.kind !== "object") continue;
+      const sv = objectField(row, seriesField);
+      const key =
+        sv?.kind === "number"
+          ? String(sv.value)
+          : sv?.kind === "string"
+            ? sv.value
+            : "default";
+      const list = groups.get(key) ?? [];
+      list.push(row);
+      groups.set(key, list);
+    }
+    const items: SceneItem[] = [];
+    let seg = 0;
+    for (const [gkey, grows] of groups) {
+      for (let i = 0; i < grows.length - 1; i++) {
+        const a = grows[i]!;
+        const b = grows[i + 1]!;
+        const ax = objectField(a, xField);
+        const ay = objectField(a, yField);
+        const bx = objectField(b, xField);
+        const by = objectField(b, yField);
+        if (!ax || !ay || !bx || !by) continue;
+        items.push(
+          node(`seg_${seg++}`, {
+            role: literal("mark-line"),
+            frame: literal(frameName),
+            x1: ax,
+            y1: ay,
+            x2: bx,
+            y2: by,
+            ...(stroke
+              ? { stroke }
+              : {
+                  stroke: {
+                    kind: "call",
+                    callee: "palette",
+                    args: [
+                      { kind: "string", value: gkey, span: span },
+                      { kind: "string", value: "categorical", span: span },
+                    ],
+                    span,
+                  },
+                }),
+            strokeWidth: literal(2),
+            strokeLinecap: literal("round"),
+          }),
+        );
+      }
+    }
+    return items;
+  }
+
+  const items: SceneItem[] = [];
   for (let i = 0; i < rows.length - 1; i++) {
     const a = rows[i]!;
     const b = rows[i + 1]!;
@@ -344,6 +403,8 @@ function expandLineSegments(
         x2: bx,
         y2: by,
         ...(stroke ? { stroke } : {}),
+        strokeWidth: literal(2),
+        strokeLinecap: literal("round"),
       }),
     );
   }

@@ -9,7 +9,7 @@ export const dashboardPreset: StylePreset = {
   },
   palette: {
     categorical: ["#38bdf8", "#a78bfa", "#34d399", "#fbbf24", "#fb7185", "#22d3ee"],
-    sequential: ["#0f172a", "#1e293b", "#334155", "#475569", "#64748b"],
+    sequential: ["#0c1929", "#1e3a5f", "#2563eb", "#38bdf8", "#bae6fd"],
     accent: "#38bdf8",
     foreground: "#f1f5f9",
     muted: "#94a3b8",
@@ -24,6 +24,9 @@ export const dashboardPreset: StylePreset = {
     subtitle: { fill: "#94a3b8", font: 13 },
     caption: { fill: "#64748b", font: 12 },
     "legend-label": { fill: "#cbd5e1", font: 11 },
+    "panel-label": { fill: "#38bdf8", font: 12, fontWeight: 700 },
+    subpanel: { fill: "#0b1220", stroke: "#475569", strokeWidth: 1.5, radius: 10 },
+    "mark-area": { opacity: 0.92, strokeWidth: 0.5 },
     mark: { stroke: "#0f172a", strokeWidth: 1.25 },
     "mark-line": { strokeWidth: 2 },
     chrome: { fill: "#1e293b", stroke: "#94a3b8", strokeWidth: 1.5 },

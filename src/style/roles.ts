@@ -92,6 +92,7 @@ export function roleTypographyKey(role: StyleRole): string | null {
     case "caption":
       return role;
     case "legend-label":
+    case "panel-label":
       return "legend";
     case "axis":
       return "axis";

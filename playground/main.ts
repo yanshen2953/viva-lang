@@ -10,6 +10,7 @@ import dashboard from "../examples/dashboard.viva?raw";
 import hello from "../examples/hello.viva?raw";
 import paper from "../examples/paper.viva?raw";
 import scatter from "../examples/scatter.viva?raw";
+import figureAtlas from "../examples/figure-atlas.viva?raw";
 import scienceStudio from "../examples/science-studio.viva?raw";
 import twin from "../examples/twin.viva?raw";
 import printNature from "../docs/handbooks/print-nature.md?raw";
@@ -28,6 +29,7 @@ const examples: Record<string, string> = {
   Arena: arena,
   Atelier: atelier,
   Studio: scienceStudio,
+  Atlas: figureAtlas,
 };
 
 const sourceEl = document.querySelector("#source") as HTMLTextAreaElement;
@@ -198,7 +200,7 @@ function load(name: string): void {
 }
 
 function handbooksForExample(name: string): string[] {
-  if (name === "Studio") return ["dashboard"];
+  if (name === "Studio" || name === "Atlas") return ["dashboard"];
   if (name === "Paper") return ["print-nature"];
   return [];
 }

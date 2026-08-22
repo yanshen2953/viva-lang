@@ -18,18 +18,25 @@ export function paletteColor(
   kind: PaletteKind = "categorical",
 ): string {
   if (!meta?.preset.palette) return "#888888";
-  const palette = meta.preset.palette?.[kind as keyof import("./types.js").StylePalette];
-  if (!Array.isArray(palette) || !palette.length) {
+  const paletteList = meta.preset.palette?.[kind as keyof import("./types.js").StylePalette];
+  if (!Array.isArray(paletteList) || !paletteList.length) {
     if (kind !== "categorical" && meta.preset.palette?.categorical?.length) {
       return paletteColor(meta, series, "categorical");
     }
     return meta.preset.palette?.accent ?? "#888888";
   }
+  if (kind === "sequential") {
+    const n = typeof series === "number" ? series : Number(series);
+    if (!Number.isNaN(n)) {
+      const idx = Math.min(paletteList.length - 1, Math.max(0, Math.floor(n)));
+      return paletteList[idx]!;
+    }
+  }
   const key = seriesKey(series);
   const map = seriesMap(meta);
   if (!map.has(key)) map.set(key, map.size);
-  const idx = map.get(key)! % palette.length;
-  return palette[idx]!;
+  const idx = map.get(key)! % paletteList.length;
+  return paletteList[idx]!;
 }
 
 function seriesKey(series: Value): string {

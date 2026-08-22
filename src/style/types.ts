@@ -13,6 +13,8 @@ export type StyleRole =
   | "caption"
   | "legend"
   | "legend-label"
+  | "panel-label"
+  | "subpanel"
   | "mark"
   | "mark-line"
   | "mark-area"
