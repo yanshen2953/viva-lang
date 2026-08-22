@@ -1,0 +1,344 @@
+artifact "Science Studio"
+
+state yaw = 0.65
+state pitch = 0.35
+state zoom = 1.15
+state pcaMark = none
+state hint = "条形/折线/矢量 · 图层混合 · 拖拽 PCA 轨道旋转 · 点选标记"
+state pulse = 0
+
+data bars = [
+  { cat: 1, val: 42 }
+  { cat: 2, val: 68 }
+  { cat: 3, val: 55 }
+  { cat: 4, val: 91 }
+  { cat: 5, val: 73 }
+]
+
+data lineSeries = [
+  { t: 0, v: 12 }
+  { t: 1, v: 18 }
+  { t: 2, v: 15 }
+  { t: 3, v: 28 }
+  { t: 4, v: 22 }
+  { t: 5, v: 35 }
+  { t: 6, v: 30 }
+]
+
+data field = [
+  { ox: 1, oy: 2, ux: 1.2, uy: 1.8 }
+  { ox: 2.5, oy: 3, ux: -0.8, uy: 2.4 }
+  { ox: 4, oy: 1.5, ux: 1.5, uy: -1.2 }
+  { ox: 5.5, oy: 4, ux: -1.1, uy: -1.6 }
+  { ox: 7, oy: 2.8, ux: 0.6, uy: 2.2 }
+  { ox: 8.2, oy: 5, ux: 1.8, uy: 0.9 }
+]
+
+data pca = [
+  { id: "A1", x: -1.4, y: 0.9, z: 0.4, fill: #38bdf8 }
+  { id: "A2", x: -1.1, y: 0.6, z: 0.2, fill: #38bdf8 }
+  { id: "A3", x: -0.9, y: 1.1, z: 0.5, fill: #38bdf8 }
+  { id: "B1", x: 0.2, y: -0.3, z: 1.1, fill: #f59e0b }
+  { id: "B2", x: 0.5, y: -0.6, z: 0.9, fill: #f59e0b }
+  { id: "B3", x: 0.8, y: -0.2, z: 1.3, fill: #f59e0b }
+  { id: "C1", x: 1.2, y: 0.7, z: -0.8, fill: #34d399 }
+  { id: "C2", x: 1.5, y: 1.0, z: -1.0, fill: #34d399 }
+  { id: "C3", x: 1.0, y: 0.4, z: -0.6, fill: #34d399 }
+]
+
+frame quiver
+  x: 520 760
+  y: 300 500
+  xlim: 0 10
+  ylim: 0 7
+
+scene
+  size: 1180 720
+  background: #050a12
+
+  layer textureBackdrop
+    opacity: 0.92
+    blend: multiply
+    node gridA
+      x: 0
+      y: 0
+      w: 1180
+      h: 720
+      gradient: #0c1220 #111827 #0a1018
+      gradientDir: y
+
+    node paperGrain
+      x: 280
+      y: 40
+      w: 880
+      h: 640
+      fill: #1e293b
+      opacity: 0.35
+      radius: 4
+
+  layer colorWash
+    opacity: 0.62
+    blend: soft-light
+    node washL
+      x: 40
+      y: 120
+      r: 200
+      gradient: #1d4ed8 #0ea5e9
+      blur: 48
+      opacity: 0.45
+
+    node washR
+      x: 980
+      y: 520
+      r: 220
+      gradient: #9f1239 #f59e0b
+      blur: 56
+      opacity: 0.38
+
+  layer chartOverlay
+    opacity: 0.72
+    blend: overlay
+    node chartSheen
+      x: 500
+      y: 72
+      w: 660
+      h: 220
+      fill: #38bdf8
+      opacity: 0.12
+      radius: 16
+
+  layer charts
+    opacity: 1
+    blend: normal
+    node chartPanel
+      x: 500
+      y: 72
+      w: 660
+      h: 220
+      radius: 16
+      fill: #0b1220
+      stroke: #334155
+      strokeWidth: 1
+      opacity: 0.92
+
+    node vecPanel
+      x: 500
+      y: 288
+      w: 280
+      h: 228
+      radius: 16
+      fill: #0b1220
+      stroke: #334155
+      strokeWidth: 1
+      opacity: 0.92
+
+    for v in field
+      node vecShaft as vecLines
+        frame: quiver
+        x1: v.ox
+        y1: v.oy
+        x2: v.ox + v.ux
+        y2: v.oy + v.uy
+        stroke: #a78bfa
+        strokeWidth: 2
+
+      node vecHead as vecHeads
+        frame: quiver
+        x: v.ox + v.ux
+        y: v.oy + v.uy
+        r: 3.5
+        fill: #c4b5fd
+
+  layer pca
+    opacity: 1
+    node pcaPanel
+      x: 800
+      y: 288
+      w: 360
+      h: 228
+      radius: 16
+      fill: #020617
+      stroke: #475569
+      strokeWidth: 1
+
+    node pcaOrbit
+      x: 800
+      y: 288
+      w: 360
+      h: 228
+      fill: #38bdf8
+      opacity: 0.04
+      drag: true
+
+    node pcaAxis
+      x: 980
+      y: 402
+      w: 120
+      h: 1
+      fill: #475569
+      opacity: 0.6
+
+    node pcaAxisY
+      x: 980
+      y: 330
+      w: 1
+      h: 144
+      fill: #475569
+      opacity: 0.6
+
+    for p in pca
+      node pcaPt as pcaPts
+        x: 980 + (p.x * cos(yaw) - p.z * sin(yaw)) * zoom * 72
+        y: 402 - (p.y * cos(pitch) - (p.x * sin(yaw) + p.z * cos(yaw)) * sin(pitch)) * zoom * 72
+        r: 7
+        fill: p.fill
+        stroke: #f8fafc
+        strokeWidth: 1
+        glow: 6
+        glowColor: p.fill
+
+      if pcaMark == p.id
+        node pcaRing as pcaPts
+          x: 980 + (p.x * cos(yaw) - p.z * sin(yaw)) * zoom * 72
+          y: 402 - (p.y * cos(pitch) - (p.x * sin(yaw) + p.z * cos(yaw)) * sin(pitch)) * zoom * 72
+          r: 12
+          fill: #000000
+          opacity: 0.15
+          stroke: #f8fafc
+
+    node zoomOut
+      x: 1110
+      y: 300
+      w: 28
+      h: 28
+      radius: 6
+      fill: #1e293b
+      stroke: #64748b
+
+    node zoomIn
+      x: 1144
+      y: 300
+      w: 28
+      h: 28
+      radius: 6
+      fill: #1e293b
+      stroke: #64748b
+
+    node zoomOutLbl
+      x: 1124
+      y: 318
+      text: "-"
+      font: 18
+      fill: #e2e8f0
+      align: center
+
+    node zoomInLbl
+      x: 1158
+      y: 318
+      text: "+"
+      font: 18
+      fill: #e2e8f0
+      align: center
+
+  layer typography
+    opacity: 1
+    node title
+      x: 48
+      y: 56
+      text: "图文排版 · 科学图板"
+      font: 26
+      fontWeight: 700
+      fill: #f8fafc
+      letterSpacing: 0.5
+
+    node subtitle
+      x: 48
+      y: 92
+      text: "条形图 / 折线图 / 矢量场 + 可旋转 PCA"
+      font: 15
+      fill: #94a3b8
+
+    node body1
+      x: 48
+      y: 140
+      w: 420
+      text: "左侧为排版区：标题层级、说明与图注。右侧图层 stack 使用 multiply、soft-light、screen 与不同 opacity，接近 Photoshop 合成。"
+      font: 14
+      fill: #cbd5e1
+      lineHeight: 1.55
+
+    node body2
+      x: 48
+      y: 220
+      w: 420
+      text: "PCA 面板：拖拽半透明轨道旋转 yaw/pitch；+/- 推拉缩放。点击散点可标记样本 id。"
+      font: 14
+      fill: #94a3b8
+      lineHeight: 1.5
+
+    node caption
+      x: 48
+      y: 680
+      text: hint
+      font: 12
+      fill: #64748b
+
+    if pcaMark != none
+      node markLbl
+        x: 48
+        y: 640
+        text: pcaMark
+        font: 16
+        fontWeight: 600
+        fill: #38bdf8
+
+  layer screenGlow
+    opacity: 0.55
+    blend: screen
+    node topGlow
+      x: 600
+      y: 0
+      w: 500
+      h: 120
+      gradient: #38bdf8 #0ea5e9
+      opacity: 0.22
+      blur: 40
+
+widget chart.bar
+  data: bars
+  xField: cat
+  yField: val
+  xlim: 0 6
+  ylim: 0 100
+  areaX: 520 700
+  areaY: 100 260
+  title: "BAR"
+  color: #38bdf8
+  barWidth: 0.55
+
+widget chart.line
+  data: lineSeries
+  xField: t
+  yField: v
+  xlim: 0 6
+  ylim: 0 40
+  areaX: 720 1140
+  areaY: 100 260
+  title: "LINE"
+  color: #34d399
+
+event drag on pcaOrbit
+  yaw = yaw + __event.dx * 0.012
+  pitch = clamp(pitch - __event.dy * 0.012, -1.1, 1.1)
+
+event click on pcaPts
+  pcaMark = p.id
+
+event click on zoomIn
+  zoom = clamp(zoom + 0.12, 0.6, 2.2)
+
+event click on zoomOut
+  zoom = clamp(zoom - 0.12, 0.6, 2.2)
+
+tick 30
+  pulse = sin(yaw * 2) * 0.01

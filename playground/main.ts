@@ -10,6 +10,7 @@ import dashboard from "../examples/dashboard.viva?raw";
 import hello from "../examples/hello.viva?raw";
 import paper from "../examples/paper.viva?raw";
 import scatter from "../examples/scatter.viva?raw";
+import scienceStudio from "../examples/science-studio.viva?raw";
 import twin from "../examples/twin.viva?raw";
 import printNature from "../docs/handbooks/print-nature.md?raw";
 import "./style.css";
@@ -25,6 +26,7 @@ const examples: Record<string, string> = {
   Dashboard: dashboard,
   Arena: arena,
   Atelier: atelier,
+  Studio: scienceStudio,
 };
 
 const sourceEl = document.querySelector("#source") as HTMLTextAreaElement;
