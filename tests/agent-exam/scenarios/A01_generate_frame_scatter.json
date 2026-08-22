@@ -7,7 +7,7 @@
   "assertions": {
     "compiles": true,
     "mustMatch": ["(?m)^frame\\s+plot", "\\blayer\\b", "frame:\\s*plot"],
-    "forbidMatch": ["(?m)^\\s{2,}frame\\s+plot"],
+    "forbidMatch": ["(?m)^[ \\t]{2,}frame\\s+plot"],
     "ir": {
       "minFrames": 1,
       "minLayers": 1

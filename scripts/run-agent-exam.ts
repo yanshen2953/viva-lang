@@ -327,7 +327,19 @@ function runScenario(scenario: Scenario, model: string): CaseResult {
   const compileCheck = checks.find((c) => c.name === "compiles");
   if (compileCheck && !compileCheck.pass && attempts < 2) {
     // One repair turn via Pi
-    const repairUser = `The following Viva source failed to compile. Fix it. Output ONLY the full corrected Viva source starting with artifact.\n\nDiagnostics:\n${compileCheck.detail ?? "error"}\n\nBroken source:\n${source}`;
+    const repairUser = `The following Viva source failed to compile. Fix it. Output ONLY the full corrected Viva source starting with artifact.
+
+Syntax reminders:
+- Top-level declarations (column 0): artifact, data, state, frame NAME, scene, widget chart.scatter|line|bar, timeline
+- Do NOT nest \`frame NAME\` or \`widget …\` under scene/layer
+- Do NOT write \`widget: chart.line\` or \`frame: plot\` as indented blocks — those are invalid
+- Nodes may use property \`frame: plot\`
+
+Diagnostics:
+${compileCheck.detail ?? "error"}
+
+Broken source:
+${source}`;
     const repaired = tryOnce(repairUser);
     if (repaired?.startsWith("artifact")) {
       source = repaired;

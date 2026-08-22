@@ -3,10 +3,11 @@
   "title": "Agent uses widget chart.line",
   "kind": "generate",
   "handbooks": [],
-  "prompt": "Write a Viva artifact that uses `widget chart.line` (not hand-built axes) with a data series of at least 4 {x,y} points, xlim/ylim, and areaX/areaY. Output ONLY valid Viva source starting with artifact.",
+  "prompt": "Write a Viva artifact that uses a TOP-LEVEL `widget chart.line` declaration.\n\nCRITICAL SYNTAX:\n- Write `widget chart.line` at the same indentation as `scene` / `data` (NOT `widget: chart.line` inside scene/layer).\n- Widget body: `data:`, `xField:`, `yField:`, `xlim:`, `ylim:`, `areaX:`, `areaY:` (pairs of numbers, e.g. `areaX: 40 440`).\n\nInclude a data series of at least 4 {x,y} points.\nOutput ONLY valid Viva source starting with artifact.",
   "assertions": {
     "compiles": true,
-    "mustMatch": ["widget\\s+chart\\.line", "data\\s+\\w+"],
+    "mustMatch": ["(?m)^widget\\s+chart\\.line", "data\\s+\\w+"],
+    "forbidMatch": ["(?m)^[ \\t]+widget", "widget:\\s*chart"],
     "ir": {
       "minFrames": 1,
       "minLayers": 1

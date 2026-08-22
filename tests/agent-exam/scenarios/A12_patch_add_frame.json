@@ -4,10 +4,11 @@
   "kind": "patch",
   "handbooks": [],
   "seedSource": "tests/agent-exam/seeds/A12_magic_scatter.viva",
-  "prompt": "Refactor this Viva artifact to use a top-level `frame plot` with xlim/ylim and put `frame: plot` on the mark nodes so x/y are data-domain values (remove magic scene coordinates on marks). Keep the same data field names. Output ONLY the full updated Viva source starting with artifact.\n\nCurrent source:\n{{source}}",
+  "prompt": "Refactor this Viva artifact to use a TOP-LEVEL `frame plot`.\n\nCRITICAL SYNTAX:\n- Add `frame plot` as a sibling of `scene` (NOT indented under scene, NOT `frame: plot` as a block).\n- Put property `frame: plot` on mark nodes; x/y become data-domain values.\n- Frame body uses `x:`/`y:` scene ranges and `xlim:`/`ylim:` data domain.\n\nKeep the same data field names. Output ONLY the full updated Viva source starting with artifact.\n\nCurrent source:\n{{source}}",
   "assertions": {
     "compiles": true,
     "mustMatch": ["(?m)^frame\\s+plot", "frame:\\s*plot"],
+    "forbidMatch": ["(?m)^[ \\t]+frame\\s+plot"],
     "ir": {
       "minFrames": 1
     }
