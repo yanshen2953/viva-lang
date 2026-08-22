@@ -9,7 +9,7 @@ import type {
 } from "./ast.js";
 import { emptyArtifact } from "./ast.js";
 import type { Diagnostic, Span } from "./diagnostics.js";
-import { VivaError } from "./diagnostics.js";
+import { VivaError, withSyntaxHint } from "./diagnostics.js";
 import type { Token, TokenType } from "./lexer.js";
 import { tokenize } from "./lexer.js";
 
@@ -192,6 +192,12 @@ class Parser {
   private parseEvent(): Artifact["events"][number] {
     const start = this.expectKeyword("event");
     const type = this.expectOneOf(["IDENT", "KEYWORD"]).value;
+    if (!this.isKeyword("on")) {
+      throw this.error(
+        `expected 'on' after event type '${type}'`,
+        this.peek().span,
+      );
+    }
     this.expectKeyword("on");
     const target = this.expectOneOf(["IDENT", "KEYWORD", "STRING"]).value;
     this.eat("NEWLINE");
@@ -482,7 +488,22 @@ class Parser {
       return { kind: "none", span: tok.span };
     }
     if (tok.type === "IDENT" || (tok.type === "KEYWORD" && !this.isExprKeyword(tok.value))) {
-      return { kind: "ident", path: this.parsePath(), span: tok.span };
+      const path = this.parsePath();
+      const span = tok.span;
+      if (path.length === 1 && this.eat("LPAREN")) {
+        const args: Expr[] = [];
+        this.skipNewlines();
+        if (!this.check("RPAREN")) {
+          args.push(this.parseExpr());
+          while (this.eat("COMMA")) {
+            this.skipNewlines();
+            args.push(this.parseExpr());
+          }
+        }
+        this.expect("RPAREN");
+        return { kind: "call", callee: path[0]!, args, span };
+      }
+      return { kind: "ident", path, span };
     }
     if (this.eat("LPAREN")) {
       const expr = this.parseExpr();
@@ -590,7 +611,15 @@ class Parser {
   }
 
   private error(message: string, span: Span): VivaError {
-    const diagnostic: Diagnostic = { message, span, source: this.filename };
+    const near = this.peek().value || this.peek().type;
+    const enriched = withSyntaxHint(message, near);
+    const diagnostic: Diagnostic = {
+      message: enriched.message,
+      span,
+      source: this.filename,
+      code: enriched.code,
+      hint: enriched.hint,
+    };
     return new VivaError([diagnostic]);
   }
 }

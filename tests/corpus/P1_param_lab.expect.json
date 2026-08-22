@@ -1,0 +1,12 @@
+{
+  "case": "P1_param_lab",
+  "input": "examples/exam/P1_param_lab.viva",
+  "expect": {
+    "data": ["knob", "series"],
+    "state": ["param", "t"],
+    "events": [{ "type": "drag", "target": "knob" }],
+    "ticks": 1,
+    "minFrames": 1,
+    "hasDragProp": true
+  }
+}

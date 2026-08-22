@@ -229,11 +229,15 @@ core system prompt     # 永远加载，短
 | layer 分组与 blend/opacity | ✅ | `runtime.ts` |
 | gradient / glow / shadow / type | ✅ | `paint.ts` |
 | timeline widget | ✅ | `widgets.ts` |
-| playground examples | ✅ | `examples/*` `atelier` `arena` |
-| frame / scale / unit | ❌ | 规划 |
-| chart.* widgets | ❌ | 规划 |
+| playground examples | ✅ | `examples/*` `atelier` `arena` `param-lab` |
+| frame / scale (linear) | ✅ | `space.ts` |
+| chart.* widgets | ✅ | `widgets.ts` |
+| safe math + array concat | ✅ | `eval.ts` |
+| headless simulate | ✅ | `simulate.ts` / `session.simulate` |
+| export package (source+svg+prov) | ✅ | `session.exportPackage` |
 | PDF/mm 导出 | ❌ | 规划 |
-| handbook 运行时装载 API | ⚠️ 文档约定已有，宿主集成待做 |
+| handbook 运行时装载 API | ✅ | `PromptService` + `docs/handbooks` |
+| Host Session / provenance MVP | ✅ | `src/agent/` |
 
 ---
 

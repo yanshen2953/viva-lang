@@ -1,5 +1,6 @@
 import { compileSource } from "../pipeline.js";
 import { Runtime } from "../runtime.js";
+import { simulate } from "../simulate.js";
 import type { VisualIR } from "../ir.js";
 import type { Diagnostic } from "../diagnostics.js";
 import { fingerprint } from "./provenance/hash.js";
@@ -37,6 +38,18 @@ export type VivaSession = {
   watch(path: string, cb: (v: unknown) => void): () => void;
   on(event: SessionEventType, cb: (e: SessionEvent) => void): () => void;
   exportSvg(): string;
+  /** SVG + source + provenance bundle for takeaway (H6). */
+  exportPackage(): {
+    source: string;
+    svg: string;
+    provenance: ReturnType<ProvenanceWriter["exportBundle"]>;
+    snapshot: ArtifactSnapshot;
+  };
+  /** Headless tick/event stepping when mount is null (or alongside runtime world). */
+  simulate(opts?: { ticks?: number; events?: { type: string; target: string; event?: Record<string, unknown> }[] }): {
+    state: unknown;
+    data: unknown;
+  };
   snapshot(): ArtifactSnapshot;
   exportProvenanceBundle(): ReturnType<ProvenanceWriter["exportBundle"]>;
   dispose(): void;
@@ -111,9 +124,11 @@ export function createSession(
       (ir ? { state: ir.state, data: ir.data } : undefined);
     const result = compileSource(nextSource, `${id}.viva`);
     const nextHash = fingerprint(nextSource);
-    const diagnostics: Diagnostic[] = result.error
-      ? [{ message: result.error, span: { line: 1, column: 1 } }]
-      : [];
+    const diagnostics: Diagnostic[] = result.diagnostics.length
+      ? result.diagnostics
+      : result.error
+        ? [{ message: result.error, span: { line: 1, column: 1 } }]
+        : [];
 
     if (!result.ir) {
       provenance.append({
@@ -211,6 +226,41 @@ export function createSession(
         note: "svg",
       });
       return svg;
+    },
+    exportPackage() {
+      const snap = session.snapshot();
+      const provenanceBundle = provenance.exportBundle(id);
+      const pack = attachBundleExtras(provenanceBundle, {
+        latestSource: source,
+        latestSvg: snap.svg,
+        snapshot: snap,
+      });
+      provenance.append({
+        kind: "export",
+        sessionId: id,
+        hostId: deps.hostId,
+        sourceHash,
+        irHash,
+        note: "package",
+      });
+      return {
+        source,
+        svg: snap.svg ?? "",
+        provenance: pack,
+        snapshot: snap,
+      };
+    },
+    simulate(opts = {}) {
+      if (!ir) return { state: {}, data: {} };
+      const world = simulate(ir, opts);
+      if (runtime) {
+        runtime.replaceWorld(world);
+      } else {
+        Object.assign(ir.state, world.state);
+        Object.assign(ir.data, world.data);
+      }
+      notifyWatchers();
+      return world;
     },
     snapshot() {
       const world = session.getWorld();

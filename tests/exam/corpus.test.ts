@@ -103,7 +103,7 @@ function anyNodeProp(ir: VisualIR, key: string): boolean {
 describe("exam corpus (input .viva -> expected VisualIR)", () => {
   it("discovered a full systematic corpus", () => {
     // L1–L6, E1–E5, S1, C1–C3, G1, W1, T1, N1
-    expect(specs.length).toBeGreaterThanOrEqual(19);
+    expect(specs.length).toBeGreaterThanOrEqual(20);
   });
 
   for (const { file, spec } of specs) {

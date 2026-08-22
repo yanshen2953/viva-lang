@@ -19,9 +19,10 @@ Coverage (see `tests/corpus/README.md`):
 
 - Layers L1–L6 (z-order, opacity, visible, blend, blur/glow, nested for/if)
 - Events E1–E5 (click, drag, tick/rule, key, collide)
-- Space/charts S1, C1–C3, path G1, bind W1, timeline T1
+- Space/charts S1, C1–C3, path G1, bind W1, timeline T1, param lab P1
 - Negative N1 (`resource` must fail)
-- Host session policies (`reset` / `preserve` / `preserve-data`)
+- Host session policies (`reset` / `preserve` / `preserve-data`) + `exportPackage` + headless `simulate`
+- Safe math / array concat / diagnostics hints
 
 ## Agent exam (Pi = system under test)
 

@@ -9,7 +9,8 @@ export type Expr =
   | { kind: "array"; items: Expr[]; span: Span }
   | { kind: "object"; entries: { key: string; value: Expr }[]; span: Span }
   | { kind: "unary"; op: "not" | "-"; expr: Expr; span: Span }
-  | { kind: "binary"; op: BinaryOp; left: Expr; right: Expr; span: Span };
+  | { kind: "binary"; op: BinaryOp; left: Expr; right: Expr; span: Span }
+  | { kind: "call"; callee: string; args: Expr[]; span: Span };
 
 export type BinaryOp =
   | "+"

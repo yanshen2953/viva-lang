@@ -37,6 +37,11 @@ export function evaluate(expr: Expr, scopes: Scope[]): Value {
     }
     case "binary":
       return applyBinary(expr.op, evaluate(expr.left, scopes), evaluate(expr.right, scopes));
+    case "call":
+      return applyCall(
+        expr.callee,
+        expr.args.map((a) => evaluate(a, scopes)),
+      );
   }
 }
 
@@ -111,6 +116,9 @@ function setPath(scope: Scope, path: string[], value: Value): void {
 function applyBinary(op: string, left: Value, right: Value): Value {
   switch (op) {
     case "+":
+      if (Array.isArray(left) && Array.isArray(right)) {
+        return [...left, ...right];
+      }
       if (typeof left === "string" || typeof right === "string") {
         return String(left ?? "") + String(right ?? "");
       }
@@ -142,6 +150,31 @@ function applyBinary(op: string, left: Value, right: Value): Value {
     default:
       return null;
   }
+}
+
+/** Safe builtins for tick / rules (no user-defined functions at runtime yet). */
+const BUILTINS: Record<string, (...args: number[]) => number> = {
+  sin: (x) => Math.sin(x),
+  cos: (x) => Math.cos(x),
+  tan: (x) => Math.tan(x),
+  abs: (x) => Math.abs(x),
+  sqrt: (x) => (x < 0 ? 0 : Math.sqrt(x)),
+  floor: (x) => Math.floor(x),
+  ceil: (x) => Math.ceil(x),
+  round: (x) => Math.round(x),
+  min: (...xs) => Math.min(...xs),
+  max: (...xs) => Math.max(...xs),
+  clamp: (x, lo, hi) => Math.min(Math.max(x, lo), hi),
+};
+
+function applyCall(callee: string, args: Value[]): Value {
+  const fn = BUILTINS[callee];
+  if (!fn) {
+    throw new Error(
+      `unknown function '${callee}' (allowed: ${Object.keys(BUILTINS).join(", ")})`,
+    );
+  }
+  return fn(...args.map(num));
 }
 
 export function truthy(value: Value): boolean {

@@ -30,6 +30,7 @@ Spirit: Tree-sitter corpus — fixed inputs, precise structural outputs.
 | `E5_collide` | collide + solid |
 | `W1_bind` | bind + tick |
 | `T1_timeline` | timeline widget expands |
+| `P1_param_lab` | drag param + tick + sin + chart.line |
 
 ### Space / charts / geometry
 

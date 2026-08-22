@@ -56,4 +56,4 @@ downloadJson(bundleOut);
 - `host.domains.open({ resource, session, mount })`
 - `host.provenance.list(session.id)`
 
-See `docs/PLAN.md` for frozen contracts.
+See `docs/hosts/minimal-host.md`. Sessions support `compile`/`patch`, `simulate({ ticks, events })` (headless), and `exportPackage()` (source + svg + provenance).

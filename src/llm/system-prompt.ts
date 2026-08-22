@@ -14,6 +14,8 @@ Rules:
 - Node style props exist (fill, gradient, stroke, dash, glow, shadow, blur, blend, rotate, scale, font*, align, opacity) but stay style-neutral unless a handbook is provided in-context.
 - Interaction flags: drag, solid. Draggable x/y must live on data/state object fields.
 - Expressions: +, -, *, /, %, ==, !=, <, >, <=, >=, and, or, not. Colors #RRGGBB. Durations 800ms or 2s.
+- Arrays: \`a + b\` concatenates when both sides are arrays.
+- Safe math: sin cos tan abs sqrt floor ceil round min max clamp — e.g. \`sin(t * 0.1)\`, \`clamp(x, 0, 1)\`. No other functions.
 - __event provides scene/viewBox x,y (grab-compensated while dragging), t, dx,dy, key, other, otherGroup.
 - If a style handbook is present in the system messages, follow it for aesthetic defaults only; do not invent syntax from it.
 

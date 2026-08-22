@@ -13,6 +13,7 @@ Punctuation (critical):
 - timeline body: \`from:\` \`to:\` \`bind:\` (not range/value).
 - tick: \`tick 30\` then body assigns. rule: \`rule when <expr>\` then body.
 - Draggable x/y on data/state fields; write back via __event.x / __event.y.
+- Arrays: \`a + b\` concatenates arrays. Safe math: sin cos tan abs sqrt floor ceil round min max clamp.
 - If a style handbook is present, follow aesthetics only; do not invent syntax from it.
 
 A language reference follows. Match its examples' shape.

@@ -103,6 +103,17 @@ scene
     expect(bundle.asSystemParts().length).toBeGreaterThanOrEqual(1);
   });
 
+  it("exports a takeaway package (source + provenance)", () => {
+    const host = createVivaAgentHost();
+    const session = host.createSession({ mount: null });
+    const src = readFileSync(path.join(examDir, "L4_blend.viva"), "utf8");
+    expect(session.compile(src).ok).toBe(true);
+    const pack = session.exportPackage();
+    expect(pack.source).toContain("artifact");
+    expect(pack.provenance.records.length).toBeGreaterThan(0);
+    expect(pack.snapshot.sourceHash).toBeTruthy();
+  });
+
   it("honors reset vs preserve vs preserve-data policies", () => {
     const host = createVivaAgentHost();
     const base = `artifact A

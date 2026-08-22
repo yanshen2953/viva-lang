@@ -26,8 +26,8 @@ Dependency refresh on pod start is `npm install` (see environment update script)
 
 ### Architecture notes for agents
 
-- **Language core:** `src/{parser,compiler,runtime,widgets,space}.ts`
-- **Agent surface (dogfood):** `src/agent/` — `createVivaAgentHost`, Session `compile`/`patch`, PipelinePort, DomainView registry, ProvenanceWriter
+- **Language core:** `src/{parser,compiler,runtime,widgets,space,eval,simulate}.ts`
+- **Agent surface (dogfood):** `src/agent/` — `createVivaAgentHost`, Session `compile`/`patch`/`simulate`/`exportPackage`, PipelinePort, DomainView registry, ProvenanceWriter
 - **Playground** must go through `VivaAgentHost` (not raw `new Runtime`)
 - **Space:** `frame` + node `frame:` maps data-domain x/y via linear scales (`src/space.ts`)
 - **Charts:** `widget chart.scatter|line|bar`

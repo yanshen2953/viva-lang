@@ -1,0 +1,70 @@
+import { cloneValue, evaluate, execute, truthy, type Scope } from "./eval.js";
+import type { VisualIR } from "./ir.js";
+
+export type SimWorld = {
+  state: Record<string, unknown>;
+  data: Record<string, unknown>;
+};
+
+export type SimulateOptions = {
+  /** How many tick-body executions to run (not wall-clock frames). */
+  ticks?: number;
+  /** Fire named events: `{ type, target, event? }` */
+  events?: { type: string; target: string; event?: Record<string, unknown> }[];
+};
+
+/**
+ * Headless world stepping: binds → rules → tick bodies → optional events.
+ * Used by Host sessions with `mount: null` and by behavioral exams.
+ */
+export function createSimWorld(ir: VisualIR): SimWorld {
+  return {
+    state: cloneValue(ir.state) as Record<string, unknown>,
+    data: cloneValue(ir.data) as Record<string, unknown>,
+  };
+}
+
+export function simulate(ir: VisualIR, opts: SimulateOptions = {}): SimWorld {
+  const world = createSimWorld(ir);
+  const scopes = (): Scope[] => [world.state, world.data];
+
+  const applyBinds = () => {
+    for (const bind of ir.binds) {
+      execute(
+        [{ kind: "assign", target: bind.target, value: bind.source, span: { line: 1, column: 1 } }],
+        scopes(),
+      );
+    }
+  };
+  const applyRules = () => {
+    for (const rule of ir.rules) {
+      if (truthy(evaluate(rule.cond, scopes()))) execute(rule.body, scopes());
+    }
+  };
+
+  applyBinds();
+  applyRules();
+
+  const n = opts.ticks ?? 0;
+  for (let i = 0; i < n; i++) {
+    for (const tick of ir.ticks) {
+      execute(tick.body, scopes());
+    }
+    applyBinds();
+    applyRules();
+  }
+
+  for (const fire of opts.events ?? []) {
+    const handlers = ir.events.filter(
+      (e) => e.type === fire.type && e.target === fire.target,
+    );
+    const extra: Scope = { __event: fire.event ?? {} };
+    for (const handler of handlers) {
+      execute(handler.body, [extra, ...scopes()]);
+    }
+    applyBinds();
+    applyRules();
+  }
+
+  return world;
+}

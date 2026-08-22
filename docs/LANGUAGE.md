@@ -170,3 +170,8 @@ layer cards
 ## 表达式
 
 `+ - * / % == != < > <= >= and or not`
+
+- 两边都是数组时，`+` 表示拼接：`series = series + [{ t: t, v: x }]`
+- 安全数学调用（仅这些）：`sin cos tan abs sqrt floor ceil round min max clamp`
+  例：`v = param * sin(t * 0.15)`，`x = clamp(__event.x, 40, 400)`
+- 不要发明 `pow` / 自定义 JS 函数

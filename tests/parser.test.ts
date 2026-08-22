@@ -64,6 +64,7 @@ state ok = x > 10 and true
       "atelier.viva",
       "scatter.viva",
       "charts.viva",
+      "param-lab.viva",
     ];
     for (const file of files) {
       const source = readFileSync(path.join(examplesDir, file), "utf8");
