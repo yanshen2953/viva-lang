@@ -321,7 +321,7 @@ export class Runtime {
         stale?.remove();
         el = this.createElement(node);
         parent.appendChild(el);
-      } else if (el.parentElement !== parent) {
+      } else if ((el.parentNode as Element | null) !== parent) {
         parent.appendChild(el);
       }
       this.updateElement(el, node, defs);

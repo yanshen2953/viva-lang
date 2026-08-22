@@ -235,7 +235,8 @@ core system prompt     # 永远加载，短
 | safe math + array concat | ✅ | `eval.ts` |
 | headless simulate | ✅ | `simulate.ts` / `session.simulate` |
 | export package (source+svg+prov) | ✅ | `session.exportPackage` |
-| PDF/mm 导出 | ❌ | 规划 |
+| PDF/JPG/PNG 导出 | ✅ | `src/export` + `viva export` |
+| PDF/mm 单位规范排版 | ❌ | 规划 |
 | handbook 运行时装载 API | ✅ | `PromptService` + `docs/handbooks` |
 | Host Session / provenance MVP | ✅ | `src/agent/` |
 

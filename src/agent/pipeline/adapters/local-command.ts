@@ -3,7 +3,7 @@
  * Hosts register this; Viva core stays free of HPC specifics.
  */
 import { spawn } from "node:child_process";
-import type { PipelineDefFull } from "./port.js";
+import type { PipelineDefFull } from "../port.js";
 
 export function createLocalCommandPipeline(options: {
   id: string;

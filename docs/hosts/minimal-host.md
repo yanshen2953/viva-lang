@@ -56,4 +56,10 @@ downloadJson(bundleOut);
 - `host.domains.open({ resource, session, mount })`
 - `host.provenance.list(session.id)`
 
-See `docs/hosts/minimal-host.md`. Sessions support `compile`/`patch`, `simulate({ ticks, events })` (headless), and `exportPackage()` (source + svg + provenance).
+See also:
+
+- Web agent embed → [`web-embed.md`](./web-embed.md)
+- Bash / CLI → [`bash.md`](./bash.md)
+- Installers → [`../../install/README.md`](../../install/README.md)
+
+Sessions support `compile`/`patch`, `simulate({ ticks, events })` (headless), and `exportPackage()` (source + svg + provenance).

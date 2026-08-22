@@ -5,6 +5,7 @@ export { compileSource } from "./pipeline.js";
 export { Runtime } from "./runtime.js";
 export { evaluate, execute } from "./eval.js";
 export { simulate, createSimWorld } from "./simulate.js";
+export { renderSvgFromIr } from "./export/static-svg.js";
 export { SYSTEM_PROMPT } from "./llm/system-prompt.js";
 export { SYSTEM_PROMPT_SLIM } from "./llm/system-prompt-slim.js";
 export { VivaError, formatDiagnostic, withSyntaxHint } from "./diagnostics.js";
@@ -19,3 +20,5 @@ export {
   fingerprint,
 } from "./agent/index.js";
 export type { VivaAgentHost, VivaSession, ProvenanceBundle } from "./agent/index.js";
+export { createVivaWebEmbed } from "./embed/web.js";
+export type { WebEmbedCommand, WebEmbedMessage, WebEmbedOptions } from "./embed/web.js";

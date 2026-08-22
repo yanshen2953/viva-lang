@@ -1,4 +1,4 @@
-import type { VivaSession } from "./session.js";
+import type { VivaSession } from "../session.js";
 import type {
   PipelineBinding,
   PipelineDef,
@@ -7,8 +7,8 @@ import type {
   PipelinePort,
   PipelineResult,
   ProvenanceWriter,
-} from "./types.js";
-import type { HostEventBus } from "./events.js";
+} from "../types.js";
+import type { HostEventBus } from "../events.js";
 
 export type { PipelineDef, PipelinePort, PipelineHandle, PipelineResult };
 
@@ -39,25 +39,25 @@ export function createPipelinePort(deps: {
   let runSeq = 0;
 
   return {
-    register(def) {
-      defs.set(def.id, def as PipelineDefFull);
+    register(def: PipelineDef) {
+      defs.set(def.id, def as unknown as PipelineDefFull);
     },
-    unregister(id) {
+    unregister(id: string) {
       defs.delete(id);
     },
     list() {
-      return [...defs.values()];
+      return [...defs.values()] as unknown as PipelineDef[];
     },
-    get(runId) {
+    get(runId: string) {
       return runs.get(runId);
     },
-    async cancel(runId) {
+    async cancel(runId: string) {
       const handle = runs.get(runId);
       if (handle && handle.status === "running") {
         handle.status = "cancelled";
       }
     },
-    async run(id, input = {}) {
+    async run(id: string, input: PipelineInput = {}) {
       const def = defs.get(id);
       if (!def) throw new Error(`pipeline not registered: ${id}`);
 

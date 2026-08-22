@@ -20,10 +20,25 @@ npm run dev
 
 浏览器打开 [http://localhost:5173](http://localhost:5173)，左侧改 `.viva` 源码，右侧立即渲染。
 
+### 安装 CLI（Win / Mac / Linux）
+
 ```bash
-npm run build
-node dist/cli.js compile examples/hello.viva
+# npm
+npm install -g .
+# 或
+bash install/install.sh          # Linux/macOS
+# Windows: powershell -File install\install.ps1
 ```
+
+```bash
+viva version
+viva export examples/charts.viva -f pdf -o charts.pdf
+viva export examples/hello.viva -f jpg -o hello.jpg
+viva serve --port 8765           # agent HTTP 内嵌桥
+```
+
+网页 Agent 内嵌：`import { createVivaWebEmbed } from "viva-lang/embed"` — 见 [`docs/hosts/web-embed.md`](docs/hosts/web-embed.md)。  
+Bash 接口：[`docs/hosts/bash.md`](docs/hosts/bash.md)。
 
 ## 最小例子
 

@@ -1,8 +1,8 @@
-import type { VivaSession } from "./session.js";
+import type { VivaSession } from "../session.js";
 import type {
   DomainSelection,
   PipelineArtifact,
-} from "./types.js";
+} from "../types.js";
 
 type HostLike = {
   events: {

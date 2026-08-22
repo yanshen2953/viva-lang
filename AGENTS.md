@@ -15,6 +15,8 @@ Dependency refresh on pod start is `npm install` (see environment update script)
 | Dev playground | `npm run dev` (Vite `:5173`) |
 | CLI without dist | `npx vite-node src/cli.ts -- compile examples/hello.viva` |
 | Agent Host smoke | `npx vite-node scripts/hello-agent.ts` |
+| Export SVG/JPG/PDF | `npx vite-node src/cli.ts -- export examples/hello.viva -f pdf -o /tmp/h.pdf` |
+| Agent HTTP bridge | `npx vite-node src/cli.ts -- serve --port 8765` |
 | Exam UI scene runner | `npm run dev` then `node scripts/exam-layers-ui.mjs` |
 
 `npm run build` may still fail on unrelated `tsc` strictness in playground/runtime; prefer `vite-node` + `vitest` for day-to-day.

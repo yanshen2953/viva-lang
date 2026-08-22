@@ -8,14 +8,38 @@
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./agent": {
+      "types": "./dist/agent/index.d.ts",
+      "import": "./dist/agent/index.js"
+    },
+    "./embed": {
+      "types": "./dist/embed/web.d.ts",
+      "import": "./dist/embed/web.js"
+    },
+    "./export": {
+      "types": "./dist/export/index.d.ts",
+      "import": "./dist/export/index.js"
+    },
+    "./package.json": "./package.json"
+  },
   "files": [
     "dist",
     "examples",
-    "docs"
+    "docs",
+    "install",
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
     "dev": "vite",
-    "build": "tsc -p tsconfig.build.json && vite build",
+    "build": "tsc -p tsconfig.build.json && vite build && vite build --config vite.embed.config.ts",
+    "build:lib": "tsc -p tsconfig.build.json",
+    "pack:release": "npm run build:lib && npm pack && bash install/pack-release.sh",
     "test": "vitest run",
     "test:exam": "vitest run tests/exam tests/parser.test.ts",
     "test:agent-exam": "vite-node scripts/run-agent-exam.ts --track hard",
@@ -29,14 +53,22 @@
     "visualization",
     "artifact",
     "compiler",
-    "runtime"
+    "runtime",
+    "embed",
+    "agent"
   ],
   "license": "MIT",
   "engines": {
     "node": ">=18"
   },
+  "dependencies": {
+    "@resvg/resvg-js": "^2.6.2",
+    "pdf-lib": "^1.17.1",
+    "sharp": "^0.34.5"
+  },
   "devDependencies": {
     "@types/node": "^22.13.10",
+    "@types/sharp": "^0.32.0",
     "typescript": "^5.8.2",
     "vite": "^6.2.2",
     "vitest": "^3.0.9"
