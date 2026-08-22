@@ -1,0 +1,38 @@
+{
+  "id": "H04_multiturn_world_edit",
+  "title": "Hard: two intent-only turns on a seeded lab (click select, then rule)",
+  "track": "hard",
+  "kind": "multiturn",
+  "system": "slim",
+  "handbooks": [],
+  "seedSource": "tests/agent-exam/seeds/H04_seed_lab.viva",
+  "repair": { "maxAttempts": 0, "syntaxCrib": false },
+  "turns": [
+    {
+      "prompt": "Edit the current artifact: clicking a city mark sets selected to that city name. Keep existing frame/data/layer names. Output ONLY the full updated Viva source starting with artifact.\n\nCurrent source:\n{{source}}"
+    },
+    {
+      "prompt": "Next edit only: add a rule that when selected is not none, a HUD text node shows selected. Do not remove the click handler or rename cities/plot. Output ONLY the full updated Viva source starting with artifact.\n\nCurrent source:\n{{source}}"
+    }
+  ],
+  "assertions": {
+    "compiles": true,
+    "mustMatch": [
+      "event\\s+click",
+      "selected\\s*=",
+      "(?m)^rule\\b",
+      "data\\s+cities",
+      "(?m)^frame\\s+plot"
+    ],
+    "forbidMatch": [
+      "(?m)^[ \\t]+frame\\s+plot"
+    ],
+    "ir": {
+      "minFrames": 1,
+      "minLayers": 2,
+      "hasEventTypes": ["click"],
+      "minRules": 1,
+      "preserveDataKeys": ["cities"]
+    }
+  }
+}

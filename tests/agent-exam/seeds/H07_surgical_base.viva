@@ -1,0 +1,53 @@
+artifact "Surgical Base"
+
+state year = 2018
+state playing = true
+
+data trend = [
+  { x: 0, y: 12 }
+  { x: 1, y: 18 }
+  { x: 2, y: 15 }
+  { x: 3, y: 22 }
+  { x: 4, y: 19 }
+]
+
+data cohort = [
+  { x: 1, y: 40 }
+  { x: 2, y: 55 }
+  { x: 3, y: 48 }
+]
+
+scene
+  size: 880 480
+  background: #070b14
+
+  layer note
+    node hint
+      x: 40
+      y: 450
+      text: "base charts — do not rename data/layers"
+      font: 12
+      fill: #64748b
+
+widget chart.line
+  data: trend
+  xField: x
+  yField: y
+  xlim: 0 4
+  ylim: 0 30
+  areaX: 40 420
+  areaY: 40 280
+  title: "TREND"
+  color: #34d399
+
+widget chart.bar
+  data: cohort
+  xField: x
+  yField: y
+  xlim: 0 4
+  ylim: 0 80
+  areaX: 460 840
+  areaY: 40 280
+  title: "COHORT"
+  color: #38bdf8
+  barWidth: 0.5

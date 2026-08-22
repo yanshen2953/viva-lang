@@ -1,9 +1,18 @@
 # Agent exam (Pi = system under test)
 
 Coding agent under test: **Pi** + DeepSeek (`deepseek-v4-flash-vision-exp`).
-Grader: **`VivaAgentHost`** (compile / patch / provenance).
+Grader: **`VivaAgentHost`** (compile / patch / provenance) + structural IR asserts.
 
-Deterministic corpus lives under `tests/corpus/` — no LLM there.
+Deterministic corpus: `tests/corpus/` (no LLM).
+
+## Tracks
+
+| Track | IDs | System | Coaching | Intent |
+| --- | --- | --- | --- | --- |
+| **smoke** | A01–A12 | full (+ template) | repair crib OK | language / Host smoke |
+| **hard** | H01–H08 | **slim** (no template) | **no** syntax crib by default | Cursor/Codex-aligned difficulty |
+
+Default npm script runs **hard**.
 
 ## Setup
 
@@ -19,28 +28,27 @@ export DEEPSEEK_API_KEY=...   # gitignored .env OK; never commit
 ## Run
 
 ```bash
-npm run test:agent-exam
-npx vite-node scripts/run-agent-exam.ts --only A02
-npx vite-node scripts/run-agent-exam.ts --model deepseek-v4-flash-vision-exp
+npm run test:agent-exam          # hard track
+npm run test:agent-exam:smoke
+npm run test:agent-exam:all
+npx vite-node scripts/run-agent-exam.ts --track hard --only H03
 ```
 
-Artifacts: `/opt/cursor/artifacts/agent-exam/`.
+Artifacts: `/opt/cursor/artifacts/agent-exam/` (`report-hard.json` when track=hard).
 
-## Scenario catalog
+## Hard catalog (H*)
 
-| ID | Kind | Intent |
+| ID | Kind | Why hard |
 | --- | --- | --- |
-| A01 | generate | frame-scaled scatter |
-| A02 | generate | layer z-order bottom/top |
-| A03 | repair | broken arithmetic assign |
-| A04 | patch | add top-layer opacity |
-| A05 | generate | print-nature handbook; top-level frame |
-| A06 | generate | `widget chart.line` |
-| A07 | generate | drag writeback |
-| A08 | generate | timeline scrub |
-| A09 | repair | frame wrongly nested in scene |
-| A10 | generate | click counter |
-| A11 | generate | `widget chart.scatter` |
-| A12 | patch | magic-number coords → frame |
+| H01 | generate | multipanel line+scatter + print-nature, slim system |
+| H02 | generate | drag param + tick + linked chart.line; anti-toy-template |
+| H03 | repair | blind multi-bug (nested frame + `widget:` + truncated assign) |
+| H04 | multiturn | two intent-only edits; preserve data/frame names |
+| H05 | generate | collide+key arena; forbid system-template vocabulary |
+| H06 | generate | ops dashboard bar+line + threshold + dashboard handbook |
+| H07 | patch | surgical timeline-only; preserve charts/data |
+| H08 | generate | print scatter+line; **zero** repair turns |
 
-Failed compile → one automatic Pi repair turn → re-grade.
+## Smoke catalog (A*)
+
+See prior A01–A12 rows (generate / repair / patch / handbook). Smoke remains the regression floor.

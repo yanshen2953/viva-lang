@@ -18,7 +18,9 @@
     "build": "tsc -p tsconfig.build.json && vite build",
     "test": "vitest run",
     "test:exam": "vitest run tests/exam tests/parser.test.ts",
-    "test:agent-exam": "vite-node scripts/run-agent-exam.ts",
+    "test:agent-exam": "vite-node scripts/run-agent-exam.ts --track hard",
+    "test:agent-exam:smoke": "vite-node scripts/run-agent-exam.ts --track smoke",
+    "test:agent-exam:all": "vite-node scripts/run-agent-exam.ts --track all",
     "preview": "vite preview"
   },
   "keywords": [

@@ -1,0 +1,31 @@
+{
+  "id": "H07_surgical_timeline_patch",
+  "title": "Hard: surgical patch — add timeline only, preserve charts/data",
+  "track": "hard",
+  "kind": "patch",
+  "system": "slim",
+  "handbooks": [],
+  "seedSource": "tests/agent-exam/seeds/H07_surgical_base.viva",
+  "repair": { "maxAttempts": 1, "syntaxCrib": false },
+  "prompt": "Surgical edit: add a top-level timeline (from 2015 to 2030) bound to year. Do not rename data trend/cohort, do not remove existing chart widgets, do not redesign layout. Output ONLY the full updated Viva source starting with artifact.\n\nCurrent source:\n{{source}}",
+  "assertions": {
+    "compiles": true,
+    "mustMatch": [
+      "(?m)^timeline\\b",
+      "bind:\\s*year",
+      "(?m)^widget\\s+chart\\.line",
+      "(?m)^widget\\s+chart\\.bar",
+      "data\\s+trend",
+      "data\\s+cohort"
+    ],
+    "forbidMatch": [
+      "(?m)^[ \\t]+timeline\\b",
+      "widget:\\s*timeline"
+    ],
+    "ir": {
+      "minFrames": 1,
+      "preserveDataKeys": ["trend", "cohort"],
+      "hasTimeline": true
+    }
+  }
+}

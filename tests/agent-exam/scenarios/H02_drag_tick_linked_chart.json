@@ -1,0 +1,31 @@
+{
+  "id": "H02_drag_tick_linked_chart",
+  "title": "Hard: draggable parameter drives tick + linked chart.line",
+  "track": "hard",
+  "kind": "generate",
+  "system": "slim",
+  "handbooks": [],
+  "repair": { "maxAttempts": 1, "syntaxCrib": false },
+  "prompt": "Create an interactive lab world: (1) a data-backed knob node the user can drag horizontally, writing __event.x back into a parameter field; (2) a tick that evolves a numeric series from that parameter; (3) a top-level chart.line bound to that series. Do not copy toy counter demos. Output ONLY Viva source starting with artifact.",
+  "assertions": {
+    "compiles": true,
+    "mustMatch": [
+      "drag:\\s*true",
+      "event\\s+drag",
+      "__event\\.x",
+      "(?m)^tick\\b",
+      "(?m)^widget\\s+chart\\.line"
+    ],
+    "forbidMatch": [
+      "widget:\\s*chart",
+      "state\\s+count\\s*=",
+      "selected\\s*=\\s*none"
+    ],
+    "ir": {
+      "minLayers": 1,
+      "minDataKeys": 1,
+      "hasEventTypes": ["drag"],
+      "minTicks": 1
+    }
+  }
+}

@@ -10,7 +10,8 @@ Dependency refresh on pod start is `npm install` (see environment update script)
 | --- | --- |
 | Tests | `npm test` (deterministic corpus/exam — no LLM) |
 | Exam subset | `npm run test:exam` |
-| **Agent exam (Pi = SUT)** | `export DEEPSEEK_API_KEY=…` then `npm run test:agent-exam` |
+| **Agent exam hard (Pi = SUT)** | `export DEEPSEEK_API_KEY=…` then `npm run test:agent-exam` |
+| Agent exam smoke | `npm run test:agent-exam:smoke` |
 | Dev playground | `npm run dev` (Vite `:5173`) |
 | CLI without dist | `npx vite-node src/cli.ts -- compile examples/hello.viva` |
 | Agent Host smoke | `npx vite-node scripts/hello-agent.ts` |
@@ -21,7 +22,7 @@ Dependency refresh on pod start is `npm install` (see environment update script)
 ### Two test tracks
 
 1. **Deterministic** (`tests/corpus`, `tests/exam`, `examples/exam`) — layers L1–L6, events E1–E5, space/charts, negatives, Host policies. See `docs/TESTING.md`.
-2. **Agent exam** (`tests/agent-exam` A01–A12, `scripts/run-agent-exam.ts`) — **Pi + DeepSeek** is the agent under test; `VivaAgentHost` grades. Default model `deepseek-v4-flash-vision-exp`. Never commit API keys.
+2. **Agent exam** (`tests/agent-exam`) — **Pi + DeepSeek** is the SUT. Default `npm run test:agent-exam` runs **hard** track H01–H08 (slim system, no template crib). Smoke A01–A12 via `test:agent-exam:smoke`. Model `deepseek-v4-flash-vision-exp`. Never commit API keys.
 
 ### Architecture notes for agents
 

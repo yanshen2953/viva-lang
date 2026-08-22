@@ -31,15 +31,19 @@ Pi is **not** the author of the suite — it is the agent under test.
 export PATH="$HOME/.npm-global/bin:$PATH"
 export DEEPSEEK_API_KEY=...   # never commit
 
-npm run test:agent-exam
-# npx vite-node scripts/run-agent-exam.ts --only A09
+npm run test:agent-exam          # hard track (default) — Cursor/Codex-aligned
+npm run test:agent-exam:smoke    # A01–A12 language smoke
+npm run test:agent-exam:all
 ```
 
 Default model: `deepseek-v4-flash-vision-exp`.
 
-Scenarios A01–A12: generate frame/layers/charts/drag/timeline/counter, repair broken + nested-frame mistakes, patch opacity + magic→frame, handbook inject.
+| Track | Cases | Notes |
+| --- | --- | --- |
+| **hard** | H01–H08 | slim system (no copy-paste template), no syntax crib, multipanel / multiturn / blind repair / surgical patch |
+| **smoke** | A01–A12 | full system + repair crib; regression floor |
 
-Report: `/opt/cursor/artifacts/agent-exam/report.json`
+Report: `/opt/cursor/artifacts/agent-exam/report-hard.json` (hard) or `report.json`.
 
 Details: [`tests/agent-exam/README.md`](../tests/agent-exam/README.md).
 

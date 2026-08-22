@@ -1,0 +1,29 @@
+{
+  "id": "H03_blind_multibug_repair",
+  "title": "Hard: blind repair of nested frame + bad widget + truncated assign",
+  "track": "hard",
+  "kind": "repair",
+  "system": "slim",
+  "handbooks": [],
+  "seedSource": "tests/agent-exam/seeds/H03_multibug.viva",
+  "repair": { "maxAttempts": 2, "syntaxCrib": false },
+  "prompt": "This Viva source does not compile. Repair it so it compiles and keeps the intended lab (framed marks + a chart.line panel + click adjusting gain). Use the diagnostics. Output ONLY the full corrected Viva source starting with artifact.\n\nDiagnostics:\n{{diagnostics}}\n\nBroken source:\n{{source}}",
+  "assertions": {
+    "compiles": true,
+    "mustMatch": [
+      "(?m)^frame\\s+\\w+",
+      "(?m)^widget\\s+chart\\.line",
+      "event\\s+click",
+      "gain\\s*="
+    ],
+    "forbidMatch": [
+      "(?m)^[ \\t]+frame\\s+\\w+",
+      "widget:\\s*chart",
+      "gain\\s*=\\s*gain\\s*\\+\\s*$"
+    ],
+    "ir": {
+      "minFrames": 1,
+      "hasEventTypes": ["click"]
+    }
+  }
+}

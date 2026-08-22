@@ -1,0 +1,37 @@
+artifact "Seed Lab"
+
+state year = 2020
+state selected = none
+
+data cities = [
+  { name: "A", x: 1, y: 20 }
+  { name: "B", x: 2, y: 35 }
+  { name: "C", x: 3, y: 28 }
+]
+
+frame plot
+  x: 60 420
+  y: 60 300
+  xlim: 0 4
+  ylim: 0 50
+
+scene
+  size: 720 400
+  background: #0b1220
+
+  layer marks
+    for c in cities
+      node city as cities
+        frame: plot
+        x: c.x
+        y: c.y
+        r: 8
+        fill: #38bdf8
+
+  layer hud
+    node title
+      x: 24
+      y: 28
+      text: "Seed Lab"
+      font: 18
+      fill: #e2e8f0

@@ -16,7 +16,7 @@ Not part of the Viva language core. Full rules: `docs/DESIGN.md` §7.
 | id | File | Intent |
 | --- | --- | --- |
 | `print-nature` | `print-nature.md` | Restrained print figures |
-| `dashboard` | (planned) | Product/ops UI |
+| `dashboard` | `dashboard.md` | Product/ops UI |
 | `slides` | (planned) | Large type, few layers |
 
 Add new files as `docs/handbooks/<id>.md` and inject by id at call time.

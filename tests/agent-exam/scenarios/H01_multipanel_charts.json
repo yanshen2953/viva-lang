@@ -1,0 +1,27 @@
+{
+  "id": "H01_multipanel_charts",
+  "title": "Hard: multipanel line+scatter report under print-nature",
+  "track": "hard",
+  "kind": "generate",
+  "system": "slim",
+  "handbooks": ["print-nature"],
+  "repair": { "maxAttempts": 1, "syntaxCrib": false },
+  "prompt": "Build a two-panel scientific figure in Viva: a line series of at least 6 points and a scatter of at least 5 points. Each panel must use the appropriate chart widget. Follow the injected print handbook. Output ONLY Viva source starting with artifact.",
+  "assertions": {
+    "compiles": true,
+    "mustMatch": [
+      "(?m)^widget\\s+chart\\.line",
+      "(?m)^widget\\s+chart\\.scatter"
+    ],
+    "forbidMatch": [
+      "glow:\\s*[1-9]",
+      "widget:\\s*chart",
+      "(?m)^[ \\t]+widget\\s"
+    ],
+    "ir": {
+      "minFrames": 1,
+      "minLayers": 2,
+      "minDataKeys": 2
+    }
+  }
+}

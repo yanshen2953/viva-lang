@@ -2,20 +2,15 @@
 /**
  * Agent exam runner — Pi (DeepSeek) is the system under test.
  *
- * Flow per scenario:
- *   1) Build Viva prompt bundle (core + optional handbooks)
- *   2) Call `pi -p` with --no-tools (agent only emits text)
- *   3) Extract Viva source → VivaAgentHost.compile / patch
- *   4) If compile fails and kind allows, one repair turn
- *   5) Grade assertions; write JSON report
- *
- * Requires:
- *   export DEEPSEEK_API_KEY=...
- *   pi on PATH (npm i -g @mariozechner/pi-coding-agent or @earendil-works/pi-coding-agent)
+ * Tracks:
+ *   smoke (A*) — coached language smoke
+ *   hard  (H*) — Cursor/Codex-aligned difficulty (slim system, no syntax crib by default)
  *
  * Usage:
- *   npx vite-node scripts/run-agent-exam.ts
- *   npx vite-node scripts/run-agent-exam.ts --only A01
+ *   npx vite-node scripts/run-agent-exam.ts --track hard
+ *   npx vite-node scripts/run-agent-exam.ts --track smoke
+ *   npx vite-node scripts/run-agent-exam.ts --track all
+ *   npx vite-node scripts/run-agent-exam.ts --only H03
  *   npx vite-node scripts/run-agent-exam.ts --model deepseek-v4-flash-vision-exp
  */
 import { spawnSync } from "node:child_process";
@@ -29,15 +24,23 @@ import path from "node:path";
 import { createVivaAgentHost } from "../src/agent/index.ts";
 import { createNodePromptService } from "../src/agent/prompt.node.ts";
 import { SYSTEM_PROMPT } from "../src/llm/system-prompt.ts";
+import { SYSTEM_PROMPT_SLIM } from "../src/llm/system-prompt-slim.ts";
 import { compileSource } from "../src/pipeline.ts";
+import type { SceneNodeIR, VisualIR } from "../src/ir.ts";
+
+type Track = "smoke" | "hard" | "all";
 
 type Scenario = {
   id: string;
   title: string;
-  kind: "generate" | "repair" | "patch";
+  track?: "smoke" | "hard";
+  kind: "generate" | "repair" | "patch" | "multiturn";
+  system?: "full" | "slim";
   handbooks?: string[];
-  prompt: string;
+  prompt?: string;
   seedSource?: string;
+  turns?: { prompt: string }[];
+  repair?: { maxAttempts?: number; syntaxCrib?: boolean };
   assertions: {
     compiles?: boolean;
     mustMatch?: string[];
@@ -47,6 +50,13 @@ type Scenario = {
       minLayers?: number;
       layerOrder?: string[];
       hasEventTypes?: string[];
+      minTicks?: number;
+      minRules?: number;
+      minDataKeys?: number;
+      minStateKeys?: number;
+      preserveDataKeys?: string[];
+      hasSolidProp?: boolean;
+      hasTimeline?: boolean;
     };
   };
 };
@@ -54,6 +64,7 @@ type Scenario = {
 type CaseResult = {
   id: string;
   title: string;
+  track: string;
   ok: boolean;
   attempts: number;
   error?: string;
@@ -68,30 +79,43 @@ const outDir = path.join("/opt/cursor/artifacts", "agent-exam");
 const defaultModel = "deepseek-v4-flash-vision-exp";
 
 function parseArgs(argv: string[]) {
-  const only = argv.find((a) => a.startsWith("--only="))?.slice(7)
-    ?? (argv.includes("--only") ? argv[argv.indexOf("--only") + 1] : undefined);
-  const model = argv.find((a) => a.startsWith("--model="))?.slice(8)
-    ?? (argv.includes("--model") ? argv[argv.indexOf("--model") + 1] : defaultModel);
-  return { only, model: model ?? defaultModel };
+  const only =
+    argv.find((a) => a.startsWith("--only="))?.slice(7) ??
+    (argv.includes("--only") ? argv[argv.indexOf("--only") + 1] : undefined);
+  const model =
+    argv.find((a) => a.startsWith("--model="))?.slice(8) ??
+    (argv.includes("--model") ? argv[argv.indexOf("--model") + 1] : defaultModel);
+  const trackRaw =
+    argv.find((a) => a.startsWith("--track="))?.slice(8) ??
+    (argv.includes("--track") ? argv[argv.indexOf("--track") + 1] : "hard");
+  const track = (trackRaw ?? "hard") as Track;
+  return { only, model: model ?? defaultModel, track };
 }
 
-function loadScenarios(only?: string): Scenario[] {
+function inferTrack(s: Scenario): "smoke" | "hard" {
+  if (s.track) return s.track;
+  if (s.id.startsWith("H")) return "hard";
+  return "smoke";
+}
+
+function loadScenarios(track: Track, only?: string): Scenario[] {
   const files = readdirSync(scenariosDir).filter((f) => f.endsWith(".json")).sort();
-  const list = files.map((f) =>
-    JSON.parse(readFileSync(path.join(scenariosDir, f), "utf8")) as Scenario,
+  let list = files.map(
+    (f) => JSON.parse(readFileSync(path.join(scenariosDir, f), "utf8")) as Scenario,
   );
+  if (track !== "all") {
+    list = list.filter((s) => inferTrack(s) === track);
+  }
   if (!only) return list;
   return list.filter((s) => s.id.includes(only) || s.id.startsWith(only));
 }
 
 function extractVivaSource(text: string): string {
   let src = text.trim();
-  // Drop pi chatter before first artifact
   const idx = src.search(/^artifact\b/m);
   if (idx >= 0) src = src.slice(idx);
   const fence = /^```(?:viva)?\s*([\s\S]*?)```/im.exec(src);
   if (fence) src = fence[1]!.trim();
-  // If still wrapped, take from artifact to end (stop at obvious trailing prose)
   const m = /^(artifact[\s\S]*?)(?:\n{2,}(?:Note|Explanation|Here|I |The |Hope)|$)/i.exec(src);
   if (m) src = m[1]!.trim();
   return src.trim();
@@ -104,11 +128,7 @@ function callPi(opts: {
 }): { ok: boolean; text: string; raw: string } {
   const key = process.env.DEEPSEEK_API_KEY;
   if (!key) {
-    return {
-      ok: false,
-      text: "",
-      raw: "DEEPSEEK_API_KEY is not set",
-    };
+    return { ok: false, text: "", raw: "DEEPSEEK_API_KEY is not set" };
   }
   const piBin = process.env.PI_BIN ?? "pi";
   const args = [
@@ -140,23 +160,17 @@ function callPi(opts: {
     timeout: 180_000,
   });
   const raw = `${res.stdout ?? ""}\n${res.stderr ?? ""}`.trim();
-  if (res.error) {
-    return { ok: false, text: "", raw: String(res.error) };
-  }
+  if (res.error) return { ok: false, text: "", raw: String(res.error) };
   if (res.status !== 0 && !raw.includes("artifact")) {
     return { ok: false, text: raw, raw };
   }
   return { ok: true, text: raw, raw };
 }
 
-function fillTemplate(
-  tpl: string,
-  vars: Record<string, string>,
-): string {
+function fillTemplate(tpl: string, vars: Record<string, string>): string {
   return tpl.replace(/\{\{(\w+)\}\}/g, (_, k: string) => vars[k] ?? "");
 }
 
-/** Scenario patterns may include `(?m)` — JS RegExp rejects that inline form when flags are also passed. */
 function compilePattern(pat: string): RegExp {
   let flags = "m";
   let body = pat;
@@ -166,6 +180,23 @@ function compilePattern(pat: string): RegExp {
     body = body.slice(inline[0].length);
   }
   return new RegExp(body, flags);
+}
+
+function walkNodes(items: SceneNodeIR[], visit: (n: SceneNodeIR) => void): void {
+  for (const item of items) {
+    visit(item);
+    if (item.kind === "for" || item.kind === "if") walkNodes(item.body, visit);
+  }
+}
+
+function anyNodeProp(ir: VisualIR, key: string): boolean {
+  let hit = false;
+  for (const layer of ir.scene.layers) {
+    walkNodes(layer.items, (n) => {
+      if (n.kind === "node" && n.props[key] !== undefined) hit = true;
+    });
+  }
+  return hit;
 }
 
 function grade(scenario: Scenario, source: string): CaseResult["checks"] {
@@ -181,17 +212,11 @@ function grade(scenario: Scenario, source: string): CaseResult["checks"] {
   }
   for (const pat of scenario.assertions.mustMatch ?? []) {
     const re = compilePattern(pat);
-    checks.push({
-      name: `mustMatch/${pat}`,
-      pass: re.test(source),
-    });
+    checks.push({ name: `mustMatch/${pat}`, pass: re.test(source) });
   }
   for (const pat of scenario.assertions.forbidMatch ?? []) {
     const re = compilePattern(pat);
-    checks.push({
-      name: `forbidMatch/${pat}`,
-      pass: !re.test(source),
-    });
+    checks.push({ name: `forbidMatch/${pat}`, pass: !re.test(source) });
   }
   const ir = compiled.ir;
   if (ir && scenario.assertions.ir) {
@@ -232,9 +257,63 @@ function grade(scenario: Scenario, source: string): CaseResult["checks"] {
         detail: missing.length ? `missing=${missing.join(",")}` : [...types].join(","),
       });
     }
+    if (a.minTicks !== undefined) {
+      checks.push({
+        name: "ir.minTicks",
+        pass: ir.ticks.length >= a.minTicks,
+        detail: `ticks=${ir.ticks.length}`,
+      });
+    }
+    if (a.minRules !== undefined) {
+      checks.push({
+        name: "ir.minRules",
+        pass: ir.rules.length >= a.minRules,
+        detail: `rules=${ir.rules.length}`,
+      });
+    }
+    if (a.minDataKeys !== undefined) {
+      const n = Object.keys(ir.data).length;
+      checks.push({
+        name: "ir.minDataKeys",
+        pass: n >= a.minDataKeys,
+        detail: `dataKeys=${n}`,
+      });
+    }
+    if (a.minStateKeys !== undefined) {
+      const n = Object.keys(ir.state).length;
+      checks.push({
+        name: "ir.minStateKeys",
+        pass: n >= a.minStateKeys,
+        detail: `stateKeys=${n}`,
+      });
+    }
+    if (a.preserveDataKeys) {
+      const keys = new Set(Object.keys(ir.data));
+      const missing = a.preserveDataKeys.filter((k) => !keys.has(k));
+      checks.push({
+        name: "ir.preserveDataKeys",
+        pass: missing.length === 0,
+        detail: missing.length ? `missing=${missing.join(",")}` : "ok",
+      });
+    }
+    if (a.hasSolidProp) {
+      checks.push({
+        name: "ir.hasSolidProp",
+        pass: anyNodeProp(ir, "solid"),
+      });
+    }
+    if (a.hasTimeline) {
+      const hit =
+        ir.scene.layers.some((l) => l.name.includes("timeline")) ||
+        ir.events.some((e) => e.target.includes("timeline"));
+      checks.push({
+        name: "ir.hasTimeline",
+        pass: hit,
+        detail: `layers=${ir.scene.layers.map((l) => l.name).join(",")}`,
+      });
+    }
   }
 
-  // Also exercise host session path (dogfood)
   if (compiles && ir) {
     const host = createVivaAgentHost();
     const session = host.createSession({
@@ -242,7 +321,7 @@ function grade(scenario: Scenario, source: string): CaseResult["checks"] {
       handbooks: scenario.handbooks ?? [],
     });
     const result =
-      scenario.kind === "patch"
+      scenario.kind === "patch" || scenario.kind === "multiturn"
         ? session.patch(source, { reason: "user-edit", handbooks: scenario.handbooks })
         : session.compile(source, {
             reason: scenario.kind === "repair" ? "repair" : "generate",
@@ -263,96 +342,180 @@ function grade(scenario: Scenario, source: string): CaseResult["checks"] {
   return checks;
 }
 
-function buildSystem(handbooks: string[]): string {
-  const prompt = createNodePromptService();
+function buildSystem(scenario: Scenario): string {
+  const mode = scenario.system ?? (inferTrack(scenario) === "hard" ? "slim" : "full");
+  const core = mode === "slim" ? SYSTEM_PROMPT_SLIM : SYSTEM_PROMPT;
+  const ids = scenario.handbooks ?? [];
+  if (!ids.length) return core;
   try {
-    const bundle = prompt.buildPromptBundle(handbooks);
-    return bundle.asSystemParts().join("\n\n---\n\n");
+    const prompt = createNodePromptService();
+    const bodies = ids.map((id) => prompt.loadHandbook(id));
+    return [core, ...bodies].join("\n\n---\n\n");
   } catch {
-    return SYSTEM_PROMPT;
+    return core;
   }
 }
 
+function wantsSyntaxCrib(scenario: Scenario): boolean {
+  if (scenario.repair?.syntaxCrib !== undefined) return scenario.repair.syntaxCrib;
+  return inferTrack(scenario) === "smoke";
+}
+
+function repairUserPrompt(
+  scenario: Scenario,
+  source: string,
+  detail: string,
+): string {
+  const crib = wantsSyntaxCrib(scenario)
+    ? `
+Syntax reminders:
+- Top-level: artifact, data, state, frame NAME, scene, widget chart.*, timeline
+- Do NOT nest frame/widget under scene; do NOT write widget: chart.x blocks
+`
+    : `
+Fix using diagnostics and valid Viva. Output ONLY full corrected source starting with artifact.
+`;
+  return `The following Viva source failed to compile.${crib}
+
+Diagnostics:
+${detail}
+
+Broken source:
+${source}`;
+}
+
+function tryExtract(
+  model: string,
+  system: string,
+  userPrompt: string,
+  counter: { n: number },
+): { source: string | null; raw: string; error: string } {
+  counter.n += 1;
+  const res = callPi({ model, system, user: userPrompt });
+  if (!res.ok && !res.text.includes("artifact")) {
+    return { source: null, raw: res.raw, error: res.raw };
+  }
+  try {
+    return { source: extractVivaSource(res.text), raw: res.raw, error: "" };
+  } catch (e) {
+    return {
+      source: null,
+      raw: res.raw,
+      error: e instanceof Error ? e.message : String(e),
+    };
+  }
+}
+
+function maybeRepair(
+  scenario: Scenario,
+  model: string,
+  system: string,
+  source: string,
+  checks: CaseResult["checks"],
+  counter: { n: number },
+): { source: string; checks: CaseResult["checks"] } {
+  const max = scenario.repair?.maxAttempts ?? 1;
+  let cur = source;
+  let curChecks = checks;
+  let repairs = 0;
+  while (repairs < max) {
+    const compilePass = curChecks.find((c) => c.name === "compiles")?.pass;
+    if (compilePass !== false) break;
+    repairs += 1;
+    const detail = curChecks.find((c) => c.name === "compiles")?.detail ?? "error";
+    const got = tryExtract(model, system, repairUserPrompt(scenario, cur, detail), counter);
+    if (got.source?.startsWith("artifact")) {
+      cur = got.source;
+      curChecks = grade(scenario, cur);
+    } else {
+      break;
+    }
+  }
+  return { source: cur, checks: curChecks };
+}
+
 function runScenario(scenario: Scenario, model: string): CaseResult {
+  const track = inferTrack(scenario);
   const seed = scenario.seedSource
     ? readFileSync(path.join(root, scenario.seedSource), "utf8")
     : "";
   let diagnostics = "";
-  if (scenario.kind === "repair" && seed) {
-    const broken = compileSource(seed, path.basename(scenario.seedSource!));
-    diagnostics = broken.error ?? "compile failed";
+  if ((scenario.kind === "repair" || scenario.seedSource) && seed) {
+    const broken = compileSource(seed, path.basename(scenario.seedSource ?? "seed.viva"));
+    diagnostics = broken.error ?? (broken.ir ? "" : "compile failed");
   }
 
-  const system = buildSystem(scenario.handbooks ?? []);
-  let user = fillTemplate(scenario.prompt, {
-    source: seed,
-    diagnostics,
-  });
-
-  let attempts = 0;
+  const system = buildSystem(scenario);
+  const counter = { n: 0 };
   let source = "";
   let lastRaw = "";
   let lastError = "";
 
-  const tryOnce = (userPrompt: string) => {
-    attempts += 1;
-    const res = callPi({ model, system, user: userPrompt });
-    lastRaw = res.raw;
-    if (!res.ok && !res.text.includes("artifact")) {
-      lastError = res.raw;
-      return null;
+  if (scenario.kind === "multiturn") {
+    const turns = scenario.turns ?? [];
+    source = seed;
+    if (!turns.length) {
+      return {
+        id: scenario.id,
+        title: scenario.title,
+        track,
+        ok: false,
+        attempts: 0,
+        error: "multiturn scenario missing turns",
+        checks: [{ name: "turns", pass: false }],
+      };
     }
-    try {
-      return extractVivaSource(res.text);
-    } catch (e) {
-      lastError = e instanceof Error ? e.message : String(e);
-      return null;
+    for (const turn of turns) {
+      const user = fillTemplate(turn.prompt, { source, diagnostics });
+      const got = tryExtract(model, system, user, counter);
+      lastRaw = got.raw;
+      lastError = got.error;
+      if (!got.source?.startsWith("artifact")) {
+        return {
+          id: scenario.id,
+          title: scenario.title,
+          track,
+          ok: false,
+          attempts: counter.n,
+          error: lastError || "no artifact in multiturn output",
+          source: lastRaw.slice(0, 2000),
+          checks: [{ name: "extract", pass: false, detail: lastError }],
+        };
+      }
+      source = got.source;
     }
-  };
-
-  source = tryOnce(user) ?? "";
-  if (!source.startsWith("artifact")) {
-    return {
-      id: scenario.id,
-      title: scenario.title,
-      ok: false,
-      attempts,
-      error: lastError || "no artifact in model output",
-      source: lastRaw.slice(0, 2000),
-      checks: [{ name: "extract", pass: false, detail: lastError }],
-    };
+  } else {
+    const user = fillTemplate(scenario.prompt ?? "", { source: seed, diagnostics });
+    const got = tryExtract(model, system, user, counter);
+    lastRaw = got.raw;
+    lastError = got.error;
+    source = got.source ?? "";
+    if (!source.startsWith("artifact")) {
+      return {
+        id: scenario.id,
+        title: scenario.title,
+        track,
+        ok: false,
+        attempts: counter.n,
+        error: lastError || "no artifact in model output",
+        source: lastRaw.slice(0, 2000),
+        checks: [{ name: "extract", pass: false, detail: lastError }],
+      };
+    }
   }
 
   let checks = grade(scenario, source);
-  const compileCheck = checks.find((c) => c.name === "compiles");
-  if (compileCheck && !compileCheck.pass && attempts < 2) {
-    // One repair turn via Pi
-    const repairUser = `The following Viva source failed to compile. Fix it. Output ONLY the full corrected Viva source starting with artifact.
-
-Syntax reminders:
-- Top-level declarations (column 0): artifact, data, state, frame NAME, scene, widget chart.scatter|line|bar, timeline
-- Do NOT nest \`frame NAME\` or \`widget …\` under scene/layer
-- Do NOT write \`widget: chart.line\` or \`frame: plot\` as indented blocks — those are invalid
-- Nodes may use property \`frame: plot\`
-
-Diagnostics:
-${compileCheck.detail ?? "error"}
-
-Broken source:
-${source}`;
-    const repaired = tryOnce(repairUser);
-    if (repaired?.startsWith("artifact")) {
-      source = repaired;
-      checks = grade(scenario, source);
-    }
-  }
+  const repaired = maybeRepair(scenario, model, system, source, checks, counter);
+  source = repaired.source;
+  checks = repaired.checks;
 
   const ok = checks.every((c) => c.pass);
   return {
     id: scenario.id,
     title: scenario.title,
+    track,
     ok,
-    attempts,
+    attempts: counter.n,
     source,
     diagnostics: checks.filter((c) => !c.pass).map((c) => `${c.name}: ${c.detail ?? "fail"}`),
     checks,
@@ -360,19 +523,21 @@ ${source}`;
 }
 
 function main() {
-  const { only, model } = parseArgs(process.argv.slice(2));
+  const { only, model, track } = parseArgs(process.argv.slice(2));
   if (!process.env.DEEPSEEK_API_KEY) {
     console.error("Missing DEEPSEEK_API_KEY. Export it before running agent exam.");
     process.exit(2);
   }
   mkdirSync(outDir, { recursive: true });
-  const scenarios = loadScenarios(only);
+  const scenarios = loadScenarios(track, only);
   if (!scenarios.length) {
-    console.error("No scenarios matched");
+    console.error(`No scenarios matched track=${track} only=${only ?? ""}`);
     process.exit(2);
   }
 
-  console.log(`Agent exam: model=${model} cases=${scenarios.map((s) => s.id).join(", ")}`);
+  console.log(
+    `Agent exam: track=${track} model=${model} cases=${scenarios.map((s) => s.id).join(", ")}`,
+  );
   const results: CaseResult[] = [];
   for (const scenario of scenarios) {
     console.log(`\n→ ${scenario.id}: ${scenario.title}`);
@@ -389,14 +554,17 @@ function main() {
   }
 
   const report = {
+    track,
     model,
     ranAt: new Date().toISOString(),
     passed: results.filter((r) => r.ok).length,
-    failed: results.filter((r) => !r.ok).length,
+    failed: results.filter((r) => r.ok === false).length,
     results,
   };
+  const reportName = track === "hard" ? "report-hard.json" : "report.json";
+  writeFileSync(path.join(outDir, reportName), JSON.stringify(report, null, 2));
   writeFileSync(path.join(outDir, "report.json"), JSON.stringify(report, null, 2));
-  console.log(`\nReport: ${path.join(outDir, "report.json")}`);
+  console.log(`\nReport: ${path.join(outDir, reportName)}`);
   console.log(`Passed ${report.passed}/${results.length}`);
   process.exit(report.failed ? 1 : 0);
 }
