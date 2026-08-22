@@ -31,7 +31,7 @@ data items = [
 
 scene
   size: 880 520
-  background: #0b1220
+  background: #ffffff
 
   layer main
     for item in items

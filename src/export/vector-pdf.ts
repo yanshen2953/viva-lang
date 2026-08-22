@@ -6,6 +6,7 @@ import {
   type RGB,
   StandardFonts,
 } from "pdf-lib";
+import { DEFAULT_SCENE_BACKGROUND } from "../style/defaults.js";
 import { flattenNodesFromIr, type FlatNode } from "./static-svg.js";
 import type { VisualIR } from "../ir.js";
 
@@ -32,7 +33,7 @@ export async function renderVectorPdfFromIr(
   const font = await pdf.embedFont(StandardFonts.Helvetica);
 
   // Background
-  const bg = parseColor(scene.background) ?? rgb(0.04, 0.07, 0.13);
+  const bg = parseColor(scene.background) ?? parseColor(DEFAULT_SCENE_BACKGROUND) ?? rgb(1, 1, 1);
   page.drawRectangle({ x: 0, y: 0, width: pageW, height: pageH, color: bg });
 
   for (const node of nodes) {

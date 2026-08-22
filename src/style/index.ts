@@ -5,6 +5,7 @@ export { applyStyleToArtifact } from "./apply.js";
 export { enforceStylePolicies } from "./enforce.js";
 export { lintStyle } from "./lint.js";
 export { DEFAULT_HANDBOOK_ID } from "./presets/print-nature.js";
+export { DEFAULT_SCENE_BACKGROUND } from "./defaults.js";
 export {
   registerStylePreset,
   registerStylePresetJson,

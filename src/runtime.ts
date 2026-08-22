@@ -16,7 +16,7 @@ import {
   scalesFromFrameProps,
   type FrameScales,
 } from "./space.js";
-import { resetPaletteSeries, setStyleContext } from "./style/index.js";
+import { DEFAULT_SCENE_BACKGROUND, resetPaletteSeries, setStyleContext } from "./style/index.js";
 import { STYLE_META_PROPS } from "./style/types.js";
 
 export type RuntimeOptions = {
@@ -269,7 +269,7 @@ export class Runtime {
     this.svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
     this.svg.setAttribute("width", "100%");
     this.svg.setAttribute("height", "100%");
-    this.svg.style.background = str(props.background, "#0b1220");
+    this.svg.style.background = str(props.background, DEFAULT_SCENE_BACKGROUND);
   }
 
   private flatten(): RenderNode[] {
@@ -438,7 +438,11 @@ export class Runtime {
       node.id,
       p,
       hovered,
-      el.tagName === "rect" ? "#1e293b" : el.tagName === "text" ? "#e2e8f0" : "#38bdf8",
+      el.tagName === "rect"
+        ? DEFAULT_SCENE_BACKGROUND
+        : el.tagName === "text"
+          ? "#1e293b"
+          : "#0072B2",
     );
     const filter = resolveFilter(defs, node.id, p);
     if (filter) el.setAttribute("filter", filter);
@@ -478,7 +482,7 @@ export class Runtime {
     } else if (el.tagName === "text") {
       el.setAttribute("x", String(x));
       el.setAttribute("y", String(y));
-      el.setAttribute("fill", hovered && p.hoverFill ? String(p.hoverFill) : str(p.fill ?? p.color, "#e2e8f0"));
+      el.setAttribute("fill", hovered && p.hoverFill ? String(p.hoverFill) : str(p.fill ?? p.color, "#1e293b"));
       applyTypography(el as SVGTextElement, {
         ...p,
         text: p.text ?? p.label ?? node.name,

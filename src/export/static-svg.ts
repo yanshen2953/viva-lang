@@ -1,4 +1,5 @@
 import type { Expr } from "../ast.js";
+import { DEFAULT_SCENE_BACKGROUND } from "../style/defaults.js";
 import { evaluate, truthy, type Scope } from "../eval.js";
 import type { SceneNodeIR, VisualIR } from "../ir.js";
 import {
@@ -43,7 +44,7 @@ export function flattenNodesFromIr(ir: VisualIR): { scene: SceneBox; nodes: Flat
   const size = asPair(sceneProps.size, [880, 480]);
   const width = num(sceneProps.width, size[0]);
   const height = num(sceneProps.height, size[1]);
-  const background = str(sceneProps.background, "#0b1220");
+  const background = str(sceneProps.background, DEFAULT_SCENE_BACKGROUND);
 
   const nodes: FlatNode[] = [];
   for (const layer of ir.scene.layers) {
@@ -72,7 +73,7 @@ function buildSvgParts(ir: VisualIR): {
   const size = asPair(sceneProps.size, [880, 480]);
   const width = num(sceneProps.width, size[0]);
   const height = num(sceneProps.height, size[1]);
-  const background = str(sceneProps.background, "#0b1220");
+  const background = str(sceneProps.background, DEFAULT_SCENE_BACKGROUND);
 
   const layersXml: string[] = [];
   for (const layer of ir.scene.layers) {

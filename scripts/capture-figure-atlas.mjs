@@ -36,8 +36,13 @@ async function loadAtlas(handbook) {
 }
 
 await loadAtlas("print-nature");
-await page.screenshot({
+const stage = await page.$("#stage");
+if (!stage) throw new Error("#stage missing");
+await stage.screenshot({
   path: "/opt/cursor/artifacts/figure_atlas_print_nature.png",
+});
+await page.screenshot({
+  path: "/opt/cursor/artifacts/playground_print_nature_light.png",
   fullPage: false,
 });
 
