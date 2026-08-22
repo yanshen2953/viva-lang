@@ -54,6 +54,7 @@ type Scenario = {
       minRules?: number;
       minDataKeys?: number;
       minStateKeys?: number;
+      stateKeyMatch?: string[];
       preserveDataKeys?: string[];
       hasSolidProp?: boolean;
       hasTimeline?: boolean;
@@ -287,6 +288,17 @@ function grade(scenario: Scenario, source: string): CaseResult["checks"] {
         detail: `stateKeys=${n}`,
       });
     }
+    if (a.stateKeyMatch) {
+      const keys = Object.keys(ir.state);
+      const missing = a.stateKeyMatch.filter(
+        (pat) => !keys.some((k) => compilePattern(pat).test(k)),
+      );
+      checks.push({
+        name: "ir.stateKeyMatch",
+        pass: missing.length === 0,
+        detail: missing.length ? `missing=${missing.join(",")}; got=${keys.join(",")}` : keys.join(","),
+      });
+    }
     if (a.preserveDataKeys) {
       const keys = new Set(Object.keys(ir.data));
       const missing = a.preserveDataKeys.filter((k) => !keys.has(k));
@@ -515,10 +527,18 @@ function runScenario(scenario: Scenario, model: string): CaseResult {
     }
   } else {
     const user = fillTemplate(scenario.prompt ?? "", { source: seed, diagnostics });
-    const got = tryExtract(model, system, user, counter);
+    let got = tryExtract(model, system, user, counter);
     lastRaw = got.raw;
     lastError = got.error;
     source = got.source ?? "";
+    // One empty-output retry for flaky model extracts (still no syntax crib)
+    if (!source.startsWith("artifact") && (scenario.repair?.maxAttempts ?? 1) > 0) {
+      const retryUser = `${user}\n\nReminder: respond with ONLY valid Viva source starting with the word artifact.`;
+      got = tryExtract(model, system, retryUser, counter);
+      lastRaw = got.raw;
+      lastError = got.error;
+      source = got.source ?? "";
+    }
     if (!source.startsWith("artifact")) {
       return {
         id: scenario.id,
