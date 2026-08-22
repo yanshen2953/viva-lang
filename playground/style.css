@@ -242,6 +242,23 @@ body,
   white-space: pre-wrap;
 }
 
+.check-out {
+  margin: 0;
+  max-height: 120px;
+  overflow: auto;
+  padding: 8px 14px;
+  border-top: 1px solid var(--line);
+  background: #fffbeb;
+  color: #92400e;
+  font: 11px/1.45 "IBM Plex Mono", monospace;
+  white-space: pre-wrap;
+}
+
+.check-out.ok {
+  background: #ecfdf5;
+  color: #047857;
+}
+
 .error {
   position: absolute;
   left: 24px;

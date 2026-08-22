@@ -2,7 +2,7 @@ export { parse } from "./parser.js";
 export { tokenize } from "./lexer.js";
 export { compile, type CompileOptions } from "./compiler.js";
 export { compileSource } from "./pipeline.js";
-export type { CompileOptions as PipelineCompileOptions } from "./pipeline.js";
+export type { CompileOptions as PipelineCompileOptions, PipelineCheckOptions } from "./pipeline.js";
 export { Runtime } from "./runtime.js";
 export { evaluate, execute } from "./eval.js";
 export { simulate, createSimWorld } from "./simulate.js";
@@ -35,6 +35,13 @@ export type {
   SelectionCombine,
 } from "./review/index.js";
 export { exportArtifact, renderSvgFromIr, renderVectorPdfFromIr } from "./export/index.js";
+export {
+  runArtifactChecks,
+  runStructuralChecks,
+  runVisualChecks,
+  withIrStyleContext,
+} from "./check/index.js";
+export type { CheckDiagnostic, CheckOptions, CheckResult } from "./check/index.js";
 export {
   applyHandbookHook,
   resolveStylePresets,

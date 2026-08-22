@@ -11,6 +11,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { compileSource } from "./pipeline.js";
+import { runArtifactChecks } from "./check/index.js";
 import { renderStandaloneHtml } from "./html.js";
 import { exportArtifact, type ExportFormat } from "./export/index.js";
 import { simulate } from "./simulate.js";
@@ -66,6 +67,41 @@ async function main(): Promise<void> {
   const source = await readFile(input, "utf8");
   const outPath = flagValue(argv, "-o") ?? flagValue(argv, "--out");
   const handbookIds = resolveCompileHandbooks(argv);
+
+  if (command === "check") {
+    const visual = argv.includes("--visual");
+    const result = compileSource(source, input, {
+      handbookIds: handbookIds.length ? handbookIds : undefined,
+      check: { structural: true },
+    });
+    if (!result.ir) {
+      console.error(result.error);
+      process.exitCode = 1;
+      return;
+    }
+    const checks = await runArtifactChecks(result.ir, {
+      structural: true,
+      visual,
+      rasterWidth: Number(flagValue(argv, "--width") ?? "960"),
+    });
+    const report = {
+      ok: checks.ok && (result.checkOk ?? true),
+      artifact: result.ir.name,
+      stats: checks.stats,
+      structural: checks.structural,
+      visual: checks.visual,
+    };
+    const json = JSON.stringify(report, null, 2);
+    if (outPath) {
+      await mkdir(path.dirname(path.resolve(outPath)), { recursive: true });
+      await writeFile(outPath, json, "utf8");
+      console.log(outPath);
+    } else {
+      console.log(json);
+    }
+    if (!report.ok) process.exitCode = 1;
+    return;
+  }
 
   if (command === "compile") {
     const result = compileSource(source, input, handbookIds.length ? { handbookIds } : undefined);
@@ -281,6 +317,7 @@ function printHelp(): void {
 
 Commands:
   compile <file> [--handbook id]   Compile to Visual IR JSON
+  check <file> [--visual]          Structural + optional raster checks
   html <file> [-o out.html]        Standalone HTML shell
   svg <file> [-o out.svg]          Export static SVG
   export <file> -f <fmt>           Export svg|png|jpg|pdf (repeat --handbook for style)
@@ -291,6 +328,7 @@ Commands:
   help                        Show this message
 
 Examples:
+  viva check examples/figure-atlas.viva --visual --handbook print-nature
   viva export examples/figure-atlas.viva -f pdf --handbook print-nature
   viva export examples/hello.viva -f pdf-raster -o r.pdf
   viva export examples/hello.viva -f jpg --width 1600

@@ -1,5 +1,6 @@
 import { createVivaAgentHost, promptServiceWithHandbooks } from "../src/agent";
 import type { VivaSession } from "../src/agent";
+import type { Diagnostic } from "../src/diagnostics";
 import type { FeedbackKind, SelectionCombine, SelectionTool } from "../src/review";
 import arena from "../examples/arena.viva?raw";
 import atelier from "../examples/atelier.viva?raw";
@@ -44,6 +45,7 @@ const DEFAULT_HANDBOOK = "print-nature";
 const sourceEl = document.querySelector("#source") as HTMLTextAreaElement;
 const stageEl = document.querySelector("#stage") as HTMLElement;
 const errorEl = document.querySelector("#error") as HTMLElement;
+const checkOutEl = document.querySelector("#check-out") as HTMLElement;
 const statusEl = document.querySelector("#status") as HTMLElement;
 const navEl = document.querySelector("#examples") as HTMLElement;
 const runEl = document.querySelector("#run") as HTMLButtonElement;
@@ -222,6 +224,27 @@ function load(name: string): void {
   run();
 }
 
+function formatCheckLine(d: Diagnostic): string {
+  const sev = (d as { severity?: string }).severity;
+  const layer = (d as { layer?: string }).layer;
+  const tag = sev === "error" ? "ERR" : "warn";
+  const layerTag = layer === "visual" ? "visual" : "struct";
+  return `[${tag}/${layerTag}] ${d.code ?? "check"}: ${d.message}`;
+}
+
+function showStructuralChecks(diagnostics: Diagnostic[]): void {
+  const checks = diagnostics.filter((d) => d.code?.startsWith("check."));
+  if (!checks.length) {
+    checkOutEl.hidden = true;
+    checkOutEl.classList.remove("ok");
+    return;
+  }
+  checkOutEl.hidden = false;
+  const hasError = checks.some((d) => (d as { severity?: string }).severity === "error");
+  checkOutEl.classList.toggle("ok", !hasError);
+  checkOutEl.textContent = checks.map(formatCheckLine).join("\n");
+}
+
 function run(): void {
   const started = performance.now();
   const handbooks = activeHandbooks();
@@ -233,22 +256,32 @@ function run(): void {
   if (!result.ok) {
     errorEl.hidden = false;
     errorEl.textContent = result.error ?? "compile failed";
+    checkOutEl.hidden = true;
     statusEl.textContent = "编译失败";
     statusEl.style.color = "#fca5a5";
     return;
   }
 
   errorEl.hidden = true;
+  showStructuralChecks(result.diagnostics);
   const ms = Math.round(performance.now() - started);
   const irName = result.ir?.name ?? current;
   const hb = handbookStatusLabel();
+  const checkTag =
+    result.diagnostics.filter((d) => d.code?.startsWith("check.")).length === 0
+      ? "check:ok"
+      : result.diagnostics.some(
+          (d) => d.code?.startsWith("check.") && (d as { severity?: string }).severity === "error",
+        )
+        ? "check:err"
+        : `check:${result.diagnostics.filter((d) => d.code?.startsWith("check.")).length}`;
   if (reviewOn) {
     ensureReviewAttached();
     showBrief();
-    statusEl.textContent = `${irName} · ${ms}ms · ${hb} · 审查中`;
+    statusEl.textContent = `${irName} · ${ms}ms · ${hb} · ${checkTag} · 审查中`;
     statusEl.style.color = "#38bdf8";
   } else {
-    statusEl.textContent = `${irName} · ${ms}ms · ${hb}`;
+    statusEl.textContent = `${irName} · ${ms}ms · ${hb} · ${checkTag}`;
     statusEl.style.color = "#34d399";
   }
 }

@@ -1,4 +1,5 @@
 import type { Expr } from "../ast.js";
+import { withIrStyleContext } from "../check/style-context.js";
 import { DEFAULT_SCENE_BACKGROUND } from "../style/defaults.js";
 import { evaluate, truthy, type Scope } from "../eval.js";
 import type { SceneNodeIR, VisualIR } from "../ir.js";
@@ -24,7 +25,7 @@ export type SceneBox = { width: number; height: number; background: string };
  * Node ids match Runtime `data-viva-id` for precise review correspondence.
  */
 export function renderSvgFromIr(ir: VisualIR): string {
-  const { width, height, background, layersXml } = buildSvgParts(ir);
+  const { width, height, background, layersXml } = withIrStyleContext(ir, () => buildSvgParts(ir));
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" style="background:${esc(background)}">
 ${layersXml.join("\n")}
@@ -34,6 +35,10 @@ ${layersXml.join("\n")}
 
 /** Flatten IR → painted nodes (same id / geometry as Runtime + review). */
 export function flattenNodesFromIr(ir: VisualIR): { scene: SceneBox; nodes: FlatNode[] } {
+  return withIrStyleContext(ir, () => flattenNodesFromIrInner(ir));
+}
+
+function flattenNodesFromIrInner(ir: VisualIR): { scene: SceneBox; nodes: FlatNode[] } {
   const state = { ...(ir.state as Record<string, unknown>) };
   const data = { ...(ir.data as Record<string, unknown>) };
   const scopes = (): Scope[] => [state, data];

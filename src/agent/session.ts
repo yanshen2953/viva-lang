@@ -173,6 +173,7 @@ export function createSession(
     const activeHandbooks = resolveSessionHandbooks(meta, handbooks);
     const result = compileSource(nextSource, `${id}.viva`, {
       handbookIds: activeHandbooks.length ? activeHandbooks : undefined,
+      check: { structural: true },
     });
     const nextHash = fingerprint(nextSource);
     const diagnostics: Diagnostic[] = result.diagnostics.length
@@ -224,9 +225,10 @@ export function createSession(
 
     emit(kind === "patch" ? "patched" : "compiled", { sourceHash, irHash });
     notifyWatchers();
+    const checkWarnings = result.checkDiagnostics ?? [];
     return {
       ok: true,
-      diagnostics: [],
+      diagnostics: checkWarnings,
       sourceHash,
       irHash,
       ir: result.ir,

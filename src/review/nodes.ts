@@ -1,3 +1,4 @@
+import { withIrStyleContext } from "../check/style-context.js";
 import { evaluate, truthy, type Scope } from "../eval.js";
 import type { Expr } from "../ast.js";
 import type { SceneNodeIR, VisualIR } from "../ir.js";
@@ -7,6 +8,10 @@ import type { BBox } from "./geometry.js";
 
 /** Headless catalog of selectable nodes from IR (matches runtime flatten ids). */
 export function listSelectableNodes(ir: VisualIR): SelectedNode[] {
+  return withIrStyleContext(ir, () => listSelectableNodesInner(ir));
+}
+
+function listSelectableNodesInner(ir: VisualIR): SelectedNode[] {
   const state = { ...(ir.state as Record<string, unknown>) };
   const data = { ...(ir.data as Record<string, unknown>) };
   const scopes = (): Scope[] => [state, data];
