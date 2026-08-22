@@ -35,17 +35,17 @@ async function loadAtlas(handbook) {
   await new Promise((r) => setTimeout(r, 1000));
 }
 
-await loadAtlas("dashboard");
-await page.screenshot({
-  path: "/opt/cursor/artifacts/figure_atlas_dashboard.png",
-  fullPage: false,
-});
-
 await loadAtlas("print-nature");
 await page.screenshot({
   path: "/opt/cursor/artifacts/figure_atlas_print_nature.png",
   fullPage: false,
 });
 
-console.log("saved figure_atlas_dashboard.png and figure_atlas_print_nature.png");
+await loadAtlas("dashboard");
+await page.screenshot({
+  path: "/opt/cursor/artifacts/figure_atlas_dashboard.png",
+  fullPage: false,
+});
+
+console.log("saved figure_atlas_print_nature.png (default) and figure_atlas_dashboard.png");
 await browser.close();

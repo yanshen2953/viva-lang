@@ -4,6 +4,7 @@ export type { StyleHookArtifactResult } from "./hook.js";
 export { applyStyleToArtifact } from "./apply.js";
 export { enforceStylePolicies } from "./enforce.js";
 export { lintStyle } from "./lint.js";
+export { DEFAULT_HANDBOOK_ID } from "./presets/print-nature.js";
 export {
   registerStylePreset,
   registerStylePresetJson,

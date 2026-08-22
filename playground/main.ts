@@ -32,12 +32,14 @@ const examples: Record<string, string> = {
   Atlas: figureAtlas,
 };
 
-/** Suggested handbook when opening an example — user can override via selector. */
+/** Suggested handbook when opening an example (default preset: print-nature). */
 const handbookSuggestions: Record<string, string> = {
-  Atlas: "dashboard",
-  Studio: "dashboard",
+  Atlas: "print-nature",
+  Studio: "print-nature",
   Paper: "print-nature",
 };
+
+const DEFAULT_HANDBOOK = "print-nature";
 
 const sourceEl = document.querySelector("#source") as HTMLTextAreaElement;
 const stageEl = document.querySelector("#stage") as HTMLElement;
@@ -212,8 +214,8 @@ function showBrief(): void {
 function load(name: string): void {
   current = name;
   sourceEl.value = examples[name] ?? "";
-  const suggested = handbookSuggestions[name];
-  handbookSelect.value = suggested ?? "";
+  const suggested = handbookSuggestions[name] ?? DEFAULT_HANDBOOK;
+  handbookSelect.value = suggested;
   for (const button of Array.from(navEl.querySelectorAll("button"))) {
     button.classList.toggle("active", button.textContent === name);
   }
@@ -251,4 +253,4 @@ function run(): void {
   }
 }
 
-load("Hello");
+load("Atlas");

@@ -1,7 +1,7 @@
 artifact "Figure Atlas"
 
 state selGene = "CD8A"
-state hint = "六联图 · 虚拟队列 n=248 · 选手册加载风格"
+state hint = "六联图 · 虚拟队列 n=248 · print-nature 默认"
 
 # ── 虚拟临床队列数据 ─────────────────────────────────────────
 
@@ -135,34 +135,7 @@ frame microFlow
 
 scene
   size: 1360 920
-
-  layer backdrop
-    node bgGrad
-      role: atmosphere
-      x: 0
-      y: 0
-      w: 1360
-      h: 920
-      gradient: #050810 #0b1220 #070b14
-      gradientDir: y
-
-    node washTL
-      role: atmosphere
-      x: 200
-      y: 180
-      r: 220
-      gradient: #1d4ed8 #38bdf8
-      blur: 56
-      opacity: 0.22
-
-    node washBR
-      role: atmosphere
-      x: 1100
-      y: 720
-      r: 260
-      gradient: #be123c #f59e0b
-      blur: 64
-      opacity: 0.18
+  background: #ffffff
 
   layer typography
     node docTitle
@@ -191,10 +164,8 @@ scene
       y: 100
       w: 1304
       h: 784
-      radius: 16
-      strokeWidth: 2
-      shadow: 0 20 40
-      shadowOpacity: 0.4
+      radius: 8
+      strokeWidth: 1.5
 
     node panelLblA
       role: panel-label
@@ -510,7 +481,7 @@ event click on geneBtnB
   selGene = "IL6"
 
 tick 40
-  hint = "六联图 · 选手册: dashboard / print-nature / 无"
+  hint = "print-nature 默认 · 可选手册 dashboard / 无"
 
 # ── Widget 子图 (a)(b)(c) ─────────────────────────────────────
 

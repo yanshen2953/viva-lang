@@ -6,6 +6,8 @@ Full hook architecture: [`HOOK.md`](./HOOK.md). Design rules: `docs/DESIGN.md` �
 
 ## How to use
 
+**Recommended default:** `print-nature` — light, Nature-style Wong palette, no glow. Playground opens **Atlas** with this preset selected.
+
 1. Always load the core system prompt (`src/llm/system-prompt.ts`).
 2. For a generation call, append **one** handbook (rarely more) by id.
 3. Pass the **same ids** to `session.compile({ handbooks: [...] })` so the compiler applies the preset — not only the LLM.

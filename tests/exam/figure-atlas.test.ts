@@ -3,10 +3,10 @@ import { describe, expect, it } from "vitest";
 import { compileSource } from "../../src/pipeline.js";
 
 describe("figure-atlas example", () => {
-  it("compiles six-panel atlas with dashboard handbook", () => {
+  it("compiles six-panel atlas with print-nature handbook (default)", () => {
     const src = readFileSync("examples/figure-atlas.viva", "utf8");
     const result = compileSource(src, "figure-atlas.viva", {
-      handbookIds: ["dashboard"],
+      handbookIds: ["print-nature"],
     });
     expect(result.error).toBeNull();
     expect(result.ir?.name).toBe("Figure Atlas");

@@ -1,5 +1,7 @@
 import type { StylePreset } from "../types.js";
 
+export const DEFAULT_HANDBOOK_ID = "print-nature";
+
 export const printNaturePreset: StylePreset = {
   id: "print-nature",
   scene: {
@@ -7,8 +9,28 @@ export const printNaturePreset: StylePreset = {
     fontFamily: "IBM Plex Sans, Helvetica, Arial, sans-serif",
   },
   palette: {
-    categorical: ["#0072B2", "#E69F00", "#009E73", "#CC79A7", "#56B4E9", "#D55E00", "#F0E442"],
-    sequential: ["#deebf7", "#9ecae1", "#6baed6", "#3182bd", "#08519c"],
+    /** Wong / Nature Methods colorblind-safe categorical (default). */
+    categorical: [
+      "#0072B2",
+      "#E69F00",
+      "#009E73",
+      "#CC79A7",
+      "#56B4E9",
+      "#D55E00",
+      "#F0E442",
+      "#999999",
+    ],
+    /** Light → deep blue (common heatmap / expression scale). */
+    sequential: [
+      "#f7fbff",
+      "#deebf7",
+      "#c6dbef",
+      "#9ecae1",
+      "#6baed6",
+      "#4292c6",
+      "#2171b5",
+      "#084594",
+    ],
     accent: "#0072B2",
     foreground: "#1a1a1a",
     muted: "#6b7280",
@@ -24,8 +46,8 @@ export const printNaturePreset: StylePreset = {
   },
   roles: {
     scene: { fill: "#ffffff" },
-    panel: { fill: "#fafafa", stroke: "#d1d5db", strokeWidth: 1, radius: 4 },
-    plot: { fill: "#ffffff", stroke: "#9ca3af", strokeWidth: 1 },
+    panel: { fill: "#ffffff", stroke: "#cbd5e1", strokeWidth: 1, radius: 4 },
+    plot: { fill: "#ffffff", stroke: "#94a3b8", strokeWidth: 1 },
     "plot-border": { stroke: "#6b7280", strokeWidth: 1 },
     axis: { stroke: "#374151", strokeWidth: 1.25 },
     grid: { stroke: "#e5e7eb", strokeWidth: 1, dash: "4 4", opacity: 0.9 },
@@ -47,7 +69,8 @@ export const printNaturePreset: StylePreset = {
     atmosphere: { opacity: 0 },
   },
   layers: [
-    { match: "atmosphere*", role: "atmosphere", opacity: 0 },
+    { match: "backdrop*", role: "atmosphere", opacity: 0 },
+    { match: "colorWash*", role: "atmosphere", opacity: 0 },
     { match: "typography", props: {} },
   ],
   inference: {
