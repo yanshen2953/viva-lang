@@ -9,6 +9,7 @@ Readable interactive ops UI: clear hierarchy, dense-but-scannable panels, not pr
 
 ## Defaults
 
+- Use `role` on panels/marks; `colorBy` + `palette: categorical` for grouped data — host must pass `handbooks: ["dashboard"]` on compile.
 - Dark or light ground OK; keep contrast high for labels and values.
 - Prefer flat panel fills (`#0f172a` / `#f8fafc` family); thin separators over heavy glow.
 - Avoid `glow` / large `blur` on chrome; data marks may use modest emphasis.

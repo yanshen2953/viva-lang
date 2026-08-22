@@ -50,4 +50,5 @@ export type VisualIR = {
   binds: { target: string[]; source: Expr }[];
   ticks: { fps: number; body: Statement[] }[];
   animates: { name: string; props: Record<string, unknown> }[];
+  meta?: import("./style/types.js").StyleMeta;
 };

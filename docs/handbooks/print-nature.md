@@ -9,6 +9,8 @@ Restrained, publication-like figures (Science/Nature-adjacent), not game UI.
 
 ## Defaults
 
+- Tag nodes with `role` (`panel` `plot` `axis` `grid` `title` `mark` `legend` …) instead of hard-coding hex fills when possible.
+- For series color: `colorBy: grp` + `palette: categorical` on marks inside `for` loops — compiler injects `palette(row.grp)`.
 - Prefer flat fills; **avoid** `glow`, `blur`, and heavy `shadow` unless essential for emphasis.
 - Thin strokes: `strokeWidth` typically 1–1.5; axes slightly stronger than data.
 - High-contrast text on light or dark grounds; keep type hierarchy modest (`font` 9–14 for annotations, larger only for titles).

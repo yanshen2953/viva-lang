@@ -4,45 +4,45 @@ state yaw = 0.65
 state pitch = 0.35
 state zoom = 1.15
 state pcaMark = none
-state hint = "分组色 · 框线网格 · 拖拽 PCA 旋转 · 点选标记"
+state hint = "handbook:dashboard · role/colorBy · 拖拽 PCA · 点选标记"
 
 data bars = [
-  { cat: 1, val: 42, grp: "A", fill: #38bdf8, stroke: #0c4a6e }
-  { cat: 2, val: 68, grp: "A", fill: #22d3ee, stroke: #155e75 }
-  { cat: 3, val: 55, grp: "B", fill: #a78bfa, stroke: #5b21b6 }
-  { cat: 4, val: 91, grp: "B", fill: #c084fc, stroke: #6b21a8 }
-  { cat: 5, val: 73, grp: "C", fill: #34d399, stroke: #065f46 }
+  { cat: 1, val: 42, grp: "A" }
+  { cat: 2, val: 68, grp: "A" }
+  { cat: 3, val: 55, grp: "B" }
+  { cat: 4, val: 91, grp: "B" }
+  { cat: 5, val: 73, grp: "C" }
 ]
 
 data lineSeries = [
-  { t: 0, v: 12, fill: #34d399 }
-  { t: 1, v: 18, fill: #34d399 }
-  { t: 2, v: 15, fill: #34d399 }
-  { t: 3, v: 28, fill: #34d399 }
-  { t: 4, v: 22, fill: #34d399 }
-  { t: 5, v: 35, fill: #34d399 }
-  { t: 6, v: 30, fill: #34d399 }
+  { t: 0, v: 12, grp: "trend" }
+  { t: 1, v: 18, grp: "trend" }
+  { t: 2, v: 15, grp: "trend" }
+  { t: 3, v: 28, grp: "trend" }
+  { t: 4, v: 22, grp: "trend" }
+  { t: 5, v: 35, grp: "trend" }
+  { t: 6, v: 30, grp: "trend" }
 ]
 
 data field = [
-  { ox: 1, oy: 2, ux: 1.2, uy: 1.8, grp: "flow", fill: #818cf8, stroke: #312e81 }
-  { ox: 2.5, oy: 3, ux: -0.8, uy: 2.4, grp: "flow", fill: #a78bfa, stroke: #4c1d95 }
-  { ox: 4, oy: 1.5, ux: 1.5, uy: -1.2, grp: "shear", fill: #f472b6, stroke: #831843 }
-  { ox: 5.5, oy: 4, ux: -1.1, uy: -1.6, grp: "shear", fill: #fb7185, stroke: #9f1239 }
-  { ox: 7, oy: 2.8, ux: 0.6, uy: 2.2, grp: "flow", fill: #60a5fa, stroke: #1e3a8a }
-  { ox: 8.2, oy: 5, ux: 1.8, uy: 0.9, grp: "curl", fill: #fbbf24, stroke: #92400e }
+  { ox: 1, oy: 2, ux: 1.2, uy: 1.8, grp: "flow" }
+  { ox: 2.5, oy: 3, ux: -0.8, uy: 2.4, grp: "flow" }
+  { ox: 4, oy: 1.5, ux: 1.5, uy: -1.2, grp: "shear" }
+  { ox: 5.5, oy: 4, ux: -1.1, uy: -1.6, grp: "shear" }
+  { ox: 7, oy: 2.8, ux: 0.6, uy: 2.2, grp: "flow" }
+  { ox: 8.2, oy: 5, ux: 1.8, uy: 0.9, grp: "curl" }
 ]
 
 data pca = [
-  { id: "A1", x: -1.4, y: 0.9, z: 0.4, grp: "A", fill: #38bdf8, stroke: #0c4a6e }
-  { id: "A2", x: -1.1, y: 0.6, z: 0.2, grp: "A", fill: #38bdf8, stroke: #0c4a6e }
-  { id: "A3", x: -0.9, y: 1.1, z: 0.5, grp: "A", fill: #7dd3fc, stroke: #0c4a6e }
-  { id: "B1", x: 0.2, y: -0.3, z: 1.1, grp: "B", fill: #f59e0b, stroke: #92400e }
-  { id: "B2", x: 0.5, y: -0.6, z: 0.9, grp: "B", fill: #fbbf24, stroke: #92400e }
-  { id: "B3", x: 0.8, y: -0.2, z: 1.3, grp: "B", fill: #fb923c, stroke: #9a3412 }
-  { id: "C1", x: 1.2, y: 0.7, z: -0.8, grp: "C", fill: #34d399, stroke: #065f46 }
-  { id: "C2", x: 1.5, y: 1.0, z: -1.0, grp: "C", fill: #6ee7b7, stroke: #065f46 }
-  { id: "C3", x: 1.0, y: 0.4, z: -0.6, grp: "C", fill: #10b981, stroke: #064e3b }
+  { id: "A1", x: -1.4, y: 0.9, z: 0.4, grp: "A" }
+  { id: "A2", x: -1.1, y: 0.6, z: 0.2, grp: "A" }
+  { id: "A3", x: -0.9, y: 1.1, z: 0.5, grp: "A" }
+  { id: "B1", x: 0.2, y: -0.3, z: 1.1, grp: "B" }
+  { id: "B2", x: 0.5, y: -0.6, z: 0.9, grp: "B" }
+  { id: "B3", x: 0.8, y: -0.2, z: 1.3, grp: "B" }
+  { id: "C1", x: 1.2, y: 0.7, z: -0.8, grp: "C" }
+  { id: "C2", x: 1.5, y: 1.0, z: -1.0, grp: "C" }
+  { id: "C3", x: 1.0, y: 0.4, z: -0.6, grp: "C" }
 ]
 
 frame quiver
@@ -53,12 +53,11 @@ frame quiver
 
 scene
   size: 1180 720
-  background: #030712
 
   layer textureBackdrop
-    opacity: 0.88
     blend: multiply
     node gridA
+      role: atmosphere
       x: 0
       y: 0
       w: 1180
@@ -67,9 +66,9 @@ scene
       gradientDir: y
 
   layer colorWash
-    opacity: 0.45
     blend: soft-light
     node washL
+      role: atmosphere
       x: 60
       y: 140
       r: 180
@@ -78,6 +77,7 @@ scene
       opacity: 0.35
 
     node washR
+      role: atmosphere
       x: 1020
       y: 500
       r: 200
@@ -86,429 +86,338 @@ scene
       opacity: 0.28
 
   layer charts
-    opacity: 1
     node chartDeck
+      role: panel
       x: 488
       y: 64
       w: 672
       h: 248
       radius: 18
-      fill: #0b1220
-      stroke: #94a3b8
-      strokeWidth: 2
       shadow: 0 18 36
-      shadowColor: #000000
       shadowOpacity: 0.45
 
-    node barLegA
-      x: 520
-      y: 278
-      w: 12
-      h: 12
-      radius: 2
-      fill: #38bdf8
-      stroke: #0c4a6e
-      strokeWidth: 1.25
-
-    node barLegALbl
-      x: 538
-      y: 290
-      text: "grp A"
-      font: 11
-      fill: #cbd5e1
-
-    node barLegB
-      x: 588
-      y: 278
-      w: 12
-      h: 12
-      radius: 2
-      fill: #a78bfa
-      stroke: #5b21b6
-      strokeWidth: 1.25
-
-    node barLegBLbl
-      x: 606
-      y: 290
-      text: "grp B"
-      font: 11
-      fill: #cbd5e1
-
-    node barLegC
-      x: 656
-      y: 278
-      w: 12
-      h: 12
-      radius: 2
-      fill: #34d399
-      stroke: #065f46
-      strokeWidth: 1.25
-
-    node barLegCLbl
-      x: 674
-      y: 290
-      text: "grp C"
-      font: 11
-      fill: #cbd5e1
-
     node vecDeck
+      role: panel
       x: 488
       y: 328
       w: 296
       h: 248
       radius: 18
-      fill: #0b1220
-      stroke: #94a3b8
-      strokeWidth: 2
 
     node vecPlotBg
+      role: plot
       x: 512
       y: 368
       w: 248
       h: 188
-      fill: #020617
-      stroke: #64748b
-      strokeWidth: 1.5
       radius: 8
 
     node vecTitle
+      role: title
       x: 512
       y: 340
       text: "VECTOR FIELD"
-      font: 14
-      fontWeight: 700
-      fill: #f1f5f9
       letterSpacing: 1
 
     node vecGrid1
+      role: grid
       frame: quiver
       x1: 0
       y1: 1.75
       x2: 10
       y2: 1.75
-      stroke: #334155
-      strokeWidth: 1
-      dash: 4 5
 
     node vecGrid2
+      role: grid
       frame: quiver
       x1: 0
       y1: 3.5
       x2: 10
       y2: 3.5
-      stroke: #334155
-      strokeWidth: 1
-      dash: 4 5
 
     node vecGrid3
+      role: grid
       frame: quiver
       x1: 0
       y1: 5.25
       x2: 10
       y2: 5.25
-      stroke: #334155
-      strokeWidth: 1
-      dash: 4 5
 
     node vecAxisX
+      role: axis
       frame: quiver
       x1: 0
       y1: 0
       x2: 10
       y2: 0
-      stroke: #cbd5e1
-      strokeWidth: 2
 
     node vecAxisY
+      role: axis
       frame: quiver
       x1: 0
       y1: 0
       x2: 0
       y2: 7
-      stroke: #cbd5e1
-      strokeWidth: 2
 
     for v in field
       node vecShaft as vecLines
+        role: mark-line
         frame: quiver
         x1: v.ox
         y1: v.oy
         x2: v.ox + v.ux
         y2: v.oy + v.uy
-        stroke: v.fill
+        colorBy: grp
+        palette: categorical
         strokeWidth: 2.5
 
       node vecHead as vecHeads
+        role: mark
         frame: quiver
         x: v.ox + v.ux
         y: v.oy + v.uy
         r: 4.5
-        fill: v.fill
-        stroke: v.stroke
-        strokeWidth: 1.2
+        colorBy: grp
+        palette: categorical
 
     node legFlow
+      role: legend
       x: 528
       y: 548
       w: 10
       h: 10
       radius: 2
-      fill: #818cf8
-      stroke: #312e81
-      strokeWidth: 1
+      fill: palette("flow", "categorical")
+      styleSkip: true
 
     node legFlowLbl
+      role: legend-label
       x: 544
       y: 558
       text: "flow"
-      font: 11
-      fill: #cbd5e1
 
     node legShear
+      role: legend
       x: 600
       y: 548
       w: 10
       h: 10
       radius: 2
-      fill: #f472b6
-      stroke: #831843
-      strokeWidth: 1
+      fill: palette("shear", "categorical")
+      styleSkip: true
 
     node legShearLbl
+      role: legend-label
       x: 616
       y: 558
       text: "shear"
-      font: 11
-      fill: #cbd5e1
 
     node legCurl
+      role: legend
       x: 672
       y: 548
       w: 10
       h: 10
       radius: 2
-      fill: #fbbf24
-      stroke: #92400e
-      strokeWidth: 1
+      fill: palette("curl", "categorical")
+      styleSkip: true
 
     node legCurlLbl
+      role: legend-label
       x: 688
       y: 558
       text: "curl"
-      font: 11
-      fill: #cbd5e1
 
   layer pca
-    opacity: 1
     node pcaDeck
+      role: panel
       x: 800
       y: 328
       w: 360
       h: 248
       radius: 18
-      fill: #0b1220
-      stroke: #94a3b8
-      strokeWidth: 2
 
     node pcaPlotBg
+      role: plot
       x: 816
       y: 368
       w: 328
       h: 188
-      fill: #020617
-      stroke: #64748b
-      strokeWidth: 1.5
       radius: 8
 
     node pcaTitle
+      role: title
       x: 816
       y: 340
       text: "PCA · 3D ORBIT"
-      font: 14
-      fontWeight: 700
-      fill: #f1f5f9
       letterSpacing: 1
 
     node pcaOrbit
+      role: chrome
       x: 816
       y: 368
       w: 328
       h: 188
-      fill: #38bdf8
       opacity: 0.03
       drag: true
 
     node pcaAxis
+      role: axis
       x: 980
       y: 462
       w: 140
       h: 1.5
-      fill: #cbd5e1
       opacity: 0.75
 
     node pcaAxisY
+      role: axis
       x: 980
       y: 382
       w: 1.5
       h: 160
-      fill: #cbd5e1
       opacity: 0.75
 
     for p in pca
       node pcaPt as pcaPts
+        role: mark
         x: 980 + (p.x * cos(yaw) - p.z * sin(yaw)) * zoom * 78
         y: 462 - (p.y * cos(pitch) - (p.x * sin(yaw) + p.z * cos(yaw)) * sin(pitch)) * zoom * 78
         r: 8
-        fill: p.fill
-        stroke: p.stroke
-        strokeWidth: 1.5
+        colorBy: grp
+        palette: categorical
         glow: 8
-        glowColor: p.fill
 
       if pcaMark == p.id
         node pcaRing as pcaPts
+          role: annotation
           x: 980 + (p.x * cos(yaw) - p.z * sin(yaw)) * zoom * 78
           y: 462 - (p.y * cos(pitch) - (p.x * sin(yaw) + p.z * cos(yaw)) * sin(pitch)) * zoom * 78
           r: 14
-          fill: #000000
           opacity: 0.12
-          stroke: #f8fafc
           strokeWidth: 2
           dash: 5 4
 
     node legA
+      role: legend
       x: 824
       y: 548
       w: 10
       h: 10
       radius: 2
-      fill: #38bdf8
-      stroke: #0c4a6e
-      strokeWidth: 1
+      fill: palette("A", "categorical")
+      styleSkip: true
 
     node legALbl
+      role: legend-label
       x: 840
       y: 558
       text: "cluster A"
-      font: 11
-      fill: #cbd5e1
 
     node legB
+      role: legend
       x: 920
       y: 548
       w: 10
       h: 10
       radius: 2
-      fill: #f59e0b
-      stroke: #92400e
-      strokeWidth: 1
+      fill: palette("B", "categorical")
+      styleSkip: true
 
     node legBLbl
+      role: legend-label
       x: 936
       y: 558
       text: "cluster B"
-      font: 11
-      fill: #cbd5e1
 
     node legC
+      role: legend
       x: 1016
       y: 548
       w: 10
       h: 10
       radius: 2
-      fill: #34d399
-      stroke: #065f46
-      strokeWidth: 1
+      fill: palette("C", "categorical")
+      styleSkip: true
 
     node legCLbl
+      role: legend-label
       x: 1032
       y: 558
       text: "cluster C"
-      font: 11
-      fill: #cbd5e1
 
     node zoomOut
+      role: chrome
       x: 1110
       y: 336
       w: 30
       h: 30
       radius: 8
-      fill: #1e293b
-      stroke: #94a3b8
-      strokeWidth: 1.5
 
     node zoomIn
+      role: chrome
       x: 1148
       y: 336
       w: 30
       h: 30
       radius: 8
-      fill: #1e293b
-      stroke: #94a3b8
-      strokeWidth: 1.5
 
     node zoomOutLbl
+      role: label
       x: 1125
       y: 356
       text: "-"
       font: 20
-      fill: #f8fafc
       align: center
 
     node zoomInLbl
+      role: label
       x: 1163
       y: 356
       text: "+"
       font: 20
-      fill: #f8fafc
       align: center
 
   layer typography
-    opacity: 1
     node title
+      role: title
       x: 48
       y: 56
       text: "图文排版 · 科学图板"
       font: 28
-      fontWeight: 700
-      fill: #f8fafc
 
     node subtitle
+      role: subtitle
       x: 48
       y: 96
-      text: "分组配色 · 绘图区框线 · 网格 · 图例"
-      font: 15
-      fill: #94a3b8
+      text: "handbook 驱动 · role / colorBy · 任意构图"
 
     node body1
+      role: label
       x: 48
       y: 148
       w: 420
-      text: "条形图按 grp 分色并带描边；折线区有浅底+网格；矢量场按物理类型着色；PCA 三色簇 + 图例。图层仍保留 multiply / soft-light 氛围。"
-      font: 14
-      fill: #cbd5e1
+      text: "数据只写 grp；色板/框线/网格由 dashboard 预设注入。LLM 可用 node+frame 画任意图，不必依赖 chart 目录。"
       lineHeight: 1.55
 
     node caption
+      role: caption
       x: 48
       y: 680
       text: hint
-      font: 12
-      fill: #64748b
 
     if pcaMark != none
       node markLbl
+        role: annotation
         x: 48
         y: 640
         text: pcaMark
         font: 16
         fontWeight: 600
-        fill: #38bdf8
 
   layer screenGlow
-    opacity: 0.4
     blend: screen
     node topGlow
+      role: atmosphere
       x: 520
       y: 0
       w: 480
@@ -521,40 +430,24 @@ widget chart.bar
   data: bars
   xField: cat
   yField: val
-  colorField: fill
-  strokeField: stroke
+  group: grp
   xlim: 0 6
   ylim: 0 100
   areaX: 508 688
   areaY: 108 268
   title: "BAR · by group"
-  plotFill: #020617
-  plotStroke: #94a3b8
-  plotStrokeWidth: 2
-  axisColor: #e2e8f0
-  gridColor: #475569
-  barStrokeWidth: 1.75
   barWidth: 0.52
 
 widget chart.line
   data: lineSeries
   xField: t
   yField: v
-  colorField: fill
+  group: grp
   xlim: 0 6
   ylim: 0 40
   areaX: 708 1148
   areaY: 108 268
   title: "LINE · trend"
-  color: #34d399
-  stroke: #6ee7b7
-  plotFill: #020617
-  plotStroke: #94a3b8
-  plotStrokeWidth: 2
-  axisColor: #e2e8f0
-  gridColor: #475569
-  markStroke: #064e3b
-  markStrokeWidth: 1.75
 
 event drag on pcaOrbit
   yaw = yaw + __event.dx * 0.012
@@ -570,4 +463,4 @@ event click on zoomOut
   zoom = clamp(zoom - 0.12, 0.6, 2.2)
 
 tick 30
-  hint = "分组色+框线已启用"
+  hint = "handbook:dashboard active"

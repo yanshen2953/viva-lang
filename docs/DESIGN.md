@@ -198,7 +198,11 @@ core system prompt     # 永远加载，短
 + handbook id...       # 本轮可选，通常 0 或 1
 + user message
 → Viva source only
+        ↓
+compile({ handbookIds })   # 同一 id 加载 preset hook（见 handbooks/HOOK.md）
 ```
+
+**双层插件：** prose 手册约束 LLM 写什么；`src/style/presets/<id>.ts` 在编译期对**任意** node 场景注入 role 默认、palette()、出版策略。不依赖预置图表目录。
 
 ### 7.2 契约（靠谱性）
 
@@ -237,7 +241,8 @@ core system prompt     # 永远加载，短
 | export package (source+svg+prov) | ✅ | `session.exportPackage` |
 | PDF/JPG/PNG 导出 | ✅ | `src/export` + `viva export` |
 | PDF/mm 单位规范排版 | ❌ | 规划 |
-| handbook 运行时装载 API | ✅ | `PromptService` + `docs/handbooks` |
+| `handbook 运行时装载 API` | ✅ | `PromptService` + `docs/handbooks` |
+| **handbook 编译期 preset hook** | ✅ | `src/style/` + `compile({ handbookIds })` |
 | Host Session / provenance MVP | ✅ | `src/agent/` |
 
 ---

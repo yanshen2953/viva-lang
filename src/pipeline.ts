@@ -1,7 +1,9 @@
-import { compile } from "./compiler.js";
+import { compile, type CompileOptions } from "./compiler.js";
 import { VivaError, withSyntaxHint, type Diagnostic } from "./diagnostics.js";
 import type { VisualIR } from "./ir.js";
 import { parse } from "./parser.js";
+
+export type { CompileOptions };
 
 export type CompileResult = {
   ir: VisualIR | null;
@@ -9,10 +11,18 @@ export type CompileResult = {
   diagnostics: Diagnostic[];
 };
 
-export function compileSource(source: string, filename = "<input>"): CompileResult {
+export function compileSource(
+  source: string,
+  filename = "<input>",
+  options?: CompileOptions,
+): CompileResult {
   try {
     const artifact = parse(source, filename);
-    return { ir: compile(artifact), error: null, diagnostics: [] };
+    const hooked = options?.handbookIds?.length || options?.preset
+      ? options
+      : undefined;
+    const ir = compile(artifact, hooked);
+    return { ir, error: null, diagnostics: [] };
   } catch (error) {
     if (error instanceof VivaError) {
       const diagnostics = error.diagnostics.map((d) => {

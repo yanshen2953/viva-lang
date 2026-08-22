@@ -13,6 +13,7 @@ import scatter from "../examples/scatter.viva?raw";
 import scienceStudio from "../examples/science-studio.viva?raw";
 import twin from "../examples/twin.viva?raw";
 import printNature from "../docs/handbooks/print-nature.md?raw";
+import dashboardHandbook from "../docs/handbooks/dashboard.md?raw";
 import "./style.css";
 
 const examples: Record<string, string> = {
@@ -44,6 +45,7 @@ const feedbackText = document.querySelector("#feedback-text") as HTMLInputElemen
 const host = createVivaAgentHost({
   prompt: promptServiceWithHandbooks({
     "print-nature": printNature,
+    dashboard: dashboardHandbook,
   }),
 });
 
@@ -195,9 +197,18 @@ function load(name: string): void {
   run();
 }
 
+function handbooksForExample(name: string): string[] {
+  if (name === "Studio") return ["dashboard"];
+  if (name === "Paper") return ["print-nature"];
+  return [];
+}
+
 function run(): void {
   const started = performance.now();
-  const result = session.patch(sourceEl.value, { reason: "user-edit" });
+  const result = session.patch(sourceEl.value, {
+    reason: "user-edit",
+    handbooks: handbooksForExample(current),
+  });
 
   if (!result.ok) {
     errorEl.hidden = false;

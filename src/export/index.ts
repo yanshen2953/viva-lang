@@ -20,6 +20,8 @@ export type ExportOptions = {
   pdfMode?: "vector" | "raster";
   /** Vector PDF scale (scene unit → PDF point). Default 1. */
   scale?: number;
+  /** Style handbook ids applied at compile time (same as session handbooks). */
+  handbookIds?: string[];
 };
 
 export type ExportResult = {
@@ -31,8 +33,12 @@ export type ExportResult = {
   vector?: boolean;
 };
 
-export function exportSvgFromSource(source: string, filename = "<input>"): { svg: string; error: string | null } {
-  const result = compileSource(source, filename);
+export function exportSvgFromSource(
+  source: string,
+  filename = "<input>",
+  handbookIds?: string[],
+): { svg: string; error: string | null } {
+  const result = compileSource(source, filename, { handbookIds });
   if (!result.ir) return { svg: "", error: result.error };
   return { svg: renderSvgFromIr(result.ir), error: null };
 }
@@ -43,7 +49,9 @@ export async function exportArtifact(
   opts: ExportOptions = {},
   filename = "<input>",
 ): Promise<ExportResult> {
-  const result = compileSource(source, filename);
+  const result = compileSource(source, filename, {
+    handbookIds: opts.handbookIds,
+  });
   if (!result.ir) throw new Error(result.error ?? "compile failed");
   const svg = renderSvgFromIr(result.ir);
   const fmt = format === "jpeg" ? "jpg" : format;

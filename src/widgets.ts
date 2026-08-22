@@ -150,12 +150,6 @@ function expandChart(
   const resolvedXField = useAreaPairs || props.x?.kind === "array" ? fieldName(props.xField, "x") : xField;
   const resolvedYField = useAreaPairs || props.y?.kind === "array" ? fieldName(props.yField, "y") : yField;
 
-  const color = props.color ?? props.fill ?? literal("#38bdf8");
-  const stroke = props.stroke ?? color;
-  const axisStroke = props.axisColor ?? props.axisStroke ?? literal("#94a3b8");
-  const gridStroke = props.gridColor ?? literal("#334155");
-  const plotFill = props.plotFill ?? props.plotBackground ?? literal("#0b1220");
-  const plotBorder = props.plotStroke ?? props.plotBorder ?? literal("#64748b");
   const title =
     props.title?.kind === "string"
       ? props.title.value
@@ -169,47 +163,46 @@ function expandChart(
   })();
 
   const area = areaRect(props, span);
-  const fillExpr = markFill(props, color);
+  const seriesField = seriesFieldName(props);
+  const markProps = markSeriesProps(props, seriesField);
 
   const axisItems: SceneItem[] = [
     node(`${frameName}_plotBg`, {
+      role: literal("plot"),
       x: area.x,
       y: area.y,
       w: area.w,
       h: area.h,
-      fill: plotFill,
-      stroke: plotBorder,
-      strokeWidth: props.plotStrokeWidth ?? literal(1.5),
       radius: literal(6),
-      opacity: props.plotOpacity ?? literal(0.95),
+      ...(props.plotFill ? { fill: props.plotFill } : {}),
+      ...(props.plotStroke ? { stroke: props.plotStroke } : {}),
+      ...(props.plotStrokeWidth ? { strokeWidth: props.plotStrokeWidth } : {}),
+      ...(props.plotOpacity ? { opacity: props.plotOpacity } : {}),
     }),
-    ...expandGridLines(frameName, props, gridStroke, span),
+    ...expandGridLines(frameName, props, span),
     node(`${frameName}_xAxis`, {
+      role: literal("axis"),
       frame: literal(frameName),
       x1: xlimLow(props),
       y1: ylimLow(props),
       x2: xlimHigh(props),
       y2: ylimLow(props),
-      stroke: axisStroke,
-      strokeWidth: literal(2),
+      ...(props.axisColor ?? props.axisStroke ? { stroke: props.axisColor ?? props.axisStroke! } : {}),
     }),
     node(`${frameName}_yAxis`, {
+      role: literal("axis"),
       frame: literal(frameName),
       x1: xlimLow(props),
       y1: ylimLow(props),
       x2: xlimLow(props),
       y2: ylimHigh(props),
-      stroke: axisStroke,
-      strokeWidth: literal(2),
+      ...(props.axisColor ?? props.axisStroke ? { stroke: props.axisColor ?? props.axisStroke! } : {}),
     }),
     node(`${frameName}_title`, {
+      role: literal("title"),
       x: titleX,
       y: titleYExpr,
       text: literal(title),
-      font: literal(15),
-      fontWeight: literal(700),
-      fill: literal("#f1f5f9"),
-      letterSpacing: literal(0.6),
     }),
   ];
 
@@ -221,6 +214,8 @@ function expandChart(
   };
 
   const marks: SceneItem[] = [];
+  const explicitFill = props.color ?? props.fill;
+  const explicitStroke = props.stroke;
   if (kind === "chart.scatter") {
     marks.push({
       kind: "for",
@@ -229,14 +224,20 @@ function expandChart(
       span,
       body: [
         node("mark", {
+          role: literal("mark"),
           frame: literal(frameName),
           x: ident(`row.${resolvedXField}`),
           y: ident(`row.${resolvedYField}`),
           r: props.r ?? literal(3.5),
-          fill: fillExpr,
-          stroke: markStroke(props, props.markStroke ?? literal("#0f172a")),
-          strokeWidth: props.markStrokeWidth ?? literal(1),
-          hoverFill: props.hoverFill ?? literal("#f59e0b"),
+          ...markProps,
+          ...(explicitFill ? { fill: explicitFill } : {}),
+          ...(props.markStroke ?? props.barStroke
+            ? { stroke: props.markStroke ?? props.barStroke! }
+            : {}),
+          ...(props.markStrokeWidth ?? props.barStrokeWidth
+            ? { strokeWidth: props.markStrokeWidth ?? props.barStrokeWidth! }
+            : {}),
+          ...(props.hoverFill ? { hoverFill: props.hoverFill } : {}),
         }),
       ],
     });
@@ -248,13 +249,15 @@ function expandChart(
       span,
       body: [
         node("linePt", {
+          role: literal("mark"),
           frame: literal(frameName),
           x: ident(`row.${resolvedXField}`),
           y: ident(`row.${resolvedYField}`),
           r: props.r ?? literal(3),
-          fill: fillExpr,
-          stroke: markStroke(props, props.markStroke ?? stroke),
-          strokeWidth: props.markStrokeWidth ?? literal(1.5),
+          ...markProps,
+          ...(explicitFill ? { fill: explicitFill } : {}),
+          ...(props.markStroke ? { stroke: props.markStroke } : {}),
+          ...(props.markStrokeWidth ? { strokeWidth: props.markStrokeWidth } : {}),
         }),
       ],
     });
@@ -265,7 +268,7 @@ function expandChart(
         resolvedXField,
         resolvedYField,
         frameName,
-        stroke,
+        explicitStroke ?? explicitFill,
         span,
       ),
     );
@@ -277,15 +280,23 @@ function expandChart(
       span,
       body: [
         node("bar", {
+          role: literal("mark"),
           frame: literal(frameName),
           x: ident(`row.${resolvedXField}`),
           y: ident(`row.${resolvedYField}`),
           w: props.barWidth ?? literal(0.6),
           h: ident(`row.${resolvedYField}`),
-          fill: fillExpr,
-          stroke: markStroke(props, props.barStroke ?? props.markStroke ?? literal("#0f172a")),
-          strokeWidth: props.barStrokeWidth ?? props.markStrokeWidth ?? literal(1.25),
-          radius: props.barRadius ?? literal(3),
+          ...markProps,
+          ...(explicitFill ? { fill: explicitFill } : markFill(props) ? { fill: markFill(props)! } : {}),
+          ...(props.barStroke ?? props.markStroke
+            ? { stroke: props.barStroke ?? props.markStroke! }
+            : markStroke(props)
+              ? { stroke: markStroke(props)! }
+              : {}),
+          ...(props.barStrokeWidth ?? props.markStrokeWidth
+            ? { strokeWidth: props.barStrokeWidth ?? props.markStrokeWidth! }
+            : {}),
+          ...(props.barRadius ? { radius: props.barRadius } : { radius: literal(3) }),
           __chartBar: literal(true),
         }),
       ],
@@ -326,14 +337,13 @@ function expandLineSegments(
     if (!ax || !ay || !bx || !by) continue;
     items.push(
       node(`seg_${i}`, {
+        role: literal("mark-line"),
         frame: literal(frameName),
         x1: ax,
         y1: ay,
         x2: bx,
         y2: by,
-        stroke,
-        strokeWidth: literal(2),
-        strokeLinecap: literal("round"),
+        ...(stroke ? { stroke } : {}),
       }),
     );
   }
@@ -373,18 +383,38 @@ function pairAt(expr: Expr | undefined, index: number, fallback: number): Expr {
   return literal(fallback);
 }
 
-/** Per-row fill when `colorField: fill` (or other row key) is set on chart widgets. */
-function markFill(props: Record<string, Expr>, fallback: Expr): Expr {
+/** Series field for handbook palette (`group`, `colorField`, `series`). */
+function seriesFieldName(props: Record<string, Expr>): string | null {
+  const gf = props.group ?? props.groupField ?? props.series ?? props.colorField ?? props.fillField;
+  if (!gf) return null;
+  return fieldName(gf, "grp");
+}
+
+function markSeriesProps(
+  props: Record<string, Expr>,
+  seriesField: string | null,
+): Record<string, Expr> {
+  if (!seriesField) return {};
+  const paletteKind =
+    props.palette?.kind === "string" ? props.palette.value : "categorical";
+  return {
+    colorBy: literal(seriesField),
+    palette: literal(paletteKind),
+  };
+}
+
+/** Per-row fill when `colorField: fill` (legacy explicit row colors). */
+function markFill(props: Record<string, Expr>): Expr | null {
   const cf = props.colorField ?? props.fillField;
-  if (!cf) return fallback;
+  if (!cf) return null;
   const field = fieldName(cf, "fill");
   return ident(`row.${field}`);
 }
 
-/** Per-row stroke when `strokeField: stroke` (or other row key) is set on chart widgets. */
-function markStroke(props: Record<string, Expr>, fallback: Expr): Expr {
+/** Per-row stroke when `strokeField: stroke`. */
+function markStroke(props: Record<string, Expr>): Expr | null {
   const sf = props.strokeField;
-  if (!sf) return fallback;
+  if (!sf) return null;
   const field = fieldName(sf, "stroke");
   return ident(`row.${field}`);
 }
@@ -409,7 +439,6 @@ function areaRect(
 function expandGridLines(
   frameName: string,
   props: Record<string, Expr>,
-  gridStroke: Expr,
   span: { line: number; column: number },
 ): SceneItem[] {
   const items: SceneItem[] = [];
@@ -425,15 +454,14 @@ function expandGridLines(
     );
     items.push(
       node(`${frameName}_grid_${i}`, {
+        role: literal("grid"),
         frame: literal(frameName),
         x1: xlimLow(props),
         y1: y,
         x2: xlimHigh(props),
         y2: y,
-        stroke: gridStroke,
-        strokeWidth: literal(1),
-        strokeDasharray: literal("4 5"),
-        opacity: literal(0.85),
+        ...(props.gridColor ? { stroke: props.gridColor } : {}),
+        dash: literal("4 5"),
       }),
     );
   }

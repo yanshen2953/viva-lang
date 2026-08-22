@@ -1,7 +1,11 @@
 import type { Artifact, SceneItem } from "./ast.js";
 import { evaluate } from "./eval.js";
 import type { LayerIR, SceneNodeIR, VisualIR } from "./ir.js";
+import { applyHandbookHook } from "./style/hook.js";
+import type { HandbookHookOptions } from "./style/types.js";
 import { expandWidgets } from "./widgets.js";
+
+export type CompileOptions = HandbookHookOptions;
 
 let nextId = 1;
 
@@ -10,49 +14,51 @@ function id(prefix: string): string {
   return `${prefix}_${nextId}`;
 }
 
-export function compile(artifact: Artifact): VisualIR {
+export function compile(artifact: Artifact, options?: CompileOptions): VisualIR {
   nextId = 1;
   const expanded = expandWidgets(artifact);
+  const hooked = applyHandbookHook(expanded, options ?? {});
+  const expandedStyled = hooked.artifact;
   const state: Record<string, unknown> = {};
   const data: Record<string, unknown> = {};
 
-  for (const decl of expanded.states) {
+  for (const decl of expandedStyled.states) {
     state[decl.name] = evaluate(decl.value, [state, data]);
   }
-  for (const decl of expanded.data) {
+  for (const decl of expandedStyled.data) {
     data[decl.name] = evaluate(decl.value, [state, data]);
   }
 
-  const scene = expanded.scene ?? {
+  const scene = expandedStyled.scene ?? {
     props: {},
     layers: [],
     span: artifact.span,
   };
 
   return {
-    name: expanded.name,
+    name: expandedStyled.name,
     scene: {
       props: scene.props,
       layers: scene.layers.map(compileLayer),
     },
-    frames: expanded.frames.map((frame) => ({
+    frames: expandedStyled.frames.map((frame) => ({
       name: frame.name,
       props: frame.props,
     })),
     state,
     data,
-    events: expanded.events.map((event) => ({
+    events: expandedStyled.events.map((event) => ({
       type: event.type,
       target: event.target,
       body: event.body,
     })),
-    rules: expanded.rules.map((rule) => ({ cond: rule.cond, body: rule.body })),
-    binds: expanded.binds.map((bind) => ({
+    rules: expandedStyled.rules.map((rule) => ({ cond: rule.cond, body: rule.body })),
+    binds: expandedStyled.binds.map((bind) => ({
       target: bind.target,
       source: bind.source,
     })),
-    ticks: expanded.ticks.map((tick) => ({ fps: tick.fps, body: tick.body })),
-    animates: expanded.animates.map((anim) => ({
+    ticks: expandedStyled.ticks.map((tick) => ({ fps: tick.fps, body: tick.body })),
+    animates: expandedStyled.animates.map((anim) => ({
       name: anim.name,
       props: Object.fromEntries(
         Object.entries(anim.props).map(([key, expr]) => [
@@ -61,6 +67,7 @@ export function compile(artifact: Artifact): VisualIR {
         ]),
       ),
     })),
+    meta: hooked.meta.handbookIds.length ? hooked.meta : undefined,
   };
 }
 

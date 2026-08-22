@@ -152,8 +152,14 @@ function applyBinary(op: string, left: Value, right: Value): Value {
   }
 }
 
+import {
+  evalPaletteBuiltin,
+  evalPaletteStrokeBuiltin,
+  getStyleContext,
+} from "./style/context.js";
+
 /** Safe builtins for tick / rules (no user-defined functions at runtime yet). */
-const BUILTINS: Record<string, (...args: number[]) => number> = {
+const NUM_BUILTINS: Record<string, (...args: number[]) => number> = {
   sin: (x) => Math.sin(x),
   cos: (x) => Math.cos(x),
   tan: (x) => Math.tan(x),
@@ -168,13 +174,23 @@ const BUILTINS: Record<string, (...args: number[]) => number> = {
 };
 
 function applyCall(callee: string, args: Value[]): Value {
-  const fn = BUILTINS[callee];
+  if (callee === "palette") {
+    return evalPaletteBuiltin(args[0], args[1]);
+  }
+  if (callee === "paletteStroke") {
+    return evalPaletteStrokeBuiltin(args[0], args[1]);
+  }
+  const fn = NUM_BUILTINS[callee];
   if (!fn) {
-    throw new Error(
-      `unknown function '${callee}' (allowed: ${Object.keys(BUILTINS).join(", ")})`,
-    );
+    const allowed = [...Object.keys(NUM_BUILTINS), "palette", "paletteStroke"].join(", ");
+    throw new Error(`unknown function '${callee}' (allowed: ${allowed})`);
   }
   return fn(...args.map(num));
+}
+
+export function evaluateWithStyle(expr: Expr, scopes: Scope[]): Value {
+  if (!getStyleContext()) return evaluate(expr, scopes);
+  return evaluate(expr, scopes);
 }
 
 export function truthy(value: Value): boolean {

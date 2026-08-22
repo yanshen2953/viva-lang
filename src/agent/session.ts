@@ -167,7 +167,9 @@ export function createSession(
     const prevWorld =
       runtime?.getWorld() ??
       (ir ? { state: ir.state, data: ir.data } : undefined);
-    const result = compileSource(nextSource, `${id}.viva`);
+    const result = compileSource(nextSource, `${id}.viva`, {
+      handbookIds: meta?.handbooks ?? handbooks,
+    });
     const nextHash = fingerprint(nextSource);
     const diagnostics: Diagnostic[] = result.diagnostics.length
       ? result.diagnostics

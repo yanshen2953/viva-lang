@@ -16,6 +16,8 @@ import {
   scalesFromFrameProps,
   type FrameScales,
 } from "./space.js";
+import { resetPaletteSeries, setStyleContext } from "./style/index.js";
+import { STYLE_META_PROPS } from "./style/types.js";
 
 export type RuntimeOptions = {
   mount: HTMLElement;
@@ -83,6 +85,12 @@ export class Runtime {
 
   start(): void {
     this.stop();
+    if (this.ir.meta) {
+      setStyleContext({ meta: this.ir.meta });
+      resetPaletteSeries(this.ir.meta);
+    } else {
+      setStyleContext(null);
+    }
     this.mount.innerHTML = "";
     this.svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     this.svg.setAttribute("class", "viva-scene");
@@ -103,6 +111,7 @@ export class Runtime {
   }
 
   stop(): void {
+    setStyleContext(null);
     this.running = false;
     if (this.animFrame) cancelAnimationFrame(this.animFrame);
     this.animFrame = 0;
@@ -854,6 +863,7 @@ function circleToRect(c: Extract<HitShape, { kind: "circle" }>): Extract<HitShap
 function evalProps(props: Record<string, Expr>, scopes: Scope[]): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const [key, expr] of Object.entries(props)) {
+    if (STYLE_META_PROPS.has(key)) continue;
     out[key] = evaluate(expr, scopes);
   }
   return out;

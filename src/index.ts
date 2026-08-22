@@ -1,7 +1,8 @@
 export { parse } from "./parser.js";
 export { tokenize } from "./lexer.js";
-export { compile } from "./compiler.js";
+export { compile, type CompileOptions } from "./compiler.js";
 export { compileSource } from "./pipeline.js";
+export type { CompileOptions as PipelineCompileOptions } from "./pipeline.js";
 export { Runtime } from "./runtime.js";
 export { evaluate, execute } from "./eval.js";
 export { simulate, createSimWorld } from "./simulate.js";
@@ -34,3 +35,11 @@ export type {
   SelectionCombine,
 } from "./review/index.js";
 export { exportArtifact, renderSvgFromIr, renderVectorPdfFromIr } from "./export/index.js";
+export {
+  applyHandbookHook,
+  resolveStylePresets,
+  registerStylePreset,
+  listStylePresets,
+  getStylePreset,
+} from "./style/index.js";
+export type { StylePreset, StyleMeta, HandbookHookOptions, StyleRole } from "./style/index.js";
