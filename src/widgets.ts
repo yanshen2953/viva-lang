@@ -180,6 +180,7 @@ function expandChart(
       ...(props.plotOpacity ? { opacity: props.plotOpacity } : {}),
     }),
     ...expandGridLines(frameName, props, span),
+    ...expandAxisTicks(frameName, props, span),
     node(`${frameName}_xAxis`, {
       role: literal("axis"),
       frame: literal(frameName),
@@ -204,6 +205,9 @@ function expandChart(
       y: titleYExpr,
       text: literal(title),
     }),
+    ...(seriesField && !props.legend?.kind
+      ? expandSeriesLegend(frameName, artifact, dataName, seriesField, props, span)
+      : []),
   ];
 
   const axisLayer: LayerDecl = {
@@ -292,7 +296,7 @@ function expandChart(
           frame: literal(frameName),
           x: xExpr,
           y: ident(`row.${resolvedYField}`),
-          w: props.barWidth ?? literal(barW),
+          w: seriesField ? ident("row.__barW") : props.barWidth ?? literal(barW),
           h: ident(`row.${resolvedYField}`),
           ...markProps,
           ...(explicitFill ? { fill: explicitFill } : markFill(props) ? { fill: markFill(props)! } : {}),
@@ -476,6 +480,7 @@ function applyGroupedBarDodge(
     sorted.forEach((row, i) => {
       const dodge = (i - (n - 1) / 2) * step;
       setObjectField(row, "__dodge", literal(dodge));
+      setObjectField(row, "__barW", literal(step));
     });
   }
 }
@@ -570,26 +575,256 @@ function expandGridLines(
   span: { line: number; column: number },
 ): SceneItem[] {
   const items: SceneItem[] = [];
-  const fracs = [0.25, 0.5, 0.75];
-  const yRange = binary("-", ylimHigh(props), ylimLow(props), span);
-  for (let i = 0; i < fracs.length; i++) {
-    const f = fracs[i]!;
-    const y = binary(
-      "+",
-      ylimLow(props),
-      binary("*", yRange, literal(f), span),
-      span,
-    );
+  const yTicks = numericTicksFromProps(props, "y");
+  if (yTicks.length >= 2) {
+    for (let i = 0; i < yTicks.length; i++) {
+      const y = literal(yTicks[i]!);
+      items.push(
+        node(`${frameName}_grid_y_${i}`, {
+          role: literal("grid"),
+          frame: literal(frameName),
+          x1: xlimLow(props),
+          y1: y,
+          x2: xlimHigh(props),
+          y2: y,
+          ...(props.gridColor ? { stroke: props.gridColor } : {}),
+          dash: literal("4 5"),
+        }),
+      );
+    }
+  } else {
+    const fracs = [0.25, 0.5, 0.75];
+    const yRange = binary("-", ylimHigh(props), ylimLow(props), span);
+    for (let i = 0; i < fracs.length; i++) {
+      const f = fracs[i]!;
+      const y = binary(
+        "+",
+        ylimLow(props),
+        binary("*", yRange, literal(f), span),
+        span,
+      );
+      items.push(
+        node(`${frameName}_grid_${i}`, {
+          role: literal("grid"),
+          frame: literal(frameName),
+          x1: xlimLow(props),
+          y1: y,
+          x2: xlimHigh(props),
+          y2: y,
+          ...(props.gridColor ? { stroke: props.gridColor } : {}),
+          dash: literal("4 5"),
+        }),
+      );
+    }
+  }
+  const xTicks = numericTicksFromProps(props, "x");
+  for (let i = 0; i < xTicks.length; i++) {
+    const x = literal(xTicks[i]!);
     items.push(
-      node(`${frameName}_grid_${i}`, {
+      node(`${frameName}_grid_x_${i}`, {
         role: literal("grid"),
         frame: literal(frameName),
-        x1: xlimLow(props),
-        y1: y,
-        x2: xlimHigh(props),
-        y2: y,
+        x1: x,
+        y1: ylimLow(props),
+        x2: x,
+        y2: ylimHigh(props),
         ...(props.gridColor ? { stroke: props.gridColor } : {}),
         dash: literal("4 5"),
+      }),
+    );
+  }
+  return items;
+}
+
+function numericPair(expr: Expr | undefined, fallback: [number, number]): [number, number] | null {
+  if (expr?.kind === "array" && expr.items.length >= 2) {
+    const a = expr.items[0];
+    const b = expr.items[1];
+    if (a?.kind === "number" && b?.kind === "number") return [a.value, b.value];
+  }
+  return fallback ? fallback : null;
+}
+
+function niceTicks(min: number, max: number, maxTicks = 6): number[] {
+  if (!Number.isFinite(min) || !Number.isFinite(max)) return [];
+  if (min === max) return [min];
+  const span = max - min;
+  const rawStep = span / Math.max(1, maxTicks - 1);
+  const magnitude = Math.pow(10, Math.floor(Math.log10(rawStep)));
+  const residual = rawStep / magnitude;
+  let niceStep = magnitude;
+  if (residual > 5) niceStep = 10 * magnitude;
+  else if (residual > 2) niceStep = 5 * magnitude;
+  else if (residual > 1) niceStep = 2 * magnitude;
+
+  const tickMin = Math.floor(min / niceStep) * niceStep;
+  const ticks: number[] = [];
+  for (let v = tickMin; v <= max + niceStep * 0.5; v += niceStep) {
+    if (v >= min - niceStep * 0.01 && v <= max + niceStep * 0.01) ticks.push(v);
+    if (ticks.length > 10) break;
+  }
+  return ticks;
+}
+
+function formatTickValue(v: number): string {
+  if (Number.isInteger(v)) return String(v);
+  const r = Math.round(v * 100) / 100;
+  return String(r);
+}
+
+function numericTicksFromProps(
+  props: Record<string, Expr>,
+  axis: "x" | "y",
+): number[] {
+  const lim = axis === "x" ? numericPair(props.xlim, [0, 10]) : numericPair(props.ylim, [0, 100]);
+  if (!lim) return [];
+  return niceTicks(lim[0], lim[1]);
+}
+
+function expandAxisTicks(
+  frameName: string,
+  props: Record<string, Expr>,
+  span: { line: number; column: number },
+): SceneItem[] {
+  const xlim = numericPair(props.xlim, [0, 10]);
+  const ylim = numericPair(props.ylim, [0, 100]);
+  if (!xlim || !ylim) return [];
+
+  const xTicks = niceTicks(xlim[0], xlim[1]);
+  const yTicks = niceTicks(ylim[0], ylim[1]);
+  const items: SceneItem[] = [];
+
+  const xSpan = binary("-", xlimHigh(props), xlimLow(props), span);
+  const ySpan = binary("-", ylimHigh(props), ylimLow(props), span);
+  const xPad = binary("*", xSpan, literal(0.12), span);
+  const yPad = binary("*", ySpan, literal(0.08), span);
+  const tickLen = binary("*", ySpan, literal(0.02), span);
+
+  const yForXLabel = binary("-", ylimLow(props), yPad, span);
+  const xForYLabel = binary("-", xlimLow(props), xPad, span);
+
+  for (let i = 0; i < xTicks.length; i++) {
+    const v = xTicks[i]!;
+    items.push(
+      node(`${frameName}_xtick_${i}`, {
+        role: literal("label"),
+        frame: literal(frameName),
+        x: literal(v),
+        y: yForXLabel,
+        text: literal(formatTickValue(v)),
+        font: literal(8),
+        align: literal("center"),
+      }),
+      node(`${frameName}_xtickMark_${i}`, {
+        role: literal("axis"),
+        frame: literal(frameName),
+        x1: literal(v),
+        y1: ylimLow(props),
+        x2: literal(v),
+        y2: binary("-", ylimLow(props), tickLen, span),
+        strokeWidth: literal(1),
+      }),
+    );
+  }
+
+  for (let i = 0; i < yTicks.length; i++) {
+    const v = yTicks[i]!;
+    items.push(
+      node(`${frameName}_ytick_${i}`, {
+        role: literal("label"),
+        frame: literal(frameName),
+        x: xForYLabel,
+        y: literal(v),
+        text: literal(formatTickValue(v)),
+        font: literal(8),
+        align: literal("right"),
+      }),
+      node(`${frameName}_ytickMark_${i}`, {
+        role: literal("axis"),
+        frame: literal(frameName),
+        x1: xlimLow(props),
+        y1: literal(v),
+        x2: binary("+", xlimLow(props), tickLen, span),
+        y2: literal(v),
+        strokeWidth: literal(1),
+      }),
+    );
+  }
+
+  return items;
+}
+
+function uniqueSeriesKeys(
+  artifact: Artifact,
+  dataName: string,
+  seriesField: string,
+): string[] {
+  const decl = artifact.data.find((d) => d.name === dataName);
+  if (!decl || decl.value.kind !== "array") return [];
+  const keys: string[] = [];
+  const seen = new Set<string>();
+  for (const row of decl.value.items) {
+    if (row.kind !== "object") continue;
+    const sv = objectField(row, seriesField);
+    const key =
+      sv?.kind === "number"
+        ? String(sv.value)
+        : sv?.kind === "string"
+          ? sv.value
+          : "default";
+    if (!seen.has(key)) {
+      seen.add(key);
+      keys.push(key);
+    }
+  }
+  return keys.sort((a, b) => a.localeCompare(b));
+}
+
+function expandSeriesLegend(
+  frameName: string,
+  artifact: Artifact,
+  dataName: string,
+  seriesField: string,
+  props: Record<string, Expr>,
+  span: { line: number; column: number },
+): SceneItem[] {
+  const keys = uniqueSeriesKeys(artifact, dataName, seriesField);
+  if (!keys.length) return [];
+
+  const x0 = pairAt(props.areaX ?? props.x, 0, 72);
+  const y1 = pairAt(props.areaY ?? props.y, 1, 400);
+  const baseX = x0.kind === "number" ? x0.value + 12 : 84;
+  const baseY = y1.kind === "number" ? y1.value - 14 : 386;
+
+  const items: SceneItem[] = [];
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i]!;
+    const y = baseY - i * 14;
+    items.push(
+      node(`${frameName}_leg_${i}`, {
+        role: literal("legend"),
+        x: literal(baseX),
+        y: literal(y - 5),
+        w: literal(8),
+        h: literal(8),
+        radius: literal(2),
+        fill: {
+          kind: "call",
+          callee: "palette",
+          args: [
+            { kind: "string", value: key, span },
+            { kind: "string", value: "categorical", span },
+          ],
+          span,
+        },
+        styleSkip: literal(true),
+      }),
+      node(`${frameName}_legLbl_${i}`, {
+        role: literal("legend-label"),
+        x: literal(baseX + 14),
+        y: literal(y),
+        text: literal(key),
+        font: literal(8),
       }),
     );
   }

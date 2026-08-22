@@ -127,6 +127,22 @@ data stageSplit = [
   { i: 4, n: 63, grp: "arm-B", lane: 1 }
 ]
 
+data flowXTicks = [
+  { v: 0 }
+  { v: 2 }
+  { v: 4 }
+  { v: 6 }
+  { v: 8 }
+  { v: 10 }
+]
+
+data flowYTicks = [
+  { v: 0 }
+  { v: 2 }
+  { v: 4 }
+  { v: 6 }
+]
+
 frame microFlow
   x: 484 860
   y: 552 848
@@ -361,6 +377,26 @@ scene
       x2: 0
       y2: 6
 
+    for t in flowXTicks
+      node flowXLbl as flowXLbls
+        role: label
+        frame: microFlow
+        x: t.v
+        y: -0.4
+        text: t.v
+        font: 8
+        align: center
+
+    for t in flowYTicks
+      node flowYLbl as flowYLbls
+        role: label
+        frame: microFlow
+        x: -0.65
+        y: t.v
+        text: t.v
+        font: 8
+        align: right
+
     for v in flowV
       node flowShaft as flowLines
         role: mark-line
@@ -397,6 +433,15 @@ scene
       w: 376
       h: 296
       radius: 6
+
+    for st in stages
+      node stageLbl as stageLbls
+        role: label
+        x: 916
+        y: 585 + st.i * 58
+        text: st.label
+        font: 8
+        align: right
 
     for s in stageSplit
       node funnelBar as funnelBars

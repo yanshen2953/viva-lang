@@ -183,6 +183,35 @@ describe("widgets: chart.line / chart.bar expansion (C2/C3)", () => {
     expect(hasBar).toBe(true);
   });
 
+  it("expands chart widgets with axis tick labels", () => {
+    const result = compileSource(
+      `artifact T
+data bars = [{ x: 1, y: 40, grp: "A" }, { x: 2, y: 65, grp: "B" }]
+scene
+  size: 400 300
+widget chart.bar
+  data: bars
+  xField: x
+  yField: y
+  group: grp
+  xlim: 0 4
+  ylim: 0 80
+  areaX: 40 360
+  areaY: 40 260
+`,
+      "t.viva",
+      { handbookIds: ["print-nature"] },
+    );
+    expect(result.error).toBeNull();
+    const axes = result.ir!.scene.layers.find((l) => l.name.endsWith("_axes"))!;
+    const names = axes.items
+      .filter((i) => i.kind === "node")
+      .map((i) => (i.kind === "node" ? i.name : ""));
+    expect(names.some((n) => n.includes("_xtick_"))).toBe(true);
+    expect(names.some((n) => n.includes("_ytick_"))).toBe(true);
+    expect(names.some((n) => n.includes("_leg_"))).toBe(true);
+  });
+
   it("offsets grouped chart.bar series on x (__dodge)", () => {
     const result = compileSource(
       `artifact G
@@ -206,9 +235,10 @@ widget chart.bar
       "g.viva",
     );
     expect(result.error).toBeNull();
-    const rows = result.ir!.data.bars as { __dodge?: number }[];
+    const rows = result.ir!.data.bars as { __dodge?: number; __barW?: number }[];
     expect(rows[0]?.__dodge).toBeLessThan(0);
     expect(rows[1]?.__dodge).toBeGreaterThan(0);
+    expect(rows[0]?.__barW).toBeGreaterThan(0);
     const marks = result.ir!.scene.layers.find((l) => l.name.endsWith("_marks"))!;
     const forItem = marks.items.find((i) => i.kind === "for");
     expect(forItem?.kind).toBe("for");
@@ -216,6 +246,7 @@ widget chart.bar
       const bar = forItem.body[0];
       if (bar?.kind === "node") {
         expect(bar.props.x?.kind).toBe("binary");
+        expect(bar.props.w?.kind).toBe("ident");
       }
     }
   });
