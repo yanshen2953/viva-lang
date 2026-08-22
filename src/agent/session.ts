@@ -15,6 +15,9 @@ import {
 } from "../review/index.js";
 import { renderSvgFromIr } from "../export/static-svg.js";
 import { renderVectorPdfFromIr } from "../export/vector-pdf.js";
+import {
+  resolveSessionHandbooks,
+} from "./handbook.js";
 import type {
   ArtifactSnapshot,
   CompileMeta,
@@ -167,8 +170,9 @@ export function createSession(
     const prevWorld =
       runtime?.getWorld() ??
       (ir ? { state: ir.state, data: ir.data } : undefined);
+    const activeHandbooks = resolveSessionHandbooks(meta, handbooks);
     const result = compileSource(nextSource, `${id}.viva`, {
-      handbookIds: meta?.handbooks ?? handbooks,
+      handbookIds: activeHandbooks.length ? activeHandbooks : undefined,
     });
     const nextHash = fingerprint(nextSource);
     const diagnostics: Diagnostic[] = result.diagnostics.length
@@ -187,7 +191,7 @@ export function createSession(
         diagnostics,
         promptDigest: meta?.promptDigest,
         modelId: meta?.modelId,
-        handbooks: meta?.handbooks ?? handbooks,
+        handbooks: resolveSessionHandbooks(meta, handbooks),
         note: result.error ?? "compile failed",
       });
       emit("compile-error", { error: result.error });

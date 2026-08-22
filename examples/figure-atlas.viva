@@ -1,7 +1,7 @@
 artifact "Figure Atlas"
 
 state selGene = "CD8A"
-state hint = "六联图 · 虚拟队列 n=248 · handbook:dashboard"
+state hint = "六联图 · 虚拟队列 n=248 · 选手册加载风格"
 
 # ── 虚拟临床队列数据 ─────────────────────────────────────────
 
@@ -64,6 +64,14 @@ data biomarkers = [
   { il6: 2.6, crp: 20, grp: "low" }
   { il6: 4.5, crp: 48, grp: "mid" }
   { il6: 7.8, crp: 88, grp: "high" }
+]
+
+data heatScale = [
+  { i: 4 }
+  { i: 3 }
+  { i: 2 }
+  { i: 1 }
+  { i: 0 }
 ]
 
 data heatCells = [
@@ -293,6 +301,39 @@ scene
         colorBy: tier
         palette: sequential
 
+    node colorbarBg
+      role: colorbar
+      x: 388
+      y: 576
+      w: 14
+      h: 248
+      radius: 3
+
+    for t in heatScale
+      node colorbarStep as colorbarSteps
+        role: colorbar
+        x: 390
+        y: 576 + t.i * 49.6
+        w: 10
+        h: 46
+        radius: 1
+        fill: palette(t.i, "sequential")
+        styleSkip: true
+
+    node colorbarHi
+      role: legend-label
+      x: 406
+      y: 586
+      text: "high"
+      font: 9
+
+    node colorbarLo
+      role: legend-label
+      x: 406
+      y: 812
+      text: "low"
+      font: 9
+
     node heatGeneLbl
       role: annotation
       x: 60
@@ -469,7 +510,7 @@ event click on geneBtnB
   selGene = "IL6"
 
 tick 40
-  hint = "六联图 · 点击切换基因标签"
+  hint = "六联图 · 选手册: dashboard / print-nature / 无"
 
 # ── Widget 子图 (a)(b)(c) ─────────────────────────────────────
 

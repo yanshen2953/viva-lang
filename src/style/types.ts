@@ -15,6 +15,7 @@ export type StyleRole =
   | "legend-label"
   | "panel-label"
   | "subpanel"
+  | "colorbar"
   | "mark"
   | "mark-line"
   | "mark-area"

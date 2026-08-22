@@ -32,12 +32,20 @@ const examples: Record<string, string> = {
   Atlas: figureAtlas,
 };
 
+/** Suggested handbook when opening an example — user can override via selector. */
+const handbookSuggestions: Record<string, string> = {
+  Atlas: "dashboard",
+  Studio: "dashboard",
+  Paper: "print-nature",
+};
+
 const sourceEl = document.querySelector("#source") as HTMLTextAreaElement;
 const stageEl = document.querySelector("#stage") as HTMLElement;
 const errorEl = document.querySelector("#error") as HTMLElement;
 const statusEl = document.querySelector("#status") as HTMLElement;
 const navEl = document.querySelector("#examples") as HTMLElement;
 const runEl = document.querySelector("#run") as HTMLButtonElement;
+const handbookSelect = document.querySelector("#handbook-select") as HTMLSelectElement;
 const reviewToggle = document.querySelector("#review-toggle") as HTMLButtonElement;
 const reviewBar = document.querySelector("#review-bar") as HTMLElement;
 const reviewOut = document.querySelector("#review-out") as HTMLElement;
@@ -62,6 +70,16 @@ let current = "Hello";
 let reviewOn = false;
 let stickyTool: SelectionTool = "rect";
 let stickyCombine: SelectionCombine = "replace";
+
+function activeHandbooks(): string[] {
+  const id = handbookSelect.value.trim();
+  return id ? [id] : [];
+}
+
+function handbookStatusLabel(): string {
+  const ids = activeHandbooks();
+  return ids.length ? `hb:${ids.join("+")}` : "hb:—";
+}
 
 function syncReviewChrome(ctrl: NonNullable<ReturnType<VivaSession["getReview"]>>): void {
   ctrl.setTool(stickyTool);
@@ -93,6 +111,7 @@ sourceEl.addEventListener("input", () => {
   timer = window.setTimeout(run, 280);
 });
 runEl.addEventListener("click", run);
+handbookSelect.addEventListener("change", run);
 
 reviewToggle.addEventListener("click", () => {
   reviewOn = !reviewOn;
@@ -193,23 +212,20 @@ function showBrief(): void {
 function load(name: string): void {
   current = name;
   sourceEl.value = examples[name] ?? "";
+  const suggested = handbookSuggestions[name];
+  handbookSelect.value = suggested ?? "";
   for (const button of Array.from(navEl.querySelectorAll("button"))) {
     button.classList.toggle("active", button.textContent === name);
   }
   run();
 }
 
-function handbooksForExample(name: string): string[] {
-  if (name === "Studio" || name === "Atlas") return ["dashboard"];
-  if (name === "Paper") return ["print-nature"];
-  return [];
-}
-
 function run(): void {
   const started = performance.now();
+  const handbooks = activeHandbooks();
   const result = session.patch(sourceEl.value, {
     reason: "user-edit",
-    handbooks: handbooksForExample(current),
+    handbooks,
   });
 
   if (!result.ok) {
@@ -223,13 +239,14 @@ function run(): void {
   errorEl.hidden = true;
   const ms = Math.round(performance.now() - started);
   const irName = result.ir?.name ?? current;
+  const hb = handbookStatusLabel();
   if (reviewOn) {
     ensureReviewAttached();
     showBrief();
-    statusEl.textContent = `${irName} · ${ms}ms · 审查中`;
+    statusEl.textContent = `${irName} · ${ms}ms · ${hb} · 审查中`;
     statusEl.style.color = "#38bdf8";
   } else {
-    statusEl.textContent = `${irName} · ${ms}ms · ${session.id}`;
+    statusEl.textContent = `${irName} · ${ms}ms · ${hb}`;
     statusEl.style.color = "#34d399";
   }
 }

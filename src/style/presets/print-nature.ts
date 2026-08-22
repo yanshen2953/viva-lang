@@ -36,6 +36,7 @@ export const printNaturePreset: StylePreset = {
     "legend-label": { fill: "#374151", font: 8 },
     "panel-label": { fill: "#0072B2", font: 11, fontWeight: 700 },
     subpanel: { fill: "#ffffff", stroke: "#d1d5db", strokeWidth: 1, radius: 6 },
+    colorbar: { stroke: "#9ca3af", strokeWidth: 1 },
     mark: { stroke: "#1f2937", strokeWidth: 1 },
     "mark-line": { strokeWidth: 1.5 },
     "mark-area": { opacity: 0.85 },

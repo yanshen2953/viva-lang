@@ -16,6 +16,7 @@ import { exportArtifact, type ExportFormat } from "./export/index.js";
 import { simulate } from "./simulate.js";
 import { SYSTEM_PROMPT } from "./llm/system-prompt.js";
 import { createNodePromptService } from "./agent/prompt.node.js";
+import { resolveCompileHandbooks } from "./style/compile-handbooks.js";
 
 async function main(): Promise<void> {
   const argv = process.argv.slice(2);
@@ -64,9 +65,10 @@ async function main(): Promise<void> {
 
   const source = await readFile(input, "utf8");
   const outPath = flagValue(argv, "-o") ?? flagValue(argv, "--out");
+  const handbookIds = resolveCompileHandbooks(argv);
 
   if (command === "compile") {
-    const result = compileSource(source, input);
+    const result = compileSource(source, input, handbookIds.length ? { handbookIds } : undefined);
     if (!result.ir) {
       console.error(result.error);
       process.exitCode = 1;
@@ -84,7 +86,7 @@ async function main(): Promise<void> {
   }
 
   if (command === "html") {
-    const result = compileSource(source, input);
+    const result = compileSource(source, input, handbookIds.length ? { handbookIds } : undefined);
     if (!result.ir) {
       console.error(result.error);
       process.exitCode = 1;
@@ -103,7 +105,12 @@ async function main(): Promise<void> {
     ) as ExportFormat;
     const width = Number(flagValue(argv, "--width") ?? "1280");
     try {
-      const result = await exportArtifact(source, format, { width }, input);
+      const result = await exportArtifact(
+        source,
+        format,
+        { width, handbookIds: handbookIds.length ? handbookIds : undefined },
+        input,
+      );
       const target =
         outPath ??
         input.replace(/\.viva$/i, `.${result.format === "jpeg" ? "jpg" : result.format}`);
@@ -118,7 +125,7 @@ async function main(): Promise<void> {
   }
 
   if (command === "simulate") {
-    const result = compileSource(source, input);
+    const result = compileSource(source, input, handbookIds.length ? { handbookIds } : undefined);
     if (!result.ir) {
       console.error(result.error);
       process.exitCode = 1;
@@ -273,10 +280,10 @@ function printHelp(): void {
   console.log(`viva <command> [file.viva] [options]
 
 Commands:
-  compile <file>              Compile to Visual IR JSON
-  html <file> [-o out.html]   Standalone HTML shell
-  svg <file> [-o out.svg]     Export static SVG
-  export <file> -f <fmt>      Export svg|png|jpg|pdf|pdf-raster
+  compile <file> [--handbook id]   Compile to Visual IR JSON
+  html <file> [-o out.html]        Standalone HTML shell
+  svg <file> [-o out.svg]          Export static SVG
+  export <file> -f <fmt>           Export svg|png|jpg|pdf (repeat --handbook for style)
   simulate <file> [--ticks N] Headless world JSON
   prompt [--handbook id]      Print system prompt (+ handbooks)
   serve [--port 8765]         Local agent HTTP embed bridge
@@ -284,7 +291,7 @@ Commands:
   help                        Show this message
 
 Examples:
-  viva export examples/charts.viva -f pdf -o charts.pdf
+  viva export examples/figure-atlas.viva -f pdf --handbook print-nature
   viva export examples/hello.viva -f pdf-raster -o r.pdf
   viva export examples/hello.viva -f jpg --width 1600
   viva serve --port 8765

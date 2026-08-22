@@ -26,6 +26,7 @@ export {
 } from "./domain/registry.js";
 export { createEventBus } from "./events.js";
 export type * from "./types.js";
+export { resolveSessionHandbooks, shouldApplyHandbookHook } from "./handbook.js";
 export {
   createReviewController,
   listSelectableNodes,

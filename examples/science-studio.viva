@@ -4,7 +4,7 @@ state yaw = 0.65
 state pitch = 0.35
 state zoom = 1.15
 state pcaMark = none
-state hint = "handbook:dashboard · role/colorBy · 拖拽 PCA · 点选标记"
+state hint = "role/colorBy · 选手册加载风格"
 
 data bars = [
   { cat: 1, val: 42, grp: "A" }
