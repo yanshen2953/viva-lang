@@ -156,6 +156,18 @@ function fillTemplate(
   return tpl.replace(/\{\{(\w+)\}\}/g, (_, k: string) => vars[k] ?? "");
 }
 
+/** Scenario patterns may include `(?m)` — JS RegExp rejects that inline form when flags are also passed. */
+function compilePattern(pat: string): RegExp {
+  let flags = "m";
+  let body = pat;
+  const inline = /^\(\?([gimsuy]+)\)/.exec(body);
+  if (inline) {
+    flags = [...new Set([...flags, ...inline[1]!])].join("");
+    body = body.slice(inline[0].length);
+  }
+  return new RegExp(body, flags);
+}
+
 function grade(scenario: Scenario, source: string): CaseResult["checks"] {
   const checks: CaseResult["checks"] = [];
   const compiled = compileSource(source, `${scenario.id}.viva`);
@@ -168,14 +180,14 @@ function grade(scenario: Scenario, source: string): CaseResult["checks"] {
     });
   }
   for (const pat of scenario.assertions.mustMatch ?? []) {
-    const re = new RegExp(pat, "m");
+    const re = compilePattern(pat);
     checks.push({
       name: `mustMatch/${pat}`,
       pass: re.test(source),
     });
   }
   for (const pat of scenario.assertions.forbidMatch ?? []) {
-    const re = new RegExp(pat, "m");
+    const re = compilePattern(pat);
     checks.push({
       name: `forbidMatch/${pat}`,
       pass: !re.test(source),
