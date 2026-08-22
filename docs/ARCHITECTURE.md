@@ -4,6 +4,7 @@
 
 ```
 LLM (+ optional handbooks) → Viva DSL → Parser → Compiler → Visual IR → Runtime → SVG
+                                                              ↘ static export → SVG / vector PDF
 ```
 
 ## 三层
@@ -11,8 +12,18 @@ LLM (+ optional handbooks) → Viva DSL → Parser → Compiler → Visual IR �
 | 层 | 职责 | 状态 |
 | --- | --- | --- |
 | World | state / event / tick / drag / collide / key | ✅ |
-| Space | frame / scale / unit | ❌ 规划见 DESIGN §5 |
+| Space | frame / scale / chart widgets | ✅ `src/space.ts` |
 | Paint | layer 合成 + 节点样式；风格手册插件 | ✅ 基础；手册见 `handbooks/` |
+
+## Export & review
+
+| 模块 | 职责 |
+| --- | --- |
+| `src/export/static-svg.ts` | 无浏览器 SVG；`data-viva-id` 与 Runtime 对齐 |
+| `src/export/vector-pdf.ts` | 真矢量 PDF（非 PNG 嵌入） |
+| `src/review/` | 圈选工具 + 富反馈 → `agentBrief`；Session `createReview` |
+
+Host 文档：`docs/hosts/`（含 [`review.md`](./hosts/review.md)）。
 
 ## Runtime 要点
 

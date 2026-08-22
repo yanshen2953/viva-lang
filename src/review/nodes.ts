@@ -1,8 +1,7 @@
-import { evaluate, type Scope } from "../eval.js";
+import { evaluate, truthy, type Scope } from "../eval.js";
 import type { Expr } from "../ast.js";
 import type { SceneNodeIR, VisualIR } from "../ir.js";
 import { applyFrameToProps, layoutChartBar, scalesFromFrameProps } from "../space.js";
-import { truthy } from "../eval.js";
 import type { SelectedNode } from "./types.js";
 import type { BBox } from "./geometry.js";
 

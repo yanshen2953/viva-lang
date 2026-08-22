@@ -25,6 +25,10 @@
       "types": "./dist/export/index.d.ts",
       "import": "./dist/export/index.js"
     },
+    "./review": {
+      "types": "./dist/review/index.d.ts",
+      "import": "./dist/review/index.js"
+    },
     "./package.json": "./package.json"
   },
   "files": [
@@ -45,6 +49,7 @@
     "test:agent-exam": "vite-node scripts/run-agent-exam.ts --track hard",
     "test:agent-exam:smoke": "vite-node scripts/run-agent-exam.ts --track smoke",
     "test:agent-exam:all": "vite-node scripts/run-agent-exam.ts --track all",
+    "demo:review": "vite-node scripts/demo-review-brief.ts",
     "preview": "vite preview"
   },
   "keywords": [

@@ -26,3 +26,15 @@ export {
 } from "./domain/registry.js";
 export { createEventBus } from "./events.js";
 export type * from "./types.js";
+export {
+  createReviewController,
+  listSelectableNodes,
+  buildAgentBrief,
+} from "../review/index.js";
+export type {
+  ReviewController,
+  ReviewSnapshot,
+  FeedbackKind,
+  SelectionTool,
+  SelectionCombine,
+} from "../review/index.js";

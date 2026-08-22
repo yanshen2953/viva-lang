@@ -60,6 +60,7 @@ See also:
 
 - Web agent embed → [`web-embed.md`](./web-embed.md)
 - Bash / CLI → [`bash.md`](./bash.md)
+- Visual review → [`review.md`](./review.md)
 - Installers → [`../../install/README.md`](../../install/README.md)
 
-Sessions support `compile`/`patch`, `simulate({ ticks, events })` (headless), and `exportPackage()` (source + svg + provenance).
+Sessions support `compile`/`patch`, `simulate({ ticks, events })` (headless), `exportPackage()` / `exportVectorPackage()`, and `createReview()` for human-in-the-loop repair briefs.

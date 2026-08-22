@@ -1,3 +1,5 @@
+#!/usr/bin/env -S npx vite-node
+/** Headless smoke: selection + agentBrief from hello.viva (no browser). */
 import { compileSource } from "../src/pipeline.js";
 import { createReviewController } from "../src/review/controller.js";
 import { listSelectableNodes } from "../src/review/nodes.js";

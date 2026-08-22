@@ -11,7 +11,8 @@ viva html examples/hello.viva -o hello.html
 viva svg examples/charts.viva -o charts.svg
 viva export examples/charts.viva -f png -o charts.png
 viva export examples/charts.viva -f jpg --width 1600 -o charts.jpg
-viva export examples/charts.viva -f pdf -o charts.pdf
+viva export examples/charts.viva -f pdf -o charts.pdf      # vector PDF (geometry 1:1, default)
+viva export examples/charts.viva -f pdf-raster -o r.pdf   # PNG-in-PDF fallback
 viva simulate examples/exam/P1_param_lab.viva --ticks 10
 viva prompt --handbook print-nature
 viva serve --port 8765
@@ -29,7 +30,8 @@ SYS=$(viva prompt --handbook print-nature)
 viva compile out.viva || true
 
 # 4) export takeaway
-viva export out.viva -f pdf -o out.pdf
+viva export out.viva -f pdf -o out.pdf      # vector
+viva export out.viva -f svg -o out.svg
 viva export out.viva -f jpg -o out.jpg
 ```
 

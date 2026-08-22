@@ -23,6 +23,8 @@ Coverage (see `tests/corpus/README.md`):
 - Negative N1 (`resource` must fail)
 - Host session policies (`reset` / `preserve` / `preserve-data`) + `exportPackage` + headless `simulate`
 - Safe math / array concat / diagnostics hints
+- Vector export (`tests/exam/export.test.ts`, `tests/exam/review-vector.test.ts`): `data-viva-id` parity, vector PDF vs `pdf-raster`
+- Review geometry combine modes (`tests/exam/review-vector.test.ts`)
 
 ## Agent exam (Pi = system under test)
 

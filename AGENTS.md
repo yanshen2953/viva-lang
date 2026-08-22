@@ -16,6 +16,7 @@ Dependency refresh on pod start is `npm install` (see environment update script)
 | CLI without dist | `npx vite-node src/cli.ts -- compile examples/hello.viva` |
 | Agent Host smoke | `npx vite-node scripts/hello-agent.ts` |
 | Export SVG/JPG/PDF | `npx vite-node src/cli.ts -- export examples/hello.viva -f pdf -o /tmp/h.pdf` |
+| Review brief demo | `npm run demo:review` |
 | Agent HTTP bridge | `npx vite-node src/cli.ts -- serve --port 8765` |
 | Exam UI scene runner | `npm run dev` then `node scripts/exam-layers-ui.mjs` |
 
@@ -35,7 +36,7 @@ Dependency refresh on pod start is `npm install` (see environment update script)
 - **Playground** must go through `VivaAgentHost` (not raw `new Runtime`)
 - **Space:** `frame` + node `frame:` maps data-domain x/y via linear scales (`src/space.ts`)
 - **Charts:** `widget chart.scatter|line|bar`
-- Design/plan: `docs/DESIGN.md`, `docs/PLAN.md`, host sketch `docs/hosts/minimal-host.md`
+- Design/plan: `docs/DESIGN.md`, `docs/PLAN.md`, host docs `docs/hosts/README.md`
 
 ### No secrets / services
 
