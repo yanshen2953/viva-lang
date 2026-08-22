@@ -1,0 +1,10 @@
+{
+  "case": "C1_chart_scatter",
+  "input": "examples/exam/C1_chart_scatter.viva",
+  "expect": {
+    "layers": ["__plot_axes", "__plot_marks"],
+    "frames": ["plot"],
+    "data": ["series"],
+    "marks": { "forItem": "row", "source": "series", "nodeName": "mark", "frame": "plot" }
+  }
+}

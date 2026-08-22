@@ -1,0 +1,8 @@
+{
+  "case": "L3_visible_false",
+  "input": "examples/exam/L3_visible_false.viva",
+  "expect": {
+    "layers": ["hidden"],
+    "layerProps": { "hidden": { "visible": false } }
+  }
+}

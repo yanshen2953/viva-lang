@@ -1,0 +1,17 @@
+artifact "L5 layer blur glow"
+
+scene
+  size: 400 300
+  background: #0b1220
+
+  # Whole-layer blur + glow -> the layer <g> gets a filter (feGaussianBlur + feFlood).
+  layer soft
+    blur: 4
+    glow: 6
+    glowColor: #38bdf8
+    node card
+      x: 120
+      y: 90
+      w: 140
+      h: 60
+      fill: #38bdf8

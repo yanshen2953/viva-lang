@@ -1,0 +1,12 @@
+{
+  "id": "A03_repair_compile_error",
+  "title": "Agent repairs a broken artifact using diagnostics",
+  "kind": "repair",
+  "handbooks": [],
+  "seedSource": "tests/agent-exam/seeds/A03_broken.viva",
+  "prompt": "The following Viva source failed to compile. Fix it so it compiles. Keep the same intent (a counter text node and click increment). Output ONLY the full corrected Viva source starting with artifact.\n\nDiagnostics:\n{{diagnostics}}\n\nBroken source:\n{{source}}",
+  "assertions": {
+    "compiles": true,
+    "mustMatch": ["state\\s+count", "event\\s+click"]
+  }
+}

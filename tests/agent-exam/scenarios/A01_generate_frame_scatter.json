@@ -1,0 +1,15 @@
+{
+  "id": "A01_generate_frame_scatter",
+  "title": "Agent generates a frame-scaled scatter from intent",
+  "kind": "generate",
+  "handbooks": [],
+  "prompt": "Create a Viva artifact that plots pressure vs time as a scatter plot using an explicit frame (data-domain x/y, no magic-number scene coords on the marks). Include at least 4 data points, one frame named plot with xlim/ylim, and a layer of points with frame: plot. Output ONLY valid Viva source starting with artifact.",
+  "assertions": {
+    "compiles": true,
+    "mustMatch": ["\\bframe\\b", "\\blayer\\b", "frame:\\s*plot|frame:\\s*\"plot\""],
+    "ir": {
+      "minFrames": 1,
+      "minLayers": 1
+    }
+  }
+}

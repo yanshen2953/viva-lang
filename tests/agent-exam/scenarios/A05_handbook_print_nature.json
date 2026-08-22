@@ -1,0 +1,15 @@
+{
+  "id": "A05_handbook_print_nature",
+  "title": "Agent generates with print-nature handbook injected",
+  "kind": "generate",
+  "handbooks": ["print-nature"],
+  "prompt": "Create a small Viva figure: one frame plot, a line or scatter of 5 points for a restrained print-style report. Prefer thin strokes, no neon glow. Output ONLY valid Viva source starting with artifact.",
+  "assertions": {
+    "compiles": true,
+    "mustMatch": ["\\bframe\\b", "\\blayer\\b"],
+    "ir": {
+      "minFrames": 1
+    },
+    "forbidMatch": ["glow:\\s*[1-9]"]
+  }
+}

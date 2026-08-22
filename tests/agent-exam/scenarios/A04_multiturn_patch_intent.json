@@ -1,0 +1,15 @@
+{
+  "id": "A04_multiturn_patch_intent",
+  "title": "Agent patches an existing artifact by intent (second turn)",
+  "kind": "patch",
+  "handbooks": [],
+  "seedSource": "examples/exam/L1_zorder.viva",
+  "prompt": "Here is an existing Viva artifact. Modify it so the top layer has opacity: 0.5 while keeping bottom/top layer names and overlap. Output ONLY the full updated Viva source starting with artifact.\n\nCurrent source:\n{{source}}",
+  "assertions": {
+    "compiles": true,
+    "mustMatch": ["layer\\s+top", "opacity:\\s*0\\.5"],
+    "ir": {
+      "layerOrder": ["bottom", "top"]
+    }
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "case": "L2_opacity",
+  "input": "examples/exam/L2_opacity.viva",
+  "expect": {
+    "layers": ["mist"],
+    "layerProps": { "mist": { "opacity": 0.5 } }
+  }
+}

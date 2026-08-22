@@ -1,0 +1,15 @@
+artifact "L3 layer visible false"
+
+scene
+  size: 400 300
+  background: #0b1220
+
+  # visible: false -> the layer group gets display:none and is not hit-testable.
+  layer hidden
+    visible: false
+    node secret
+      x: 120
+      y: 90
+      w: 140
+      h: 60
+      fill: #38bdf8
