@@ -4,133 +4,229 @@ state yaw = 0.65
 state pitch = 0.35
 state zoom = 1.15
 state pcaMark = none
-state hint = "条形/折线/矢量 · 图层混合 · 拖拽 PCA 轨道旋转 · 点选标记"
-state pulse = 0
+state hint = "分组色 · 框线网格 · 拖拽 PCA 旋转 · 点选标记"
 
 data bars = [
-  { cat: 1, val: 42 }
-  { cat: 2, val: 68 }
-  { cat: 3, val: 55 }
-  { cat: 4, val: 91 }
-  { cat: 5, val: 73 }
+  { cat: 1, val: 42, grp: "A", fill: #38bdf8, stroke: #0c4a6e }
+  { cat: 2, val: 68, grp: "A", fill: #22d3ee, stroke: #155e75 }
+  { cat: 3, val: 55, grp: "B", fill: #a78bfa, stroke: #5b21b6 }
+  { cat: 4, val: 91, grp: "B", fill: #c084fc, stroke: #6b21a8 }
+  { cat: 5, val: 73, grp: "C", fill: #34d399, stroke: #065f46 }
 ]
 
 data lineSeries = [
-  { t: 0, v: 12 }
-  { t: 1, v: 18 }
-  { t: 2, v: 15 }
-  { t: 3, v: 28 }
-  { t: 4, v: 22 }
-  { t: 5, v: 35 }
-  { t: 6, v: 30 }
+  { t: 0, v: 12, fill: #34d399 }
+  { t: 1, v: 18, fill: #34d399 }
+  { t: 2, v: 15, fill: #34d399 }
+  { t: 3, v: 28, fill: #34d399 }
+  { t: 4, v: 22, fill: #34d399 }
+  { t: 5, v: 35, fill: #34d399 }
+  { t: 6, v: 30, fill: #34d399 }
 ]
 
 data field = [
-  { ox: 1, oy: 2, ux: 1.2, uy: 1.8 }
-  { ox: 2.5, oy: 3, ux: -0.8, uy: 2.4 }
-  { ox: 4, oy: 1.5, ux: 1.5, uy: -1.2 }
-  { ox: 5.5, oy: 4, ux: -1.1, uy: -1.6 }
-  { ox: 7, oy: 2.8, ux: 0.6, uy: 2.2 }
-  { ox: 8.2, oy: 5, ux: 1.8, uy: 0.9 }
+  { ox: 1, oy: 2, ux: 1.2, uy: 1.8, grp: "flow", fill: #818cf8, stroke: #312e81 }
+  { ox: 2.5, oy: 3, ux: -0.8, uy: 2.4, grp: "flow", fill: #a78bfa, stroke: #4c1d95 }
+  { ox: 4, oy: 1.5, ux: 1.5, uy: -1.2, grp: "shear", fill: #f472b6, stroke: #831843 }
+  { ox: 5.5, oy: 4, ux: -1.1, uy: -1.6, grp: "shear", fill: #fb7185, stroke: #9f1239 }
+  { ox: 7, oy: 2.8, ux: 0.6, uy: 2.2, grp: "flow", fill: #60a5fa, stroke: #1e3a8a }
+  { ox: 8.2, oy: 5, ux: 1.8, uy: 0.9, grp: "curl", fill: #fbbf24, stroke: #92400e }
 ]
 
 data pca = [
-  { id: "A1", x: -1.4, y: 0.9, z: 0.4, fill: #38bdf8 }
-  { id: "A2", x: -1.1, y: 0.6, z: 0.2, fill: #38bdf8 }
-  { id: "A3", x: -0.9, y: 1.1, z: 0.5, fill: #38bdf8 }
-  { id: "B1", x: 0.2, y: -0.3, z: 1.1, fill: #f59e0b }
-  { id: "B2", x: 0.5, y: -0.6, z: 0.9, fill: #f59e0b }
-  { id: "B3", x: 0.8, y: -0.2, z: 1.3, fill: #f59e0b }
-  { id: "C1", x: 1.2, y: 0.7, z: -0.8, fill: #34d399 }
-  { id: "C2", x: 1.5, y: 1.0, z: -1.0, fill: #34d399 }
-  { id: "C3", x: 1.0, y: 0.4, z: -0.6, fill: #34d399 }
+  { id: "A1", x: -1.4, y: 0.9, z: 0.4, grp: "A", fill: #38bdf8, stroke: #0c4a6e }
+  { id: "A2", x: -1.1, y: 0.6, z: 0.2, grp: "A", fill: #38bdf8, stroke: #0c4a6e }
+  { id: "A3", x: -0.9, y: 1.1, z: 0.5, grp: "A", fill: #7dd3fc, stroke: #0c4a6e }
+  { id: "B1", x: 0.2, y: -0.3, z: 1.1, grp: "B", fill: #f59e0b, stroke: #92400e }
+  { id: "B2", x: 0.5, y: -0.6, z: 0.9, grp: "B", fill: #fbbf24, stroke: #92400e }
+  { id: "B3", x: 0.8, y: -0.2, z: 1.3, grp: "B", fill: #fb923c, stroke: #9a3412 }
+  { id: "C1", x: 1.2, y: 0.7, z: -0.8, grp: "C", fill: #34d399, stroke: #065f46 }
+  { id: "C2", x: 1.5, y: 1.0, z: -1.0, grp: "C", fill: #6ee7b7, stroke: #065f46 }
+  { id: "C3", x: 1.0, y: 0.4, z: -0.6, grp: "C", fill: #10b981, stroke: #064e3b }
 ]
 
 frame quiver
-  x: 520 760
-  y: 300 500
+  x: 528 752
+  y: 318 488
   xlim: 0 10
   ylim: 0 7
 
 scene
   size: 1180 720
-  background: #050a12
+  background: #030712
 
   layer textureBackdrop
-    opacity: 0.92
+    opacity: 0.88
     blend: multiply
     node gridA
       x: 0
       y: 0
       w: 1180
       h: 720
-      gradient: #0c1220 #111827 #0a1018
+      gradient: #0a0f1a #0f172a #070b14
       gradientDir: y
 
-    node paperGrain
-      x: 280
-      y: 40
-      w: 880
-      h: 640
-      fill: #1e293b
-      opacity: 0.35
-      radius: 4
-
   layer colorWash
-    opacity: 0.62
+    opacity: 0.45
     blend: soft-light
     node washL
-      x: 40
-      y: 120
-      r: 200
+      x: 60
+      y: 140
+      r: 180
       gradient: #1d4ed8 #0ea5e9
-      blur: 48
-      opacity: 0.45
+      blur: 40
+      opacity: 0.35
 
     node washR
-      x: 980
-      y: 520
-      r: 220
-      gradient: #9f1239 #f59e0b
-      blur: 56
-      opacity: 0.38
-
-  layer chartOverlay
-    opacity: 0.72
-    blend: overlay
-    node chartSheen
-      x: 500
-      y: 72
-      w: 660
-      h: 220
-      fill: #38bdf8
-      opacity: 0.12
-      radius: 16
+      x: 1020
+      y: 500
+      r: 200
+      gradient: #be123c #f59e0b
+      blur: 48
+      opacity: 0.28
 
   layer charts
     opacity: 1
-    blend: normal
-    node chartPanel
-      x: 500
-      y: 72
-      w: 660
-      h: 220
-      radius: 16
+    node chartDeck
+      x: 488
+      y: 64
+      w: 672
+      h: 248
+      radius: 18
       fill: #0b1220
-      stroke: #334155
-      strokeWidth: 1
-      opacity: 0.92
+      stroke: #94a3b8
+      strokeWidth: 2
+      shadow: 0 18 36
+      shadowColor: #000000
+      shadowOpacity: 0.45
 
-    node vecPanel
-      x: 500
-      y: 288
-      w: 280
-      h: 228
-      radius: 16
+    node barLegA
+      x: 520
+      y: 278
+      w: 12
+      h: 12
+      radius: 2
+      fill: #38bdf8
+      stroke: #0c4a6e
+      strokeWidth: 1.25
+
+    node barLegALbl
+      x: 538
+      y: 290
+      text: "grp A"
+      font: 11
+      fill: #cbd5e1
+
+    node barLegB
+      x: 588
+      y: 278
+      w: 12
+      h: 12
+      radius: 2
+      fill: #a78bfa
+      stroke: #5b21b6
+      strokeWidth: 1.25
+
+    node barLegBLbl
+      x: 606
+      y: 290
+      text: "grp B"
+      font: 11
+      fill: #cbd5e1
+
+    node barLegC
+      x: 656
+      y: 278
+      w: 12
+      h: 12
+      radius: 2
+      fill: #34d399
+      stroke: #065f46
+      strokeWidth: 1.25
+
+    node barLegCLbl
+      x: 674
+      y: 290
+      text: "grp C"
+      font: 11
+      fill: #cbd5e1
+
+    node vecDeck
+      x: 488
+      y: 328
+      w: 296
+      h: 248
+      radius: 18
       fill: #0b1220
+      stroke: #94a3b8
+      strokeWidth: 2
+
+    node vecPlotBg
+      x: 512
+      y: 368
+      w: 248
+      h: 188
+      fill: #020617
+      stroke: #64748b
+      strokeWidth: 1.5
+      radius: 8
+
+    node vecTitle
+      x: 512
+      y: 340
+      text: "VECTOR FIELD"
+      font: 14
+      fontWeight: 700
+      fill: #f1f5f9
+      letterSpacing: 1
+
+    node vecGrid1
+      frame: quiver
+      x1: 0
+      y1: 1.75
+      x2: 10
+      y2: 1.75
       stroke: #334155
       strokeWidth: 1
-      opacity: 0.92
+      dash: 4 5
+
+    node vecGrid2
+      frame: quiver
+      x1: 0
+      y1: 3.5
+      x2: 10
+      y2: 3.5
+      stroke: #334155
+      strokeWidth: 1
+      dash: 4 5
+
+    node vecGrid3
+      frame: quiver
+      x1: 0
+      y1: 5.25
+      x2: 10
+      y2: 5.25
+      stroke: #334155
+      strokeWidth: 1
+      dash: 4 5
+
+    node vecAxisX
+      frame: quiver
+      x1: 0
+      y1: 0
+      x2: 10
+      y2: 0
+      stroke: #cbd5e1
+      strokeWidth: 2
+
+    node vecAxisY
+      frame: quiver
+      x1: 0
+      y1: 0
+      x2: 0
+      y2: 7
+      stroke: #cbd5e1
+      strokeWidth: 2
 
     for v in field
       node vecShaft as vecLines
@@ -139,105 +235,232 @@ scene
         y1: v.oy
         x2: v.ox + v.ux
         y2: v.oy + v.uy
-        stroke: #a78bfa
-        strokeWidth: 2
+        stroke: v.fill
+        strokeWidth: 2.5
 
       node vecHead as vecHeads
         frame: quiver
         x: v.ox + v.ux
         y: v.oy + v.uy
-        r: 3.5
-        fill: #c4b5fd
+        r: 4.5
+        fill: v.fill
+        stroke: v.stroke
+        strokeWidth: 1.2
+
+    node legFlow
+      x: 528
+      y: 548
+      w: 10
+      h: 10
+      radius: 2
+      fill: #818cf8
+      stroke: #312e81
+      strokeWidth: 1
+
+    node legFlowLbl
+      x: 544
+      y: 558
+      text: "flow"
+      font: 11
+      fill: #cbd5e1
+
+    node legShear
+      x: 600
+      y: 548
+      w: 10
+      h: 10
+      radius: 2
+      fill: #f472b6
+      stroke: #831843
+      strokeWidth: 1
+
+    node legShearLbl
+      x: 616
+      y: 558
+      text: "shear"
+      font: 11
+      fill: #cbd5e1
+
+    node legCurl
+      x: 672
+      y: 548
+      w: 10
+      h: 10
+      radius: 2
+      fill: #fbbf24
+      stroke: #92400e
+      strokeWidth: 1
+
+    node legCurlLbl
+      x: 688
+      y: 558
+      text: "curl"
+      font: 11
+      fill: #cbd5e1
 
   layer pca
     opacity: 1
-    node pcaPanel
+    node pcaDeck
       x: 800
-      y: 288
+      y: 328
       w: 360
-      h: 228
-      radius: 16
+      h: 248
+      radius: 18
+      fill: #0b1220
+      stroke: #94a3b8
+      strokeWidth: 2
+
+    node pcaPlotBg
+      x: 816
+      y: 368
+      w: 328
+      h: 188
       fill: #020617
-      stroke: #475569
-      strokeWidth: 1
+      stroke: #64748b
+      strokeWidth: 1.5
+      radius: 8
+
+    node pcaTitle
+      x: 816
+      y: 340
+      text: "PCA · 3D ORBIT"
+      font: 14
+      fontWeight: 700
+      fill: #f1f5f9
+      letterSpacing: 1
 
     node pcaOrbit
-      x: 800
-      y: 288
-      w: 360
-      h: 228
+      x: 816
+      y: 368
+      w: 328
+      h: 188
       fill: #38bdf8
-      opacity: 0.04
+      opacity: 0.03
       drag: true
 
     node pcaAxis
       x: 980
-      y: 402
-      w: 120
-      h: 1
-      fill: #475569
-      opacity: 0.6
+      y: 462
+      w: 140
+      h: 1.5
+      fill: #cbd5e1
+      opacity: 0.75
 
     node pcaAxisY
       x: 980
-      y: 330
-      w: 1
-      h: 144
-      fill: #475569
-      opacity: 0.6
+      y: 382
+      w: 1.5
+      h: 160
+      fill: #cbd5e1
+      opacity: 0.75
 
     for p in pca
       node pcaPt as pcaPts
-        x: 980 + (p.x * cos(yaw) - p.z * sin(yaw)) * zoom * 72
-        y: 402 - (p.y * cos(pitch) - (p.x * sin(yaw) + p.z * cos(yaw)) * sin(pitch)) * zoom * 72
-        r: 7
+        x: 980 + (p.x * cos(yaw) - p.z * sin(yaw)) * zoom * 78
+        y: 462 - (p.y * cos(pitch) - (p.x * sin(yaw) + p.z * cos(yaw)) * sin(pitch)) * zoom * 78
+        r: 8
         fill: p.fill
-        stroke: #f8fafc
-        strokeWidth: 1
-        glow: 6
+        stroke: p.stroke
+        strokeWidth: 1.5
+        glow: 8
         glowColor: p.fill
 
       if pcaMark == p.id
         node pcaRing as pcaPts
-          x: 980 + (p.x * cos(yaw) - p.z * sin(yaw)) * zoom * 72
-          y: 402 - (p.y * cos(pitch) - (p.x * sin(yaw) + p.z * cos(yaw)) * sin(pitch)) * zoom * 72
-          r: 12
+          x: 980 + (p.x * cos(yaw) - p.z * sin(yaw)) * zoom * 78
+          y: 462 - (p.y * cos(pitch) - (p.x * sin(yaw) + p.z * cos(yaw)) * sin(pitch)) * zoom * 78
+          r: 14
           fill: #000000
-          opacity: 0.15
+          opacity: 0.12
           stroke: #f8fafc
+          strokeWidth: 2
+          dash: 5 4
+
+    node legA
+      x: 824
+      y: 548
+      w: 10
+      h: 10
+      radius: 2
+      fill: #38bdf8
+      stroke: #0c4a6e
+      strokeWidth: 1
+
+    node legALbl
+      x: 840
+      y: 558
+      text: "cluster A"
+      font: 11
+      fill: #cbd5e1
+
+    node legB
+      x: 920
+      y: 548
+      w: 10
+      h: 10
+      radius: 2
+      fill: #f59e0b
+      stroke: #92400e
+      strokeWidth: 1
+
+    node legBLbl
+      x: 936
+      y: 558
+      text: "cluster B"
+      font: 11
+      fill: #cbd5e1
+
+    node legC
+      x: 1016
+      y: 548
+      w: 10
+      h: 10
+      radius: 2
+      fill: #34d399
+      stroke: #065f46
+      strokeWidth: 1
+
+    node legCLbl
+      x: 1032
+      y: 558
+      text: "cluster C"
+      font: 11
+      fill: #cbd5e1
 
     node zoomOut
       x: 1110
-      y: 300
-      w: 28
-      h: 28
-      radius: 6
+      y: 336
+      w: 30
+      h: 30
+      radius: 8
       fill: #1e293b
-      stroke: #64748b
+      stroke: #94a3b8
+      strokeWidth: 1.5
 
     node zoomIn
-      x: 1144
-      y: 300
-      w: 28
-      h: 28
-      radius: 6
+      x: 1148
+      y: 336
+      w: 30
+      h: 30
+      radius: 8
       fill: #1e293b
-      stroke: #64748b
+      stroke: #94a3b8
+      strokeWidth: 1.5
 
     node zoomOutLbl
-      x: 1124
-      y: 318
+      x: 1125
+      y: 356
       text: "-"
-      font: 18
-      fill: #e2e8f0
+      font: 20
+      fill: #f8fafc
       align: center
 
     node zoomInLbl
-      x: 1158
-      y: 318
+      x: 1163
+      y: 356
       text: "+"
-      font: 18
-      fill: #e2e8f0
+      font: 20
+      fill: #f8fafc
       align: center
 
   layer typography
@@ -246,35 +469,25 @@ scene
       x: 48
       y: 56
       text: "图文排版 · 科学图板"
-      font: 26
+      font: 28
       fontWeight: 700
       fill: #f8fafc
-      letterSpacing: 0.5
 
     node subtitle
       x: 48
-      y: 92
-      text: "条形图 / 折线图 / 矢量场 + 可旋转 PCA"
+      y: 96
+      text: "分组配色 · 绘图区框线 · 网格 · 图例"
       font: 15
       fill: #94a3b8
 
     node body1
       x: 48
-      y: 140
+      y: 148
       w: 420
-      text: "左侧为排版区：标题层级、说明与图注。右侧图层 stack 使用 multiply、soft-light、screen 与不同 opacity，接近 Photoshop 合成。"
+      text: "条形图按 grp 分色并带描边；折线区有浅底+网格；矢量场按物理类型着色；PCA 三色簇 + 图例。图层仍保留 multiply / soft-light 氛围。"
       font: 14
       fill: #cbd5e1
       lineHeight: 1.55
-
-    node body2
-      x: 48
-      y: 220
-      w: 420
-      text: "PCA 面板：拖拽半透明轨道旋转 yaw/pitch；+/- 推拉缩放。点击散点可标记样本 id。"
-      font: 14
-      fill: #94a3b8
-      lineHeight: 1.5
 
     node caption
       x: 48
@@ -293,39 +506,55 @@ scene
         fill: #38bdf8
 
   layer screenGlow
-    opacity: 0.55
+    opacity: 0.4
     blend: screen
     node topGlow
-      x: 600
+      x: 520
       y: 0
-      w: 500
-      h: 120
+      w: 480
+      h: 100
       gradient: #38bdf8 #0ea5e9
-      opacity: 0.22
-      blur: 40
+      opacity: 0.18
+      blur: 36
 
 widget chart.bar
   data: bars
   xField: cat
   yField: val
+  colorField: fill
+  strokeField: stroke
   xlim: 0 6
   ylim: 0 100
-  areaX: 520 700
-  areaY: 100 260
-  title: "BAR"
-  color: #38bdf8
-  barWidth: 0.55
+  areaX: 508 688
+  areaY: 108 268
+  title: "BAR · by group"
+  plotFill: #020617
+  plotStroke: #94a3b8
+  plotStrokeWidth: 2
+  axisColor: #e2e8f0
+  gridColor: #475569
+  barStrokeWidth: 1.75
+  barWidth: 0.52
 
 widget chart.line
   data: lineSeries
   xField: t
   yField: v
+  colorField: fill
   xlim: 0 6
   ylim: 0 40
-  areaX: 720 1140
-  areaY: 100 260
-  title: "LINE"
+  areaX: 708 1148
+  areaY: 108 268
+  title: "LINE · trend"
   color: #34d399
+  stroke: #6ee7b7
+  plotFill: #020617
+  plotStroke: #94a3b8
+  plotStrokeWidth: 2
+  axisColor: #e2e8f0
+  gridColor: #475569
+  markStroke: #064e3b
+  markStrokeWidth: 1.75
 
 event drag on pcaOrbit
   yaw = yaw + __event.dx * 0.012
@@ -341,4 +570,4 @@ event click on zoomOut
   zoom = clamp(zoom - 0.12, 0.6, 2.2)
 
 tick 30
-  pulse = sin(yaw * 2) * 0.01
+  hint = "分组色+框线已启用"
