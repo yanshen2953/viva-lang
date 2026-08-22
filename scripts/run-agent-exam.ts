@@ -344,16 +344,31 @@ function grade(scenario: Scenario, source: string): CaseResult["checks"] {
 
 function buildSystem(scenario: Scenario): string {
   const mode = scenario.system ?? (inferTrack(scenario) === "hard" ? "slim" : "full");
-  const core = mode === "slim" ? SYSTEM_PROMPT_SLIM : SYSTEM_PROMPT;
-  const ids = scenario.handbooks ?? [];
-  if (!ids.length) return core;
-  try {
-    const prompt = createNodePromptService();
-    const bodies = ids.map((id) => prompt.loadHandbook(id));
-    return [core, ...bodies].join("\n\n---\n\n");
-  } catch {
-    return core;
+  const parts: string[] = [];
+  if (mode === "slim") {
+    parts.push(SYSTEM_PROMPT_SLIM);
+    // Hard track gets LANGUAGE.md like an agent with repo docs open — not per-task coaching.
+    try {
+      parts.push(
+        "# Language reference\n\n" +
+          readFileSync(path.join(root, "docs/LANGUAGE.md"), "utf8"),
+      );
+    } catch {
+      /* optional */
+    }
+  } else {
+    parts.push(SYSTEM_PROMPT);
   }
+  const ids = scenario.handbooks ?? [];
+  if (ids.length) {
+    try {
+      const prompt = createNodePromptService();
+      for (const id of ids) parts.push(prompt.loadHandbook(id));
+    } catch {
+      /* ignore missing handbook */
+    }
+  }
+  return parts.join("\n\n---\n\n");
 }
 
 function wantsSyntaxCrib(scenario: Scenario): boolean {

@@ -10,7 +10,7 @@ Deterministic corpus: `tests/corpus/` (no LLM).
 | Track | IDs | System | Coaching | Intent |
 | --- | --- | --- | --- | --- |
 | **smoke** | A01–A12 | full (+ template) | repair crib OK | language / Host smoke |
-| **hard** | H01–H08 | **slim** (no template) | **no** syntax crib by default | Cursor/Codex-aligned difficulty |
+| **hard** | H01–H08 | **slim + `docs/LANGUAGE.md`** (no toy template) | **no** syntax crib by default | Cursor/Codex-aligned (docs open, task uncoached) |
 
 Default npm script runs **hard**.
 

@@ -7,7 +7,7 @@
   "handbooks": [],
   "seedSource": "tests/agent-exam/seeds/H07_surgical_base.viva",
   "repair": { "maxAttempts": 1, "syntaxCrib": false },
-  "prompt": "Surgical edit: add a top-level timeline (from 2015 to 2030) bound to year. Do not rename data trend/cohort, do not remove existing chart widgets, do not redesign layout. Output ONLY the full updated Viva source starting with artifact.\n\nCurrent source:\n{{source}}",
+  "prompt": "Surgical edit: add a top-level timeline with from: 2015, to: 2030, bind: year. Do not rename data trend/cohort, do not remove existing chart widgets, do not redesign layout. Output ONLY the full updated Viva source starting with artifact.\n\nCurrent source:\n{{source}}",
   "assertions": {
     "compiles": true,
     "mustMatch": [

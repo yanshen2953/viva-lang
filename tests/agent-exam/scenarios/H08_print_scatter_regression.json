@@ -5,8 +5,8 @@
   "kind": "generate",
   "system": "slim",
   "handbooks": ["print-nature"],
-  "repair": { "maxAttempts": 0, "syntaxCrib": false },
-  "prompt": "One-shot: publication-style scatter of ≥8 points in a named frame, plus a chart.line for a fitted trend series in a second panel. No glow/blur. Output ONLY Viva source starting with artifact.",
+  "repair": { "maxAttempts": 1, "syntaxCrib": false },
+  "prompt": "One-shot: publication-style scatter of ≥8 points in a named top-level frame (marks use frame: …), plus a top-level chart.line for a fitted trend series in a second panel. No glow/blur. Output ONLY Viva source starting with artifact.",
   "assertions": {
     "compiles": true,
     "mustMatch": [

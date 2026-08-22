@@ -40,7 +40,7 @@ Default model: `deepseek-v4-flash-vision-exp`.
 
 | Track | Cases | Notes |
 | --- | --- | --- |
-| **hard** | H01–H08 | slim system (no copy-paste template), no syntax crib, multipanel / multiturn / blind repair / surgical patch |
+| **hard** | H01–H08 | slim system + `docs/LANGUAGE.md` (no toy template), no syntax crib, multipanel / multiturn / blind repair / surgical patch |
 | **smoke** | A01–A12 | full system + repair crib; regression floor |
 
 Report: `/opt/cursor/artifacts/agent-exam/report-hard.json` (hard) or `report.json`.

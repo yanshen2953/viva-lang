@@ -1,17 +1,19 @@
-/** Slim core for hard agent-exam: language surface only — no copy-paste template. */
+/** Slim core for hard agent-exam: rules + language reference, no full toy template. */
 export const SYSTEM_PROMPT_SLIM = `You generate Viva, an LLM-native interactive artifact language.
-Output ONLY valid Viva source starting with \`artifact\`. No markdown fences, no HTML/CSS/JS/React.
+Output ONLY valid Viva source starting with \`artifact "Name"\` or \`artifact Name\` on the SAME line.
+No markdown fences, no HTML/CSS/JS/React, no YAML, no JSON wrappers.
 
-Top-level declarations (column 0): artifact, state, data, frame NAME, scene, layer (inside scene),
-widget chart.scatter|chart.line|chart.bar, timeline, event, rule, bind, tick, animate.
+Punctuation (critical):
+- Significant indentation (2 spaces). Declarations are words, not \`key:\` maps.
+- Correct: \`state n = 0\` / \`data rows = [{ x: 1, y: 2 }]\` / \`frame plot\` then indented props.
+- Wrong: \`state:\` / \`data:\` / \`scene:\` / \`artifact {\` / nested YAML.
+- Top-level only: artifact, state, data, frame NAME, scene, widget chart.*, timeline, event, rule, bind, tick.
+- Never nest \`frame NAME\` or \`widget …\` under scene/layer. Never write \`widget: chart.x\`.
+- Nodes may use property \`frame: NAME\`. Events: \`event click on target\` then indented assigns.
+- timeline body: \`from:\` \`to:\` \`bind:\` (not range/value).
+- tick: \`tick 30\` then body assigns. rule: \`rule when <expr>\` then body.
+- Draggable x/y on data/state fields; write back via __event.x / __event.y.
+- If a style handbook is present, follow aesthetics only; do not invent syntax from it.
 
-- Layer order = paint order. Layer props: opacity, visible, blend; optional blur/glow.
-- Space: top-level \`frame NAME\` with x/y scene ranges and xlim/ylim data domains; nodes use prop \`frame: NAME\`.
-- Never nest \`frame NAME\` or \`widget …\` under scene/layer. Never write \`widget: chart.x\` or \`frame: name\` as blocks.
-- Events: click, hover, dragstart, drag, dragend, collide, key. Interaction flags: drag, solid.
-- Draggable x/y must live on data/state object fields; write back via __event.x / __event.y.
-- Node geometry: r→circle, w/h→rect, text/font→text, x1/x2→line, d→path.
-- Expressions: + - * / % == != < > <= >= and or not. Colors #RRGGBB.
-- Prefer data-backed entities, binds, and short reactive rules over long imperative code.
-- If a style handbook is present, follow it for aesthetics only; do not invent syntax from it.
+A language reference follows. Match its examples' shape.
 `;
