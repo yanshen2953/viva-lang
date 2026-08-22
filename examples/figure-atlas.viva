@@ -115,21 +115,21 @@ data stages = [
 ]
 
 data stageSplit = [
-  { i: 0, n: 124, grp: "arm-A" }
-  { i: 0, n: 124, grp: "arm-B" }
-  { i: 1, n: 94, grp: "arm-A" }
-  { i: 1, n: 92, grp: "arm-B" }
-  { i: 2, n: 82, grp: "arm-A" }
-  { i: 2, n: 80, grp: "arm-B" }
-  { i: 3, n: 76, grp: "arm-A" }
-  { i: 3, n: 72, grp: "arm-B" }
-  { i: 4, n: 68, grp: "arm-A" }
-  { i: 4, n: 63, grp: "arm-B" }
+  { i: 0, n: 124, grp: "arm-A", lane: 0 }
+  { i: 0, n: 124, grp: "arm-B", lane: 1 }
+  { i: 1, n: 94, grp: "arm-A", lane: 0 }
+  { i: 1, n: 92, grp: "arm-B", lane: 1 }
+  { i: 2, n: 82, grp: "arm-A", lane: 0 }
+  { i: 2, n: 80, grp: "arm-B", lane: 1 }
+  { i: 3, n: 76, grp: "arm-A", lane: 0 }
+  { i: 3, n: 72, grp: "arm-B", lane: 1 }
+  { i: 4, n: 68, grp: "arm-A", lane: 0 }
+  { i: 4, n: 63, grp: "arm-B", lane: 1 }
 ]
 
 frame microFlow
-  x: 500 820
-  y: 520 748
+  x: 484 860
+  y: 552 848
   xlim: 0 10
   ylim: 0 6
 
@@ -402,9 +402,9 @@ scene
       node funnelBar as funnelBars
         role: mark-area
         x: 920
-        y: 568 + s.i * 52
+        y: 568 + s.i * 58 + s.lane * 24
         w: s.n * 1.45
-        h: 22
+        h: 18
         radius: 4
         colorBy: grp
         palette: categorical
@@ -412,7 +412,7 @@ scene
     node funnelLegA
       role: legend
       x: 920
-      y: 840
+      y: 828
       w: 10
       h: 10
       radius: 2
@@ -422,13 +422,13 @@ scene
     node funnelLegALbl
       role: legend-label
       x: 936
-      y: 850
+      y: 838
       text: "arm-A"
 
     node funnelLegB
       role: legend
       x: 1000
-      y: 840
+      y: 828
       w: 10
       h: 10
       radius: 2
@@ -438,13 +438,13 @@ scene
     node funnelLegBLbl
       role: legend-label
       x: 1016
-      y: 850
+      y: 838
       text: "arm-B"
 
   layer hud
     node geneBtnA
       role: chrome
-      x: 280
+      x: 200
       y: 842
       w: 52
       h: 22
@@ -452,7 +452,7 @@ scene
 
     node geneBtnALbl
       role: label
-      x: 306
+      x: 226
       y: 856
       text: "CD8A"
       font: 10
@@ -460,7 +460,7 @@ scene
 
     node geneBtnB
       role: chrome
-      x: 340
+      x: 260
       y: 842
       w: 52
       h: 22
@@ -468,7 +468,7 @@ scene
 
     node geneBtnBLbl
       role: label
-      x: 366
+      x: 286
       y: 856
       text: "IL6"
       font: 10
@@ -494,6 +494,7 @@ widget chart.bar
   ylim: 0 100
   areaX: 60 436
   areaY: 168 468
+  barWidth: 0.55
   title: "RESPONSE BY VISIT"
 
 widget chart.line
@@ -513,7 +514,7 @@ widget chart.scatter
   yField: crp
   group: grp
   xlim: 0 12
-  ylim: 0 130
+  ylim: 5 130
   areaX: 908 1280
   areaY: 168 468
   title: "IL-6 vs CRP"

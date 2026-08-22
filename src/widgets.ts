@@ -274,6 +274,13 @@ function expandChart(
       ),
     );
   } else if (kind === "chart.bar") {
+    const barW = barWidthData(props);
+    if (seriesField) {
+      applyGroupedBarDodge(artifact, dataName, resolvedXField, seriesField, barW);
+    }
+    const xExpr = seriesField
+      ? binary("+", ident(`row.${resolvedXField}`), ident("row.__dodge"), span)
+      : ident(`row.${resolvedXField}`);
     marks.push({
       kind: "for",
       item: "row",
@@ -283,9 +290,9 @@ function expandChart(
         node("bar", {
           role: literal("mark"),
           frame: literal(frameName),
-          x: ident(`row.${resolvedXField}`),
+          x: xExpr,
           y: ident(`row.${resolvedYField}`),
-          w: props.barWidth ?? literal(0.6),
+          w: props.barWidth ?? literal(barW),
           h: ident(`row.${resolvedYField}`),
           ...markProps,
           ...(explicitFill ? { fill: explicitFill } : markFill(props) ? { fill: markFill(props)! } : {}),
@@ -416,6 +423,66 @@ function objectField(
   key: string,
 ): Expr | null {
   return obj.entries.find((e) => e.key === key)?.value ?? null;
+}
+
+function setObjectField(
+  obj: Extract<Expr, { kind: "object" }>,
+  key: string,
+  value: Expr,
+): void {
+  const existing = obj.entries.find((e) => e.key === key);
+  if (existing) existing.value = value;
+  else obj.entries.push({ key, value });
+}
+
+/** Offset grouped bars in data space so `group` series do not overlap. */
+function applyGroupedBarDodge(
+  artifact: Artifact,
+  dataName: string,
+  xField: string,
+  seriesField: string,
+  barWidth: number,
+): void {
+  const decl = artifact.data.find((d) => d.name === dataName);
+  if (!decl || decl.value.kind !== "array") return;
+
+  const byX = new Map<string, Extract<Expr, { kind: "object" }>[]>();
+  for (const row of decl.value.items) {
+    if (row.kind !== "object") continue;
+    const xf = objectField(row, xField);
+    const key =
+      xf?.kind === "number"
+        ? String(xf.value)
+        : xf?.kind === "string"
+          ? xf.value
+          : "0";
+    const list = byX.get(key) ?? [];
+    list.push(row);
+    byX.set(key, list);
+  }
+
+  for (const group of byX.values()) {
+    const sorted = [...group].sort((a, b) => {
+      const sa = objectField(a, seriesField);
+      const sb = objectField(b, seriesField);
+      const ka =
+        sa?.kind === "string" ? sa.value : sa?.kind === "number" ? String(sa.value) : "";
+      const kb =
+        sb?.kind === "string" ? sb.value : sb?.kind === "number" ? String(sb.value) : "";
+      return ka.localeCompare(kb);
+    });
+    const n = sorted.length;
+    const step = n > 0 ? barWidth / n : barWidth;
+    sorted.forEach((row, i) => {
+      const dodge = (i - (n - 1) / 2) * step;
+      setObjectField(row, "__dodge", literal(dodge));
+    });
+  }
+}
+
+function barWidthData(props: Record<string, Expr>): number {
+  if (props.barWidth?.kind === "number") return props.barWidth.value;
+  return 0.6;
 }
 
 function fieldName(expr: Expr | undefined, fallback: string): string {

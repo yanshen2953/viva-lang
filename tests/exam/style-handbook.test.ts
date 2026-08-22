@@ -28,6 +28,32 @@ scene
     }
   });
 
+  it("parses hyphenated roles like mark-area (not subtraction)", () => {
+    const src = `
+artifact "T"
+scene
+  layer main
+    for c in heatCells
+      node cell
+        w: 40
+        h: 40
+        role: mark-area
+        colorBy: tier
+        palette: sequential
+`;
+    const ir = compile(parse(src), { handbookIds: ["print-nature"] });
+    const forItem = ir.scene.layers[0]?.items[0];
+    expect(forItem?.kind).toBe("for");
+    if (forItem?.kind === "for") {
+      const cell = forItem.body[0];
+      expect(cell?.kind).toBe("node");
+      if (cell?.kind === "node") {
+        expect(cell.props.fill?.kind).toBe("call");
+        expect(cell.props.fill?.kind === "call" && cell.props.fill.callee).toBe("palette");
+      }
+    }
+  });
+
   it("injects palette() for colorBy in for-loops", () => {
     const src = `
 artifact "T"

@@ -182,4 +182,41 @@ describe("widgets: chart.line / chart.bar expansion (C2/C3)", () => {
     }
     expect(hasBar).toBe(true);
   });
+
+  it("offsets grouped chart.bar series on x (__dodge)", () => {
+    const result = compileSource(
+      `artifact G
+data bars = [
+  { x: 1, y: 10, grp: "A" }
+  { x: 1, y: 20, grp: "B" }
+  { x: 2, y: 15, grp: "A" }
+]
+scene
+  size: 400 300
+widget chart.bar
+  data: bars
+  xField: x
+  yField: y
+  group: grp
+  xlim: 0 3
+  ylim: 0 30
+  areaX: 40 360
+  areaY: 40 260
+`,
+      "g.viva",
+    );
+    expect(result.error).toBeNull();
+    const rows = result.ir!.data.bars as { __dodge?: number }[];
+    expect(rows[0]?.__dodge).toBeLessThan(0);
+    expect(rows[1]?.__dodge).toBeGreaterThan(0);
+    const marks = result.ir!.scene.layers.find((l) => l.name.endsWith("_marks"))!;
+    const forItem = marks.items.find((i) => i.kind === "for");
+    expect(forItem?.kind).toBe("for");
+    if (forItem?.kind === "for") {
+      const bar = forItem.body[0];
+      if (bar?.kind === "node") {
+        expect(bar.props.x?.kind).toBe("binary");
+      }
+    }
+  });
 });

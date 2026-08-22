@@ -7,8 +7,26 @@ export function literalString(expr: Expr | undefined): string | null {
   return null;
 }
 
+/**
+ * Role props are often written `mark-area` which parses as `mark - area`.
+ * Reconstruct hyphenated role tokens from idents and subtraction chains.
+ */
+export function roleToken(expr: Expr | undefined): string | null {
+  if (!expr) return null;
+  if (expr.kind === "string") return expr.value;
+  if (expr.kind === "ident") return expr.path.join(".");
+  if (expr.kind === "binary" && expr.op === "-") {
+    const left = roleToken(expr.left);
+    const right = roleToken(expr.right);
+    if (left && right && !left.includes(".") && !right.includes(".")) {
+      return `${left}-${right}`;
+    }
+  }
+  return literalString(expr);
+}
+
 function roleExprValue(props: Record<string, Expr>): string | null {
-  return literalString(props.role);
+  return roleToken(props.role);
 }
 
 export function literalNumber(expr: Expr | undefined): number | null {
