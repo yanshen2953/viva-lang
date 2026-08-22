@@ -1,0 +1,36 @@
+artifact "E5 collide"
+
+data bodies = [
+  { name: "a", x: 80, y: 80 }
+  { name: "b", x: 140, y: 80 }
+]
+
+state hits = 0
+
+scene
+  size: 280 180
+  background: #0b1220
+
+  layer stage
+    for body in bodies
+      node ball as bodies
+        x: body.x
+        y: body.y
+        r: 20
+        fill: #38bdf8
+        solid: true
+        drag: true
+
+    node score
+      x: 16
+      y: 24
+      text: hits
+      font: 16
+      fill: #e2e8f0
+
+event drag on bodies
+  body.x = __event.x
+  body.y = __event.y
+
+event collide on bodies
+  hits = hits + 1

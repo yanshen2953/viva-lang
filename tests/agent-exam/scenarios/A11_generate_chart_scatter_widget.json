@@ -1,0 +1,14 @@
+{
+  "id": "A11_generate_chart_scatter_widget",
+  "title": "Agent uses widget chart.scatter",
+  "kind": "generate",
+  "handbooks": [],
+  "prompt": "Write a Viva artifact using `widget chart.scatter` with data points, xField/yField, xlim/ylim, areaX/areaY. Output ONLY valid Viva source starting with artifact.",
+  "assertions": {
+    "compiles": true,
+    "mustMatch": ["widget\\s+chart\\.scatter"],
+    "ir": {
+      "minFrames": 1
+    }
+  }
+}

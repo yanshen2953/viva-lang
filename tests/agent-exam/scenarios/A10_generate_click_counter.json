@@ -1,0 +1,14 @@
+{
+  "id": "A10_generate_click_counter",
+  "title": "Agent generates click counter world",
+  "kind": "generate",
+  "handbooks": [],
+  "prompt": "Write a minimal Viva artifact: state count = 0, a text node showing count, event click that increments count. Output ONLY valid Viva source starting with artifact.",
+  "assertions": {
+    "compiles": true,
+    "mustMatch": ["state\\s+count", "event\\s+click", "count\\s*=\\s*count\\s*\\+\\s*1"],
+    "ir": {
+      "hasEventTypes": ["click"]
+    }
+  }
+}

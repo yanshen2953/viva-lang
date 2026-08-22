@@ -1,0 +1,23 @@
+artifact "C3 chart bar"
+
+data bars = [
+  { x: 1, y: 40 }
+  { x: 2, y: 65 }
+  { x: 3, y: 50 }
+]
+
+scene
+  size: 480 280
+  background: #0b1220
+
+widget chart.bar
+  data: bars
+  xField: x
+  yField: y
+  xlim: 0 4
+  ylim: 0 80
+  areaX: 40 440
+  areaY: 40 240
+  title: "BAR"
+  color: #38bdf8
+  barWidth: 0.5

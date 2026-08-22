@@ -1,0 +1,22 @@
+artifact "E2 drag writeback"
+
+data items = [
+  { name: "orb", x: 120, y: 90 }
+]
+
+scene
+  size: 320 200
+  background: #0b1220
+
+  layer stage
+    for item in items
+      node orb as items
+        x: item.x
+        y: item.y
+        r: 18
+        fill: #38bdf8
+        drag: true
+
+event drag on items
+  item.x = __event.x
+  item.y = __event.y

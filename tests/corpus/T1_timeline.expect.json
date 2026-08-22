@@ -1,0 +1,9 @@
+{
+  "case": "T1_timeline",
+  "input": "examples/exam/T1_timeline.viva",
+  "expect": {
+    "layers": ["hud", "__timeline"],
+    "events": [{ "type": "click", "target": "timelineTrack" }],
+    "state": ["year"]
+  }
+}

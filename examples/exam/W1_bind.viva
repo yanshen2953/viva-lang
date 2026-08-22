@@ -1,0 +1,21 @@
+artifact "W1 bind"
+
+state t = 0
+state label = 0
+
+scene
+  size: 240 120
+  background: #0b1220
+
+  layer hud
+    node text
+      x: 20
+      y: 40
+      text: label
+      font: 18
+      fill: #e2e8f0
+
+bind label <- t
+
+tick 20
+  t = t + 1

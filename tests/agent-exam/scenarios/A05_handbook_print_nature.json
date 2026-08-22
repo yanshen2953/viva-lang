@@ -1,15 +1,16 @@
 {
   "id": "A05_handbook_print_nature",
-  "title": "Agent generates with print-nature handbook injected",
+  "title": "Agent generates with print-nature handbook; frame is TOP-LEVEL",
   "kind": "generate",
   "handbooks": ["print-nature"],
-  "prompt": "Create a small Viva figure: one frame plot, a line or scatter of 5 points for a restrained print-style report. Prefer thin strokes, no neon glow. Output ONLY valid Viva source starting with artifact.",
+  "prompt": "Create a small Viva figure for a restrained print report.\n\nCRITICAL SYNTAX:\n- `frame plot` is a TOP-LEVEL declaration (sibling of scene), NEVER inside scene/layer.\n- Inside nodes use `frame: plot` as a property.\n- Prefer thin strokes; do not use glow.\n\nInclude: top-level frame plot with xlim/ylim and scene x/y ranges; a data array of 5 points; one layer of marks with frame: plot.\nOutput ONLY valid Viva source starting with artifact.",
   "assertions": {
     "compiles": true,
-    "mustMatch": ["\\bframe\\b", "\\blayer\\b"],
+    "mustMatch": ["(?m)^frame\\s+\\w+", "\\blayer\\b", "frame:\\s*plot"],
+    "forbidMatch": ["(?m)^\\s+frame\\s+\\w+", "glow:\\s*[1-9]"],
     "ir": {
-      "minFrames": 1
-    },
-    "forbidMatch": ["glow:\\s*[1-9]"]
+      "minFrames": 1,
+      "minLayers": 1
+    }
   }
 }

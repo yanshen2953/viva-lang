@@ -1,0 +1,7 @@
+{
+  "case": "N1_resource_error",
+  "input": "examples/exam/N1_resource_error.viva",
+  "expect": {
+    "compileError": true
+  }
+}

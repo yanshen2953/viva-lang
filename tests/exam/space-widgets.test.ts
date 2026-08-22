@@ -151,3 +151,35 @@ widget chart.scatter
     expect(ir.scene.layers.some((l) => l.name === "____chart_1_marks")).toBe(true);
   });
 });
+
+describe("widgets: chart.line / chart.bar expansion (C2/C3)", () => {
+  it("expands C2 chart.line into axes + marks over series", () => {
+    const src = readFileSync(path.join(examDir, "C2_chart_line.viva"), "utf8");
+    const result = compileSource(src, "C2_chart_line.viva");
+    expect(result.error).toBeNull();
+    const ir = result.ir!;
+    expect(ir.frames.length).toBeGreaterThanOrEqual(1);
+    expect(ir.scene.layers.some((l) => l.name.endsWith("_axes"))).toBe(true);
+    expect(ir.scene.layers.some((l) => l.name.endsWith("_marks"))).toBe(true);
+    const marks = ir.scene.layers.find((l) => l.name.endsWith("_marks"))!;
+    expect(marks.items.some((item) => item.kind === "for")).toBe(true);
+  });
+
+  it("expands C3 chart.bar with __chartBar marks", () => {
+    const src = readFileSync(path.join(examDir, "C3_chart_bar.viva"), "utf8");
+    const result = compileSource(src, "C3_chart_bar.viva");
+    expect(result.error).toBeNull();
+    const ir = result.ir!;
+    expect(Object.keys(ir.data)).toContain("bars");
+    let hasBar = false;
+    for (const layer of ir.scene.layers) {
+      for (const item of layer.items) {
+        if (item.kind !== "for") continue;
+        for (const body of item.body) {
+          if (body.kind === "node" && body.props.__chartBar !== undefined) hasBar = true;
+        }
+      }
+    }
+    expect(hasBar).toBe(true);
+  });
+});

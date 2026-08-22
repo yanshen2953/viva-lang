@@ -103,20 +103,53 @@ scene
     expect(bundle.asSystemParts().length).toBeGreaterThanOrEqual(1);
   });
 
-  it("compiles with a handbook-loaded prompt service", () => {
-    const host = createVivaAgentHost({
-      prompt: promptServiceWithHandbooks({ demo: "# handbook\n" }),
-    });
-    const session = host.createSession({ mount: null, handbooks: ["demo"] });
-    const result = session.compile(`artifact "S"
-state n = 1
+  it("honors reset vs preserve vs preserve-data policies", () => {
+    const host = createVivaAgentHost();
+    const base = `artifact A
+data series = [1]
+state n = 0
 scene
   layer a
     node t
-      x: 10
-      y: 10
+      x: 1
+      y: 1
       text: n
-`);
-    expect(result.ok).toBe(true);
+`;
+    const next = `artifact A
+data series = [0]
+state n = 9
+scene
+  layer a
+    node t
+      x: 1
+      y: 1
+      text: n
+`;
+
+    const reset = host.createSession({ mount: null, statePolicy: "reset" });
+    reset.compile(base);
+    reset.setData("series", [7]);
+    reset.setState("n", 3);
+    reset.patch(next);
+    expect((reset.getWorld() as { data: { series: number[] }; state: { n: number } }).data.series).toEqual([0]);
+    expect((reset.getWorld() as { state: { n: number } }).state.n).toBe(9);
+
+    const preserve = host.createSession({ mount: null, statePolicy: "preserve" });
+    preserve.compile(base);
+    preserve.setData("series", [7]);
+    preserve.setState("n", 3);
+    preserve.patch(next);
+    const pw = preserve.getWorld() as { data: { series: number[] }; state: { n: number } };
+    expect(pw.data.series).toEqual([7]);
+    expect(pw.state.n).toBe(3);
+
+    const preserveData = host.createSession({ mount: null, statePolicy: "preserve-data" });
+    preserveData.compile(base);
+    preserveData.setData("series", [7]);
+    preserveData.setState("n", 3);
+    preserveData.patch(next);
+    const dw = preserveData.getWorld() as { data: { series: number[] }; state: { n: number } };
+    expect(dw.data.series).toEqual([7]);
+    expect(dw.state.n).toBe(9);
   });
 });

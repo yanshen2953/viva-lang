@@ -1,0 +1,12 @@
+{
+  "case": "E5_collide",
+  "input": "examples/exam/E5_collide.viva",
+  "expect": {
+    "layers": ["stage"],
+    "events": [
+      { "type": "drag", "target": "bodies" },
+      { "type": "collide", "target": "bodies" }
+    ],
+    "hasSolidProp": true
+  }
+}

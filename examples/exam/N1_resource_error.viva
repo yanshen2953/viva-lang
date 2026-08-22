@@ -1,0 +1,11 @@
+artifact "N1 resource reserved"
+
+resource foo
+  bar: 1
+
+scene
+  layer a
+    node t
+      x: 1
+      y: 1
+      text: "x"

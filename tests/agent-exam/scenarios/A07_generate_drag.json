@@ -1,0 +1,15 @@
+{
+  "id": "A07_generate_drag",
+  "title": "Agent generates draggable data-backed nodes",
+  "kind": "generate",
+  "handbooks": [],
+  "prompt": "Write a Viva artifact with a data array of objects that have x/y fields, a for-loop of nodes with drag: true, and an `event drag` handler that writes __event.x/__event.y back to the item. Output ONLY valid Viva source starting with artifact.",
+  "assertions": {
+    "compiles": true,
+    "mustMatch": ["drag:\\s*true", "event\\s+drag", "__event\\.x", "__event\\.y"],
+    "ir": {
+      "minLayers": 1,
+      "hasEventTypes": ["drag"]
+    }
+  }
+}

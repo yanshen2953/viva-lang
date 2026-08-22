@@ -1,0 +1,8 @@
+{
+  "case": "G1_path",
+  "input": "examples/exam/G1_path.viva",
+  "expect": {
+    "layers": ["ink"],
+    "hasPath": true
+  }
+}

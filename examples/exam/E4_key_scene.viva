@@ -1,0 +1,19 @@
+artifact "E4 key scene"
+
+state paused = false
+
+scene
+  size: 280 120
+  background: #0b1220
+
+  layer hud
+    node status
+      x: 20
+      y: 40
+      text: paused
+      font: 18
+      fill: #94a3b8
+
+event key on scene
+  if __event.key == " "
+    paused = not paused

@@ -1,0 +1,30 @@
+artifact "E3 tick and rule"
+
+state n = 0
+state alarm = false
+
+scene
+  size: 280 140
+  background: #0b1220
+
+  layer hud
+    node label
+      x: 20
+      y: 40
+      text: n
+      font: 22
+      fill: #e2e8f0
+
+    if alarm
+      node warn
+        x: 20
+        y: 80
+        text: "alarm"
+        font: 16
+        fill: #f59e0b
+
+tick 30
+  n = n + 1
+
+rule when n > 5
+  alarm = true

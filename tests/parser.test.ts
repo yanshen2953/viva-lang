@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { compile } from "../src/compiler";
 import { parse } from "../src/parser";
@@ -52,7 +52,7 @@ state ok = x > 10 and true
     expect(ir.state.ok).toBe(true);
   });
 
-  it("compiles every bundled example", () => {
+  it("compiles every bundled example including exam fixtures", () => {
     const files = [
       "hello.viva",
       "cities.viva",
@@ -70,6 +70,13 @@ state ok = x > 10 and true
       const result = compileSource(source, file);
       expect(result.error, result.error ?? file).toBeNull();
       expect(result.ir?.name).toBeTruthy();
+    }
+    const examDir = path.resolve("examples/exam");
+    for (const file of readdirSync(examDir).filter((f) => f.endsWith(".viva"))) {
+      if (file.startsWith("N1_")) continue; // intentional compile failures
+      const source = readFileSync(path.join(examDir, file), "utf8");
+      const result = compileSource(source, file);
+      expect(result.error, result.error ?? file).toBeNull();
     }
   });
 

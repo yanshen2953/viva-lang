@@ -93,9 +93,22 @@ describe("exam layers — compile IR contract", () => {
       "L3_visible_false",
       "L4_blend",
       "L5_blur_glow",
+      "L6_nested_for_if",
     ]) {
       expect(() => load(name)).not.toThrow();
     }
+  });
+
+  it("L6: nested for/if survives compile", () => {
+    const ir = load("L6_nested_for_if");
+    expect(ir.scene.layers.map((l) => l.name)).toEqual(["marks"]);
+    const outer = ir.scene.layers[0]!.items[0];
+    expect(outer?.kind).toBe("for");
+    if (outer?.kind !== "for") return;
+    const maybeIf = outer.body[0];
+    expect(maybeIf?.kind).toBe("if");
+    if (maybeIf?.kind !== "if") return;
+    expect(maybeIf.body[0]?.kind).toBe("for");
   });
 });
 

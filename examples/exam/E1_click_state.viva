@@ -1,0 +1,18 @@
+artifact "E1 click state"
+
+state count = 0
+
+scene
+  size: 320 180
+  background: #0b1220
+
+  layer ui
+    node counter
+      x: 24
+      y: 40
+      text: count
+      font: 28
+      fill: #e2e8f0
+
+event click on counter
+  count = count + 1

@@ -1,0 +1,14 @@
+{
+  "id": "A08_generate_timeline",
+  "title": "Agent generates timeline scrub widget",
+  "kind": "generate",
+  "handbooks": [],
+  "prompt": "Write a Viva artifact with state year = 2024 and a timeline widget from 2020 to 2030 bound to year, plus a text node showing year. Output ONLY valid Viva source starting with artifact.",
+  "assertions": {
+    "compiles": true,
+    "mustMatch": ["timeline", "bind:\\s*year|bind:\\s*\"year\"", "state\\s+year"],
+    "ir": {
+      "hasEventTypes": ["click"]
+    }
+  }
+}

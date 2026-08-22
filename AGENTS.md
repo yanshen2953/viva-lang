@@ -8,21 +8,20 @@ Dependency refresh on pod start is `npm install` (see environment update script)
 
 | Action | Command |
 | --- | --- |
-| Tests | `npm test` (vitest; deterministic — no LLM) |
+| Tests | `npm test` (deterministic corpus/exam — no LLM) |
+| Exam subset | `npm run test:exam` |
+| **Agent exam (Pi = SUT)** | `export DEEPSEEK_API_KEY=…` then `npm run test:agent-exam` |
 | Dev playground | `npm run dev` (Vite `:5173`) |
 | CLI without dist | `npx vite-node src/cli.ts -- compile examples/hello.viva` |
 | Agent Host smoke | `npx vite-node scripts/hello-agent.ts` |
-| Exam tests | `npx vitest run tests/exam` |
-| Exam snapshot update | `npx vitest run tests/exam/snapshot.test.ts -u` |
-| Exam UI scene runner | `npm run dev &` then `node scripts/exam-layers-ui.mjs` (needs Chrome via `puppeteer-core`) |
-| **Agent exam (Pi = SUT)** | `export DEEPSEEK_API_KEY=…` then `npx vite-node scripts/run-agent-exam.ts` |
+| Exam UI scene runner | `npm run dev` then `node scripts/exam-layers-ui.mjs` |
 
 `npm run build` may still fail on unrelated `tsc` strictness in playground/runtime; prefer `vite-node` + `vitest` for day-to-day.
 
 ### Two test tracks
 
-1. **Deterministic** (`tests/corpus`, `tests/exam`, `examples/exam`) — IR/layer contracts, no network. Backs `docs/TESTING.md`.
-2. **Agent exam** (`tests/agent-exam`, `scripts/run-agent-exam.ts`) — **Pi + DeepSeek** is the agent under test; `VivaAgentHost` grades compile/patch/provenance. Default model `deepseek-v4-flash-vision-exp`. Never commit API keys (read from env / gitignored `.env`).
+1. **Deterministic** (`tests/corpus`, `tests/exam`, `examples/exam`) — layers L1–L6, events E1–E5, space/charts, negatives, Host policies. See `docs/TESTING.md`.
+2. **Agent exam** (`tests/agent-exam` A01–A12, `scripts/run-agent-exam.ts`) — **Pi + DeepSeek** is the agent under test; `VivaAgentHost` grades. Default model `deepseek-v4-flash-vision-exp`. Never commit API keys.
 
 ### Architecture notes for agents
 
@@ -33,17 +32,6 @@ Dependency refresh on pod start is `npm install` (see environment update script)
 - **Charts:** `widget chart.scatter|line|bar`
 - Design/plan: `docs/DESIGN.md`, `docs/PLAN.md`, host sketch `docs/hosts/minimal-host.md`
 
-### Exam problem set
-
-`examples/exam/` + `tests/corpus/*.expect.json` + `tests/exam/` form the systematic
-layer test corpus (z-order, opacity, visible, blend, blur/glow, frame scales,
-chart expansion). Strategy and runbook live in `docs/TESTING.md`. The node
-tests assert compile IR + paint/DOM structure via a mini in-memory DOM
-(`tests/exam/dom.ts`); the puppeteer scene runner (`scripts/exam-layers-ui.mjs`)
-checks real browser DOM z-order + hit-testing.
-
 ### No secrets / services
 
-Core flows need no secrets. **Agent exam** reads `DEEPSEEK_API_KEY` from the
-environment only — never commit keys (the value lives in gitignored `.env`).
-Deterministic Host unit tests use in-memory provenance / stub prompts, no API key.
+Core flows need no secrets. **Agent exam** needs `DEEPSEEK_API_KEY` in the environment only (gitignored `.env` OK). Deterministic Host unit tests use in-memory provenance / stub prompts.

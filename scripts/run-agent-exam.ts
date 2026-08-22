@@ -46,6 +46,7 @@ type Scenario = {
       minFrames?: number;
       minLayers?: number;
       layerOrder?: string[];
+      hasEventTypes?: string[];
     };
   };
 };
@@ -208,6 +209,15 @@ function grade(scenario: Scenario, source: string): CaseResult["checks"] {
         name: "ir.layerOrder",
         pass: ordered || relative,
         detail: `got=[${names.join(",")}]`,
+      });
+    }
+    if (a.hasEventTypes) {
+      const types = new Set(ir.events.map((e) => e.type));
+      const missing = a.hasEventTypes.filter((t) => !types.has(t));
+      checks.push({
+        name: "ir.hasEventTypes",
+        pass: missing.length === 0,
+        detail: missing.length ? `missing=${missing.join(",")}` : [...types].join(","),
       });
     }
   }

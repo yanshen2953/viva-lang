@@ -1,0 +1,9 @@
+{
+  "case": "W1_bind",
+  "input": "examples/exam/W1_bind.viva",
+  "expect": {
+    "layers": ["hud"],
+    "binds": 1,
+    "ticks": 1
+  }
+}

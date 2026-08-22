@@ -17,6 +17,8 @@
     "dev": "vite",
     "build": "tsc -p tsconfig.build.json && vite build",
     "test": "vitest run",
+    "test:exam": "vitest run tests/exam tests/parser.test.ts",
+    "test:agent-exam": "vite-node scripts/run-agent-exam.ts",
     "preview": "vite preview"
   },
   "keywords": [

@@ -1,0 +1,15 @@
+{
+  "id": "A06_generate_chart_line",
+  "title": "Agent uses widget chart.line",
+  "kind": "generate",
+  "handbooks": [],
+  "prompt": "Write a Viva artifact that uses `widget chart.line` (not hand-built axes) with a data series of at least 4 {x,y} points, xlim/ylim, and areaX/areaY. Output ONLY valid Viva source starting with artifact.",
+  "assertions": {
+    "compiles": true,
+    "mustMatch": ["widget\\s+chart\\.line", "data\\s+\\w+"],
+    "ir": {
+      "minFrames": 1,
+      "minLayers": 1
+    }
+  }
+}
