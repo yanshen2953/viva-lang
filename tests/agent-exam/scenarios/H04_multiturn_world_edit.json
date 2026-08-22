@@ -6,10 +6,10 @@
   "system": "slim",
   "handbooks": [],
   "seedSource": "tests/agent-exam/seeds/H04_seed_lab.viva",
-  "repair": { "maxAttempts": 0, "syntaxCrib": false },
+  "repair": { "maxAttempts": 1, "syntaxCrib": false },
   "turns": [
     {
-      "prompt": "Edit the current artifact: clicking a city mark sets selected to that city name. Keep existing frame/data/layer names. Output ONLY the full updated Viva source starting with artifact.\n\nCurrent source:\n{{source}}"
+      "prompt": "Edit the current artifact: add a top-level `event click on cities` that sets selected = c.name (or the loop item name). Keep existing frame/data/layer names. Output ONLY the full updated Viva source starting with artifact.\n\nCurrent source:\n{{source}}"
     },
     {
       "prompt": "Next edit only: add a rule that when selected is not none, a HUD text node shows selected. Do not remove the click handler or rename cities/plot. Output ONLY the full updated Viva source starting with artifact.\n\nCurrent source:\n{{source}}"

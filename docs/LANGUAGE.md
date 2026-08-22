@@ -14,6 +14,61 @@ tick bind if for frame widget
 
 事件：`click hover dragstart drag dragend collide key`
 
+完整最小示例（标点以本块为准；勿写成 YAML/`artifact {`）：
+
+```viva
+artifact "Demo"
+
+state n = 0
+
+data rows = [
+  { x: 0, y: 1 }
+  { x: 1, y: 2 }
+]
+
+frame plot
+  x: 40 400
+  y: 40 300
+  xlim: 0 2
+  ylim: 0 3
+
+scene
+  size: 640 360
+  background: #0b1220
+
+  layer main
+    for row in rows
+      node p as points
+        frame: plot
+        x: row.x
+        y: row.y
+        r: 4
+        fill: #0072B2
+
+widget chart.line
+  data: rows
+  xField: x
+  yField: y
+  xlim: 0 2
+  ylim: 0 3
+  areaX: 420 620
+  areaY: 40 300
+
+event click on points
+  n = n + 1
+
+tick 30
+  n = n + 0
+
+rule when n > 10
+  n = 0
+
+timeline
+  from: 2000
+  to: 2030
+  bind: n
+```
+
 ## Space（frame / scale）
 
 ```viva

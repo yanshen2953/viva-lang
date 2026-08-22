@@ -498,6 +498,20 @@ function runScenario(scenario: Scenario, model: string): CaseResult {
         };
       }
       source = got.source;
+      // Mid-turn compile repair (diagnostics only; no syntax crib on hard)
+      const mid = grade(
+        { ...scenario, assertions: { compiles: true } },
+        source,
+      );
+      const repaired = maybeRepair(
+        { ...scenario, repair: { maxAttempts: scenario.repair?.maxAttempts ?? 1, syntaxCrib: scenario.repair?.syntaxCrib } },
+        model,
+        system,
+        source,
+        mid,
+        counter,
+      );
+      source = repaired.source;
     }
   } else {
     const user = fillTemplate(scenario.prompt ?? "", { source: seed, diagnostics });
