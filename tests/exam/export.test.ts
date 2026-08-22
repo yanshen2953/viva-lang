@@ -29,6 +29,7 @@ describe("static SVG + raster/pdf export", () => {
     const pdf = await exportArtifact(src, "pdf", { width: 640 }, "hello.viva");
     expect(pdf.bytes.byteLength).toBeGreaterThan(100);
     expect(pdf.mime).toBe("application/pdf");
+    expect(pdf.vector).toBe(true);
     // PDF magic
     expect(String.fromCharCode(...pdf.bytes.slice(0, 4))).toBe("%PDF");
   }, 30_000);

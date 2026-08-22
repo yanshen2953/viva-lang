@@ -30,9 +30,13 @@ Parent → embed commands:
 | `viva:patch` | `{ source, handbooks? }` |
 | `viva:setData` / `viva:setState` | `{ path, value }` |
 | `viva:exportSvg` | — |
+| `viva:exportVector` | SVG + selection/agentBrief pack |
+| `viva:reviewStart` / `Stop` / `Tool` / `Combine` / `Feedback` / `Snapshot` | visual review (see review.md) |
 | `viva:promptBundle` | `{ handbooks? }` |
 
-Embed → parent events: `viva:ready`, `viva:compiled`, `viva:patched`, `viva:svg`, `viva:error`, `viva:event`.
+Embed → parent events: `viva:ready`, `viva:compiled`, `viva:patched`, `viva:svg`, `viva:review`, `viva:error`, `viva:event`.
+
+For Photoshop-like selection + agent feedback, see [`review.md`](./review.md).
 
 ## Bundles
 

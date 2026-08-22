@@ -6,6 +6,15 @@ import type { Diagnostic } from "../diagnostics.js";
 import { fingerprint } from "./provenance/hash.js";
 import { attachBundleExtras, dataFingerprints } from "./provenance/memory.js";
 import type { HostEventBus } from "./events.js";
+import {
+  createReviewController,
+  listSelectableNodes,
+  runtimeReviewView,
+  type ReviewController,
+  type ReviewSnapshot,
+} from "../review/index.js";
+import { renderSvgFromIr } from "../export/static-svg.js";
+import { renderVectorPdfFromIr } from "../export/vector-pdf.js";
 import type {
   ArtifactSnapshot,
   CompileMeta,
@@ -45,6 +54,20 @@ export type VivaSession = {
     provenance: ReturnType<ProvenanceWriter["exportBundle"]>;
     snapshot: ArtifactSnapshot;
   };
+  /**
+   * Vector takeaway: precise SVG (with data-viva-id) + optional vector PDF bytes
+   * + review snapshot/agentBrief when review is active.
+   */
+  exportVectorPackage(opts?: { pdf?: boolean }): Promise<{
+    source: string;
+    svg: string;
+    pdf?: Uint8Array;
+    review?: ReviewSnapshot;
+    provenance: ReturnType<ProvenanceWriter["exportBundle"]>;
+  }>;
+  /** Photoshop-like selection + rich feedback for agent repair. */
+  createReview(opts?: { attach?: boolean }): ReviewController | null;
+  getReview(): ReviewController | null;
   /** Headless tick/event stepping when mount is null (or alongside runtime world). */
   simulate(opts?: { ticks?: number; events?: { type: string; target: string; event?: Record<string, unknown> }[] }): {
     state: unknown;
@@ -78,6 +101,7 @@ export function createSession(
   let ir: VisualIR | null = null;
   let irHash: string | undefined;
   let runtime: Runtime | null = null;
+  let review: ReviewController | null = null;
   const watchers = new Map<string, Set<(v: unknown) => void>>();
   const listeners = new Map<SessionEventType, Set<(e: SessionEvent) => void>>();
 
@@ -101,9 +125,15 @@ export function createSession(
     const merged = applyStatePolicy(nextIr, statePolicy, prevWorld);
     ir = merged;
     if (!mount) return;
+    const hadReview = Boolean(review);
+    review?.destroy();
+    review = null;
     runtime?.stop();
     runtime = new Runtime({ mount, ir: merged });
     runtime.start();
+    if (hadReview) {
+      ensureReview(true);
+    }
     provenance.append({
       kind: "run",
       sessionId: id,
@@ -111,6 +141,21 @@ export function createSession(
       sourceHash,
       irHash,
     });
+  };
+
+  const ensureReview = (attach: boolean): ReviewController | null => {
+    if (!runtime || !ir) return null;
+    if (review) {
+      if (attach) review.attach();
+      return review;
+    }
+    review = createReviewController({
+      runtime: runtimeReviewView(runtime, () => (ir ? listSelectableNodes(ir) : [])),
+      getSource: () => source,
+      onChange: (snap) => emit("user-interact", { kind: "review", snapshot: snap }),
+    });
+    if (attach) review.attach();
+    return review;
   };
 
   const doCompile = (
@@ -250,6 +295,35 @@ export function createSession(
         snapshot: snap,
       };
     },
+    async exportVectorPackage(opts = {}) {
+      const svg =
+        runtime?.exportSvg() ||
+        (ir ? renderSvgFromIr(ir) : "");
+      let pdf: Uint8Array | undefined;
+      if (opts.pdf !== false && ir) {
+        pdf = await renderVectorPdfFromIr(ir);
+      }
+      const reviewSnap = review?.snapshot();
+      provenance.append({
+        kind: "export",
+        sessionId: id,
+        hostId: deps.hostId,
+        sourceHash,
+        irHash,
+        note: "vector-package",
+      });
+      return {
+        source,
+        svg,
+        pdf,
+        review: reviewSnap,
+        provenance: provenance.exportBundle(id),
+      };
+    },
+    createReview(opts = {}) {
+      return ensureReview(opts.attach !== false);
+    },
+    getReview: () => review,
     simulate(opts = {}) {
       if (!ir) return { state: {}, data: {} };
       const world = simulate(ir, opts);
@@ -294,6 +368,8 @@ export function createSession(
       });
     },
     dispose() {
+      review?.destroy();
+      review = null;
       runtime?.stop();
       runtime = null;
       emit("disposed");

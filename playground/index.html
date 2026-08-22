@@ -24,6 +24,7 @@
         <nav id="examples" class="examples"></nav>
         <div class="actions">
           <button id="run" type="button">运行</button>
+          <button id="review-toggle" type="button" class="ghost">审查模式</button>
           <span id="status" class="status">就绪</span>
         </div>
       </header>
@@ -32,8 +33,47 @@
           <textarea id="source" spellcheck="false"></textarea>
         </section>
         <section class="pane preview-pane">
+          <div id="review-bar" class="review-bar" hidden>
+            <div class="review-tools">
+              <span class="review-label">选取</span>
+              <button type="button" data-tool="rect" class="active" title="拖拽框">框选</button>
+              <button type="button" data-tool="point" title="点击元素">点选</button>
+              <button type="button" data-tool="lasso" title="自由轨迹">套索</button>
+              <button type="button" data-tool="bezier" title="贝塞尔">曲线</button>
+            </div>
+            <div class="review-tools">
+              <span class="review-label">合并</span>
+              <button type="button" data-combine="replace" class="active">替换</button>
+              <button type="button" data-combine="add">加选</button>
+              <button type="button" data-combine="subtract">减选</button>
+              <button type="button" data-combine="intersect">交集</button>
+              <button type="button" id="review-invert">反选</button>
+              <button type="button" id="review-all">全选</button>
+              <button type="button" id="review-clear">清空</button>
+            </div>
+            <div class="review-feedback">
+              <select id="feedback-kind">
+                <option value="issue">issue</option>
+                <option value="fix">fix</option>
+                <option value="style">style</option>
+                <option value="layout">layout</option>
+                <option value="data">data</option>
+                <option value="label">label</option>
+                <option value="interaction">interaction</option>
+                <option value="constraint">constraint</option>
+                <option value="keep">keep</option>
+                <option value="question">question</option>
+                <option value="note">note</option>
+              </select>
+              <input id="feedback-text" type="text" placeholder="写给 agent 的反馈…" />
+              <button type="button" id="feedback-add">标注</button>
+              <button type="button" id="review-brief">复制 Brief</button>
+              <button type="button" id="review-export-svg">导出矢量 SVG</button>
+            </div>
+          </div>
           <div id="stage" class="stage"></div>
           <pre id="error" class="error" hidden></pre>
+          <pre id="review-out" class="review-out" hidden></pre>
         </section>
       </main>
     </div>

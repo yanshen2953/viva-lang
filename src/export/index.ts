@@ -3,15 +3,23 @@ import { Resvg } from "@resvg/resvg-js";
 import sharp from "sharp";
 import { compileSource } from "../pipeline.js";
 import { renderSvgFromIr } from "./static-svg.js";
+import { renderVectorPdfFromIr } from "./vector-pdf.js";
 
-export type ExportFormat = "svg" | "png" | "jpg" | "jpeg" | "pdf";
+export type ExportFormat = "svg" | "png" | "jpg" | "jpeg" | "pdf" | "pdf-raster";
 
 export type ExportOptions = {
-  /** Raster / PDF width in CSS pixels (SVG viewBox mapped). Default 1280. */
+  /** Raster width in CSS pixels (SVG viewBox mapped). Default 1280. */
   width?: number;
   /** JPEG quality 1–100. Default 92. */
   quality?: number;
   background?: string;
+  /**
+   * PDF mode: `vector` (default) draws primitives 1:1 with SVG geometry;
+   * `raster` embeds a PNG (legacy). Format `pdf-raster` forces raster.
+   */
+  pdfMode?: "vector" | "raster";
+  /** Vector PDF scale (scene unit → PDF point). Default 1. */
+  scale?: number;
 };
 
 export type ExportResult = {
@@ -19,6 +27,8 @@ export type ExportResult = {
   bytes: Uint8Array;
   mime: string;
   svg: string;
+  /** True when PDF used vector primitives (not PNG embed). */
+  vector?: boolean;
 };
 
 export function exportSvgFromSource(source: string, filename = "<input>"): { svg: string; error: string | null } {
@@ -33,25 +43,37 @@ export async function exportArtifact(
   opts: ExportOptions = {},
   filename = "<input>",
 ): Promise<ExportResult> {
-  const { svg, error } = exportSvgFromSource(source, filename);
-  if (error) throw new Error(error);
+  const result = compileSource(source, filename);
+  if (!result.ir) throw new Error(result.error ?? "compile failed");
+  const svg = renderSvgFromIr(result.ir);
   const fmt = format === "jpeg" ? "jpg" : format;
+
   if (fmt === "svg") {
     return {
       format: "svg",
       bytes: new TextEncoder().encode(svg),
       mime: "image/svg+xml",
       svg,
+      vector: true,
     };
   }
 
-  const width = opts.width ?? 1280;
-  const resvg = new Resvg(svg, {
-    fitTo: { mode: "width", value: width },
-    background: opts.background,
-  });
-  const pngData = resvg.render();
-  const png = pngData.asPng();
+  if (fmt === "pdf" || fmt === "pdf-raster") {
+    const mode = fmt === "pdf-raster" ? "raster" : (opts.pdfMode ?? "vector");
+    if (mode === "vector") {
+      const bytes = await renderVectorPdfFromIr(result.ir, { scale: opts.scale ?? 1 });
+      return { format: "pdf", bytes, mime: "application/pdf", svg, vector: true };
+    }
+    const raster = await rasterize(svg, opts);
+    const pdf = await PDFDocument.create();
+    const pngImage = await pdf.embedPng(raster);
+    const page = pdf.addPage([pngImage.width, pngImage.height]);
+    page.drawImage(pngImage, { x: 0, y: 0, width: pngImage.width, height: pngImage.height });
+    const pdfBytes = await pdf.save();
+    return { format: "pdf-raster", bytes: pdfBytes, mime: "application/pdf", svg, vector: false };
+  }
+
+  const png = await rasterize(svg, opts);
 
   if (fmt === "png") {
     return { format: "png", bytes: png, mime: "image/png", svg };
@@ -64,13 +86,17 @@ export async function exportArtifact(
     return { format: "jpg", bytes: jpg, mime: "image/jpeg", svg };
   }
 
-  // pdf
-  const pdf = await PDFDocument.create();
-  const pngImage = await pdf.embedPng(png);
-  const pageWidth = pngImage.width;
-  const pageHeight = pngImage.height;
-  const page = pdf.addPage([pageWidth, pageHeight]);
-  page.drawImage(pngImage, { x: 0, y: 0, width: pageWidth, height: pageHeight });
-  const pdfBytes = await pdf.save();
-  return { format: "pdf", bytes: pdfBytes, mime: "application/pdf", svg };
+  throw new Error(`unsupported format: ${format}`);
 }
+
+async function rasterize(svg: string, opts: ExportOptions): Promise<Uint8Array> {
+  const width = opts.width ?? 1280;
+  const resvg = new Resvg(svg, {
+    fitTo: { mode: "width", value: width },
+    background: opts.background,
+  });
+  return resvg.render().asPng();
+}
+
+export { renderSvgFromIr, flattenNodesFromIr } from "./static-svg.js";
+export { renderVectorPdfFromIr } from "./vector-pdf.js";

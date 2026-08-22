@@ -1,5 +1,6 @@
 import { createVivaAgentHost, promptServiceWithHandbooks } from "../src/agent";
 import type { VivaSession } from "../src/agent";
+import type { FeedbackKind, SelectionCombine, SelectionTool } from "../src/review";
 import arena from "../examples/arena.viva?raw";
 import atelier from "../examples/atelier.viva?raw";
 import cells from "../examples/cells.viva?raw";
@@ -32,6 +33,11 @@ const errorEl = document.querySelector("#error") as HTMLElement;
 const statusEl = document.querySelector("#status") as HTMLElement;
 const navEl = document.querySelector("#examples") as HTMLElement;
 const runEl = document.querySelector("#run") as HTMLButtonElement;
+const reviewToggle = document.querySelector("#review-toggle") as HTMLButtonElement;
+const reviewBar = document.querySelector("#review-bar") as HTMLElement;
+const reviewOut = document.querySelector("#review-out") as HTMLElement;
+const feedbackKind = document.querySelector("#feedback-kind") as HTMLSelectElement;
+const feedbackText = document.querySelector("#feedback-text") as HTMLInputElement;
 
 const host = createVivaAgentHost({
   prompt: promptServiceWithHandbooks({
@@ -47,6 +53,26 @@ let session: VivaSession = host.createSession({
 
 let timer: number | null = null;
 let current = "Hello";
+let reviewOn = false;
+let stickyTool: SelectionTool = "rect";
+let stickyCombine: SelectionCombine = "replace";
+
+function syncReviewChrome(ctrl: NonNullable<ReturnType<VivaSession["getReview"]>>): void {
+  ctrl.setTool(stickyTool);
+  ctrl.setCombine(stickyCombine);
+  reviewBar.querySelectorAll<HTMLButtonElement>("[data-tool]").forEach((b) => {
+    b.classList.toggle("active", b.dataset.tool === stickyTool);
+  });
+  reviewBar.querySelectorAll<HTMLButtonElement>("[data-combine]").forEach((b) => {
+    b.classList.toggle("active", b.dataset.combine === stickyCombine);
+  });
+}
+
+function ensureReviewAttached() {
+  const ctrl = session.createReview({ attach: true });
+  if (ctrl) syncReviewChrome(ctrl);
+  return ctrl;
+}
 
 for (const name of Object.keys(examples)) {
   const button = document.createElement("button");
@@ -61,6 +87,102 @@ sourceEl.addEventListener("input", () => {
   timer = window.setTimeout(run, 280);
 });
 runEl.addEventListener("click", run);
+
+reviewToggle.addEventListener("click", () => {
+  reviewOn = !reviewOn;
+  reviewBar.hidden = !reviewOn;
+  reviewToggle.classList.toggle("active", reviewOn);
+  if (reviewOn) {
+    const ctrl = ensureReviewAttached();
+    if (!ctrl) {
+      statusEl.textContent = "审查模式需要已编译场景";
+      return;
+    }
+    statusEl.textContent = "审查模式：框选 / 点选 / 套索 / 曲线 → 标注 → Brief";
+    statusEl.style.color = "#38bdf8";
+    showBrief();
+  } else {
+    session.getReview()?.detach();
+    reviewOut.hidden = true;
+    statusEl.textContent = "已退出审查模式";
+    statusEl.style.color = "#93a4bb";
+  }
+});
+
+reviewBar.querySelectorAll<HTMLButtonElement>("[data-tool]").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    stickyTool = btn.dataset.tool as SelectionTool;
+    ensureReviewAttached()?.setTool(stickyTool);
+    reviewBar.querySelectorAll("[data-tool]").forEach((b) => b.classList.toggle("active", b === btn));
+  });
+});
+
+reviewBar.querySelectorAll<HTMLButtonElement>("[data-combine]").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    stickyCombine = btn.dataset.combine as SelectionCombine;
+    ensureReviewAttached()?.setCombine(stickyCombine);
+    reviewBar.querySelectorAll("[data-combine]").forEach((b) => b.classList.toggle("active", b === btn));
+  });
+});
+
+document.querySelector("#review-invert")?.addEventListener("click", () => {
+  ensureReviewAttached()?.invertSelection();
+  showBrief();
+});
+document.querySelector("#review-all")?.addEventListener("click", () => {
+  const ctrl = ensureReviewAttached();
+  if (!ctrl) return;
+  stickyCombine = "replace";
+  syncReviewChrome(ctrl);
+  ctrl.selectByRegion({ kind: "rect", x: -1e6, y: -1e6, w: 2e6, h: 2e6 }, "replace");
+  showBrief();
+});
+document.querySelector("#review-clear")?.addEventListener("click", () => {
+  const ctrl = session.getReview();
+  ctrl?.clearSelection();
+  ctrl?.clearFeedback();
+  showBrief();
+});
+document.querySelector("#feedback-add")?.addEventListener("click", () => {
+  const text = feedbackText.value.trim();
+  if (!text) return;
+  ensureReviewAttached()?.addFeedback({
+    kind: feedbackKind.value as FeedbackKind,
+    text,
+  });
+  feedbackText.value = "";
+  showBrief();
+});
+document.querySelector("#review-brief")?.addEventListener("click", async () => {
+  const brief = session.getReview()?.snapshot().agentBrief ?? "";
+  await navigator.clipboard.writeText(brief);
+  statusEl.textContent = "已复制 agentBrief";
+  statusEl.style.color = "#34d399";
+  showBrief();
+});
+document.querySelector("#review-export-svg")?.addEventListener("click", () => {
+  const snap = session.getReview()?.snapshot();
+  const svg = snap?.selectionSvg || session.exportSvg();
+  const blob = new Blob([svg], { type: "image/svg+xml" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "viva-selection.svg";
+  a.click();
+});
+
+session.on("user-interact", () => {
+  if (reviewOn) showBrief();
+});
+
+function showBrief(): void {
+  const snap = session.getReview()?.snapshot();
+  if (!snap) {
+    reviewOut.hidden = true;
+    return;
+  }
+  reviewOut.hidden = false;
+  reviewOut.textContent = `${snap.agentBrief}\n\n--- ids ---\n${snap.payload.ids.join(", ") || "(none)"}`;
+}
 
 function load(name: string): void {
   current = name;
@@ -86,8 +208,15 @@ function run(): void {
   errorEl.hidden = true;
   const ms = Math.round(performance.now() - started);
   const irName = result.ir?.name ?? current;
-  statusEl.textContent = `${irName} · ${ms}ms · ${session.id}`;
-  statusEl.style.color = "#34d399";
+  if (reviewOn) {
+    ensureReviewAttached();
+    showBrief();
+    statusEl.textContent = `${irName} · ${ms}ms · 审查中`;
+    statusEl.style.color = "#38bdf8";
+  } else {
+    statusEl.textContent = `${irName} · ${ms}ms · ${session.id}`;
+    statusEl.style.color = "#34d399";
+  }
 }
 
 load("Hello");

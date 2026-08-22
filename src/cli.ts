@@ -276,7 +276,7 @@ Commands:
   compile <file>              Compile to Visual IR JSON
   html <file> [-o out.html]   Standalone HTML shell
   svg <file> [-o out.svg]     Export static SVG
-  export <file> -f <fmt>      Export svg|png|jpg|pdf
+  export <file> -f <fmt>      Export svg|png|jpg|pdf|pdf-raster
   simulate <file> [--ticks N] Headless world JSON
   prompt [--handbook id]      Print system prompt (+ handbooks)
   serve [--port 8765]         Local agent HTTP embed bridge
@@ -285,8 +285,11 @@ Commands:
 
 Examples:
   viva export examples/charts.viva -f pdf -o charts.pdf
+  viva export examples/hello.viva -f pdf-raster -o r.pdf
   viva export examples/hello.viva -f jpg --width 1600
   viva serve --port 8765
+
+Visual review → agent brief: docs/hosts/review.md
 `);
 }
 

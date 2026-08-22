@@ -97,4 +97,35 @@ export function fieldIdent(row: string, field: string, span: Span): Expr {
   return ident(`${row}.${field}`, span);
 }
 
+/**
+ * Chart bars: after frame maps x/y to scene, convert center/value into a
+ * scene-space rect sitting on the frame baseline. Shared by runtime + static SVG.
+ */
+export function layoutChartBar(
+  props: Record<string, unknown>,
+  frames: FrameScales[],
+): Record<string, unknown> {
+  if (!props.__chartBar) return props;
+  const frameName = props.frame !== undefined ? String(props.frame) : "";
+  const frame = frames.find((f) => f.name === frameName);
+  if (!frame) return props;
+
+  const dataX = typeof props.x === "number" ? props.x : 0;
+  const dataYTop = typeof props.y === "number" ? props.y : 0;
+  const barWData = typeof props.w === "number" ? props.w : Number(props.w) || 0.6;
+  const sceneW = Math.abs(
+    linearMap(barWData, [0, frame.xmax - frame.xmin], [0, frame.x1 - frame.x0], false),
+  );
+  const baseline = linearMap(frame.ymin, [frame.ymin, frame.ymax], [frame.y0, frame.y1], true);
+  const top = dataYTop;
+  const height = Math.max(0, baseline - top);
+  return {
+    ...props,
+    x: dataX - sceneW / 2,
+    y: top,
+    w: sceneW,
+    h: height,
+  };
+}
+
 export { literal, ident, binary };

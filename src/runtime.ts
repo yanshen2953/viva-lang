@@ -12,7 +12,7 @@ import {
 } from "./paint.js";
 import {
   applyFrameToProps,
-  linearMap,
+  layoutChartBar,
   scalesFromFrameProps,
   type FrameScales,
 } from "./space.js";
@@ -120,6 +120,69 @@ export class Runtime {
 
   exportSvg(): string {
     return this.svg?.outerHTML ?? "";
+  }
+
+  /** Live SVG root (for review overlay / selection tools). */
+  getSvg(): SVGSVGElement | null {
+    return this.svg;
+  }
+
+  /** Client → scene (viewBox) coordinates. */
+  scenePoint(clientX: number, clientY: number): { x: number; y: number } {
+    if (!this.svg) return { x: 0, y: 0 };
+    const fake = {
+      clientX,
+      clientY,
+    } as PointerEvent;
+    const p = this.pointerToScene(fake);
+    return { x: p.x, y: p.y };
+  }
+
+  /** Hit-test painted node under client coords (element pick). */
+  hitTest(clientX: number, clientY: number): {
+    id: string;
+    name: string;
+    group?: string;
+    layerId: string;
+    layerName: string;
+    bbox: { x: number; y: number; w: number; h: number };
+  } | null {
+    if (!this.svg) return null;
+    const el = document.elementFromPoint(clientX, clientY);
+    const hit = el?.closest?.("[data-viva-id]");
+    if (!hit) return null;
+    const id = hit.getAttribute("data-viva-id");
+    if (!id) return null;
+    const node = this.lastNodes.find((n) => n.id === id) ?? this.flatten().find((n) => n.id === id);
+    if (!node) return null;
+    return renderNodeToSelected(node);
+  }
+
+  /** Catalog of currently painted nodes with bboxes (id-aligned with static SVG). */
+  listPaintedNodes(): {
+    id: string;
+    name: string;
+    group?: string;
+    layerId: string;
+    layerName: string;
+    bbox: { x: number; y: number; w: number; h: number };
+  }[] {
+    const nodes = this.lastNodes.length ? this.lastNodes : this.flatten();
+    return nodes.map((node) => {
+      const base = renderNodeToSelected(node);
+      const el = this.svg?.querySelector(`[data-viva-id="${css(node.id)}"]`) as SVGGraphicsElement | null;
+      if (el && typeof el.getBBox === "function") {
+        try {
+          const b = el.getBBox();
+          if (b.width > 0 || b.height > 0) {
+            base.bbox = { x: b.x, y: b.y, w: Math.max(b.width, 1), h: Math.max(b.height, 1) };
+          }
+        } catch {
+          /* detached */
+        }
+      }
+      return base;
+    });
   }
 
   setData(path: string, value: unknown): void {
@@ -849,37 +912,55 @@ function setDeep(root: Record<string, unknown>, path: string[], value: unknown):
   cur[path[path.length - 1]!] = value;
 }
 
-/**
- * Chart bars: after frame maps x/y to scene, convert (centerX, valueY, width in data…)
- * into a scene-space rect sitting on the frame baseline.
- */
-function layoutChartBar(
-  props: Record<string, unknown>,
-  frames: FrameScales[],
-): Record<string, unknown> {
-  if (!props.__chartBar) return props;
-  const frameName = props.frame !== undefined ? String(props.frame) : "";
-  const frame = frames.find((f) => f.name === frameName);
-  if (!frame) return props;
-
-  // Incoming x/y are already scene-mapped from data domain by applyFrameToProps.
-  // We need width in scene units from data-domain bar width.
-  const dataX = typeof props.x === "number" ? props.x : 0;
-  const dataYTop = typeof props.y === "number" ? props.y : 0;
-  // Re-read raw: actually applyFrame already mapped. For bar width, map domain width:
-  const barWData = num(props.w, 0.6);
-  const sceneW = Math.abs(
-    linearMap(barWData, [0, frame.xmax - frame.xmin], [0, frame.x1 - frame.x0], false),
-  );
-  const baseline = linearMap(frame.ymin, [frame.ymin, frame.ymax], [frame.y0, frame.y1], true);
-  const top = dataYTop;
-  const height = Math.max(0, baseline - top);
+function renderNodeToSelected(node: RenderNode): {
+  id: string;
+  name: string;
+  group?: string;
+  layerId: string;
+  layerName: string;
+  bbox: { x: number; y: number; w: number; h: number };
+} {
   return {
-    ...props,
-    x: dataX - sceneW / 2,
-    y: top,
-    w: sceneW,
-    h: height,
+    id: node.id,
+    name: node.name,
+    group: node.group,
+    layerId: node.layerId,
+    layerName: node.layerName,
+    bbox: propsToBBox(node.props),
   };
+}
+
+function propsToBBox(p: Record<string, unknown>): { x: number; y: number; w: number; h: number } {
+  const x = num(p.x, 0);
+  const y = num(p.y, 0);
+  if (p.r !== undefined || (p.size !== undefined && p.w === undefined && p.width === undefined && p.text === undefined && p.label === undefined)) {
+    const r = num(p.r ?? p.size, 16);
+    return { x: x - r, y: y - r, w: r * 2, h: r * 2 };
+  }
+  if (p.w !== undefined || p.width !== undefined || p.h !== undefined || p.height !== undefined) {
+    return { x, y, w: num(p.w ?? p.width, 80), h: num(p.h ?? p.height, 24) };
+  }
+  if (p.x1 !== undefined) {
+    const x1 = num(p.x1, 0);
+    const y1 = num(p.y1, 0);
+    const x2 = num(p.x2, x1 + 40);
+    const y2 = num(p.y2, y1);
+    return {
+      x: Math.min(x1, x2),
+      y: Math.min(y1, y2),
+      w: Math.abs(x2 - x1) || 1,
+      h: Math.abs(y2 - y1) || 1,
+    };
+  }
+  if (p.text !== undefined || p.label !== undefined || p.font !== undefined || p.fontSize !== undefined) {
+    const text = String(p.text ?? p.label ?? "");
+    const font = num(p.font ?? p.fontSize, 14);
+    const w = Math.max(font * Math.max(text.length, 1) * 0.6, font * 2);
+    const h = font * 1.4;
+    const align = String(p.align ?? "start");
+    const left = align === "center" || align === "middle" ? x - w / 2 : align === "right" || align === "end" ? x - w : x;
+    return { x: left, y: y - font * 0.85, w, h };
+  }
+  return { x: x - 4, y: y - 4, w: 8, h: 8 };
 }
 

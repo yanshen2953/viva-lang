@@ -3,11 +3,12 @@ import { evaluate, truthy, type Scope } from "../eval.js";
 import type { SceneNodeIR, VisualIR } from "../ir.js";
 import {
   applyFrameToProps,
+  layoutChartBar,
   scalesFromFrameProps,
   type FrameScales,
 } from "../space.js";
 
-type FlatNode = {
+export type FlatNode = {
   id: string;
   name: string;
   layerId: string;
@@ -15,11 +16,51 @@ type FlatNode = {
   props: Record<string, unknown>;
 };
 
+export type SceneBox = { width: number; height: number; background: string };
+
 /**
  * Deterministic SVG export from VisualIR (no browser Runtime required).
- * Covers circle/rect/text/line/path + layer opacity/visibility for CLI/JPG/PDF.
+ * Node ids match Runtime `data-viva-id` for precise review correspondence.
  */
 export function renderSvgFromIr(ir: VisualIR): string {
+  const { width, height, background, layersXml } = buildSvgParts(ir);
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" style="background:${esc(background)}">
+${layersXml.join("\n")}
+</svg>
+`;
+}
+
+/** Flatten IR → painted nodes (same id / geometry as Runtime + review). */
+export function flattenNodesFromIr(ir: VisualIR): { scene: SceneBox; nodes: FlatNode[] } {
+  const state = { ...(ir.state as Record<string, unknown>) };
+  const data = { ...(ir.data as Record<string, unknown>) };
+  const scopes = (): Scope[] => [state, data];
+  const scales = (ir.frames ?? []).map((f) =>
+    scalesFromFrameProps(f.name, evalProps(f.props, scopes())),
+  );
+  const sceneProps = evalProps(ir.scene.props, scopes());
+  const size = asPair(sceneProps.size, [880, 480]);
+  const width = num(sceneProps.width, size[0]);
+  const height = num(sceneProps.height, size[1]);
+  const background = str(sceneProps.background, "#0b1220");
+
+  const nodes: FlatNode[] = [];
+  for (const layer of ir.scene.layers) {
+    const lp = evalProps(layer.props ?? {}, scopes());
+    const visible = lp.visible === undefined ? true : Boolean(lp.visible);
+    if (!visible) continue;
+    flattenItems(layer.items, scopes(), nodes, layer.name, layer.id, layer.name, scales);
+  }
+  return { scene: { width, height, background }, nodes };
+}
+
+function buildSvgParts(ir: VisualIR): {
+  width: number;
+  height: number;
+  background: string;
+  layersXml: string[];
+} {
   const state = { ...(ir.state as Record<string, unknown>) };
   const data = { ...(ir.data as Record<string, unknown>) };
   const scopes = (): Scope[] => [state, data];
@@ -31,7 +72,7 @@ export function renderSvgFromIr(ir: VisualIR): string {
   const size = asPair(sceneProps.size, [880, 480]);
   const width = num(sceneProps.width, size[0]);
   const height = num(sceneProps.height, size[1]);
-  const bg = str(sceneProps.background, "#0b1220");
+  const background = str(sceneProps.background, "#0b1220");
 
   const layersXml: string[] = [];
   for (const layer of ir.scene.layers) {
@@ -43,15 +84,10 @@ export function renderSvgFromIr(ir: VisualIR): string {
     if (!visible) continue;
     const children = nodes.map((n) => nodeToSvg(n)).join("\n");
     layersXml.push(
-      `<g data-viva-layer="${esc(layer.name)}" opacity="${opacity}">\n${children}\n</g>`,
+      `<g data-viva-layer="${esc(layer.name)}" data-viva-layer-id="${esc(layer.id)}" opacity="${opacity}">\n${children}\n</g>`,
     );
   }
-
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" style="background:${esc(bg)}">
-${layersXml.join("\n")}
-</svg>
-`;
+  return { width, height, background, layersXml };
 }
 
 function flattenItems(
@@ -66,7 +102,8 @@ function flattenItems(
   for (const item of items) {
     if (item.kind === "node") {
       const raw = evalProps(item.props, scopes);
-      const props = applyFrameToProps(raw, scales);
+      const framed = applyFrameToProps(raw, scales);
+      const props = layoutChartBar(framed, scales);
       out.push({
         id: `${prefix}:${item.id}`,
         name: item.name,
@@ -102,7 +139,7 @@ function nodeToSvg(node: FlatNode): string {
   const p = node.props;
   const tag = inferTag(p);
   const opacity = p.opacity === undefined ? 1 : num(p.opacity, 1);
-  const common = `data-viva-name="${esc(node.name)}" opacity="${opacity}"`;
+  const common = `data-viva-id="${esc(node.id)}" data-viva-name="${esc(node.name)}" opacity="${opacity}"`;
   if (tag === "circle") {
     return `<circle ${common} cx="${num(p.x)}" cy="${num(p.y)}" r="${num(p.r ?? p.size, 16)}" fill="${esc(str(p.fill ?? p.color, "#38bdf8"))}"${strokeAttrs(p)} />`;
   }
@@ -113,7 +150,12 @@ function nodeToSvg(node: FlatNode): string {
     const text = esc(str(p.text ?? p.label ?? node.name, ""));
     const fill = esc(str(p.fill ?? p.color, "#e2e8f0"));
     const size = num(p.font ?? p.fontSize, 14);
-    const anchor = str(p.align, "start") === "center" ? "middle" : str(p.align, "start") === "right" ? "end" : "start";
+    const anchor =
+      str(p.align, "start") === "center"
+        ? "middle"
+        : str(p.align, "start") === "right"
+          ? "end"
+          : "start";
     return `<text ${common} x="${num(p.x)}" y="${num(p.y)}" fill="${fill}" font-size="${size}" text-anchor="${anchor}">${text}</text>`;
   }
   if (tag === "line") {
