@@ -28,7 +28,8 @@ export function paletteColor(
   if (kind === "sequential") {
     const n = typeof series === "number" ? series : Number(series);
     if (!Number.isNaN(n)) {
-      const idx = Math.min(paletteList.length - 1, Math.max(0, Math.floor(n)));
+      const maxIdx = paletteList.length - 1;
+      const idx = Math.min(maxIdx, Math.max(0, Math.round(n)));
       return paletteList[idx]!;
     }
   }

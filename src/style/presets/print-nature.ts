@@ -20,15 +20,14 @@ export const printNaturePreset: StylePreset = {
       "#F0E442",
       "#999999",
     ],
-    /** Light → deep blue (common heatmap / expression scale). */
+    /** Visible on white backgrounds (no near-white steps). */
     sequential: [
-      "#f7fbff",
-      "#deebf7",
       "#c6dbef",
       "#9ecae1",
       "#6baed6",
       "#4292c6",
       "#2171b5",
+      "#1a5a9e",
       "#084594",
     ],
     accent: "#0072B2",

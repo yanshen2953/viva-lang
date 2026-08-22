@@ -6,24 +6,24 @@ state hint = "六联图 · 虚拟队列 n=248 · print-nature 默认"
 # ── 虚拟临床队列数据 ─────────────────────────────────────────
 
 data cohortBars = [
-  { visit: 0.75, pct: 38, grp: "placebo" }
-  { visit: 1.0, pct: 38, grp: "drug-A" }
-  { visit: 1.25, pct: 38, grp: "drug-B" }
-  { visit: 1.75, pct: 41, grp: "placebo" }
-  { visit: 2.0, pct: 52, grp: "drug-A" }
-  { visit: 2.25, pct: 48, grp: "drug-B" }
-  { visit: 2.75, pct: 44, grp: "placebo" }
-  { visit: 3.0, pct: 61, grp: "drug-A" }
-  { visit: 3.25, pct: 58, grp: "drug-B" }
-  { visit: 3.75, pct: 46, grp: "placebo" }
-  { visit: 4.0, pct: 68, grp: "drug-A" }
-  { visit: 4.25, pct: 63, grp: "drug-B" }
-  { visit: 4.75, pct: 48, grp: "placebo" }
-  { visit: 5.0, pct: 74, grp: "drug-A" }
-  { visit: 5.25, pct: 70, grp: "drug-B" }
-  { visit: 5.75, pct: 50, grp: "placebo" }
-  { visit: 6.0, pct: 79, grp: "drug-A" }
-  { visit: 6.25, pct: 76, grp: "drug-B" }
+  { visit: 1, pct: 38, grp: "placebo" }
+  { visit: 1, pct: 38, grp: "drug-A" }
+  { visit: 1, pct: 38, grp: "drug-B" }
+  { visit: 2, pct: 41, grp: "placebo" }
+  { visit: 2, pct: 52, grp: "drug-A" }
+  { visit: 2, pct: 48, grp: "drug-B" }
+  { visit: 3, pct: 44, grp: "placebo" }
+  { visit: 3, pct: 61, grp: "drug-A" }
+  { visit: 3, pct: 58, grp: "drug-B" }
+  { visit: 4, pct: 46, grp: "placebo" }
+  { visit: 4, pct: 68, grp: "drug-A" }
+  { visit: 4, pct: 63, grp: "drug-B" }
+  { visit: 5, pct: 48, grp: "placebo" }
+  { visit: 5, pct: 74, grp: "drug-A" }
+  { visit: 5, pct: 70, grp: "drug-B" }
+  { visit: 6, pct: 50, grp: "placebo" }
+  { visit: 6, pct: 79, grp: "drug-A" }
+  { visit: 6, pct: 76, grp: "drug-B" }
 ]
 
 data vitals = [
@@ -285,8 +285,10 @@ scene
         w: 40
         h: 40
         radius: 3
-        colorBy: tier
-        palette: sequential
+        fill: palette(c.tier, "sequential")
+        stroke: "#94a3b8"
+        strokeWidth: 0.75
+        styleSkip: true
 
     node colorbarBg
       role: colorbar
@@ -349,17 +351,73 @@ scene
       role: grid
       frame: microFlow
       x1: 0
+      y1: 1
+      x2: 10
+      y2: 1
+
+    node flowGrid2
+      role: grid
+      frame: microFlow
+      x1: 0
       y1: 2
       x2: 10
       y2: 2
 
-    node flowGrid2
+    node flowGrid3
+      role: grid
+      frame: microFlow
+      x1: 0
+      y1: 3
+      x2: 10
+      y2: 3
+
+    node flowGrid4
       role: grid
       frame: microFlow
       x1: 0
       y1: 4
       x2: 10
       y2: 4
+
+    node flowGrid5
+      role: grid
+      frame: microFlow
+      x1: 0
+      y1: 5
+      x2: 10
+      y2: 5
+
+    node flowGridV1
+      role: grid
+      frame: microFlow
+      x1: 2
+      y1: 0
+      x2: 2
+      y2: 6
+
+    node flowGridV2
+      role: grid
+      frame: microFlow
+      x1: 4
+      y1: 0
+      x2: 4
+      y2: 6
+
+    node flowGridV3
+      role: grid
+      frame: microFlow
+      x1: 6
+      y1: 0
+      x2: 6
+      y2: 6
+
+    node flowGridV4
+      role: grid
+      frame: microFlow
+      x1: 8
+      y1: 0
+      x2: 8
+      y2: 6
 
     node flowAxisX
       role: axis
@@ -380,9 +438,8 @@ scene
     for t in flowXTicks
       node flowXLbl as flowXLbls
         role: label
-        frame: microFlow
-        x: t.v
-        y: -0.4
+        x: 484 + t.v * 37.6
+        y: 854
         text: t.v
         font: 8
         align: center
@@ -390,9 +447,8 @@ scene
     for t in flowYTicks
       node flowYLbl as flowYLbls
         role: label
-        frame: microFlow
-        x: -0.65
-        y: t.v
+        x: 476
+        y: 848 - t.v * 49.333
         text: t.v
         font: 8
         align: right
@@ -408,6 +464,7 @@ scene
         colorBy: grp
         palette: categorical
         strokeWidth: 2.5
+        strokeLinecap: round
 
       node flowHead as flowTips
         role: mark
@@ -537,9 +594,9 @@ widget chart.bar
   group: grp
   xlim: 0 7
   ylim: 0 100
-  areaX: 60 436
-  areaY: 168 468
-  barWidth: 0.55
+  areaX: 68 432
+  areaY: 176 460
+  barWidth: 0.62
   title: "RESPONSE BY VISIT"
 
 widget chart.line
