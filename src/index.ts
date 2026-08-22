@@ -39,9 +39,23 @@ export {
   runArtifactChecks,
   runStructuralChecks,
   runVisualChecks,
+  runVisionChecks,
+  rasterizeIr,
   withIrStyleContext,
+  createTextModelClient,
+  createVisionModelClient,
+  describeModelSlots,
+  resolveModelsConfig,
 } from "./check/index.js";
-export type { CheckDiagnostic, CheckOptions, CheckResult } from "./check/index.js";
+export type {
+  CheckDiagnostic,
+  CheckOptions,
+  CheckResult,
+  ModelEndpointConfig,
+  TextModelClient,
+  VisionModelClient,
+  VivaModelsFile,
+} from "./check/index.js";
 export {
   applyHandbookHook,
   resolveStylePresets,

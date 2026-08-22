@@ -11,7 +11,11 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { compileSource } from "./pipeline.js";
-import { runArtifactChecks } from "./check/index.js";
+import {
+  runArtifactChecks,
+  describeModelSlots,
+  resolveModelsConfig,
+} from "./check/index.js";
 import { renderStandaloneHtml } from "./html.js";
 import { exportArtifact, type ExportFormat } from "./export/index.js";
 import { simulate } from "./simulate.js";
@@ -57,6 +61,13 @@ async function main(): Promise<void> {
     return;
   }
 
+  if (command === "models") {
+    const configPath = flagValue(argv, "--config");
+    const slots = resolveModelsConfig(configPath);
+    console.log(JSON.stringify(describeModelSlots(slots), null, 2));
+    return;
+  }
+
   const input = argv[1];
   if (!input) {
     printHelp();
@@ -70,6 +81,8 @@ async function main(): Promise<void> {
 
   if (command === "check") {
     const visual = argv.includes("--visual");
+    const vision = argv.includes("--vision");
+    const modelsConfig = flagValue(argv, "--models-config");
     const result = compileSource(source, input, {
       handbookIds: handbookIds.length ? handbookIds : undefined,
       check: { structural: true },
@@ -82,6 +95,9 @@ async function main(): Promise<void> {
     const checks = await runArtifactChecks(result.ir, {
       structural: true,
       visual,
+      vision,
+      source,
+      modelsConfigPath: modelsConfig,
       rasterWidth: Number(flagValue(argv, "--width") ?? "960"),
     });
     const report = {
@@ -90,6 +106,7 @@ async function main(): Promise<void> {
       stats: checks.stats,
       structural: checks.structural,
       visual: checks.visual,
+      vision: checks.vision,
     };
     const json = JSON.stringify(report, null, 2);
     if (outPath) {
@@ -317,7 +334,8 @@ function printHelp(): void {
 
 Commands:
   compile <file> [--handbook id]   Compile to Visual IR JSON
-  check <file> [--visual]          Structural + optional raster checks
+  check <file> [--visual] [--vision]  Structural + raster + optional multimodal
+  models [--config path]           Show resolved base/vision model slots
   html <file> [-o out.html]        Standalone HTML shell
   svg <file> [-o out.svg]          Export static SVG
   export <file> -f <fmt>           Export svg|png|jpg|pdf (repeat --handbook for style)
@@ -328,7 +346,8 @@ Commands:
   help                        Show this message
 
 Examples:
-  viva check examples/figure-atlas.viva --visual --handbook print-nature
+  viva models
+  viva check examples/figure-atlas.viva --visual --vision --handbook print-nature
   viva export examples/figure-atlas.viva -f pdf --handbook print-nature
   viva export examples/hello.viva -f pdf-raster -o r.pdf
   viva export examples/hello.viva -f jpg --width 1600

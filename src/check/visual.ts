@@ -1,10 +1,8 @@
-import { Resvg } from "@resvg/resvg-js";
 import sharp from "sharp";
 import type { VisualIR } from "../ir.js";
-import { renderSvgFromIr } from "../export/static-svg.js";
-import { flattenNodesFromIr } from "../export/static-svg.js";
+import type { RasterizedArtifact } from "./raster.js";
+import { rasterizeIr } from "./raster.js";
 import type { CheckDiagnostic, CheckOptions } from "./types.js";
-import { withIrStyleContext } from "./style-context.js";
 
 function push(
   out: CheckDiagnostic[],
@@ -100,24 +98,17 @@ function cellInk(
 export async function runVisualChecks(
   ir: VisualIR,
   opts: CheckOptions = {},
+  cachedRaster?: RasterizedArtifact,
 ): Promise<{ diagnostics: CheckDiagnostic[]; inkRatio: number; colorCount: number }> {
   const out: CheckDiagnostic[] = [];
-  const rasterWidth = opts.rasterWidth ?? 960;
   const minInk = opts.minInkRatio ?? 0.004;
   const minColors = opts.minColorCount ?? 6;
 
-  const { scene } = withIrStyleContext(ir, () => ({ scene: flattenNodesFromIr(ir).scene }));
-  const svg = withIrStyleContext(ir, () => renderSvgFromIr(ir));
-  const resvg = new Resvg(svg, {
-    fitTo: { mode: "width", value: rasterWidth },
-    background: scene.background,
-  });
-  const png = resvg.render().asPng();
-  const meta = await sharp(png).metadata();
-  const width = meta.width ?? rasterWidth;
-  const height = meta.height ?? Math.round((scene.height / scene.width) * rasterWidth);
-  const raw = await sharp(png).ensureAlpha().raw().toBuffer();
-  const bg = parseBgRgb(scene.background);
+  const raster = cachedRaster ?? await rasterizeIr(ir, opts);
+  const raw = await sharp(raster.png).ensureAlpha().raw().toBuffer();
+  const width = raster.width;
+  const height = raster.height;
+  const bg = parseBgRgb(raster.background);
 
   const { ink, colors } = inkStats(raw, width, height, bg);
   const total = width * height;

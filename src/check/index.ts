@@ -3,6 +3,8 @@ import { flattenNodesFromIr } from "../export/static-svg.js";
 import { listSelectableNodes } from "../review/nodes.js";
 import { runStructuralChecks } from "./structural.js";
 import { runVisualChecks } from "./visual.js";
+import { runVisionChecks } from "./vision.js";
+import { rasterizeIr } from "./raster.js";
 import type { CheckOptions, CheckResult } from "./types.js";
 import { withIrStyleContext } from "./style-context.js";
 
@@ -10,6 +12,20 @@ export type { CheckDiagnostic, CheckOptions, CheckResult, CheckSeverity } from "
 export { withIrStyleContext } from "./style-context.js";
 export { runStructuralChecks } from "./structural.js";
 export { runVisualChecks } from "./visual.js";
+export { runVisionChecks } from "./vision.js";
+export { rasterizeIr } from "./raster.js";
+export {
+  createTextModelClient,
+  createVisionModelClient,
+  describeModelSlots,
+  resolveModelsConfig,
+} from "./models/index.js";
+export type {
+  ModelEndpointConfig,
+  TextModelClient,
+  VisionModelClient,
+  VivaModelsFile,
+} from "./models/index.js";
 
 export function hasCheckErrors(diagnostics: import("./types.js").CheckDiagnostic[]): boolean {
   return diagnostics.some((d) => d.severity === "error");
@@ -23,17 +39,28 @@ export async function runArtifactChecks(
   const structural =
     opts.structural !== false ? runStructuralChecks(ir, opts) : [];
   let visual: import("./types.js").CheckDiagnostic[] = [];
+  let vision: import("./types.js").CheckDiagnostic[] = [];
   let inkRatio: number | undefined;
   let colorCount: number | undefined;
 
+  const needRaster = Boolean(opts.visual || opts.vision);
+  const cachedRaster = needRaster ? await rasterizeIr(ir, opts) : undefined;
+
   if (opts.visual) {
-    const v = await runVisualChecks(ir, opts);
+    const v = await runVisualChecks(ir, opts, cachedRaster);
     visual = v.diagnostics;
     inkRatio = v.inkRatio;
     colorCount = v.colorCount;
   }
 
-  const diagnostics = [...structural, ...visual];
+  if (opts.vision) {
+    vision = await runVisionChecks(ir, { ...opts, source: opts.source }, structural, {
+      inkRatio,
+      colorCount,
+    });
+  }
+
+  const diagnostics = [...structural, ...visual, ...vision];
   const { scene, nodes } = withIrStyleContext(ir, () => flattenNodesFromIr(ir));
   const selectable = withIrStyleContext(ir, () => listSelectableNodes(ir));
 
@@ -42,6 +69,7 @@ export async function runArtifactChecks(
     diagnostics,
     structural,
     visual,
+    vision,
     stats: {
       nodeCount: selectable.length,
       sceneWidth: scene.width,

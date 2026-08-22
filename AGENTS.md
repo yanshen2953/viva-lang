@@ -17,6 +17,8 @@ Dependency refresh on pod start is `npm install` (see environment update script)
 | Agent Host smoke | `npx vite-node scripts/hello-agent.ts` |
 | Export SVG/JPG/PDF | `npx vite-node src/cli.ts -- export examples/hello.viva -f pdf -o /tmp/h.pdf` |
 | Layout checks | `npx vite-node src/cli.ts -- check examples/figure-atlas.viva --visual --handbook print-nature` |
+| Multimodal check | `npx vite-node src/cli.ts -- check file.viva --vision` (see `viva.models.json.example`) |
+| Model slots | `npx vite-node src/cli.ts -- models` |
 | Prune artifact screenshots | `node scripts/cleanup-artifacts.mjs` |
 | Review brief demo | `npm run demo:review` |
 | Agent HTTP bridge | `npx vite-node src/cli.ts -- serve --port 8765` |
@@ -35,7 +37,7 @@ Dependency refresh on pod start is `npm install` (see environment update script)
 - **Agent surface (dogfood):** `src/agent/` — `createVivaAgentHost`, Session `compile`/`patch`/`simulate`/`exportPackage`/`exportVectorPackage`/`createReview`, PipelinePort, DomainView registry, ProvenanceWriter
 - **Review → agent repair:** `src/review/` + playground **审查模式** — rect/point/lasso/bezier, add/subtract/intersect/invert, rich feedback kinds → `agentBrief`. See `docs/hosts/review.md`
 - **Vector export:** `export -f svg|pdf` is geometry-precise (`data-viva-id`); `pdf-raster` is PNG-in-PDF fallback
-- **Layout QA:** structural checks in Playground + `viva check`; raster layer via `--visual` (see `docs/CHECK.md`)
+- **Layout QA:** structural in Playground + `viva check --visual`; multimodal `--vision` via `viva.models.json` / HTTP entry (`docs/CHECK.md`)
 - **Playground** must go through `VivaAgentHost` (not raw `new Runtime`)
 - **Space:** `frame` + node `frame:` maps data-domain x/y via linear scales (`src/space.ts`)
 - **Charts:** `widget chart.scatter|line|bar`
