@@ -9,6 +9,7 @@ import {
   applyFrameToProps,
   HEAT_CELL_GUTTER,
   layoutChartHeat,
+  layoutChartVector,
   linearMap,
   scalesFromFrameProps,
   type FrameScales,
@@ -293,5 +294,28 @@ widget chart.bar
     expect(b.h).toBeCloseTo(a.h as number);
     expect((b.x as number) - (a.x as number)).toBeCloseTo(cellW);
     expect(a.w).toBeGreaterThan(cellW - 1);
+  });
+
+  it("paints a scene-space vector head as a triangle, not a circle", () => {
+    const head = layoutChartVector({
+      __chartVec: true,
+      x1: 10,
+      y1: 10,
+      x2: 40,
+      y2: 10,
+    });
+    const shaft = layoutChartVector({
+      __chartVecShaft: true,
+      x1: 10,
+      y1: 10,
+      x2: 40,
+      y2: 10,
+    });
+    expect(String(head.d)).toMatch(/^M 40 10 L /);
+    expect(String(head.d)).toMatch(/Z$/);
+    expect(head.r).toBeUndefined();
+    expect(shaft.x2).toBeLessThan(40);
+    expect(shaft.x2).toBeGreaterThan(10);
+    expect(shaft.y2).toBe(10);
   });
 });

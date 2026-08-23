@@ -234,6 +234,7 @@ export function layoutChartGeom(
   if (props.__chartBar) return layoutChartBar(props, frames);
   if (props.__chartBox) return layoutChartBox(props, frames);
   if (props.__chartHeat) return layoutChartHeat(props, frames);
+  if (props.__chartVec || props.__chartVecShaft) return layoutChartVector(props);
   return props;
 }
 
@@ -357,6 +358,39 @@ export function layoutChartHeat(
     y: cy - sceneH / 2 + gap / 2,
     w: Math.max(sceneW * 0.5, sceneW - gap),
     h: Math.max(sceneH * 0.5, sceneH - gap),
+  };
+}
+
+/** Scene-space arrow after frame maps the shaft. Not a data-domain chevron. */
+export function layoutChartVector(props: Record<string, unknown>): Record<string, unknown> {
+  if (!props.__chartVec && !props.__chartVecShaft) return props;
+  const x1 = typeof props.x1 === "number" ? props.x1 : 0;
+  const y1 = typeof props.y1 === "number" ? props.y1 : 0;
+  const x2 = typeof props.x2 === "number" ? props.x2 : typeof props.x === "number" ? props.x : x1;
+  const y2 = typeof props.y2 === "number" ? props.y2 : typeof props.y === "number" ? props.y : y1;
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const len = Math.hypot(dx, dy);
+  if (len < 1e-3) return props;
+  const nx = dx / len;
+  const ny = dy / len;
+  const headLen = Math.min(len * 0.36, Math.max(5, len * 0.22));
+  const headW = headLen * 0.42;
+  const bx = x2 - nx * headLen;
+  const by = y2 - ny * headLen;
+  if (props.__chartVecShaft) {
+    return { ...props, x2: bx, y2: by };
+  }
+  const px = -ny * headW;
+  const py = nx * headW;
+  const d = `M ${x2} ${y2} L ${bx + px} ${by + py} L ${bx - px} ${by - py} Z`;
+  const fill = props.fill ?? props.stroke ?? props.color;
+  return {
+    ...props,
+    d,
+    x: x2,
+    y: y2,
+    ...(fill !== undefined ? { fill } : {}),
   };
 }
 

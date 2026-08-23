@@ -429,6 +429,41 @@ widget chart.scatter
     expect(xTitleText).not.toMatch(/^\)$/);
   });
 
+  it("exports vector heads as filled triangles", () => {
+    const src = `artifact "Arrows"
+data flow = [
+  { x: 1, y: 1, ux: 2, uy: 0 }
+]
+scene
+  size: 240 160
+widget chart.vector
+  data: flow
+  xField: x
+  yField: y
+  uField: ux
+  vField: uy
+  xlim: 0 4
+  ylim: 0 3
+  areaX: 20 220
+  areaY: 20 140
+  interactive: false
+`;
+    const result = compileSource(src, "arrows.viva", { handbookIds: ["print-nature"] });
+    expect(result.error).toBeNull();
+    const marks = result.ir!.scene.layers.find((l) => l.name.endsWith("_marks"))!;
+    const loop = marks.items.find((i) => i.kind === "for");
+    expect(loop?.kind).toBe("for");
+    if (loop?.kind === "for") {
+      const head = loop.body.find((b) => b.kind === "node" && b.name === "head");
+      expect(head?.kind).toBe("node");
+      if (head?.kind === "node") expect(head.props.__chartVec).toBeDefined();
+    }
+    const svg = renderSvgFromIr(result.ir!);
+    expect(svg).toMatch(/<path[^>]+d="M /);
+    expect(svg).toMatch(/Z"/);
+    expect(svg).not.toMatch(/<circle[^>]+data-viva-name="head"/);
+  });
+
   it("ticks a weekly line at the sample weeks, not a nice 5", () => {
     const src = `artifact "Weeks"
 data rows = [
