@@ -228,6 +228,20 @@ scene
       [{}],
     );
     expect(low).not.toBe(high);
+    const mid = evaluate(
+      {
+        kind: "call",
+        callee: "palette",
+        args: [
+          { kind: "number", value: 0.5, span: { line: 1, column: 1 } },
+          { kind: "string", value: "sequential", span: { line: 1, column: 1 } },
+        ],
+        span: { line: 1, column: 1 },
+      },
+      [{}],
+    );
+    expect(mid).not.toBe(low);
+    expect(mid).not.toBe(high);
     setStyleContext(null);
   });
 });

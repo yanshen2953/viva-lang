@@ -54,11 +54,11 @@
 | mm 跟手 tip | 紧凑/投稿图不再靠常驻角 HUD；`chartTip` 跟 `__event` 走，空字不画；HUD/brush/folio 不抢指针。paper-cjk / paper-column / paper-pages / paper-spread / paper-linked-pages / paper-board-linked / paper-storyboard / figure-grid / figure-span / box / violin / time-axis / brackets 默认可交互。绑了 board 槽的 figure 也会避页刀；场景拉高后 lower-third 跟到最后一页。`paper-board-linked` 是 board 安全框 + A4 页刀 + 跨页 `__sel`。`paper-storyboard` 是 16:9 mm 分镜 + play + 跨拍 `__sel` |
 | 未加引号多词轴题 | `xLabel: Sum score` 不再被收成 ident 数组后静默丢掉；`paper-linked-marks` 漏斗 X 轴画出 `Sum score`。仍不是投稿成品轴语义 |
 | 线性轴端点 | `niceTicks` 键上作者 `xlim`/`ylim` 两端；`0 70` 不再停在 60。挤时抽稀仍留两端。仍不是完整轴文法 |
-| mm 色条尺度 | 热图色带按 `sceneScale` 画；`zLabel` 在色标右侧 −90° 竖排（第三轴），按绘图区高度折行。色条刻度落在 `zlim`（整数 0…4 逐档，更宽域 nice + 键端），并画短刻度线，不再只标底/中/顶三段。色带仍是 7 档顺序色，不是插值渐变。仍不是投稿色条 |
+| mm 色条尺度 | 热图色带按 `sceneScale` 画；`zLabel` 在色标右侧 −90° 竖排（第三轴），按绘图区高度折行。色条刻度落在 `zlim`（整数 0…4 逐档，更宽域 nice + 键端），并画短刻度线，不再只标底/中/顶三段。顺序色按索引插值，色带是细条渐变而不是 7 块分类色。仍不是投稿色条 |
 | 热图格子 | 未写 `cellW`/`cellH` 时按相邻唯一坐标的中位步长铺格（`0 2 4` 不再用宽 1 的瘦条）；离散数值轴刻度落在格心，不再把 `xlim: -0.5 7.5` 的半格端点画成刻度；白缝是短边的 5%，不再减 1 个场景单位（mm 下不再掏出 1 mm 洞）。热图 Y 第一行在顶上。仍不是 Nature 色矩阵 |
 | 柱类目刻度 | `chart.bar` / `box` / `violin` 的少量整数类目轴刻在取值上，不再把 `xlim` 两端空位（Atlas visit `0 7`）画成刻度。折线 / 散点 / 矢量的整数 x 若铺满大部分域（周次 0…12）也刻在取样点，不再插入 nice 5；稀疏散点仍键端点。漏斗数值轴仍键端点。仍不是完整类目文法 |
 | 矢量箭头 | `chart.vector` 的头在场景坐标画成三角，杆停在箭颈。仍不是带比例尺的 quiver |
-| 色条刻度 | 热图色条按 `zlim` 刻度（Atlas `0 4` 不再被读成 0–6；`6 28` 不再只标 6/17/28）。仍是 7 档色带，不是 Nature 连续色标 |
+| 色条刻度 | 热图色条按 `zlim` 刻度（Atlas `0 4` 不再被读成 0–6；`6 28` 不再只标 6/17/28）。顺序色插值成细条渐变。仍不是 Nature 连续色标 |
 
 ## 仍然很粗（按用户可见排序）
 

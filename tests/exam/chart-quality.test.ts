@@ -205,7 +205,11 @@ widget chart.heatmap
     };
     const barW = num("b_cbar_0", "w");
     const barX = num("b_cbar_0", "x");
-    const topY = num("b_cbar_6", "y");
+    const ramp = axes.items.filter((i) => i.kind === "node" && /^b_cbar_\d+$/.test(i.name));
+    expect(ramp.length).toBeGreaterThan(7);
+    const topY = Math.min(
+      ...ramp.map((i) => (i.kind === "node" && i.props.y?.kind === "number" ? i.props.y.value : Infinity)),
+    );
     const titleX = num("b_cbarTitle", "x");
     const titleY = num("b_cbarTitle", "y");
     const plotY0 = result.ir!.frames.find((f) => f.name === "b")!.props.y;

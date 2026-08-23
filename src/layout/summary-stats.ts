@@ -257,7 +257,7 @@ function applyHeatSummary(
   const z1 = Number(props.__heatZ1);
   const span = z1 - z0;
   const norm = span === 0 ? 0 : (z - z0) / span;
-  const tier = Math.min(6, Math.max(0, Math.round(norm * 6)));
+  const tier = Math.min(6, Math.max(0, norm * 6));
   return {
     ...props,
     visible: true,

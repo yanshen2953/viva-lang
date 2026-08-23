@@ -3781,7 +3781,7 @@ function heatTierExpr(value: Expr, z0: number, z1: number, span: { line: number;
     kind: "call",
     callee: "clamp",
     args: [
-      { kind: "call", callee: "round", args: [binary("*", norm, literal(6), span)], span },
+      binary("*", norm, literal(6), span),
       literal(0),
       literal(6),
     ],
@@ -3914,7 +3914,7 @@ function expandColorbar(
   const bot = y1.kind === "number" ? y1.value : 400;
   const h = Math.max(minH, bot - top);
   const titleStep = chrome?.axisLineH ?? toScene(11);
-  const steps = 7;
+  const steps = 24;
   const items: SceneItem[] = [];
   for (let i = 0; i < steps; i++) {
     items.push(
@@ -3927,13 +3927,25 @@ function expandColorbar(
         fill: {
           kind: "call",
           callee: "palette",
-          args: [literal(i), { kind: "string", value: "sequential", span }],
+          args: [literal((i * 6) / Math.max(1, steps - 1)), { kind: "string", value: "sequential", span }],
           span,
         },
+        stroke: literal("none"),
+        strokeWidth: literal(0),
         styleSkip: literal(true),
       }),
     );
   }
+  items.push(
+    node(`${frameName}_cbarFrame`, {
+      role: literal("colorbar"),
+      x: literal(barX),
+      y: literal(bot - h),
+      w: literal(barW),
+      h: literal(h),
+      fill: literal("none"),
+    }),
+  );
   const zTicks = colorbarTicks(z0, z1);
   const labeled = thinYTicks(
     zTicks.map((value, i) => {

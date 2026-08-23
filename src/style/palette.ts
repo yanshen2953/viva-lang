@@ -29,8 +29,11 @@ export function paletteColor(
     const n = typeof series === "number" ? series : Number(series);
     if (!Number.isNaN(n)) {
       const maxIdx = paletteList.length - 1;
-      const idx = Math.min(maxIdx, Math.max(0, Math.round(n)));
-      return paletteList[idx]!;
+      const t = Math.min(maxIdx, Math.max(0, n));
+      const lo = Math.floor(t);
+      const hi = Math.ceil(t);
+      if (lo === hi) return paletteList[lo]!;
+      return lerpHex(paletteList[lo]!, paletteList[hi]!, t - lo);
     }
   }
   const key = seriesKey(series);
@@ -59,6 +62,24 @@ export function strokeForSeries(
     return darkenHex(fill, 0.35);
   }
   return meta.preset.palette?.foreground ?? "#0f172a";
+}
+
+function parseHex(hex: string): [number, number, number] | null {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+  if (!m) return null;
+  const n = parseInt(m[1]!, 16);
+  return [(n >> 16) & 0xff, (n >> 8) & 0xff, n & 0xff];
+}
+
+function lerpHex(a: string, b: string, t: number): string {
+  const pa = parseHex(a);
+  const pb = parseHex(b);
+  if (!pa || !pb) return a;
+  const u = Math.min(1, Math.max(0, t));
+  const r = Math.round(pa[0] + (pb[0] - pa[0]) * u);
+  const g = Math.round(pa[1] + (pb[1] - pa[1]) * u);
+  const bl = Math.round(pa[2] + (pb[2] - pa[2]) * u);
+  return `#${((r << 16) | (g << 8) | bl).toString(16).padStart(6, "0")}`;
 }
 
 function darkenHex(hex: string, amount: number): string {
