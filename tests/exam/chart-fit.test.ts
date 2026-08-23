@@ -58,6 +58,54 @@ describe("chart host leftover", () => {
     expect(plotY[0]).toBeGreaterThan(cellY[0] - 1);
   });
 
+  it("ignores a full-bleed atmosphere wash when parking a chart", () => {
+    const result = compileSource(
+      `artifact Wash
+data rows = [{ x: 1, y: 2 }, { x: 2, y: 4 }]
+scene
+  size: 400 240
+  layer bg
+    node wash
+      role: atmosphere
+      x: 0
+      y: 0
+      w: 400
+      h: 240
+widget chart.line
+  data: rows
+  xField: x
+  yField: y
+  xlim: 0 3
+  ylim: 0 5
+  interactive: false
+`,
+      "wash.viva",
+    );
+    expect(result.error).toBeNull();
+    const cell = evaluate(result.ir!.frames[0]!.props.cellX!, [
+      result.ir!.state,
+      result.ir!.data,
+    ]) as [number, number];
+    expect(cell[0]).toBeCloseTo(0);
+    expect(cell[1]).toBeCloseTo(400);
+  });
+
+  it("tiles unbound charts above a caption instead of covering it", () => {
+    const src = readFileSync("examples/charts.viva", "utf8");
+    expect(src).not.toMatch(/areaX|areaY|layout\.figure/);
+    const result = compileSource(src, "charts.viva");
+    expect(result.error).toBeNull();
+    const scopes = [result.ir!.state, result.ir!.data];
+    const bottoms = result.ir!.frames
+      .filter((f) => ["a", "b", "c"].includes(f.name))
+      .map((f) => {
+        const cellY = evaluate(f.props.cellY!, scopes) as [number, number];
+        return cellY[1];
+      });
+    expect(bottoms.length).toBe(3);
+    expect(Math.max(...bottoms)).toBeLessThan(490);
+  });
+
   it("keeps the param-lab example chart off the slider track", () => {
     const src = readFileSync("examples/param-lab.viva", "utf8");
     expect(src).not.toMatch(/areaX|areaY/);

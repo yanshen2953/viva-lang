@@ -211,19 +211,17 @@ function implicitFigureIfNeeded(artifact: Artifact): void {
   }
   const extent = sceneExtentOf(artifact);
   const unit = sceneUnitOf(artifact);
-  const compact = unit === "mm" || unit === "pt";
+  const host = chartHostBox(artifact, extent, unit);
   expandLayoutFigure(
     artifact,
     {
       id: literal("auto"),
-      x: literal(0),
-      y: literal(0),
-      w: literal(extent.w),
-      h: literal(Math.max(compact ? 40 : 120, extent.h - (compact ? 4 : 36))),
+      x: literal(host.x),
+      y: literal(host.y),
+      w: literal(host.w),
+      h: literal(host.h),
       cols: literal(cols),
       rows: literal(rows),
-      gutter: literal(compact ? 3 : 20),
-      margin: literal(compact ? 2 : 12),
       labels: literal(true),
     },
     1,

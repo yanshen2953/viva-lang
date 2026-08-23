@@ -119,12 +119,22 @@ function walkAuthorNodes(items: SceneItem[], out: Extract<SceneItem, { kind: "no
   }
 }
 
+const SKIP_ROLES = new Set(["atmosphere", "backdrop", "grid"]);
+
+function roleOf(node: Extract<SceneItem, { kind: "node" }>): string {
+  const expr = node.props.role;
+  if (expr?.kind === "string") return expr.value;
+  if (expr?.kind === "ident") return expr.path.join(".");
+  return "";
+}
+
 function nodeObstacle(
   node: Extract<SceneItem, { kind: "node" }>,
   scopes: Scope[],
   toScene: (px: number) => number,
 ): FitRect | null {
   if (node.props.frame) return null;
+  if (SKIP_ROLES.has(roleOf(node))) return null;
   const x = numOf(node.props.x, scopes);
   const y = numOf(node.props.y, scopes);
   const r = numOf(node.props.r ?? node.props.size, scopes);
@@ -200,7 +210,11 @@ export function chartHostBox(
   const minH = compact ? 20 : 64;
   const toScene = compact ? (px: number) => px / (96 / 25.4) : (px: number) => px;
   const sceneBox = { x: 0, y: 0, w: scene.w, h: scene.h };
-  return largestEmptyRect(sceneBox, collectAuthorObstacles(artifact, { toScene }), {
+  const area = Math.max(1, scene.w * scene.h);
+  const obstacles = collectAuthorObstacles(artifact, { toScene }).filter(
+    (rect) => rect.w * rect.h < area * 0.7,
+  );
+  return largestEmptyRect(sceneBox, obstacles, {
     pad,
     minW,
     minH,

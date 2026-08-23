@@ -35,8 +35,6 @@ widget chart.line
   yField: y
   xlim: 0 4
   ylim: 0 30
-  areaX: 40 420
-  areaY: 40 280
   title: "TREND"
   color: #34d399
 
@@ -46,8 +44,6 @@ widget chart.bar
   yField: y
   xlim: 0 4
   ylim: 0 80
-  areaX: 460 840
-  areaY: 40 280
   title: "COHORT"
   color: #38bdf8
   barWidth: 0.5
