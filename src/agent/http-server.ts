@@ -474,7 +474,7 @@ function openApiSpec(): Record<string, unknown> {
       "/api/prompt": { get: { summary: "Core system prompt" } },
       "/api/compile": {
         post: {
-          summary: "Compile Viva source → IR JSON (attaches raster visual QA; visual:false skips)"
+          summary: "Compile Viva source → IR JSON (attaches raster visual QA; visual:false skips)",
           requestBody: {
             content: {
               "application/json": {
