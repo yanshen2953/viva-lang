@@ -69,9 +69,12 @@ describe("figure-atlas example", () => {
       l.items.some((i) => i.kind === "for" && i.body.some((b) => b.kind === "node" && b.name === "heatCell")),
     );
     expect(hasHeat).toBe(true);
-    expect(src).not.toMatch(/insetL|insetR|insetT|insetB|areaX|areaY|panelAdeck|panelLbl|figMain|docTitle/);
+    expect(src).not.toMatch(/insetL|insetR|insetT|insetB|areaX|areaY|panelAdeck|panelLbl|figMain|docTitle|geneBtn/);
     expect(src).not.toMatch(/widget layout\.figure[\s\S]*?\n\s+(x|y|w|h):/);
     expect(result.ir!.scene.layers.some((l) => l.name === "__board_copy")).toBe(true);
+    expect(result.ir!.scene.layers.some((l) => l.name === "__board_controls")).toBe(true);
+    expect(result.ir!.frames.map((f) => f.name)).toEqual(expect.arrayContaining(["hud"]));
+    expect(result.ir!.events.some((e) => e.type === "click" && e.target === "board_ctl_0")).toBe(true);
     expect(result.ir!.scene.layers.some((l) => l.name === "__fig_decks")).toBe(true);
     expect(result.ir!.scene.layers.some((l) => l.name === "__fig_labels")).toBe(true);
     expect(result.ir!.scene.layers.some((l) => l.name === "__fig_plate")).toBe(true);

@@ -474,7 +474,7 @@ widget chart.scatter
       ],
     });
     expect((kept.state.__sel as { n: number }).n).toBeGreaterThan(0);
-    expect(kept.state.__brush).toMatchObject({ on: 0 });
+    expect(kept.state.__brush).toMatchObject({ on: 1 });
     const cleared = simulate(result.ir!, {
       events: [
         { type: "dragstart", target: "__chart_1_plotBg", event: { x: 10, y: 190 } },
@@ -482,6 +482,7 @@ widget chart.scatter
       ],
     });
     expect((cleared.state.__sel as { n: number }).n).toBe(0);
+    expect(cleared.state.__brush).toMatchObject({ on: 0 });
   });
 
   it("expands significance brackets and violin density", () => {

@@ -3,6 +3,7 @@ import { literal } from "../../src/ast";
 import { compileSource } from "../../src/pipeline";
 import { evaluate } from "../../src/eval";
 import { listWidgets, registerWidget, resetWidgetPlugins } from "../../src/widgets";
+import { simulate } from "../../src/simulate";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
@@ -266,6 +267,32 @@ widget chart.scatter
     if (cap?.kind === "node") {
       expect(evaluate(cap.props.text, [ir.state, ir.data])).toBe("Board caption");
     }
+  });
+
+  it("paints board control chips from controls/bind without scene nodes", () => {
+    const result = compileSource(
+      `artifact Hud
+state gene = "CD8A"
+scene
+  size: 640 360
+  background: #ffffff
+widget layout.board
+  title: "Board"
+  controls: [CD8A, IL6]
+  bind: gene
+  safe: 20
+  guides: false
+`,
+      "hud.viva",
+    );
+    expect(result.error).toBeNull();
+    const ir = result.ir!;
+    expect(ir.frames.map((f) => f.name)).toEqual(expect.arrayContaining(["hud", "lower", "body"]));
+    expect(ir.scene.layers.some((l) => l.name === "__board_controls")).toBe(true);
+    const click = ir.events.find((e) => e.type === "click" && e.target === "board_ctl_1");
+    expect(click).toBeTruthy();
+    const after = simulate(ir, { events: [{ type: "click", target: "board_ctl_1" }] });
+    expect(after.state.gene).toBe("IL6");
   });
 
   it("tiles two unbound charts into a figure grid without areaX", () => {

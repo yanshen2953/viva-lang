@@ -123,62 +123,17 @@ scene
   size: 1360 920
   background: #ffffff
 
-  layer hud
-    node heatGeneLbl
-      role: annotation
-      x: 1080
-      y: 854
-      text: selGene
-      font: 11
-      fontWeight: 600
-
-    node geneBtnA
-      role: chrome
-      x: 1140
-      y: 842
-      w: 52
-      h: 22
-      radius: 6
-
-    node geneBtnALbl
-      role: label
-      x: 1166
-      y: 856
-      text: "CD8A"
-      font: 10
-      align: center
-
-    node geneBtnB
-      role: chrome
-      x: 1200
-      y: 842
-      w: 52
-      h: 22
-      radius: 6
-
-    node geneBtnBLbl
-      role: label
-      x: 1226
-      y: 856
-      text: "IL6"
-      font: 10
-      align: center
-
-event click on geneBtnA
-  selGene = "CD8A"
-
-event click on geneBtnB
-  selGene = "IL6"
-
 tick 40
   hint = "print-nature 默认 · 可选手册 dashboard / 无"
 
-# 页面槽位 + 六联图：board 出题注，figure 吃 body，图表只写 panel
+# 页面槽位 + 六联图：board 出题注和 HUD 芯片，figure 吃 body
 
 widget layout.board
   title: "多面板综合图 · 虚拟临床队列"
   subtitle: "Figure 2 · n=248 · IL-6 / CRP 生物标志物 · 六类子图组合"
   caption: hint
+  controls: [CD8A, IL6]
+  bind: selGene
   safe: 40
   guides: false
 

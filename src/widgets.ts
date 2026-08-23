@@ -1142,6 +1142,8 @@ function expandLayoutBoard(
   const titleExpr = copyExpr(props, ["title"]);
   const subtitleExpr = copyExpr(props, ["subtitle"]);
   const captionExpr = copyExpr(props, ["caption"]);
+  const controlKeys = controlKeysFromProps(props);
+  const controlBind = stringProp(props, ["bind", "controlBind"]);
   const safe = numProp(props, "safe", 64);
   const typeGrid = boolProp(props, "typeGrid", false) || boolProp(props, "baseline", false);
   const typeStep = Math.max(4, numProp(props, "typeGridStep", numProp(props, "baselineStep", 8)));
@@ -1160,7 +1162,7 @@ function expandLayoutBoard(
   const lowerH = snapType(
     props.lowerH !== undefined
       ? numProp(props, "lowerH", 96)
-      : captionExpr
+      : captionExpr || controlKeys.length
         ? 48
         : 96,
   );
@@ -1179,11 +1181,15 @@ function expandLayoutBoard(
   const trimY0 = originY + bleed;
   const trimX1 = originX + width - bleed;
   const trimY1 = originY + height - bleed;
+  const hudW = controlKeys.length ? Math.min(280, Math.max(160, controlKeys.length * 68 + 72)) : 0;
   const slots: { name: string; x: [number, number]; y: [number, number] }[] = [
     { name: nameOf("safe"), x: [safeX0, safeX1], y: [safeY0, safeY1] },
     { name: nameOf("title"), x: [safeX0, safeX1], y: [safeY0, titleY1] },
     { name: nameOf("body"), x: [safeX0, safeX1], y: [titleY1, lowerY0] },
     { name: nameOf("lower"), x: [safeX0, safeX1], y: [lowerY0, safeY1] },
+    ...(hudW
+      ? [{ name: nameOf("hud"), x: [safeX1 - hudW, safeX1] as [number, number], y: [lowerY0, safeY1] as [number, number] }]
+      : []),
   ];
   if (bleed > 0) {
     slots.push(
@@ -1345,6 +1351,62 @@ function expandLayoutBoard(
       span,
       props: {},
       items: copyItems,
+    });
+  }
+
+  if (controlKeys.length) {
+    const chipW = 52;
+    const chipH = 22;
+    const gap = 8;
+    const chipY = lowerY0 + Math.max(8, (lowerH - chipH) / 2);
+    let cursorX = safeX1 - 4;
+    const ctlItems: SceneItem[] = [];
+    if (controlBind) {
+      ctlItems.push(
+        node(`${id}_ctlVal`, {
+          role: literal("annotation"),
+          x: literal(safeX1 - hudW + 8),
+          y: literal(chipY + 15),
+          text: ident(controlBind),
+        }),
+      );
+    }
+    for (let i = controlKeys.length - 1; i >= 0; i--) {
+      const key = controlKeys[i]!;
+      cursorX -= chipW;
+      const chipName = `${id}_ctl_${i}`;
+      ctlItems.push(
+        node(chipName, {
+          role: literal("chrome"),
+          x: literal(cursorX),
+          y: literal(chipY),
+          w: literal(chipW),
+          h: literal(chipH),
+          radius: literal(6),
+        }),
+        node(`${id}_ctlLbl_${i}`, {
+          role: literal("label"),
+          x: literal(cursorX + chipW / 2),
+          y: literal(chipY + 14),
+          text: literal(key),
+          align: literal("center"),
+        }),
+      );
+      if (controlBind && !artifact.events.some((e) => e.type === "click" && e.target === chipName)) {
+        artifact.events.push({
+          type: "click",
+          target: chipName,
+          body: [assign(controlBind.split("."), literal(key))],
+          span,
+        });
+      }
+      cursorX -= gap;
+    }
+    artifact.scene?.layers.push({
+      name: `__${id}_controls`,
+      span,
+      props: {},
+      items: ctlItems,
     });
   }
 
@@ -2077,6 +2139,16 @@ function paperChromeOf(
   } = {},
 ): PaperChrome | null {
   return chromeLayoutOf(props, artifact, extras)?.chrome ?? null;
+}
+
+function controlKeysFromProps(props: Record<string, Expr>): string[] {
+  const expr = props.controls ?? props.chips;
+  if (expr?.kind !== "array") return [];
+  return expr.items
+    .map((item) =>
+      item.kind === "string" ? item.value : item.kind === "ident" ? item.path.join(".") : "",
+    )
+    .filter(Boolean);
 }
 
 function copyExpr(props: Record<string, Expr>, keys: string[]): Expr | undefined {
@@ -3541,11 +3613,11 @@ function ensureChartInteract(
       type: "dragend",
       target: plotName,
       body: [
-        assign(["__brush", "on"], literal(0)),
         {
           kind: "if",
           cond: binary("and", tinyX, tinyY, span),
           body: [
+            assign(["__brush", "on"], literal(0)),
             assign(["__sel", "keys"], { kind: "array", items: [], span }),
             assign(["__sel", "n"], literal(0)),
             assign(["__sel", "xField"], literal("")),
