@@ -3,6 +3,7 @@ import { compileSource } from "../pipeline.js";
 import { runArtifactChecks } from "../check/index.js";
 import { exportArtifact, type ExportFormat } from "../export/index.js";
 import { SYSTEM_PROMPT } from "../llm/system-prompt.js";
+import { SYSTEM_PROMPT_SLIM } from "../llm/system-prompt-slim.js";
 import { createNodePromptService } from "../agent/prompt.node.js";
 import { describeModelSlots, resolveModelsConfig } from "../check/models/index.js";
 import type { VivaAgentHost } from "../agent/host.js";
@@ -120,8 +121,9 @@ async function toolExport(args: Record<string, unknown>) {
 
 function toolPrompt(args: Record<string, unknown>) {
   const handbookIds = (args.handbookIds as string[] | undefined) ?? [];
+  const variant = String(args.variant ?? "slim");
   const prompt = createNodePromptService();
-  const parts = [SYSTEM_PROMPT];
+  const parts = [variant === "full" ? SYSTEM_PROMPT : SYSTEM_PROMPT_SLIM];
   for (const id of handbookIds) {
     parts.push(prompt.loadHandbook(id));
   }
@@ -165,7 +167,7 @@ async function toolSession(args: Record<string, unknown>, host: VivaAgentHost) {
     case "get":
       return textResult(JSON.stringify(api.get(sessionId)));
     case "compile": {
-      const compiled = api.compile(sessionId, String(args.source ?? ""), meta, includeIr);
+      const compiled = await api.compile(sessionId, String(args.source ?? ""), meta, includeIr);
       return textResult(JSON.stringify(compiled), !compiled.ok);
     }
     case "patch":

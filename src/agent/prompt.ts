@@ -1,4 +1,4 @@
-import { SYSTEM_PROMPT } from "../llm/system-prompt.js";
+import { SYSTEM_PROMPT_SLIM } from "../llm/system-prompt-slim.js";
 import type { Diagnostic } from "../diagnostics.js";
 import type { HandbookId } from "./types.js";
 
@@ -23,7 +23,7 @@ export type PromptServiceOptions = {
 };
 
 export function createPromptService(opts: PromptServiceOptions = {}): PromptService {
-  const core = opts.corePrompt ?? SYSTEM_PROMPT;
+  const core = opts.corePrompt ?? SYSTEM_PROMPT_SLIM;
   const handbookBodies = new Map<string, string>();
 
   const listHandbooks =

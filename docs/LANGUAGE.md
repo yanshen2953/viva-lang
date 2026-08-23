@@ -127,6 +127,21 @@ widget chart.scatter
 
 `layout.figure` 会创建 frame `a` `b` `c`…，并画 `(a)(b)` 标签（`labels: false` 可关）。可选 `prefix: fig` → `fig_a`。这是插件名，不是新关键字。宿主可用 `registerWidget()` 再挂 `chart.*` / `layout.*`；`viva widgets` 列出当前注册表。未知 widget 编译失败。
 
+影像板（同样不是新关键字）：
+
+```viva
+widget layout.board
+  w: 1280
+  h: 720
+  safe: 64
+```
+
+得到 frame `safe` `title` `body` `lower`。图表可 `panel: body`。
+
+投稿尺寸：`scene` 上写 `unit: mm` 与 `column: single`（89 mm）或 `double`（183 mm）。轴可 `xScale: log` / `yScale: log`（frame 或 chart 属性）。
+
+图表默认交互（`interactive: false` 可关）：`__tip` 字符串、`__hover` 对象、`__brush` 框选、同 `group` 跨面板 `__highlightGrp`。
+
 出版级常用 props（均为 widget 属性，不是新关键字）：
 
 ```viva

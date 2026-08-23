@@ -118,7 +118,7 @@ Vision 检查需 `viva.models.json`（见 `viva.models.json.example`）或 env `
 3. **Playground** — 状态栏已有结构检查；浏览器内 vision/MCP 不现实
 4. **Agent exam** — `npm run test:agent-exam` 需 `DEEPSEEK_API_KEY`（Pi+DeepSeek SUT）
 5. **发布包实跑** — `npm run pack:release`，在干净环境验证 `release/` 与 Docker
-6. **图核 + 排版插件** — 轴标题/误差/热图/hover 已起步；`layout.figure` + `registerWidget()` 已落地。下一刀：PDF/CJK、mm 栏宽、Atlas 迁 figure 网格、`layout.board`、session visual。对照 `docs/VISION.md`
+6. **三柱推进中（未齐）** — `layout.board`、`unit: mm`/`column`、log 轴、PDF CJK 嵌入、`__hover`/`__brush`/`__highlightGrp`、Atlas (a–d) 已迁网格、slim prompt 默认、session visual 附带。仍欠：分类轴、漏斗/向量场 widget、数据域 brush filter、随包字体。对照 `docs/VISION.md`。**不要**标愿景完成。
 
 ### 已知约束 / 坑
 

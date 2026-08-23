@@ -19,6 +19,7 @@ import { renderStandaloneHtml } from "./html.js";
 import { exportArtifact, type ExportFormat } from "./export/index.js";
 import { simulate } from "./simulate.js";
 import { SYSTEM_PROMPT } from "./llm/system-prompt.js";
+import { SYSTEM_PROMPT_SLIM } from "./llm/system-prompt-slim.js";
 import { createNodePromptService } from "./agent/prompt.node.js";
 import { startAgentHttpServer } from "./agent/http-server.js";
 import { createVivaAgentHost } from "./agent/host.js";
@@ -43,7 +44,7 @@ async function main(): Promise<void> {
   if (command === "prompt") {
     const handbooks = flagValues(argv, "--handbook");
     const prompt = createNodePromptService();
-    const parts = [SYSTEM_PROMPT];
+    const parts = [argv.includes("--full") ? SYSTEM_PROMPT : SYSTEM_PROMPT_SLIM];
     for (const id of handbooks) {
       try {
         parts.push(prompt.loadHandbook(id));

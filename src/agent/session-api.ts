@@ -11,6 +11,7 @@ import type {
 } from "./types.js";
 import { createHttpWebhookPipeline } from "./pipeline/adapters/http-webhook.js";
 import { createInlinePipeline } from "./pipeline/port.js";
+import { runArtifactChecks } from "../check/index.js";
 
 export type SessionSummary = {
   id: string;
@@ -27,6 +28,7 @@ export type CompileSummary = {
   irHash?: string;
   error?: string | null;
   ir?: unknown;
+  visualOk?: boolean;
 };
 
 export type PipelineInfo = {
@@ -114,14 +116,25 @@ export function createSessionFacade(host: VivaAgentHost) {
       };
     },
 
-    compile(
+    async compile(
       sessionId: string,
       source: string,
       meta?: CompileMeta,
       includeIr = false,
-    ): CompileSummary {
+    ): Promise<CompileSummary> {
       const session = requireSession(host, sessionId);
-      return summarizeCompile(session, session.compile(source, meta), includeIr);
+      const compiled = session.compile(source, meta);
+      const summary = summarizeCompile(session, compiled, includeIr);
+      if (compiled.ir) {
+        const checks = await runArtifactChecks(compiled.ir, {
+          structural: true,
+          visual: true,
+          rasterWidth: 640,
+        });
+        summary.diagnostics = [...summary.diagnostics, ...checks.structural, ...checks.visual];
+        summary.visualOk = checks.ok;
+      }
+      return summary;
     },
 
     patch(

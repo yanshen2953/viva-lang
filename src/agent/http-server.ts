@@ -10,6 +10,7 @@ import { describeModelSlots, resolveModelsConfig } from "../check/models/index.j
 import { exportArtifact, type ExportFormat } from "../export/index.js";
 import { compileSource } from "../pipeline.js";
 import { SYSTEM_PROMPT } from "../llm/system-prompt.js";
+import { SYSTEM_PROMPT_SLIM } from "../llm/system-prompt-slim.js";
 import { createVivaAgentHost, type VivaAgentHost } from "./host.js";
 import { attachBuiltinPipelines } from "./remote-host.js";
 import { createSessionFacade } from "./session-api.js";
@@ -71,7 +72,8 @@ export function createAgentHttpServer(opts: AgentHttpOptions): Server {
         return;
       }
       if (url.pathname === "/api/prompt" && req.method === "GET") {
-        json(200, { system: SYSTEM_PROMPT });
+        const variant = url.searchParams.get("variant") ?? "slim";
+        json(200, { system: variant === "full" ? SYSTEM_PROMPT : SYSTEM_PROMPT_SLIM, variant });
         return;
       }
 
@@ -253,7 +255,7 @@ async function handleSessionRoutes(
     };
     json(
       200,
-      sessions.compile(
+      await sessions.compile(
         sessionId,
         payload.source ?? "",
         { reason: payload.reason ?? "generate", handbooks: payload.handbookIds },

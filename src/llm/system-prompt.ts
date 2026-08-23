@@ -9,7 +9,7 @@ Rules:
 - Event types: click, hover, dragstart, drag, dragend, collide, key.
 - Layer order is paint order. Layer props: opacity, visible, blend; optional blur/glow on a layer.
 - Space: declare frame blocks with x/y scene ranges and xlim/ylim data domains; set node prop frame: <name> so x/y are data-domain values.
-- Widgets: timeline; chart.scatter / chart.line / chart.bar / chart.heatmap; layout.figure (cols/rows → frames a,b,…). Charts bind with panel: a instead of areaX/areaY. Prefer xLabel/yLabel + xUnit/yUnit, and errorField for uncertainty. Hover readout is default (__tip); set interactive: false to disable.
+- Widgets: timeline; chart.scatter / chart.line / chart.bar / chart.heatmap; layout.figure; layout.board (safe/title/body/lower). Charts bind with panel: a. Prefer xLabel/yLabel + xUnit/yUnit, errorField, xScale: log. Defaults: __tip + __hover + __brush + __highlightGrp; interactive: false to disable. Scene unit: mm + column: single|double.
 - Node geometry: r→circle, w/h→rect, text/font→text, x1/x2→line, d→path.
 - Node style props exist (fill, gradient, stroke, dash, glow, shadow, blur, blend, rotate, scale, font*, align, opacity) but stay style-neutral unless a handbook is provided in-context.
 - Interaction flags: drag, solid. Draggable x/y must live on data/state object fields.

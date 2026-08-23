@@ -40,12 +40,12 @@
 
 ## 仍然很粗（按用户可见排序）
 
-1. PDF 仍 Helvetica + CJK 变 `?`；无 mm/栏宽投稿尺寸
-2. 无 log / 时间 / 分类轴；无 box/violin；无显著性括号
-3. 图例仍在图内；Atlas (d)(e)(f) 仍手写魔法数（`layout.figure` + `panel:` 已存在，Atlas 未迁）
-4. 悬停是 `__tip` 字符串，不是数据域 tooltip / brush / 跨面板高亮
-5. session 仍只跑 structural；visual/vision 不在热路径
-6. LLM 默认 full prompt 仍带玩具模板；生成成功率未测
+1. PDF 已嵌 CJK 字体（系统 Droid/Noto）；仍无随包子集，缺字环境会回退 Helvetica
+2. 有 log 轴；仍无时间 / 分类轴、box/violin、显著性括号
+3. Atlas (a–d) 已迁 `layout.figure` + heatmap；(e) 向量场 / (f) 漏斗仍手摆
+4. 默认有 `__hover` / `__brush` / `__highlightGrp`；刷选仍是场景坐标，不是完整数据域 filter
+5. session HTTP/MCP compile 会附带 visual diagnostics（不挡编译成功）
+6. MCP/HTTP/CLI prompt 默认 slim；`--full` / `variant=full` 仍可取玩具模板。生成成功率未测
 
 ## 本轮已补的语言脊柱（相对「硬编码 switch」）
 
