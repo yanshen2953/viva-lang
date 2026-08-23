@@ -131,6 +131,8 @@ describe("chart quality: axis titles, error bars, hover, heatmap", () => {
       if (cell?.kind === "node") {
         expect(cell.name).toBe("heatCell");
         expect(cell.props.__chartHeat).toBeDefined();
+        expect(cell.props.visible).toBeDefined();
+        expect(JSON.stringify(cell.props.visible)).toContain("__sel");
       }
     }
     const axes = result.ir!.scene.layers.find((l) => l.name.endsWith("_axes"))!;

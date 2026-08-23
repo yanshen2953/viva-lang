@@ -510,7 +510,12 @@ function expandChart(
       ],
     });
   } else if (kind === "chart.heatmap") {
-    marks.push(...expandHeatCells(props, dataName, frameName, markXField, markYField, span));
+    marks.push(
+      ...expandHeatCells(props, dataName, frameName, markXField, markYField, span, {
+        ...interactOpacity,
+        ...interactVisible,
+      }),
+    );
     axisItems.push(...expandColorbar(frameName, geom, span));
   } else if (kind === "chart.vector") {
     const uField = fieldName(props.uField ?? props.dx ?? props.ux, "ux");
@@ -2081,6 +2086,7 @@ function expandHeatCells(
   xField: string,
   yField: string,
   span: { line: number; column: number },
+  interact: Record<string, Expr> = {},
 ): SceneItem[] {
   const vField = valueFieldName(props);
   const [z0, z1] = zlimPair(props);
@@ -2131,6 +2137,7 @@ function expandHeatCells(
           stroke: literal("#ffffff"),
           strokeWidth: literal(0.6),
           __chartHeat: literal(true),
+          ...interact,
         }),
       ],
     },
@@ -2854,6 +2861,37 @@ function ensureChartInteract(
         assign(["__brush", "frame"], literal(frameName)),
         assign(["__brush", "xField"], literal(xField)),
         ...collectSelStmts(dataName, markXField, markYField, seriesField, span),
+      ],
+      span,
+    });
+    const tinyX = binary(
+      "<",
+      callExpr("abs", [binary("-", ident("__brush.x1"), ident("__brush.x0"), span)], span),
+      literal(4),
+      span,
+    );
+    const tinyY = binary(
+      "<",
+      callExpr("abs", [binary("-", ident("__brush.y1"), ident("__brush.y0"), span)], span),
+      literal(4),
+      span,
+    );
+    artifact.events.push({
+      type: "dragend",
+      target: plotName,
+      body: [
+        assign(["__brush", "on"], literal(0)),
+        {
+          kind: "if",
+          cond: binary("and", tinyX, tinyY, span),
+          body: [
+            assign(["__sel", "keys"], { kind: "array", items: [], span }),
+            assign(["__sel", "n"], literal(0)),
+            assign(["__sel", "xField"], literal("")),
+            assign(["__highlightGrp"], noneExpr(span)),
+          ],
+          span,
+        },
       ],
       span,
     });

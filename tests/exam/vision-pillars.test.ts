@@ -370,6 +370,22 @@ widget chart.scatter
     expect(sel.n).toBeGreaterThan(0);
     expect(sel.keys).toContain("A");
     expect(sel.keys).not.toContain("B");
+    const kept = simulate(result.ir!, {
+      events: [
+        { type: "dragstart", target: "__chart_1_plotBg", event: { x: 10, y: 190 } },
+        { type: "drag", target: "__chart_1_plotBg", event: { x: 50, y: 150 } },
+        { type: "dragend", target: "__chart_1_plotBg", event: { x: 50, y: 150 } },
+      ],
+    });
+    expect((kept.state.__sel as { n: number }).n).toBeGreaterThan(0);
+    expect(kept.state.__brush).toMatchObject({ on: 0 });
+    const cleared = simulate(result.ir!, {
+      events: [
+        { type: "dragstart", target: "__chart_1_plotBg", event: { x: 10, y: 190 } },
+        { type: "dragend", target: "__chart_1_plotBg", event: { x: 11, y: 191 } },
+      ],
+    });
+    expect((cleared.state.__sel as { n: number }).n).toBe(0);
   });
 
   it("expands significance brackets and violin density", () => {

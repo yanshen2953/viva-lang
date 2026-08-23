@@ -60,7 +60,7 @@
 ## 下一刀（质量，不再铺接口）
 
 1. 投稿级留白 / 字距 / 出血（仍走编译器，不加关键字）
-2. linked selection 还缺过渡 / 反向刷选清空 / 热图格子同步藏
+2. linked selection 已藏热图格子，空点 dragend 会清 `__sel`；仍缺过渡动画
 3. 扩大随包 CJK 子集（现在只覆盖 examples + 一小撮论文用字）
 4. `layout.board play` 只是拍遮罩，不是导出视频
 5. agent-exam 进 CI

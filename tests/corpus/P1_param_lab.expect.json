@@ -8,7 +8,8 @@
       { "type": "drag", "target": "knob" },
       { "type": "hover", "target": "linePt" },
       { "type": "dragstart", "target": "__chart_1_plotBg" },
-      { "type": "drag", "target": "__chart_1_plotBg" }
+      { "type": "drag", "target": "__chart_1_plotBg" },
+      { "type": "dragend", "target": "__chart_1_plotBg" }
     ],
     "ticks": 1,
     "minFrames": 1,
