@@ -99,7 +99,8 @@ widget chart.line
 
   it("drops science-studio area boxes onto the chartDeck panel", () => {
     const src = readFileSync("examples/science-studio.viva", "utf8");
-    expect(src).not.toMatch(/areaX|areaY/);
+    expect(src).not.toMatch(/areaX|areaY|frame quiver/);
+    expect(src).toMatch(/widget chart\.vector/);
     const result = compileSource(src, "science-studio.viva");
     expect(result.error).toBeNull();
     const scopes = [result.ir!.state, result.ir!.data];
@@ -123,6 +124,52 @@ widget chart.line
       expect(cellY[0]).toBeGreaterThanOrEqual(64);
       expect(cellY[1]).toBeLessThanOrEqual(312);
     }
+    const vecBox = evaluate(result.ir!.frames.find((f) => f.name === "vecDeck")!.props.x, scopes) as [
+      number,
+      number,
+    ];
+    expect(vecBox[0]).toBeCloseTo(488);
+    expect(vecBox[1]).toBeCloseTo(784);
+    expect(result.ir!.scene.layers.some((l) => l.name === "__vecDeck_marks")).toBe(true);
+    const shaft = result.ir!.scene.layers
+      .flatMap((l) => l.items)
+      .some((item) => item.kind === "for" && item.body.some((n) => n.kind === "node" && n.name === "shaft"));
+    expect(shaft).toBe(true);
+  });
+
+  it("promotes a role: plot node into a bindable frame", () => {
+    const result = compileSource(
+      `artifact PlotSlot
+data rows = [{ x: 1, y: 2, ux: 0.4, uy: 0.2 }]
+scene
+  size: 320 200
+  layer ui
+    node plotA
+      role: plot
+      x: 20
+      y: 10
+      w: 280
+      h: 180
+widget chart.vector
+  panel: plotA
+  data: rows
+  xField: x
+  yField: y
+  uField: ux
+  vField: uy
+  xlim: 0 2
+  ylim: 0 3
+  interactive: false
+`,
+      "plot-slot.viva",
+    );
+    expect(result.error).toBeNull();
+    const x = evaluate(result.ir!.frames.find((f) => f.name === "plotA")!.props.x, [
+      result.ir!.state,
+      result.ir!.data,
+    ]) as [number, number];
+    expect(x[0]).toBeCloseTo(20);
+    expect(x[1]).toBeCloseTo(300);
   });
 
   it("ignores a full-bleed atmosphere wash when parking a chart", () => {

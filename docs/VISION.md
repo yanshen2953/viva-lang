@@ -55,7 +55,7 @@
 
 - `registerWidget()` / `listWidgets()`（`src/plugins/registry.ts`）
 - 内置插件：`timeline`、`chart.*`（含 vector/funnel）、`layout.figure`、`layout.board`
-- 图表用 `panel: a` 吃排版插件吐出的 frame，或吃作者 `role: panel` 升成的同名 frame，不再强迫手写 `areaX/areaY`
+- 图表用 `panel: a` 吃排版插件吐出的 frame，或吃作者 `role: panel` / `role: plot` 升成的同名 frame，不再强迫手写 `areaX/areaY`
 - `layout.*` 先于 `chart.*` 展开，源码顺序无所谓
 
 **没有**新增语言关键字。`widget layout.figure` 只是一个插件名。

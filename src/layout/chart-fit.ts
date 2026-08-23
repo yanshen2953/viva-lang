@@ -222,8 +222,8 @@ export function chartHostBox(
 }
 
 /**
- * Author `role: panel` nodes become frames. Charts and layout.figure
- * bind with the existing `panel:` prop. Not a new keyword.
+ * Author `role: panel` / `role: plot` nodes become frames. Charts and
+ * layout.figure bind with the existing `panel:` prop. Not a new keyword.
  */
 export function promotePanelFrames(artifact: Artifact): void {
   const scopes = authorScopes(artifact);
@@ -232,7 +232,8 @@ export function promotePanelFrames(artifact: Artifact): void {
     const nodes: Extract<SceneItem, { kind: "node" }>[] = [];
     walkAuthorNodes(layer.items, nodes);
     for (const node of nodes) {
-      if (roleOf(node) !== "panel") continue;
+      const role = roleOf(node);
+      if (role !== "panel" && role !== "plot") continue;
       if (node.props.frame) continue;
       if (artifact.frames.some((frame) => frame.name === node.name)) continue;
       const x = numOf(node.props.x, scopes);

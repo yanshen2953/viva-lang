@@ -45,12 +45,6 @@ data pca = [
   { id: "C3", x: 1.0, y: 0.4, z: -0.6, grp: "C" }
 ]
 
-frame quiver
-  x: 528 752
-  y: 318 488
-  xlim: 0 10
-  ylim: 0 7
-
 scene
   size: 1180 720
 
@@ -103,130 +97,6 @@ scene
       w: 296
       h: 248
       radius: 18
-
-    node vecPlotBg
-      role: plot
-      x: 512
-      y: 368
-      w: 248
-      h: 188
-      radius: 8
-
-    node vecTitle
-      role: title
-      x: 512
-      y: 340
-      text: "VECTOR FIELD"
-      letterSpacing: 1
-
-    node vecGrid1
-      role: grid
-      frame: quiver
-      x1: 0
-      y1: 1.75
-      x2: 10
-      y2: 1.75
-
-    node vecGrid2
-      role: grid
-      frame: quiver
-      x1: 0
-      y1: 3.5
-      x2: 10
-      y2: 3.5
-
-    node vecGrid3
-      role: grid
-      frame: quiver
-      x1: 0
-      y1: 5.25
-      x2: 10
-      y2: 5.25
-
-    node vecAxisX
-      role: axis
-      frame: quiver
-      x1: 0
-      y1: 0
-      x2: 10
-      y2: 0
-
-    node vecAxisY
-      role: axis
-      frame: quiver
-      x1: 0
-      y1: 0
-      x2: 0
-      y2: 7
-
-    for v in field
-      node vecShaft as vecLines
-        role: mark-line
-        frame: quiver
-        x1: v.ox
-        y1: v.oy
-        x2: v.ox + v.ux
-        y2: v.oy + v.uy
-        colorBy: grp
-        palette: categorical
-        strokeWidth: 2.5
-
-      node vecHead as vecHeads
-        role: mark
-        frame: quiver
-        x: v.ox + v.ux
-        y: v.oy + v.uy
-        r: 4.5
-        colorBy: grp
-        palette: categorical
-
-    node legFlow
-      role: legend
-      x: 528
-      y: 548
-      w: 10
-      h: 10
-      radius: 2
-      fill: palette("flow", "categorical")
-      styleSkip: true
-
-    node legFlowLbl
-      role: legend-label
-      x: 544
-      y: 558
-      text: "flow"
-
-    node legShear
-      role: legend
-      x: 600
-      y: 548
-      w: 10
-      h: 10
-      radius: 2
-      fill: palette("shear", "categorical")
-      styleSkip: true
-
-    node legShearLbl
-      role: legend-label
-      x: 616
-      y: 558
-      text: "shear"
-
-    node legCurl
-      role: legend
-      x: 672
-      y: 548
-      w: 10
-      h: 10
-      radius: 2
-      fill: palette("curl", "categorical")
-      styleSkip: true
-
-    node legCurlLbl
-      role: legend-label
-      x: 688
-      y: 558
-      text: "curl"
 
   layer pca
     node pcaDeck
@@ -396,7 +266,7 @@ scene
       x: 48
       y: 148
       w: 420
-      text: "数据只写 grp；色板/框线/网格由 dashboard 预设注入。LLM 可用 node+frame 画任意图，不必依赖 chart 目录。"
+      text: "数据只写 grp；色板/框线/网格由 dashboard 预设注入。图表吃 role: panel 甲板；PCA 轨道仍是可拖的 World 点。"
       lineHeight: 1.55
 
     node caption
@@ -452,6 +322,21 @@ widget chart.line
   xlim: 0 6
   ylim: 0 40
   title: "LINE · trend"
+
+widget chart.vector
+  panel: vecDeck
+  data: field
+  xField: ox
+  yField: oy
+  uField: ux
+  vField: uy
+  group: grp
+  xlim: 0 10
+  ylim: 0 7
+  title: "VECTOR FIELD"
+  xLabel: x
+  yLabel: y
+  legend: bottom
 
 event drag on pcaOrbit
   yaw = yaw + __event.dx * 0.012
