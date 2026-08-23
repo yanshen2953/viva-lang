@@ -11,13 +11,16 @@ export function inlineCheckLines(
   error?: string | null,
 ): string[] {
   const lines: string[] = [];
-  if (error) lines.push(String(error));
+  const seen = new Set<string>();
+  if (error) {
+    lines.push(String(error));
+    seen.add(String(error));
+  }
   for (const d of diagnostics ?? []) {
     const msg = (d.message ?? "").trim();
-    if (!msg) continue;
-    const line = d.code ? `${d.code} ${msg}` : msg;
-    if (lines.includes(line) || lines.includes(msg)) continue;
-    lines.push(line);
+    if (!msg || seen.has(msg)) continue;
+    seen.add(msg);
+    lines.push(d.code ? `${d.code} ${msg}` : msg);
   }
   return lines.slice(0, 5);
 }
