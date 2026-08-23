@@ -130,7 +130,7 @@ widget layout.board
 
 不写 `w`/`h` 时铺满场景。得到 frame `safe` `title` `body` `lower`，并画出 title/subtitle/caption。`controls: [CD8A, IL6]` + `bind: selGene` 在 lower 右侧画 HUD 芯片（选中不透明、未选 0.4，不再旁路写当前值；再出 `hud` 槽）。图表或 `layout.figure` 可 `panel: body`。`bleed: 16` 再出 `bleed` / `trim`，并默认画裁切十字（`crop: false` 可关）。
 
-投稿尺寸：`scene` 上写 `unit: mm` 与 `column: single`（89 mm）或 `double`（183 mm）。单独用 `column`、不写 `page` 时，场景宽就是栏宽（一张投稿图）。`page: a4`（或 `letter`）时场景是纸页（A4 宽 210 mm）；`column` 变成图的栏宽，左右按双栏 183 mm 留边，未写 `x`/`w` 的 figure / 单图停在这条栏里，不再把整页收成 89 mm。场景高度超过页高时，**PDF** 按页高切片，并在每页盖 `n / N` 页码（续页可带 figure 题注 `(continued)`）。`layout.figure` 的格子若会骑在页缝上，编译器把整行推到下一页并拉高场景，避免从面板中间切开。SVG/PNG 仍是一张长画布。这是 scene 属性，不是新关键字，也不是会重排正文或跑页眉的排版器。PDF 中文默认用随包子集；宿主可用环境变量 `VIVA_PDF_CJK_FONT`、CLI `--cjk-font` 或导出选项 `cjkFontPath` 挂自己的 TTF/OTF（仍不是语言关键字）。未覆盖的字仍可能变成 `?`。
+投稿尺寸：`scene` 上写 `unit: mm` 与 `column: single`（89 mm）或 `double`（183 mm）。单独用 `column`、不写 `page` 时，场景宽就是栏宽（一张投稿图）。`page: a4`（或 `letter`）时场景是纸页（A4 宽 210 mm）；`column` 变成图的栏宽，左右按双栏 183 mm 留边，未写 `x`/`w` 的 figure / 单图停在这条栏里，不再把整页收成 89 mm。场景高度超过页高时，**PDF** 按页高切片，并在每页盖 `n / N` 页码。续页顶栏会重复 `layout.figure` 题注并标 `(continued)`，或重复 `layout.board` 题注（跑页眉，不是章节对页）。`layout.figure` 的格子若会骑在页缝上，编译器把整行推到下一页并拉高场景，避免从面板中间切开。SVG/PNG 仍是一张长画布。这是 scene 属性，不是新关键字，也不是会重排正文的排版器。PDF 中文默认用随包子集；宿主可用环境变量 `VIVA_PDF_CJK_FONT`、CLI `--cjk-font` 或导出选项 `cjkFontPath` 挂自己的 TTF/OTF（仍不是语言关键字）。未覆盖的字仍可能变成 `?`。
 
 轴尺度（frame 或 chart 属性，不是新关键字）：
 

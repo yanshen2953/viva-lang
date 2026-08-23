@@ -63,6 +63,14 @@ describe("copy flow across a page knife", () => {
     const doc = await PDFDocument.load(pdf.bytes);
     expect(doc.getPageCount()).toBeGreaterThanOrEqual(2);
     expect(doc.getPage(0)!.getSize().width).toBeGreaterThan(500);
+    const folio = result.ir!.scene.layers.find((l) => l.name === "__page_folio")!;
+    const folioTexts = folio.items
+      .filter((i) => i.kind === "node")
+      .map((i) => (i.kind === "node" ? String(evaluate(i.props.text, scopes)) : ""));
+    expect(folioTexts[0]).toMatch(/^1 \/ \d+$/);
+    expect(folioTexts.some((t) => /^2 \/ \d+$/.test(t))).toBe(true);
+    expect(folioTexts).toContain("89 mm prose on an A4 sheet");
+    expect(folioTexts.some((t) => /\(continued\)/.test(t))).toBe(false);
   });
 
   it("counts a 12-col type grid as three readable prose measures", () => {

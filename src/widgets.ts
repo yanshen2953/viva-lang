@@ -151,10 +151,10 @@ export function expandWidgets(artifact: Artifact): Artifact {
 }
 
 /**
- * Folio + continued title on a multi-page `scene` slice. Uses the same
- * label primitive as figure chrome. Coordinates stay in scene units
- * (mm when `unit: mm`). One page, or no `page` prop, paints nothing.
- * This is a page stamp, not a running-header typesetter.
+ * Folio n/N plus a later-slice running head. Figure titles keep
+ * `(continued)`; board titles repeat as-is. Same caption primitive.
+ * One page, or no `page` prop, paints nothing. Not a section-mark
+ * typesetter — no jump folio, no verso/recto pair.
  */
 function paintPageFolio(artifact: Artifact): void {
   const scene = artifact.scene;
@@ -169,8 +169,14 @@ function paintPageFolio(artifact: Artifact): void {
   if (pages < 2) return;
 
   const figure = artifact.widgets.find((w) => w.name === "layout.figure");
-  const title = figure ? stringProp(figure.props, ["title"]) : null;
+  const board = artifact.widgets.find((w) => w.name === "layout.board");
+  const figureTitle = figure ? stringProp(figure.props, ["title"]) : null;
+  const boardTitle = board ? stringProp(board.props, ["title"]) : null;
+  const title = figureTitle ?? boardTitle;
+  const markContinued = Boolean(figureTitle);
   const { pad } = figurePageReserves(unit);
+  const scale = sceneScaleOf({ unit });
+  const wrapW = Math.max(40, (extent.w - pad * 2) * Math.max(scale, 1e-6));
   const items: SceneItem[] = [];
   for (let i = 0; i < pages; i++) {
     const top = i * pageH;
@@ -185,10 +191,11 @@ function paintPageFolio(artifact: Artifact): void {
       }),
     );
     if (i > 0 && title) {
+      const raw = markContinued ? `${title} (continued)` : title;
       items.push(
         node(`__page_folio_title_${i + 1}`, {
           role: literal("caption"),
-          text: literal(`${title} (continued)`),
+          text: literal(ellipsizeToWidth(raw, wrapW, 8, 0.1)),
           x: literal(pad),
           y: literal(top + pad * 1.2),
           w: literal(Math.max(8, extent.w - pad * 2)),
