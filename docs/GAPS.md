@@ -21,7 +21,7 @@
 
 ## 粗糙的根因（不是缺再一个 HTTP 路由）
 
-1. **图核语义仍缺出版层** — 有轴标题/单位/band/log/time/box/violin/括号；`print-nature` 已接管字号/字距；编译器按字号和 mm 比例堆叠刻度/标题。仍不是真正的碰撞求解。
+1. **图核语义仍缺出版层** — 有轴标题/单位/band/log/time/box/violin/括号；`print-nature` 已接管字号/字距。编译器按字号估盒子，并对标题/刻度/图例/色条/`(a)` 做一轮重叠消解。仍不是通用排版求解（不换行、不减刻度）。
 2. **默认交互还不是完整 linked view** — `__sel.keys` 已跨面板藏行（含 box / violin / 折线）；Runtime 用 opacity 淡 180ms，不是时间轴动画。本地 brush 仍是 marquee。
 3. **导出 ≠ 预览** — SVG 已接近 Runtime；PNG/JPG 现在填场景底色（投稿白底不再透成黑卡）；PDF 随包 CJK 子集，缺字仍可能 `?`。
 4. **Agent 闭环没产品化** — session compile 附带 visual diagnostics，但不挡成功；生成成功率未测。
@@ -51,7 +51,7 @@
 
 1. PDF 随包 `assets/fonts/VivaSansFallback.ttf`（Droid 子集，examples + 论文用字）；缺字仍可能 `?`
 2. 有 time / box / violin（KDE 轮廓）/ 显著性括号；轴刻度在场景坐标。`print-nature` 刻度 8 / 轴标题 9。观感仍粗，不是投稿成品
-3. Atlas / figure-grid 已去掉 `inset*`、手摆 panel 卡和页面 title 节点；`layout.board` 出题注，`layout.figure` 吃 `body` 并画甲板/`(a)`。基因 HUD 仍手摆。仍不是碰撞求解
+3. Atlas / figure-grid 已去掉 `inset*`、手摆 panel 卡和页面 title 节点；`layout.board` 出题注，`layout.figure` 吃 `body` 并画甲板/`(a)`。chrome 有盒子碰撞消解。基因 HUD 仍手摆。不换行、不减刻度
 4. `__sel` 默认跨面板藏行；本地 brush 仍是单图 marquee，没有过渡动画
 5. session visual diagnostics 不挡编译成功
 6. MCP/HTTP/CLI prompt 默认 slim；生成成功率未测
@@ -60,7 +60,7 @@
 
 ## 下一刀（质量，不再铺接口）
 
-1. 真正的碰撞求解（标题/刻度/图例仍只是字号感知间距）
+1. 通用排版求解（换行、减刻度、跨格）；现有盒子碰撞只消一档重叠
 2. linked selection 已藏热图、折线、box/violin；仍缺过渡动画
 3. 再扩 CJK 或允许宿主挂全库；`scripts/subset-cjk-font.py` 可从 Droid 重建
 4. `layout.board play` 遮罩现在画在图表之上（layout 先展开、chart 后展开）；`export --beats` / MCP `beats` 仍是 PNG 序列，不是成片视频
