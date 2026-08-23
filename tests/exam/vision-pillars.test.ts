@@ -166,6 +166,7 @@ widget chart.scatter
       "brackets.viva",
       "paper-pages.viva",
       "paper-spread.viva",
+      "paper-linked-pages.viva",
     ]) {
       expect(readFileSync(`examples/${file}`, "utf8")).not.toMatch(/interactive:\s*false/);
     }
@@ -241,6 +242,53 @@ widget chart.scatter
       const slipped = evaluate(tip.props.y!, [{ __tipY: 300 }]) as number;
       expect(slipped).toBeGreaterThanOrEqual(PAGE_MM.a4.h);
     }
+  });
+
+  it("links a page-2 box to visit keys on a paginated mm figure", () => {
+    const src = readFileSync("examples/paper-linked-pages.viva", "utf8");
+    expect(src).not.toMatch(/interactive:\s*false|areaX|areaY/);
+    const result = compileSource(src, "paper-linked-pages.viva", { handbookIds: ["print-nature"] });
+    expect(result.error).toBeNull();
+    expect(result.ir!.events.some((e) => e.type === "hover" && e.target === "mark")).toBe(true);
+    expect(result.ir!.events.some((e) => e.type === "hover" && e.target === "box")).toBe(true);
+    const scopes = [result.ir!.state, result.ir!.data];
+    const cellA = evaluate(result.ir!.frames.find((f) => f.name === "a")!.props.cellY!, scopes) as [
+      number,
+      number,
+    ];
+    const cellB = evaluate(result.ir!.frames.find((f) => f.name === "b")!.props.cellY!, scopes) as [
+      number,
+      number,
+    ];
+    expect(cellA[1]).toBeLessThanOrEqual(PAGE_MM.a4.h - 4);
+    expect(cellB[0]).toBeGreaterThanOrEqual(PAGE_MM.a4.h);
+    const marks = result.ir!.scene.layers.find((l) => l.name === "__b_marks")!;
+    const boxNode = marks.items.find((i) => i.kind === "node" && i.name === "box");
+    expect(boxNode?.kind).toBe("node");
+    if (boxNode?.kind !== "node") return;
+    const visit = applySelSummary(
+      {
+        __boxData: "rows",
+        __boxKey: "placebo",
+        __boxXField: "arm",
+        __boxYField: "score",
+        __boxCats: ["placebo", "drug-A", "drug-B"],
+        __boxPart: "body",
+        __chartBox: true,
+        frame: "b",
+        q1: 11,
+        y: 14,
+      },
+      {
+        data: result.ir!.data as Record<string, unknown>,
+        state: { __sel: { n: 1, keys: [1] }, __brush: { frame: "a" } },
+      },
+    );
+    expect(visit.visible).toBe(true);
+    expect(visit.q1).toBe(12);
+    expect(visit.y).toBe(12);
+    const svg = renderSvgFromIr(result.ir!);
+    expect(svg).not.toMatch(/placebo, 12/);
   });
 
   it("lets a host CJK font win over the bundled subset", () => {
