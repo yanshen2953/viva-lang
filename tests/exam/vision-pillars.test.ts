@@ -9,7 +9,7 @@ import { domainMap, domainUnmap, scalesFromFrameProps } from "../../src/space.js
 import { resolveCjkFontPath } from "../../src/export/pdf-font.js";
 import { flattenNodesFromIr } from "../../src/export/static-svg.js";
 import { evaluate, truthy } from "../../src/eval.js";
-import { mmToPx, resolveSceneBox, scenePageCount, viewBoxToScene, COLUMN_MM, PAGE_MM } from "../../src/space/scene-box.js";
+import { mmToPx, resolveSceneBox, scenePageCount, viewBoxToScene, evalSceneProps, COLUMN_MM, PAGE_MM } from "../../src/space/scene-box.js";
 import { PDFDocument } from "pdf-lib";
 import { handleMcpTool } from "../../src/mcp/tools.js";
 import { SYSTEM_PROMPT_SLIM } from "../../src/llm/system-prompt-slim.js";
@@ -612,10 +612,10 @@ widget chart.scatter
     if (veil0?.kind === "node") {
       expect(evaluate(veil0.props.visible!, [{ __beat: 0 }])).toBe(false);
       expect(evaluate(veil0.props.visible!, [{ __beat: 1 }])).toBe(true);
-      expect(evaluate(veil0.props.role!, [{}])).toBe("hud");
+      expect(evaluate(veil0.props.role!, [{}])).toBe("chrome");
       expect(nodeIgnoresPointer(veil0.name, evaluate(veil0.props.role!, [{}]))).toBe(true);
     }
-    expect(play.items.every((i) => i.kind === "node" && nodeIgnoresPointer(i.name, "hud"))).toBe(
+    expect(play.items.every((i) => i.kind === "node" && nodeIgnoresPointer(i.name, "chrome"))).toBe(
       true,
     );
     expect(src).not.toMatch(/interactive:\s*false/);
@@ -642,15 +642,14 @@ widget chart.scatter
     for (const item of play.items) {
       expect(item.kind).toBe("node");
       if (item.kind !== "node") continue;
-      expect(evaluate(item.props.role!, [{}])).toBe("hud");
-      expect(nodeIgnoresPointer(item.name, "hud")).toBe(true);
+      expect(evaluate(item.props.role!, [{}])).toBe("chrome");
       expect(nodeIgnoresPointer(item.name, "chrome")).toBe(true);
     }
     const scopes = [result.ir!.state, result.ir!.data];
-    const width = evaluate(result.ir!.scene.props.width!, scopes) as number;
-    expect(width).toBeCloseTo(COLUMN_MM.double);
-    const height = evaluate(result.ir!.scene.props.height!, scopes) as number;
-    expect(height).toBeCloseTo(103);
+    const box = resolveSceneBox(evalSceneProps(result.ir!.scene.props, scopes));
+    expect(box.column).toBe("double");
+    expect(box.width).toBeCloseTo(mmToPx(COLUMN_MM.double));
+    expect(box.height).toBeCloseTo(mmToPx(103));
     const visit = applySelSummary(
       {
         __boxData: "rows",

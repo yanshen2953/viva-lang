@@ -1922,7 +1922,7 @@ function expandLayoutBoard(
     });
     const veilItems: SceneItem[] = beatRects.map((rect, i) =>
       node(`${id}_veil_${i}`, {
-        role: literal("hud"),
+        role: literal("chrome"),
         x: literal(rect.x0),
         y: literal(rect.y0),
         w: literal(rect.x1 - rect.x0),
