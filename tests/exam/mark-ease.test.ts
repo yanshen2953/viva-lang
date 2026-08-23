@@ -3,7 +3,7 @@ import sharp from "sharp";
 import { readFileSync } from "node:fs";
 import { compileSource } from "../../src/pipeline.js";
 import { evaluate } from "../../src/eval.js";
-import { MARK_EASE_MS, markPaintState } from "../../src/runtime/mark-ease.js";
+import { applyMarkPaintCss, MARK_EASE_MS, markPaintState } from "../../src/runtime/mark-ease.js";
 import { exportArtifact } from "../../src/export/index.js";
 
 describe("runtime mark ease and paper raster background", () => {
@@ -20,6 +20,28 @@ describe("runtime mark ease and paper raster background", () => {
     const lit = markPaintState(true, 1, 1.18);
     expect(lit.transform).toBe("scale(1.18)");
     expect(lit.transition).toMatch(/transform/);
+  });
+
+  it("writes style.opacity so play veils and hidden marks can CSS-ease", () => {
+    const shown = markPaintState(true, 0.55);
+    const hidden = markPaintState(true, 0);
+    const style = {
+      transition: "",
+      transformBox: "",
+      transformOrigin: "",
+      transform: "",
+      pointerEvents: "",
+      display: "",
+      opacity: "",
+    };
+    const attrs: Record<string, string> = {};
+    const el = { style, setAttribute: (k: string, v: string) => { attrs[k] = v; } };
+    applyMarkPaintCss(el, shown);
+    expect(style.opacity).toBe("0.55");
+    expect(attrs.opacity).toBe("0.55");
+    expect(style.transition).toMatch(/opacity/);
+    applyMarkPaintCss(el, hidden);
+    expect(style.opacity).toBe("0");
   });
 
   it("compiles a group highlight scale onto scatter marks", () => {

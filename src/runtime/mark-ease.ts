@@ -25,3 +25,28 @@ export function markPaintState(visible: boolean, opacity: number, scale = 1): Ma
     transition: `opacity ${MARK_EASE_MS}ms ${MARK_EASE_CURVE}, transform ${MARK_EASE_MS}ms ${MARK_EASE_CURVE}`,
   };
 }
+
+export type MarkPaintEl = {
+  style: {
+    transition: string;
+    transformBox: string;
+    transformOrigin: string;
+    transform: string;
+    pointerEvents: string;
+    display: string;
+    opacity: string;
+  };
+  setAttribute(name: string, value: string): void;
+};
+
+/** Write CSS opacity/transform so the 220ms ease actually runs. SVG attr alone does not. */
+export function applyMarkPaintCss(el: MarkPaintEl, paint: MarkPaint): void {
+  el.style.transition = paint.transition;
+  el.style.transformBox = "fill-box";
+  el.style.transformOrigin = "center";
+  el.style.transform = paint.transform;
+  el.style.pointerEvents = paint.pointerEvents || "auto";
+  el.style.display = paint.display;
+  el.style.opacity = String(paint.opacity);
+  el.setAttribute("opacity", String(paint.opacity));
+}

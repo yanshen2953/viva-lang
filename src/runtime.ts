@@ -19,7 +19,7 @@ import {
 import { evalSceneProps, resolveSceneBox, scaleSceneGeom, sceneScaleOf } from "./space/scene-box.js";
 import { DEFAULT_SCENE_BACKGROUND, resetPaletteSeries, setStyleContext } from "./style/index.js";
 import { STYLE_META_PROPS } from "./style/types.js";
-import { markPaintState } from "./runtime/mark-ease.js";
+import { applyMarkPaintCss, markPaintState } from "./runtime/mark-ease.js";
 
 export type RuntimeOptions = {
   mount: HTMLElement;
@@ -439,13 +439,7 @@ export class Runtime {
         ? 1
         : num(p.scale, 1);
     const paint = markPaintState(visible, opacity, scale);
-    el.style.transition = paint.transition;
-    el.style.transformBox = "fill-box";
-    el.style.transformOrigin = "center";
-    el.style.transform = paint.transform;
-    el.style.pointerEvents = paint.pointerEvents || "auto";
-    el.style.display = paint.display;
-    el.setAttribute("opacity", String(paint.opacity));
+    applyMarkPaintCss(el, paint);
     const prevHide = this.hideTimers.get(node.id);
     if (prevHide) window.clearTimeout(prevHide);
     if (paint.hideAfterMs !== null) {
