@@ -135,7 +135,7 @@ describe("chart quality: axis titles, error bars, hover, heatmap", () => {
     }
     const axes = result.ir!.scene.layers.find((l) => l.name.endsWith("_axes"))!;
     const names = axes.items.filter((i) => i.kind === "node").map((i) => (i.kind === "node" ? i.name : ""));
-    expect(names.some((n) => n.includes("_cbar_"))).toBe(true);
+    expect(names.some((n) => /_cbar$/.test(n))).toBe(true);
     expect(names.some((n) => n.includes("_cbarLbl_"))).toBe(true);
     expect(names.some((n) => n.includes("_cbarTitle"))).toBe(true);
     const titleText = axes.items
@@ -159,6 +159,9 @@ describe("chart quality: axis titles, error bars, hover, heatmap", () => {
     expect(zTicks).toContain("0");
     expect(zTicks).toContain("1");
     expect(names.some((n) => n.includes("_cbarMark_"))).toBe(true);
+    const svg = renderSvgFromIr(result.ir!);
+    expect(svg).toContain("<linearGradient");
+    expect(svg).toContain('stop-color="#');
   });
 
   it("infers heat cell pitch from unique numeric spacing", () => {
@@ -203,13 +206,15 @@ widget chart.heatmap
       const n = axes.items.find((i) => i.kind === "node" && i.name === name);
       return n?.kind === "node" && n.props[key]?.kind === "number" ? n.props[key].value : NaN;
     };
-    const barW = num("b_cbar_0", "w");
-    const barX = num("b_cbar_0", "x");
-    const ramp = axes.items.filter((i) => i.kind === "node" && /^b_cbar_\d+$/.test(i.name));
-    expect(ramp.length).toBeGreaterThan(7);
-    const topY = Math.min(
-      ...ramp.map((i) => (i.kind === "node" && i.props.y?.kind === "number" ? i.props.y.value : Infinity)),
-    );
+    const barW = num("b_cbar", "w");
+    const barX = num("b_cbar", "x");
+    const ramp = axes.items.find((i) => i.kind === "node" && i.name === "b_cbar");
+    expect(ramp?.kind).toBe("node");
+    if (ramp?.kind === "node") {
+      expect(ramp.props.gradient?.kind).toBe("array");
+      expect(ramp.props.gradient?.kind === "array" ? ramp.props.gradient.items.length : 0).toBeGreaterThanOrEqual(2);
+    }
+    const topY = num("b_cbar", "y");
     const titleX = num("b_cbarTitle", "x");
     const titleY = num("b_cbarTitle", "y");
     const plotY0 = result.ir!.frames.find((f) => f.name === "b")!.props.y;

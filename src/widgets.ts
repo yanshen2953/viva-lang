@@ -3914,36 +3914,23 @@ function expandColorbar(
   const bot = y1.kind === "number" ? y1.value : 400;
   const h = Math.max(minH, bot - top);
   const titleStep = chrome?.axisLineH ?? toScene(11);
-  const steps = 24;
   const items: SceneItem[] = [];
-  for (let i = 0; i < steps; i++) {
-    items.push(
-      node(`${frameName}_cbar_${i}`, {
-        role: literal("colorbar"),
-        x: literal(barX),
-        y: literal(bot - ((i + 1) / steps) * h),
-        w: literal(barW),
-        h: literal(h / steps),
-        fill: {
-          kind: "call",
-          callee: "palette",
-          args: [literal((i * 6) / Math.max(1, steps - 1)), { kind: "string", value: "sequential", span }],
-          span,
-        },
-        stroke: literal("none"),
-        strokeWidth: literal(0),
-        styleSkip: literal(true),
-      }),
-    );
-  }
+  const seqStop = (tier: number): Expr => ({
+    kind: "call",
+    callee: "palette",
+    args: [literal(tier), { kind: "string", value: "sequential", span }],
+    span,
+  });
   items.push(
-    node(`${frameName}_cbarFrame`, {
+    node(`${frameName}_cbar`, {
       role: literal("colorbar"),
       x: literal(barX),
       y: literal(bot - h),
       w: literal(barW),
       h: literal(h),
-      fill: literal("none"),
+      fill: seqStop(0),
+      gradient: { kind: "array", items: [6, 5, 4, 3, 2, 1, 0].map(seqStop), span },
+      gradientDir: literal("y"),
     }),
   );
   const zTicks = colorbarTicks(z0, z1);

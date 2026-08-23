@@ -20,10 +20,20 @@ export function cssId(value: string): string {
 
 function asColors(value: unknown): string[] {
   if (Array.isArray(value)) {
-    return value.map((item) => String(item)).filter(Boolean);
+    return value.map((item) => String(item)).filter((item) => item && item !== "none");
   }
-  if (typeof value === "string" && value.trim()) return [value.trim()];
+  if (typeof value === "string" && value.trim() && value.trim() !== "none") return [value.trim()];
   return [];
+}
+
+/** Shared by Runtime and static SVG so a colorbar ramp is the same linearGradient. */
+export function gradientSpec(
+  props: Record<string, unknown>,
+): { colors: string[]; vertical: boolean } | null {
+  const colors = asColors(props.gradient ?? props.fillGradient ?? props.ramp);
+  if (colors.length < 2) return null;
+  const vertical = str(props.gradientDir ?? props.gradientAxis, "y") !== "x";
+  return { colors, vertical };
 }
 
 function num(value: unknown, fallback: number): number {
@@ -44,9 +54,8 @@ export function resolveFill(
 ): string {
   if (hovered && props.hoverFill !== undefined) return String(props.hoverFill);
 
-  const gradient = props.gradient ?? props.fillGradient ?? props.ramp;
-  const colors = asColors(gradient);
-  if (colors.length >= 2) {
+  const spec = gradientSpec(props);
+  if (spec) {
     const id = `grad_${cssId(nodeId)}`;
     let grad = defs.querySelector(`#${id}`) as SVGLinearGradientElement | null;
     if (!grad) {
@@ -54,7 +63,7 @@ export function resolveFill(
       grad.id = id;
       defs.appendChild(grad);
     }
-    const vertical = str(props.gradientDir ?? props.gradientAxis, "y") !== "x";
+    const { colors, vertical } = spec;
     grad.setAttribute("x1", "0%");
     grad.setAttribute("y1", "0%");
     grad.setAttribute("x2", vertical ? "0%" : "100%");
