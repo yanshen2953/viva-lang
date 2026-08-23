@@ -63,6 +63,6 @@
 2. linked selection 已藏热图格子，空点 dragend 会清 `__sel`；仍缺过渡动画
 3. 扩大随包 CJK 子集（现在只覆盖 examples + 一小撮论文用字）
 4. `layout.board play` 只是拍遮罩，不是导出视频
-5. agent-exam 进 CI
+5. agent-exam 种子编译进 CI；生成成功率仍未测（要 LLM）
 
 对照真源：`docs/VISION.md`。

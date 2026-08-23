@@ -20,5 +20,13 @@ jobs:
       - run: npm test
       - name: Visual check (Figure Atlas)
         run: node dist/cli.js check examples/figure-atlas.viva --visual --handbook print-nature
+      - name: Visual check (paper examples)
+        run: |
+          node dist/cli.js check examples/box.viva --visual --handbook print-nature
+          node dist/cli.js check examples/violin.viva --visual --handbook print-nature
+          node dist/cli.js check examples/paper-column.viva --visual --handbook print-nature
+          node dist/cli.js check examples/linked-filter.viva --visual --handbook print-nature
+      - name: Slim prompt smoke
+        run: node dist/cli.js prompt | grep -E "layout.board|__sel|chart.violin"
       - name: MCP tools smoke
         run: node dist/cli.js prompt --handbook print-nature | head -c 200

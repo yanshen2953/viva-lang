@@ -101,6 +101,6 @@
 2. brush 升级成可共享的数据域 selection，而不只是变淡
 3. 扩大随包 CJK 子集
 4. `layout.board play` 已能推进 `__beat` 并遮罩非当前拍；仍不是成片时间轴 / 导出视频
-5. agent 生成成功率进 CI；不要把 visual diagnostics 误报成「已经闭环」
+5. 例子与 exam 种子编译已进 CI；LLM 生成成功率仍未测。不要把 visual diagnostics 误报成「已经闭环」
 
 发现插件：`viva widgets` 或 `listWidgets()`。
