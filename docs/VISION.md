@@ -25,7 +25,7 @@
 | 语法 | 原语极小，新能力只加插件名 | 核还算小；widget 走 `registerWidget()` | 语言表面没涨关键字。不要为图种/槽位加关键字 |
 | 编译器 | 度量、避让、对齐、交互默认、导出保真全在编译/运行时 | band/log/linear + handbook 涂颜料/接管字号字距 + 图核默认交互 | handbook **仍不**执行图语法（避让、对齐、栏宽文法）；导出保真仍有缺口 |
 | 插件 | 宿主运行时注册：图种、排版、领域视图，agent 可发现 | 手册 / 领域视图 / 结构宏都可注册 | 还不是热加载 / 沙箱包；未知 widget 编译失败并列出已注册名 |
-| Agent | 内联写短意图 → 编译 → 交互卡 → 检查 → 补丁 | CLI / MCP / HTTP / SDK 能编能导；prompt 默认 slim；MCP/HTTP compile 附 raster visual QA（空栏看 figure cell） | 生成成功率未测；visual 不挡 IR 成功；内联卡无 raster；无自动修复 |
+| Agent | 内联写短意图 → 编译 → 交互卡 → 检查 → 补丁 | CLI / MCP / HTTP / SDK 能编能导；prompt 默认 slim；MCP/HTTP compile 附 raster visual QA（空栏看 figure cell）；结构层用 CSS px + 旋转感知盒子警告 chrome 出格 | 生成成功率未测；visual / chromeOverflow 不挡 IR 成功；内联卡无 raster；无自动修复 |
 
 一句话：今天是 **World + Space + Paint** 粘在一起，脊柱已能同时展开三柱，但出版观感与 agent 闭环都还没齐。愿景是 **同一套极小原语**，三柱都是编译器展开，插件只换展开器。
 
@@ -72,7 +72,7 @@
 ### 3.2 论文级图表
 
 有：线性 / log / band / time 轴、scatter/line/bar/heatmap/vector/funnel/box、轴标题/单位、误差棒、热图色条、图例外置、投稿 mm、SVG 更接近 Runtime、PDF 默认随包 CJK 子集（examples + 论文用字；`VIVA_PDF_CJK_FONT` / `--cjk-font` / `cjkFontPath` 可挂宿主全库）。`print-nature` 会覆盖 widget 硬编码字号，刻度 8 / 轴标题 9 带字距。编译器按字号和 `unit: mm` 比例放置轴标题/刻度/图例；单图不写 `areaX`/`areaY` 时按场景估绘图区，并避开作者节点/手写 frame 占的空位，避免小栏宽把标题推出画布。  
-没有：完整 CJK 字库、通用排版求解（跨页、栏宽文法）。有 time / box / violin（KDE 轮廓）/ 显著性括号；轴刻度已离开数据域。chrome 盒子会互推一档（标题避开 `(a)`，y 轴标题避开刻度，图例避开色条）；图/轴标题按栏宽折行（最多三行；封顶后尾行 `...`；Y 轴 −90° 后从上往下读），折行宽度按像素字宽量、落位按场景单位（mm 栏不再把 60 mm 当成 60 px），图例键和色条标签按剩余栏宽折行（含连字符，最多两行；无连字符的拉丁图例键先按整词让 inset，避免 `treatmen` / `t`；色条/右图例先让 inset，仍装不下才省略），热图可用 `zLabel`/`zUnit`，重叠刻度抽稀，相邻格 chrome 互叠时再长 inset。仍不是 InDesign。小栏宽 mm 图默认不再画常驻 HUD 读数。
+没有：完整 CJK 字库、通用排版求解（跨页、栏宽文法）。有 time / box / violin（KDE 轮廓）/ 显著性括号；轴刻度已离开数据域。chrome 盒子会互推一档（标题避开 `(a)`，y 轴标题避开刻度，图例避开色条）；图/轴标题按栏宽折行（最多三行；封顶后尾行 `...`；Y 轴 −90° 后从上往下读），折行宽度按像素字宽量、落位按场景单位（mm 栏不再把 60 mm 当成 60 px），图例键和色条标签按剩余栏宽折行（含连字符，最多两行；无连字符的拉丁图例键先按整词让 inset，避免 `treatmen` / `t`；色条/右图例先让 inset，仍装不下才省略），热图可用 `zLabel`/`zUnit`，重叠刻度抽稀，相邻格 chrome 互叠时再长 inset（互叠缝跟场景 `pad` 走）；inset 封顶后标题/轴题/图例尽量收回格内，不推进刻度。审查 / Runtime / 结构检查共用旋转感知盒子（CJK 字宽，mm 场景先 `scaleSceneGeom`）。仍不是 InDesign。小栏宽 mm 图默认不再画常驻 HUD 读数。
 
 ### 3.3 图像 / 视频级排版
 

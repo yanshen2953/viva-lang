@@ -266,6 +266,27 @@ export function overflowDelta(
   };
 }
 
+/** Shift a span toward `[wantLo, wantHi]` without adding `[wallLo, wallHi]` overflow. */
+export function fitShift(
+  x0: number,
+  x1: number,
+  wantLo: number,
+  wantHi: number,
+  wallLo: number,
+  wallHi: number,
+): number {
+  const overflowLo = Math.max(0, wallLo - x0);
+  const overflowHi = Math.max(0, x1 - wallHi);
+  let dx = 0;
+  if (x0 < wantLo) dx += wantLo - x0;
+  if (x1 + dx > wantHi) dx -= x1 + dx - wantHi;
+  const nextLo = Math.max(0, wallLo - (x0 + dx));
+  const nextHi = Math.max(0, x1 + dx - wallHi);
+  if (nextLo > overflowLo) dx += nextLo - overflowLo;
+  if (nextHi > overflowHi) dx -= nextHi - overflowHi;
+  return dx;
+}
+
 /** Scene leftover → px wrap budget. Identity `toScene` keeps px exams green. */
 function sceneToPx(scene: number, toScene: (px: number) => number): number {
   const unit = toScene(1);
@@ -540,7 +561,7 @@ export function placePaperChrome(
     }
     rects = build();
   }
-  if (extras.colorbar) {
+    if (extras.colorbar) {
     const leftoverScene = cell
       ? cell.x1 - (cbarX + toScene(14)) - toScene(4)
       : toScene(compact ? 36 : 56);
@@ -559,6 +580,65 @@ export function placePaperChrome(
     }
     if (extras.legendAt === "right") {
       legendX = cbarRight() + toScene(compact ? 6 : 10);
+    }
+    rects = build();
+  }
+
+  if (cell) {
+    const pad = toScene(compact ? 2 : 3);
+    const wantX0 = cell.x0 + pad;
+    const wantX1 = cell.x1 - pad;
+    const wantY0 = cell.y0 + pad;
+    const wantY1 = cell.y1 - pad;
+    const union = (ids: string[]) => {
+      const mine = rects.filter((r) => ids.some((id) => r.id === id || r.id.startsWith(id)));
+      if (!mine.length) return null;
+      return {
+        x0: Math.min(...mine.map((r) => r.x)),
+        y0: Math.min(...mine.map((r) => r.y)),
+        x1: Math.max(...mine.map((r) => r.x + r.w)),
+        y1: Math.max(...mine.map((r) => r.y + r.h)),
+      };
+    };
+    const tickLeft = Math.min(
+      box.px0,
+      ...rects.filter((r) => r.id.startsWith("ytick-")).map((r) => r.x),
+    );
+    const tickBot = Math.max(
+      box.py1,
+      ...rects.filter((r) => r.id.startsWith("xtick-")).map((r) => r.y + r.h),
+    );
+    const titleBox = union(["title"]);
+    if (titleBox) {
+      titleX += fitShift(titleBox.x0, titleBox.x1, wantX0, wantX1, wantX0, wantX1);
+      titleY += fitShift(titleBox.y0, titleBox.y1, wantY0, wantY1, wantY0, box.py0 - gap);
+    }
+    const yTitleBox = union(["yTitle"]);
+    if (yTitleBox) {
+      yTitleX += fitShift(yTitleBox.x0, yTitleBox.x1, wantX0, wantX1, wantX0, tickLeft - gap);
+    }
+    const xTitleBox = union(["xTitle"]);
+    if (xTitleBox) {
+      xTitleY += fitShift(xTitleBox.y0, xTitleBox.y1, wantY0, wantY1, tickBot + gap, wantY1);
+    }
+    const plotRight = extras.colorbar ? cbarRight() + gap : box.px1 + gap;
+    if (extras.colorbar) {
+      const cbarBox = union(["cbar", "cbar-title"]);
+      if (cbarBox) {
+        const dx = fitShift(cbarBox.x0, cbarBox.x1, wantX0, wantX1, plotRight - (cbarBox.x1 - cbarBox.x0), wantX1);
+        cbarX += dx;
+        cbarTitleX += dx;
+      }
+    }
+    if (extras.legendAt === "right" || extras.legendAt === "bottom") {
+      const legendBox = union(["legend-"]);
+      if (legendBox) {
+        if (extras.legendAt === "right") {
+          legendX += fitShift(legendBox.x0, legendBox.x1, wantX0, wantX1, plotRight, wantX1);
+        } else {
+          legendY += fitShift(legendBox.y0, legendBox.y1, wantY0, wantY1, tickBot + gap, wantY1);
+        }
+      }
     }
     rects = build();
   }
@@ -609,14 +689,14 @@ export function growInsetsForChrome(
     for (let j = i + 1; j < rects.length; j++) {
       const a = rects[i]!;
       const b = rects[j]!;
-      if (!rectsOverlap(a, b, 2)) continue;
+      if (!rectsOverlap(a, b, pad)) continue;
       const pair = `${a.id} ${b.id}`;
       const leftish = /yTitle|ytick|panel-label/.test(pair);
       const rightish = /cbar|cbar-title|legend-/.test(pair);
       const topish = /title|panel-label/.test(pair);
       const botish = /xTitle|xtick|legend-/.test(pair);
-      const overlapW = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x) + 2;
-      const overlapH = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y) + 2;
+      const overlapW = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x) + pad;
+      const overlapH = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y) + pad;
       if (leftish) out.l = Math.max(out.l, overlapW * 0.5);
       if (rightish) out.r = Math.max(out.r, overlapW * 0.5);
       if (topish) out.t = Math.max(out.t, overlapH * 0.5);

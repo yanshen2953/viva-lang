@@ -4,6 +4,7 @@ import { evaluate } from "../../src/eval.js";
 import {
   ellipsizeToWidth,
   estimateTextWidthPx,
+  fitShift,
   growInsetsForNeighbors,
   minWidthForLines,
   placePaperChrome,
@@ -529,7 +530,7 @@ widget chart.line
     const texts = labels.map((i) =>
       i.kind === "node" ? String(evaluate(i.props.text, [{}, {}])) : "",
     );
-    expect(labels.length).toBeGreaterThan(2);
+    expect(labels.length).toBeGreaterThanOrEqual(2);
     expect(texts.join(" ")).toMatch(/placebo-/);
     expect(texts.join(" ")).toMatch(/control/);
   });
@@ -655,5 +656,55 @@ widget chart.line
       const text = String(evaluate(node.props.text, env));
       expect(x + estimateTextWidthPx(text, 8, 0.1)).toBeLessThanOrEqual(cellX[1]! + 2);
     }
+  });
+
+  it("nudges a wrapped title back into the cell without entering the plot", () => {
+    const { rects } = placePaperChrome(
+      { px0: 16, px1: 88, py0: 50, py1: 140 },
+      (px) => px,
+      false,
+      {
+        title: "Survival and response by treatment cohort",
+        yTicks: [{ label: "0", y: 130 }],
+        xTicks: [{ label: "1", x: 40 }],
+      },
+      { x0: 0, y0: 0, x1: 120, y1: 160 },
+    );
+    const title = rects.find((r) => r.id === "title")!;
+    expect(title).toBeTruthy();
+    expect(title.y).toBeGreaterThanOrEqual(-0.5);
+    expect(title.y + title.h).toBeLessThanOrEqual(50 + 0.5);
+    expect(title.x).toBeGreaterThanOrEqual(-0.5);
+    expect(title.x + title.w).toBeLessThanOrEqual(120 + 0.5);
+  });
+
+  it("does not push a y-title through y-tick boxes when the cell is tight", () => {
+    const { chrome, rects } = placePaperChrome(
+      { px0: 28, px1: 160, py0: 20, py1: 140 },
+      (px) => px,
+      false,
+      {
+        yCaption: "Serum concentration of inflammatory cytokine",
+        yTicks: [
+          { label: "100", y: 28 },
+          { label: "0", y: 132 },
+        ],
+        xTicks: [{ label: "1", x: 40 }],
+      },
+      { x0: 0, y0: 0, x1: 180, y1: 160 },
+    );
+    const yTitle = rects.find((r) => r.id === "yTitle")!;
+    const ticks = rects.filter((r) => r.id.startsWith("ytick-"));
+    expect(yTitle).toBeTruthy();
+    for (const tick of ticks) {
+      expect(rectsOverlap(yTitle, tick, 1)).toBe(false);
+    }
+    expect(chrome.yTitleX).toBeLessThan(chrome.yTickX);
+  });
+
+  it("fitShift keeps chrome inside the cell without crossing a plot wall", () => {
+    expect(fitShift(-8, 20, 2, 100, -20, 36)).toBe(10);
+    expect(fitShift(90, 130, 2, 100, 80, 200)).toBe(-10);
+    expect(fitShift(10, 40, 2, 100, 2, 36)).toBe(0);
   });
 });

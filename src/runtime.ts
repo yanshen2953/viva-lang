@@ -17,6 +17,7 @@ import {
   scalesFromFrameProps,
   type FrameScales,
 } from "./space.js";
+import { propsToBBox as nodePropsToBBox } from "./layout/node-bbox.js";
 import { evalSceneProps, resolveSceneBox, scaleSceneGeom, sceneScaleOf } from "./space/scene-box.js";
 import { DEFAULT_SCENE_BACKGROUND, resetPaletteSeries, setStyleContext } from "./style/index.js";
 import { STYLE_META_PROPS } from "./style/types.js";
@@ -1019,36 +1020,6 @@ function renderNodeToSelected(node: RenderNode): {
 }
 
 function propsToBBox(p: Record<string, unknown>): { x: number; y: number; w: number; h: number } {
-  const x = num(p.x, 0);
-  const y = num(p.y, 0);
-  if (p.r !== undefined || (p.size !== undefined && p.w === undefined && p.width === undefined && p.text === undefined && p.label === undefined)) {
-    const r = num(p.r ?? p.size, 16);
-    return { x: x - r, y: y - r, w: r * 2, h: r * 2 };
-  }
-  if (p.w !== undefined || p.width !== undefined || p.h !== undefined || p.height !== undefined) {
-    return { x, y, w: num(p.w ?? p.width, 80), h: num(p.h ?? p.height, 24) };
-  }
-  if (p.x1 !== undefined) {
-    const x1 = num(p.x1, 0);
-    const y1 = num(p.y1, 0);
-    const x2 = num(p.x2, x1 + 40);
-    const y2 = num(p.y2, y1);
-    return {
-      x: Math.min(x1, x2),
-      y: Math.min(y1, y2),
-      w: Math.abs(x2 - x1) || 1,
-      h: Math.abs(y2 - y1) || 1,
-    };
-  }
-  if (p.text !== undefined || p.label !== undefined || p.font !== undefined || p.fontSize !== undefined) {
-    const text = String(p.text ?? p.label ?? "");
-    const font = num(p.font ?? p.fontSize, 14);
-    const w = Math.max(font * Math.max(text.length, 1) * 0.6, font * 2);
-    const h = font * 1.4;
-    const align = String(p.align ?? "start");
-    const left = align === "center" || align === "middle" ? x - w / 2 : align === "right" || align === "end" ? x - w : x;
-    return { x: left, y: y - font * 0.85, w, h };
-  }
-  return { x: x - 4, y: y - 4, w: 8, h: 8 };
+  return nodePropsToBBox(p);
 }
 

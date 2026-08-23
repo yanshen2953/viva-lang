@@ -5,11 +5,15 @@ import { listSelectableNodes } from "../review/nodes.js";
 import type { SelectedNode } from "../review/types.js";
 import type { CheckDiagnostic, CheckOptions } from "./types.js";
 import { withIrStyleContext } from "./style-context.js";
+import { figureCellsFromIr, type FigureCellPx } from "./figure-cells.js";
 
 const MARK_HINT =
   /bar|cell|dot|point|mark|tile|bin|rect|heat|flow|arrow|line|path|scatter/i;
 const CHROME_HINT =
   /grid|axis|tick|title|caption|legend|label|border|frame|colorbar|chrome|subtitle|panel-label|plotbg|plot-bg|flowbg|flow-bg|panelbg|brush|hud|typegrid|deck/i;
+const PAPER_CHROME_TEXT =
+  /(_title(?:_\d+)?|_xTitle|_yTitle|_legLbl_|_lab_|cbarTitle|cbarLbl|_zTitle)/i;
+const CHROME_OVERFLOW_PX = 1.5;
 
 function push(
   out: CheckDiagnostic[],
@@ -55,6 +59,33 @@ function iou(a: BBox, b: BBox): number {
   if (inter <= 0) return 0;
   const union = a.w * a.h + b.w * b.h - inter;
   return union > 0 ? inter / union : 0;
+}
+
+function isPaperChromeText(n: SelectedNode): boolean {
+  return PAPER_CHROME_TEXT.test(n.name);
+}
+
+function cellForChrome(n: SelectedNode, cells: FigureCellPx[]): FigureCellPx | undefined {
+  const byPrefix = cells.find((c) => n.name === c.name || n.name.startsWith(`${c.name}_`));
+  if (byPrefix) return byPrefix;
+  return cells.find((c) => n.name.endsWith(`_lab_${c.name}`));
+}
+
+function overflowAmount(
+  b: BBox,
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+  pad: number,
+): number {
+  return Math.max(
+    0,
+    x0 + pad - b.x,
+    y0 + pad - b.y,
+    b.x + b.w - (x1 - pad),
+    b.y + b.h - (y1 - pad),
+  );
 }
 
 function overlapRatio(a: BBox, b: BBox): number {
@@ -201,6 +232,34 @@ export function runStructuralChecks(ir: VisualIR, opts: CheckOptions = {}): Chec
         `heatmap cells (${cells.length}) share a single fill color`,
         "error",
         "Use palette(c.tier, sequential) or fix role: mark-area parsing.",
+      );
+    }
+  }
+
+  const figureCells = figureCellsFromIr(ir);
+  const chromeTexts = selectable.filter(isPaperChromeText);
+  for (const n of chromeTexts) {
+    const sceneOverflow = overflowAmount(n.bbox, 0, 0, scene.width, scene.height, 0);
+    if (sceneOverflow > CHROME_OVERFLOW_PX) {
+      push(
+        out,
+        "check.struct.chromeOverflow",
+        `chrome '${n.name}' overflows scene by ${sceneOverflow.toFixed(1)}px`,
+        "warn",
+        "Grow plot insets or shorten the title/axis/legend; compiler already wraps and nudges chrome.",
+      );
+      continue;
+    }
+    const cell = cellForChrome(n, figureCells);
+    if (!cell) continue;
+    const cellOverflow = overflowAmount(n.bbox, cell.x0, cell.y0, cell.x1, cell.y1, 0);
+    if (cellOverflow > CHROME_OVERFLOW_PX) {
+      push(
+        out,
+        "check.struct.chromeOverflow",
+        `chrome '${n.name}' overflows panel '${cell.name}' by ${cellOverflow.toFixed(1)}px`,
+        "warn",
+        "Let the compiler size insets (omit inset*/areaX) or wrap the caption.",
       );
     }
   }

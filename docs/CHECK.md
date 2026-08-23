@@ -15,6 +15,7 @@ Runs on flattened geometry after compile (same ids as Runtime / `data-viva-id`).
 | `check.struct.overlap` | warn | Heavy overlap between marks |
 | `check.struct.barCrowding` | warn | Horizontal bars overlap |
 | `check.struct.flatHeatmap` | error | Heat cells share one fill |
+| `check.struct.chromeOverflow` | warn | Title / axis / legend / panel-label box leaves the scene or figure cell (rotate-aware, CSS px) |
 
 **Where:** Playground, Session `patch`, `viva check`
 

@@ -26,7 +26,7 @@
 | 项 | 状态 |
 | --- | --- |
 | 工作分支 | `cursor/style-handbook-hook-a8c1` |
-| 最新提交 | Session/Pipeline/Provenance 对外接入 + CI + GAPS（见 git log） |
+| 最新提交 | 见 git log（含 handbook、CJK 折行、chrome 格内回收、旋转感知 bbox） |
 | 测试 | `npm test` — 见当前 vitest；含 handbook 字号、typeGrid、CJK PDF 短语 |
 | `build:lib` | `npm run build:lib` 通过 |
 | CI | `.github/workflows/ci.yml`：`npm ci` / `build:lib` / `npm test` / Atlas `--visual` |
