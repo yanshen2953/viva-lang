@@ -184,8 +184,8 @@ layer marks
 | `chart.line` / `bar` / `scatter` | 展开 frame+axis+marks | ✅ MVP |
 | `chart.heat` / `chart.heatmap` | 热力 + 色条 | ✅ MVP |
 | `chart.vector` / `chart.funnel` / `chart.box` / `chart.violin` | 箭头 / 漏斗 / 箱线 / 密度 | ✅ 插件 |
-| `layout.figure` 多面板 | 边距、对齐、(a)(b) 标签 | ✅ 插件（不是关键字） |
-| `layout.board` | 安全框 / 字幕条 / splits / beats / bleed / typeGrid | ✅ 插件 |
+| `layout.figure` 多面板 | 网格 + `(a)(b)`；不写 `inset*` 时按 chrome 估留白 | ✅ 插件（不是关键字） |
+| `layout.board` | 安全框 / 字幕条 / splits / beats / bleed / typeGrid；`--beats` PNG 序列 | ✅ 插件 |
 
 规则：**结构展开 = widget；审美纪律 = handbook。**
 

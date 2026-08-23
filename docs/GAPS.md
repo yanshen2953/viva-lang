@@ -41,8 +41,8 @@
 | 折线按 x 排序 | 源数据乱序也能连对 |
 | SVG 导出 | `font-family` / `font-weight` / `letter-spacing` / `stroke-dasharray` / 旋转轴标题 |
 | 动态 widget 插件 | `registerWidget()` / `listWidgets()` |
-| `layout.figure` | `cols/rows/gutter/margin/inset*` → frame + `(a)` 标签 |
-| `layout.board` | `safe`/`title`/`body`/`lower`；`splits` / `beats` / `bleed` / `typeGrid` |
+| `layout.figure` | `cols/rows/gutter/margin`；不写 `inset*` 时按绑定 chart 的 chrome 迭代估留白 |
+| `layout.board` | `safe`/`title`/`body`/`lower`；`splits` / `beats` / `bleed` / `typeGrid`；`--beats` 出 PNG 序列 |
 | 图表对位 | `panel: a` 吃已有 frame |
 | 投稿尺寸 | `unit: mm` + `column: single\|double` |
 | Agent 热路径 | slim prompt 默认；session compile 附 visual diagnostics |
@@ -51,7 +51,7 @@
 
 1. PDF 随包 `assets/fonts/VivaSansFallback.ttf`（Droid 子集，examples + 论文用字）；缺字仍可能 `?`
 2. 有 time / box / violin（KDE 轮廓）/ 显著性括号；轴刻度在场景坐标。`print-nature` 刻度 8 / 轴标题 9。观感仍粗，不是投稿成品
-3. Atlas (a–f) 已走 `layout.figure` + chart 插件；(e)(f) 不再手摆像素
+3. Atlas / figure-grid 已去掉 `inset*` 魔法数；格子留白由编译器按 chrome 估，仍不是全图碰撞求解
 4. `__sel` 默认跨面板藏行；本地 brush 仍是单图 marquee，没有过渡动画
 5. session visual diagnostics 不挡编译成功
 6. MCP/HTTP/CLI prompt 默认 slim；生成成功率未测
@@ -63,7 +63,7 @@
 1. 真正的碰撞求解（标题/刻度/图例仍只是字号感知间距）
 2. linked selection 已藏热图、折线、box/violin；仍缺过渡动画
 3. 再扩 CJK 或允许宿主挂全库；`scripts/subset-cjk-font.py` 可从 Droid 重建
-4. `layout.board play` / `typeGrid` 只是遮罩和基线，不是导出视频
+4. `layout.board play` / `typeGrid` 只是遮罩和基线；`export --beats` / MCP `beats` 是 PNG 序列，不是成片视频
 5. agent-exam 种子编译进 CI；生成成功率仍未测（要 LLM）
 
 对照真源：`docs/VISION.md`。
