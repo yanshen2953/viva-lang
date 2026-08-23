@@ -39,6 +39,67 @@ export type MarkPaintEl = {
   setAttribute(name: string, value: string): void;
 };
 
+export const MARK_GEOM_KEYS = ["x", "y", "w", "h", "width", "height", "x1", "y1", "x2", "y2", "r", "q1"] as const;
+
+export type GeomTween = {
+  t0: number;
+  from: Record<string, number>;
+  to: Record<string, number>;
+};
+
+export function isSummaryMark(props: Record<string, unknown>): boolean {
+  return Boolean(props.__boxData || props.__violinData || props.__lineData);
+}
+
+export function pickGeom(props: Record<string, unknown>): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const key of MARK_GEOM_KEYS) {
+    const value = props[key];
+    if (typeof value === "number" && Number.isFinite(value)) out[key] = value;
+  }
+  return out;
+}
+
+export function geomChanged(a: Record<string, number>, b: Record<string, number>, eps = 0.05): boolean {
+  const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
+  for (const key of keys) {
+    if (Math.abs((a[key] ?? 0) - (b[key] ?? 0)) > eps) return true;
+  }
+  return false;
+}
+
+export function easeOutCubic(t: number): number {
+  const u = 1 - Math.min(1, Math.max(0, t));
+  return 1 - u * u * u;
+}
+
+/** Lerp summary mark geom toward the latest __sel layout. Not a timeline. */
+export function sampleGeomEase(
+  shown: Record<string, number> | undefined,
+  target: Record<string, number>,
+  now: number,
+  running: GeomTween | undefined,
+  duration = MARK_EASE_MS,
+): { values: Record<string, number>; running?: GeomTween } {
+  if (!shown || !Object.keys(target).length) return { values: { ...target } };
+  const retarget = !running || geomChanged(running.to, target);
+  const from = retarget ? shown : running.from;
+  const to = retarget ? target : running.to;
+  const t0 = retarget ? now : running.t0;
+  if (!geomChanged(from, to)) return { values: { ...to } };
+  const u = duration <= 0 ? 1 : Math.min(1, Math.max(0, (now - t0) / duration));
+  const e = easeOutCubic(u);
+  const values: Record<string, number> = { ...to };
+  const keys = new Set([...Object.keys(from), ...Object.keys(to)]);
+  for (const key of keys) {
+    const a = from[key] ?? to[key] ?? 0;
+    const b = to[key] ?? from[key] ?? 0;
+    values[key] = a + (b - a) * e;
+  }
+  if (u >= 1) return { values: { ...to } };
+  return { values, running: { t0, from, to } };
+}
+
 /** Write CSS opacity/transform so the 220ms ease actually runs. SVG attr alone does not. */
 export function applyMarkPaintCss(el: MarkPaintEl, paint: MarkPaint): void {
   el.style.transition = paint.transition;

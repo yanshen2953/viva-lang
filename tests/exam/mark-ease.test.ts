@@ -3,7 +3,14 @@ import sharp from "sharp";
 import { readFileSync } from "node:fs";
 import { compileSource } from "../../src/pipeline.js";
 import { evaluate } from "../../src/eval.js";
-import { applyMarkPaintCss, MARK_EASE_MS, markPaintState } from "../../src/runtime/mark-ease.js";
+import {
+  applyMarkPaintCss,
+  isSummaryMark,
+  MARK_EASE_MS,
+  markPaintState,
+  pickGeom,
+  sampleGeomEase,
+} from "../../src/runtime/mark-ease.js";
 import { exportArtifact } from "../../src/export/index.js";
 
 describe("runtime mark ease and paper raster background", () => {
@@ -20,6 +27,22 @@ describe("runtime mark ease and paper raster background", () => {
     const lit = markPaintState(true, 1, 1.18);
     expect(lit.transform).toBe("scale(1.18)");
     expect(lit.transition).toMatch(/transform/);
+  });
+
+  it("eases summary line endpoints toward a hopped __sel target", () => {
+    expect(isSummaryMark({ __lineData: "rows" })).toBe(true);
+    expect(isSummaryMark({ x: 1 })).toBe(false);
+    const from = pickGeom({ x1: 10, y1: 20, x2: 40, y2: 20 });
+    const to = pickGeom({ x1: 10, y1: 20, x2: 80, y2: 12 });
+    const start = sampleGeomEase(from, to, 0, undefined, 220);
+    const mid = sampleGeomEase(start.values, to, 110, start.running, 220);
+    expect(mid.running).toBeTruthy();
+    expect(mid.values.x2).toBeGreaterThan(40);
+    expect(mid.values.x2).toBeLessThan(80);
+    const done = sampleGeomEase(mid.values, to, 400, mid.running, 220);
+    expect(done.running).toBeUndefined();
+    expect(done.values.x2).toBe(80);
+    expect(done.values.y2).toBe(12);
   });
 
   it("writes style.opacity so play veils and hidden marks can CSS-ease", () => {

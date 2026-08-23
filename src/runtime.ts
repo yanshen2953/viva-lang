@@ -20,7 +20,14 @@ import {
 import { evalSceneProps, resolveSceneBox, scaleSceneGeom, sceneScaleOf } from "./space/scene-box.js";
 import { DEFAULT_SCENE_BACKGROUND, resetPaletteSeries, setStyleContext } from "./style/index.js";
 import { STYLE_META_PROPS } from "./style/types.js";
-import { applyMarkPaintCss, markPaintState } from "./runtime/mark-ease.js";
+import {
+  applyMarkPaintCss,
+  isSummaryMark,
+  markPaintState,
+  pickGeom,
+  sampleGeomEase,
+  type GeomTween,
+} from "./runtime/mark-ease.js";
 
 export type RuntimeOptions = {
   mount: HTMLElement;
@@ -79,6 +86,8 @@ export class Runtime {
   private keyHandler: ((event: KeyboardEvent) => void) | null = null;
   private lastNodes: RenderNode[] = [];
   private hideTimers = new Map<string, number>();
+  private geomTweens = new Map<string, GeomTween>();
+  private geomShown = new Map<string, Record<string, number>>();
 
   constructor(options: RuntimeOptions) {
     this.ir = options.ir;
@@ -431,7 +440,11 @@ export class Runtime {
   }
 
   private updateElement(el: SVGElement, node: RenderNode, defs: SVGDefsElement): void {
-    const p = node.props;
+    const raw = node.props;
+    const p =
+      isSummaryMark(raw) && this.drag?.node.id !== node.id
+        ? this.easeSummaryGeom(node.id, raw)
+        : raw;
     const x = num(p.x, 0);
     const y = num(p.y, 0);
     const opacity = p.opacity === undefined ? 1 : num(p.opacity, 1);
@@ -542,6 +555,23 @@ export class Runtime {
     }
 
     applyTransform(el, { ...p, scale: undefined }, { x: anchorX, y: anchorY });
+  }
+
+  private easeSummaryGeom(
+    id: string,
+    props: Record<string, unknown>,
+  ): Record<string, unknown> {
+    const target = pickGeom(props);
+    const { values, running } = sampleGeomEase(
+      this.geomShown.get(id),
+      target,
+      this.time || 0,
+      this.geomTweens.get(id),
+    );
+    this.geomShown.set(id, values);
+    if (running) this.geomTweens.set(id, running);
+    else this.geomTweens.delete(id);
+    return { ...props, ...values };
   }
 
   private bindPointer(): void {
