@@ -17,7 +17,7 @@ export const dashboardPreset: StylePreset = {
   },
   roles: {
     panel: { fill: "#0f172a", stroke: "#334155", strokeWidth: 1.5, radius: 12 },
-    plot: { fill: "#020617", stroke: "#475569", strokeWidth: 1.5 },
+    plot: { fill: "#020617", stroke: "#475569", strokeWidth: 1.5, radius: 6 },
     axis: { stroke: "#cbd5e1", strokeWidth: 2 },
     grid: { stroke: "#334155", dash: "4 5" },
     title: { fill: "#f1f5f9", font: 15, fontWeight: 700 },

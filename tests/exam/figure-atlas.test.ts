@@ -147,6 +147,25 @@ describe("figure-atlas example", () => {
     expect(dAxes.items.some((i) => i.kind === "node" && i.name.includes("_grid_"))).toBe(false);
     const aGrid = aAxes.items.some((i) => i.kind === "node" && i.name.includes("_grid_"));
     expect(aGrid).toBe(true);
+    const plotBg = dAxes.items.find((i) => i.kind === "node" && i.name.endsWith("_plotBg"));
+    expect(plotBg?.kind).toBe("node");
+    if (plotBg?.kind === "node") {
+      expect(plotBg.props.radius).toMatchObject({ kind: "number", value: 0 });
+    }
+    const deck = result.ir!.scene.layers
+      .find((l) => l.name === "__fig_decks")!
+      .items.find((i) => i.kind === "node" && i.name.endsWith("_deck_d"));
+    expect(deck?.kind).toBe("node");
+    if (deck?.kind === "node") {
+      expect(deck.props.radius).toMatchObject({ kind: "number", value: 0 });
+    }
+    const plate = result.ir!.scene.layers
+      .find((l) => l.name === "__fig_plate")!
+      .items.find((i) => i.kind === "node" && i.name.endsWith("_plate"));
+    expect(plate?.kind).toBe("node");
+    if (plate?.kind === "node") {
+      expect(plate.props.radius).toMatchObject({ kind: "number", value: 0 });
+    }
     const heatCells = result.ir!.scene.layers
       .find((l) => l.name === "__d_marks")!
       .items.filter((i) => i.kind === "node" && i.name === "heatCell");

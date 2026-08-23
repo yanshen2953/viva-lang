@@ -584,6 +584,30 @@ widget chart.scatter
     expect(ys[ys.length - 1]).toBe("6");
   });
 
+  it("lets print-nature square plot frames while dashboard keeps rounded cards", () => {
+    const src = `artifact "Corners"
+data rows = [{ x: 1, y: 2 }, { x: 3, y: 4 }]
+scene
+  size: 240 160
+widget chart.scatter
+  data: rows
+  xField: x
+  yField: y
+  interactive: false
+`;
+    const radiusOf = (handbook: string) => {
+      const result = compileSource(src, "corners.viva", { handbookIds: [handbook] });
+      expect(result.error).toBeNull();
+      const axes = result.ir!.scene.layers.find((l) => l.name.endsWith("_axes"))!;
+      const plot = axes.items.find((i) => i.kind === "node" && i.name.endsWith("_plotBg"));
+      return plot?.kind === "node" && plot.props.radius?.kind === "number"
+        ? plot.props.radius.value
+        : NaN;
+    };
+    expect(radiusOf("print-nature")).toBe(0);
+    expect(radiusOf("dashboard")).toBe(6);
+  });
+
   it("joins an unquoted multi-word xLabel onto a horizontal funnel", () => {
     const src = `artifact "Funnel words"
 data rows = [

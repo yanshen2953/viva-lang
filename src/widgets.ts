@@ -628,7 +628,7 @@ function expandChart(
       y: area.y,
       w: area.w,
       h: area.h,
-      radius: literal(6),
+      ...(props.plotRadius ?? props.plotRx ? { radius: props.plotRadius ?? props.plotRx! } : {}),
       ...(chartInteractive(props) ? { drag: literal(true), __chartBrush: literal(true) } : {}),
       ...(props.plotFill ? { fill: props.plotFill } : {}),
       ...(props.plotStroke ? { stroke: props.plotStroke } : {}),
@@ -1440,7 +1440,6 @@ function expandLayoutFigure(
           y: literal(cellY0),
           w: literal(spanW),
           h: literal(spanH),
-          radius: literal(6),
         }),
       );
     }
@@ -1469,7 +1468,6 @@ function expandLayoutFigure(
           y: literal(originY),
           w: literal(width),
           h: literal(height),
-          radius: literal(8),
         }),
       ],
     });
