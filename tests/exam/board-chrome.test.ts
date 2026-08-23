@@ -104,4 +104,39 @@ widget layout.board
       expect(String(evaluate(first.props.text, env))).toMatch(/Long|hyphenated|board/);
     }
   });
+
+  it("wraps board body copy into the left split and binds caption idents", () => {
+    const result = compileSource(
+      `artifact BodyBoard
+state hint = "live caption"
+scene
+  size: 640 360
+widget layout.board
+  title: "Board"
+  body: "Compiler wraps this prose into the left column so the right stays a figure slot."
+  caption: hint
+  splits: 2
+  guides: false
+`,
+      "body-board.viva",
+    );
+    expect(result.error).toBeNull();
+    const ir = result.ir!;
+    const env = [ir.state, ir.data];
+    const left = evaluate(ir.frames.find((f) => f.name === "left")!.props.x, env) as [number, number];
+    const copy = ir.scene.layers.find((l) => l.name === "__board_copy")!;
+    const bodies = copy.items.filter((i) => i.kind === "node" && /^board_docBody/.test(i.name));
+    expect(bodies.length).toBeGreaterThan(0);
+    for (const item of bodies) {
+      if (item.kind !== "node") continue;
+      expect(evaluate(item.props.x, env)).toBeCloseTo(left[0]!);
+      expect(String(evaluate(item.props.text, env))).toMatch(/Compiler|prose|figure/);
+    }
+    const cap = copy.items.find((i) => i.kind === "node" && i.name === "board_docCap");
+    expect(cap?.kind).toBe("node");
+    if (cap?.kind === "node") {
+      expect(cap.props.text?.kind).toBe("ident");
+      expect(evaluate(cap.props.text, env)).toBe("live caption");
+    }
+  });
 });

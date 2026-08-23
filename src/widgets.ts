@@ -22,13 +22,20 @@ import { COLUMN_MM, mmToPx, pageColumnMeasure, parsePage, sceneScaleOf } from ".
 import { estimateBoardBands, measureChipWidth } from "./layout/board-chrome.js";
 import { figureCopyDefaults, figureCopyPlace, figureGapDefaults } from "./layout/figure-gap.js";
 import { figurePageReserves, packFigureCellsToPages } from "./layout/figure-page.js";
-import { chartHostBox, promotePanelFrames } from "./layout/chart-fit.js";
+import {
+  chartHostBox,
+  fillAuthorSlotNodes,
+  PLOT_SLOT_INSET,
+  promotePanelFrames,
+  slotHasAuthorPlot,
+} from "./layout/chart-fit.js";
 import { boxStats, quantile } from "./layout/summary-stats.js";
 import { gaussianKDE, violinPathD } from "./layout/violin-density.js";
 import {
   clampChartInsets,
   growInsetsForChrome,
   growInsetsForNeighbors,
+  wrapTextLines,
   INSET_CAP_FIT,
   INSET_CAP_SOFT,
   placePaperChrome,
@@ -132,6 +139,9 @@ export function expandWidgets(artifact: Artifact): Artifact {
   }
   liftPlayLayers(next);
   paintPageFolio(next);
+  fillAuthorSlotNodes(next);
+  promotePanelFrames(next);
+  fillAuthorSlotNodes(next);
   bindFramedWorldInteract(next);
   paintPlotFrameChrome(next);
   return next;
@@ -1408,6 +1418,7 @@ function expandLayoutBoard(
   const titleExpr = copyExpr(props, ["title"]);
   const subtitleExpr = copyExpr(props, ["subtitle"]);
   const captionExpr = copyExpr(props, ["caption"]);
+  const bodyExpr = copyExpr(props, ["body", "prose"]);
   const controlKeys = controlKeysFromProps(props);
   const controlBind = stringProp(props, ["bind", "controlBind"]);
   const typeGrid = boolProp(props, "typeGrid", false) || boolProp(props, "baseline", false);
@@ -1626,6 +1637,28 @@ function expandLayoutBoard(
         }),
       );
       capCursor += 12;
+    }
+  }
+  if (bodyExpr) {
+    const host =
+      slots.find((s) => s.name === nameOf("left")) ?? slots.find((s) => s.name === nameOf("body"));
+    if (host) {
+      const bodyW = Math.max(40, host.x[1] - host.x[0]);
+      const staticBody = staticCopyText(bodyExpr);
+      const lines = staticBody ? wrapTextLines(staticBody, bodyW, 12, 0.12, 18) : [null];
+      let bodyCursor = host.y[0] + 16;
+      for (const [i, line] of lines.entries()) {
+        copyItems.push(
+          node(`${id}_docBody${i ? `_${i}` : ""}`, {
+            role: literal("label"),
+            x: literal(host.x[0]),
+            y: literal(bodyCursor),
+            w: literal(bodyW),
+            text: line === null ? bodyExpr : literal(line),
+          }),
+        );
+        bodyCursor += 20;
+      }
     }
   }
   if (copyItems.length) {
@@ -2616,8 +2649,9 @@ function estimatePanelInsets(
 ): { l: number; r: number; t: number; b: number } {
   const fallback = { l: 76, r: 32, t: 32, b: 52 };
   const chart = chartForPanel(artifact, panelName);
-  if (!chart) return fallback;
-  return fitChartInsets(artifact, chart, cellX0, cellY0, cellW, cellH);
+  if (chart) return fitChartInsets(artifact, chart, cellX0, cellY0, cellW, cellH);
+  if (slotHasAuthorPlot(artifact, panelName)) return { ...PLOT_SLOT_INSET };
+  return fallback;
 }
 
 function chartChromeExtras(

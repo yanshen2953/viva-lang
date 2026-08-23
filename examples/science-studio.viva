@@ -79,41 +79,10 @@ scene
       blur: 48
       opacity: 0.28
 
-  layer charts
-    node chartDeck
-      role: panel
-      x: 488
-      y: 64
-      w: 672
-      h: 248
-      radius: 18
-      shadow: 0 18 36
-      shadowOpacity: 0.45
-
-    node vecDeck
-      role: panel
-      x: 488
-      y: 328
-      w: 296
-      h: 248
-      radius: 18
-
   layer pca
-    node pcaDeck
-      role: panel
-      x: 800
-      y: 328
-      w: 360
-      h: 248
-      radius: 18
-
     node pcaPlotBg
       role: plot
-      x: 816
-      y: 368
-      w: 328
-      h: 188
-      radius: 8
+      panel: d
       xlim: -2.5 2.5
       ylim: -2.5 2.5
       title: "PCA · 3D ORBIT"
@@ -125,10 +94,7 @@ scene
 
     node pcaOrbit
       role: chrome
-      x: 816
-      y: 368
-      w: 328
-      h: 188
+      panel: pcaPlotBg
       opacity: 0.03
       drag: true
 
@@ -170,43 +136,6 @@ scene
           strokeWidth: 2
           dash: 5 4
 
-  layer typography
-    node title
-      role: title
-      x: 48
-      y: 56
-      text: "图文排版 · 科学图板"
-      font: 28
-
-    node subtitle
-      role: subtitle
-      x: 48
-      y: 96
-      text: "handbook 驱动 · role / colorBy · 任意构图"
-
-    node body1
-      role: label
-      x: 48
-      y: 148
-      w: 420
-      text: "数据只写 grp；色板/框线/网格由 dashboard 预设注入。图表吃 role: panel 甲板；PCA 投影走 plot frame，悬停/高亮与图表同一套 Runtime，拖轨道仍是 World。"
-      lineHeight: 1.55
-
-    node caption
-      role: caption
-      x: 48
-      y: 680
-      text: hint
-
-    if pcaMark != none
-      node markLbl
-        role: annotation
-        x: 48
-        y: 640
-        text: pcaMark
-        font: 16
-        fontWeight: 600
-
   layer screenGlow
     blend: screen
     node topGlow
@@ -219,10 +148,17 @@ scene
       opacity: 0.18
       blur: 36
 
+widget layout.board
+  title: "图文排版 · 科学图板"
+  subtitle: "handbook 驱动 · role / colorBy · 任意构图"
+  body: "数据只写 grp；色板/框线/网格由 dashboard 预设注入。图表吃 board right；PCA 投影走 plot frame，悬停/高亮与图表同一套 Runtime，拖轨道仍是 World。"
+  caption: hint
+  splits: 2
+
 widget layout.figure
-  panel: chartDeck
+  panel: right
   cols: 2
-  rows: 1
+  rows: 2
   plate: false
 
 widget chart.bar
@@ -247,7 +183,7 @@ widget chart.line
   title: "LINE · trend"
 
 widget chart.vector
-  panel: vecDeck
+  panel: c
   data: field
   xField: ox
   yField: oy
@@ -268,5 +204,5 @@ event drag on pcaOrbit
 event click on pcaPts
   pcaMark = p.id
 
-tick 30
-  hint = "handbook:dashboard active"
+rule when pcaMark != none
+  hint = pcaMark

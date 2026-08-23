@@ -98,44 +98,46 @@ widget chart.line
     expect(cell[1]).toBeLessThanOrEqual(360);
   });
 
-  it("drops science-studio area boxes onto the chartDeck panel", () => {
+  it("parks science-studio copy and decks on board slots", () => {
     const src = readFileSync("examples/science-studio.viva", "utf8");
     expect(src).not.toMatch(/areaX|areaY|frame quiver/);
+    expect(src).toMatch(/widget layout\.board/);
     expect(src).toMatch(/widget chart\.vector/);
+    expect(src).toMatch(/panel:\s*right/);
+    expect(src).toMatch(/panel:\s*d/);
+    expect(src).not.toMatch(/node chartDeck|node vecDeck|node pcaDeck/);
+    expect(src).not.toMatch(/x:\s*488|x:\s*816|x:\s*48\b/);
     const result = compileSource(src, "science-studio.viva");
     expect(result.error).toBeNull();
     const scopes = [result.ir!.state, result.ir!.data];
-    const deck = evaluate(result.ir!.frames.find((f) => f.name === "chartDeck")!.props.x, scopes) as [
+    const names = result.ir!.frames.map((f) => f.name);
+    expect(names).toEqual(expect.arrayContaining(["left", "right", "a", "b", "c", "d", "pcaPlotBg"]));
+    const left = evaluate(result.ir!.frames.find((f) => f.name === "left")!.props.x, scopes) as [
       number,
       number,
     ];
-    expect(deck[0]).toBeCloseTo(488);
-    expect(deck[1]).toBeCloseTo(1160);
-    for (const name of ["a", "b"] as const) {
+    const right = evaluate(result.ir!.frames.find((f) => f.name === "right")!.props.x, scopes) as [
+      number,
+      number,
+    ];
+    expect(right[0]).toBeGreaterThan(left[1]!);
+    for (const name of ["a", "b", "c"] as const) {
       const cellX = evaluate(result.ir!.frames.find((f) => f.name === name)!.props.cellX!, scopes) as [
         number,
         number,
       ];
-      const cellY = evaluate(result.ir!.frames.find((f) => f.name === name)!.props.cellY!, scopes) as [
-        number,
-        number,
-      ];
-      expect(cellX[0]).toBeGreaterThanOrEqual(488);
-      expect(cellX[1]).toBeLessThanOrEqual(1160);
-      expect(cellY[0]).toBeGreaterThanOrEqual(64);
-      expect(cellY[1]).toBeLessThanOrEqual(312);
+      expect(cellX[0]).toBeGreaterThanOrEqual(right[0]! - 1);
+      expect(cellX[1]).toBeLessThanOrEqual(right[1]! + 1);
     }
-    const vecBox = evaluate(result.ir!.frames.find((f) => f.name === "vecDeck")!.props.x, scopes) as [
-      number,
-      number,
-    ];
-    expect(vecBox[0]).toBeCloseTo(488);
-    expect(vecBox[1]).toBeCloseTo(784);
-    expect(result.ir!.scene.layers.some((l) => l.name === "__vecDeck_marks")).toBe(true);
+    expect(result.ir!.scene.layers.some((l) => l.name === "__c_marks")).toBe(true);
     const shaft = result.ir!.scene.layers
       .flatMap((l) => l.items)
       .some((item) => item.kind === "for" && item.body.some((n) => n.kind === "node" && n.name === "shaft"));
     expect(shaft).toBe(true);
+    const copy = result.ir!.scene.layers.find((l) => l.name === "__board_copy");
+    expect(copy?.items.some((item) => item.kind === "node" && item.name.startsWith("board_docBody"))).toBe(
+      true,
+    );
   });
 
   it("maps science-studio PCA marks through the promoted plot frame", () => {
@@ -146,17 +148,84 @@ widget chart.line
     expect(result.error).toBeNull();
     const scopes = [result.ir!.state, result.ir!.data];
     const plot = result.ir!.frames.find((f) => f.name === "pcaPlotBg")!;
+    const cell = result.ir!.frames.find((f) => f.name === "d")!;
     const xlim = evaluate(plot.props.xlim!, scopes) as [number, number];
     expect(xlim[0]).toBeCloseTo(-2.5);
     expect(xlim[1]).toBeCloseTo(2.5);
+    const box = evaluate(plot.props.x, scopes) as [number, number];
+    const boxY = evaluate(plot.props.y, scopes) as [number, number];
+    const cellX = evaluate(cell.props.cellX!, scopes) as [number, number];
+    const cellY = evaluate(cell.props.cellY!, scopes) as [number, number];
+    expect(box[0]).toBeGreaterThanOrEqual(cellX[0]!);
+    expect(box[1]).toBeLessThanOrEqual(cellX[1]!);
+    expect(boxY[0]).toBeGreaterThanOrEqual(cellY[0]!);
+    expect(boxY[1]).toBeLessThanOrEqual(cellY[1]!);
+    expect(box[1]! - box[0]!).toBeGreaterThan((cellX[1]! - cellX[0]!) * 0.7);
     const pts = flattenNodesFromIr(result.ir!).nodes.filter((n) => n.name === "pcaPt");
     expect(pts.length).toBeGreaterThan(0);
     for (const pt of pts) {
-      expect(Number(pt.props.x)).toBeGreaterThanOrEqual(816);
-      expect(Number(pt.props.x)).toBeLessThanOrEqual(1144);
-      expect(Number(pt.props.y)).toBeGreaterThanOrEqual(368);
-      expect(Number(pt.props.y)).toBeLessThanOrEqual(556);
+      expect(Number(pt.props.x)).toBeGreaterThanOrEqual(box[0]!);
+      expect(Number(pt.props.x)).toBeLessThanOrEqual(box[1]!);
+      expect(Number(pt.props.y)).toBeGreaterThanOrEqual(boxY[0]!);
+      expect(Number(pt.props.y)).toBeLessThanOrEqual(boxY[1]!);
     }
+  });
+
+  it("fills an author plot into a figure cell without x/y/w/h", () => {
+    const result = compileSource(
+      `artifact SlotPlot
+scene
+  size: 640 360
+  layer ui
+    node plotA
+      role: plot
+      panel: a
+      xlim: 0 1
+      ylim: 0 1
+    node orbit
+      role: chrome
+      panel: plotA
+      drag: true
+widget layout.board
+  title: "Board"
+  splits: 2
+  guides: false
+widget layout.figure
+  panel: right
+  cols: 1
+  rows: 1
+  plate: false
+  labels: false
+`,
+      "slot-plot.viva",
+    );
+    expect(result.error).toBeNull();
+    const scopes = [result.ir!.state, result.ir!.data];
+    const cell = evaluate(result.ir!.frames.find((f) => f.name === "a")!.props.cellX!, scopes) as [
+      number,
+      number,
+    ];
+    const cellY = evaluate(result.ir!.frames.find((f) => f.name === "a")!.props.cellY!, scopes) as [
+      number,
+      number,
+    ];
+    const plot = evaluate(result.ir!.frames.find((f) => f.name === "plotA")!.props.x, scopes) as [
+      number,
+      number,
+    ];
+    const plotY = evaluate(result.ir!.frames.find((f) => f.name === "plotA")!.props.y, scopes) as [
+      number,
+      number,
+    ];
+    expect(plot[0]).toBeGreaterThan(cell[0]!);
+    expect(plot[1]).toBeLessThan(cell[1]!);
+    expect(plotY[0]).toBeGreaterThan(cellY[0]!);
+    expect(plotY[1]).toBeLessThan(cellY[1]!);
+    const nodes = flattenNodesFromIr(result.ir!).nodes;
+    const orbit = nodes.find((n) => n.name === "orbit");
+    expect(orbit).toBeTruthy();
+    expect(Number(orbit!.props.x)).toBeCloseTo(plot[0]!);
+    expect(Number(orbit!.props.w)).toBeCloseTo(plot[1]! - plot[0]!);
   });
 
   it("promotes a role: plot node into a bindable frame", () => {

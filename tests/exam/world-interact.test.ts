@@ -114,11 +114,13 @@ scene
     });
     expect(hover.state.__tip).toBe("A1 · A");
     expect(hover.state.__highlightGrp).toBe("A");
+    const plot = result.ir!.frames.find((f) => f.name === "pcaPlotBg")!;
+    const plotY = evaluate(plot.props.y, [result.ir!.state, result.ir!.data]) as [number, number];
     const legend = flattenNodesFromIr(result.ir!).nodes.filter((n) => n.name.startsWith("pcaPlotBg_leg_"));
     expect(legend.length).toBeGreaterThanOrEqual(3);
     for (const node of legend) {
-      expect(Number(node.props.y)).toBeGreaterThan(548);
-      expect(Number(node.props.y)).toBeLessThan(576);
+      expect(Number(node.props.y)).toBeGreaterThanOrEqual(plotY[1]!);
+      expect(Number(node.props.y)).toBeLessThan(plotY[1]! + 28);
     }
     const pt = result.ir!.scene.layers
       .flatMap((l) => l.items)
@@ -139,15 +141,18 @@ scene
     const result = compileSource(src, "science-studio.viva");
     expect(result.error).toBeNull();
     const nodes = flattenNodesFromIr(result.ir!).nodes;
+    const plot = result.ir!.frames.find((f) => f.name === "pcaPlotBg")!;
+    const box = evaluate(plot.props.x, [result.ir!.state, result.ir!.data]) as [number, number];
+    const boxY = evaluate(plot.props.y, [result.ir!.state, result.ir!.data]) as [number, number];
     const title = nodes.find((n) => n.name === "pcaPlotBg_title");
     expect(title).toBeTruthy();
     expect(String(title!.props.text)).toMatch(/PCA/);
-    expect(Number(title!.props.y)).toBeGreaterThan(328);
-    expect(Number(title!.props.y)).toBeLessThan(368);
+    expect(Number(title!.props.y)).toBeGreaterThanOrEqual(boxY[0]! - 28);
+    expect(Number(title!.props.y)).toBeLessThan(boxY[0]!);
     const plus = nodes.find((n) => n.name === "pcaPlotBg_ctl_1");
     expect(plus).toBeTruthy();
-    expect(Number(plus!.props.x) + Number(plus!.props.w)).toBeLessThanOrEqual(1164);
-    expect(Number(plus!.props.x)).toBeGreaterThan(1080);
+    expect(Number(plus!.props.x) + Number(plus!.props.w)).toBeLessThanOrEqual(box[1]! + 4);
+    expect(Number(plus!.props.x)).toBeGreaterThan(box[0]!);
     const zoomed = simulate(result.ir!, {
       events: [{ type: "click", target: "pcaPlotBg_ctl_1" }],
     });

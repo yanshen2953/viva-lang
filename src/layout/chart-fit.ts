@@ -247,6 +247,96 @@ export function chartHostBox(
   });
 }
 
+function slotNameOf(node: Extract<SceneItem, { kind: "node" }>): string | null {
+  const raw = node.props.panel;
+  if (raw?.kind === "string" && raw.value) return raw.value;
+  if (raw?.kind === "ident" && raw.path.length) return raw.path.join(".");
+  return null;
+}
+
+function frameBoxFromPairs(
+  xs: [number, number] | null,
+  ys: [number, number] | null,
+): FitRect | null {
+  if (!xs || !ys) return null;
+  const w = Math.abs(xs[1] - xs[0]);
+  const h = Math.abs(ys[1] - ys[0]);
+  if (!(w > 0) || !(h > 0)) return null;
+  return {
+    x: Math.min(xs[0], xs[1]),
+    y: Math.min(ys[0], ys[1]),
+    w,
+    h,
+  };
+}
+
+function frameSceneBoxOf(artifact: Artifact, name: string): FitRect | null {
+  const frame = artifact.frames.find((f) => f.name === name);
+  if (!frame) return null;
+  return frameBoxFromPairs(
+    pairOf(frame.props.x ?? frame.props.areaX),
+    pairOf(frame.props.y ?? frame.props.areaY),
+  );
+}
+
+function frameCellBoxOf(artifact: Artifact, name: string): FitRect | null {
+  const frame = artifact.frames.find((f) => f.name === name);
+  if (!frame) return null;
+  return frameBoxFromPairs(pairOf(frame.props.cellX), pairOf(frame.props.cellY));
+}
+
+/** Title-band inset when a `role: plot` fills a board/figure slot. */
+export const PLOT_SLOT_INSET = { l: 8, t: 28, r: 8, b: 8 };
+
+export function insetPlotSlot(slot: FitRect): FitRect {
+  return {
+    x: slot.x + PLOT_SLOT_INSET.l,
+    y: slot.y + PLOT_SLOT_INSET.t,
+    w: Math.max(8, slot.w - PLOT_SLOT_INSET.l - PLOT_SLOT_INSET.r),
+    h: Math.max(8, slot.h - PLOT_SLOT_INSET.t - PLOT_SLOT_INSET.b),
+  };
+}
+
+export function slotHasAuthorPlot(artifact: Artifact, slotName: string): boolean {
+  for (const layer of artifact.scene?.layers ?? []) {
+    if (layer.name.startsWith("__")) continue;
+    const nodes: Extract<SceneItem, { kind: "node" }>[] = [];
+    walkAuthorNodes(layer.items, nodes);
+    if (nodes.some((node) => slotNameOf(node) === slotName && roleOf(node) === "plot")) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Author nodes with `panel:` and omitted x/y/w/h fill that frame.
+ * `role: plot` prefers the figure cell (cellX/cellY) so empty-cell chart
+ * fallback insets are not applied twice. World `frame:` stays data-domain.
+ */
+export function fillAuthorSlotNodes(artifact: Artifact): void {
+  const scopes = authorScopes(artifact);
+  for (const layer of artifact.scene?.layers ?? []) {
+    if (layer.name.startsWith("__")) continue;
+    const nodes: Extract<SceneItem, { kind: "node" }>[] = [];
+    walkAuthorNodes(layer.items, nodes);
+    for (const node of nodes) {
+      const slotName = slotNameOf(node);
+      if (!slotName) continue;
+      const slot = frameSceneBoxOf(artifact, slotName);
+      const cell = frameCellBoxOf(artifact, slotName);
+      const role = roleOf(node);
+      const host = role === "plot" ? (cell ?? slot) : (slot ?? cell);
+      if (!host || !(host.w > 0) || !(host.h > 0)) continue;
+      const box = role === "plot" ? insetPlotSlot(host) : host;
+      if (numOf(node.props.x, scopes) === null) node.props.x = literal(box.x);
+      if (numOf(node.props.y, scopes) === null) node.props.y = literal(box.y);
+      if (numOf(node.props.w ?? node.props.width, scopes) === null) node.props.w = literal(box.w);
+      if (numOf(node.props.h ?? node.props.height, scopes) === null) node.props.h = literal(box.h);
+    }
+  }
+}
+
 /**
  * Author `role: panel` / `role: plot` nodes become frames. Charts and
  * layout.figure bind with the existing `panel:` prop. Not a new keyword.
