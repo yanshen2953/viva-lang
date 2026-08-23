@@ -26,7 +26,9 @@ import {
   markPaintState,
   pickGeom,
   sampleGeomEase,
+  samplePathEase,
   type GeomTween,
+  type PathTween,
 } from "./runtime/mark-ease.js";
 
 export type RuntimeOptions = {
@@ -88,6 +90,8 @@ export class Runtime {
   private hideTimers = new Map<string, number>();
   private geomTweens = new Map<string, GeomTween>();
   private geomShown = new Map<string, Record<string, number>>();
+  private pathTweens = new Map<string, PathTween>();
+  private pathShown = new Map<string, string>();
 
   constructor(options: RuntimeOptions) {
     this.ir = options.ir;
@@ -561,17 +565,28 @@ export class Runtime {
     id: string,
     props: Record<string, unknown>,
   ): Record<string, unknown> {
+    const now = this.time || 0;
     const target = pickGeom(props);
     const { values, running } = sampleGeomEase(
       this.geomShown.get(id),
       target,
-      this.time || 0,
+      now,
       this.geomTweens.get(id),
     );
     this.geomShown.set(id, values);
     if (running) this.geomTweens.set(id, running);
     else this.geomTweens.delete(id);
-    return { ...props, ...values };
+    const next: Record<string, unknown> = { ...props, ...values };
+    const targetD = typeof props.d === "string" ? props.d : typeof props.path === "string" ? props.path : "";
+    if (targetD) {
+      const eased = samplePathEase(this.pathShown.get(id), targetD, now, this.pathTweens.get(id));
+      this.pathShown.set(id, eased.value);
+      if (eased.running) this.pathTweens.set(id, eased.running);
+      else this.pathTweens.delete(id);
+      next.d = eased.value;
+      if (typeof props.path === "string") next.path = eased.value;
+    }
+    return next;
   }
 
   private bindPointer(): void {

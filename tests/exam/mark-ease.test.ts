@@ -6,11 +6,14 @@ import { evaluate } from "../../src/eval.js";
 import {
   applyMarkPaintCss,
   isSummaryMark,
+  lerpPathD,
   MARK_EASE_MS,
   markPaintState,
   pickGeom,
   sampleGeomEase,
+  samplePathEase,
 } from "../../src/runtime/mark-ease.js";
+import { gaussianKDE, violinPathD } from "../../src/layout/violin-density.js";
 import { exportArtifact } from "../../src/export/index.js";
 
 describe("runtime mark ease and paper raster background", () => {
@@ -43,6 +46,26 @@ describe("runtime mark ease and paper raster background", () => {
     expect(done.running).toBeUndefined();
     expect(done.values.x2).toBe(80);
     expect(done.values.y2).toBe(12);
+  });
+
+  it("eases matching violin path numbers toward a __sel density", () => {
+    const from = violinPathD(40, gaussianKDE([8, 10, 12], 0, 20, 16), 0, 20, 120, 20, "linear", 18);
+    const to = violinPathD(40, gaussianKDE([14, 16], 0, 20, 16), 0, 20, 120, 20, "linear", 18);
+    expect(from).not.toBe(to);
+    const start = samplePathEase(from, to, 0, undefined, 220);
+    const mid = samplePathEase(start.value, to, 110, start.running, 220);
+    expect(mid.running).toBeTruthy();
+    expect(mid.value).not.toBe(from);
+    expect(mid.value).not.toBe(to);
+    const midNums = [...mid.value.matchAll(/[-+]?(?:\d*\.\d+|\d+)/g)].map((m) => Number(m[0]));
+    const fromNums = [...from.matchAll(/[-+]?(?:\d*\.\d+|\d+)/g)].map((m) => Number(m[0]));
+    const toNums = [...to.matchAll(/[-+]?(?:\d*\.\d+|\d+)/g)].map((m) => Number(m[0]));
+    expect(midNums.length).toBe(fromNums.length);
+    expect(midNums.some((n, i) => n !== fromNums[i] && n !== toNums[i])).toBe(true);
+    const done = samplePathEase(mid.value, to, 400, mid.running, 220);
+    expect(done.running).toBeUndefined();
+    expect(done.value).toBe(to);
+    expect(lerpPathD("M 0 0 L 10 0", "M 0 0 C 1 1 2 2 3 3", 0.5)).toBeNull();
   });
 
   it("writes style.opacity so play veils and hidden marks can CSS-ease", () => {

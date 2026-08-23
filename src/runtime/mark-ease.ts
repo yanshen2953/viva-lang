@@ -47,6 +47,65 @@ export type GeomTween = {
   to: Record<string, number>;
 };
 
+export type PathTween = {
+  t0: number;
+  from: string;
+  to: string;
+};
+
+function pathNumRe(): RegExp {
+  return /[-+]?(?:\d*\.\d+|\d+)(?:[eE][-+]?\d+)?/g;
+}
+
+function pathCommands(d: string): string {
+  return d.replace(pathNumRe(), "#");
+}
+
+function pathNumbers(d: string): number[] {
+  return [...d.matchAll(pathNumRe())].map((m) => Number(m[0]));
+}
+
+/** Lerp matching SVG path numbers. Different command skeletons snap. Not a morpher. */
+export function lerpPathD(from: string, to: string, t: number): string | null {
+  if (from === to) return to;
+  if (pathCommands(from) !== pathCommands(to)) return null;
+  const a = pathNumbers(from);
+  const b = pathNumbers(to);
+  if (a.length !== b.length || !a.length) return null;
+  let i = 0;
+  return from.replace(pathNumRe(), () => {
+    const av = a[i] ?? 0;
+    const bv = b[i] ?? av;
+    i += 1;
+    const v = av + (bv - av) * t;
+    if (Number.isInteger(v)) return String(v);
+    return String(Math.round(v * 100) / 100);
+  });
+}
+
+/** Lerp a violin (or same-skeleton) path `d` over the 220ms window. Not a timeline. */
+export function samplePathEase(
+  shown: string | undefined,
+  target: string,
+  now: number,
+  running: PathTween | undefined,
+  duration = MARK_EASE_MS,
+): { value: string; running?: PathTween } {
+  if (!target) return { value: target };
+  if (!shown) return { value: target };
+  const retarget = !running || running.to !== target;
+  const from = retarget ? shown : running.from;
+  const to = retarget ? target : running.to;
+  const t0 = retarget ? now : running.t0;
+  if (from === to) return { value: to };
+  const u = duration <= 0 ? 1 : Math.min(1, Math.max(0, (now - t0) / duration));
+  const e = easeOutCubic(u);
+  const mixed = lerpPathD(from, to, e);
+  if (mixed == null) return { value: to };
+  if (u >= 1) return { value: to };
+  return { value: mixed, running: { t0, from, to } };
+}
+
 export function isSummaryMark(props: Record<string, unknown>): boolean {
   return Boolean(props.__boxData || props.__violinData || props.__lineData);
 }
