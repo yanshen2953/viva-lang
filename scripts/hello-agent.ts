@@ -45,7 +45,7 @@ host.pipeline.register(
 );
 
 const handle = await host.pipeline.run("bump", {
-  values: { __sessionId: session.id },
+  sessionId: session.id,
 });
 const world = session.getWorld();
 console.log(

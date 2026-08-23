@@ -10,6 +10,10 @@ import { describeModelSlots, resolveModelsConfig } from "../check/models/index.j
 import { exportArtifact, type ExportFormat } from "../export/index.js";
 import { compileSource } from "../pipeline.js";
 import { SYSTEM_PROMPT } from "../llm/system-prompt.js";
+import { createVivaAgentHost, type VivaAgentHost } from "./host.js";
+import { attachBuiltinPipelines } from "./remote-host.js";
+import { createSessionFacade } from "./session-api.js";
+import type { CompileMeta, StatePolicy } from "./types.js";
 
 export type AgentHttpOptions = {
   port: number;
@@ -17,6 +21,8 @@ export type AgentHttpOptions = {
   /** Static files root (optional). */
   root?: string;
   modelsConfigPath?: string;
+  /** Inject a host (tests / shared MCP process). */
+  hostApi?: VivaAgentHost;
 };
 
 export type AgentHttpHandle = {
@@ -34,6 +40,9 @@ export function createAgentHttpServer(opts: AgentHttpOptions): Server {
   const host = opts.host ?? "127.0.0.1";
   const root = path.resolve(opts.root ?? process.cwd());
   const embedDir = path.join(PKG_ROOT, "embed");
+  const hostApi = opts.hostApi ?? createVivaAgentHost();
+  if (!opts.hostApi) attachBuiltinPipelines(hostApi);
+  const sessions = createSessionFacade(hostApi);
 
   return createServer(async (req, res) => {
     try {
@@ -154,6 +163,9 @@ export function createAgentHttpServer(opts: AgentHttpOptions): Server {
         return;
       }
 
+      if (await handleSessionRoutes(url, req, json, sessions)) return;
+      if (await handlePipelineRoutes(url, req, json, sessions)) return;
+
       if (opts.root && url.pathname.startsWith("/")) {
         const filePath = path.join(root, decodeURIComponent(url.pathname));
         if (!filePath.startsWith(root)) {
@@ -197,6 +209,178 @@ export function startAgentHttpServer(opts: AgentHttpOptions): Promise<AgentHttpH
       });
     });
   });
+}
+
+async function handleSessionRoutes(
+  url: URL,
+  req: import("node:http").IncomingMessage,
+  json: (status: number, body: unknown) => void,
+  sessions: ReturnType<typeof createSessionFacade>,
+): Promise<boolean> {
+  if (url.pathname === "/api/session" && req.method === "GET") {
+    json(200, { sessions: sessions.list() });
+    return true;
+  }
+  if (url.pathname === "/api/session" && req.method === "POST") {
+    const payload = JSON.parse((await readBody(req)) || "{}") as {
+      handbooks?: string[];
+      statePolicy?: StatePolicy;
+      title?: string;
+    };
+    json(200, sessions.create(payload));
+    return true;
+  }
+
+  const match = url.pathname.match(/^\/api\/session\/([^/]+)(?:\/([^/]+))?$/);
+  if (!match) return false;
+  const sessionId = decodeURIComponent(match[1]!);
+  const action = match[2];
+
+  if (!action && req.method === "GET") {
+    json(200, sessions.get(sessionId));
+    return true;
+  }
+  if (!action && req.method === "DELETE") {
+    json(200, sessions.dispose(sessionId));
+    return true;
+  }
+  if (action === "compile" && req.method === "POST") {
+    const payload = JSON.parse((await readBody(req)) || "{}") as {
+      source?: string;
+      includeIr?: boolean;
+      reason?: CompileMeta["reason"];
+      handbookIds?: string[];
+    };
+    json(
+      200,
+      sessions.compile(
+        sessionId,
+        payload.source ?? "",
+        { reason: payload.reason ?? "generate", handbooks: payload.handbookIds },
+        Boolean(payload.includeIr),
+      ),
+    );
+    return true;
+  }
+  if (action === "patch" && req.method === "POST") {
+    const payload = JSON.parse((await readBody(req)) || "{}") as {
+      source?: string;
+      includeIr?: boolean;
+      reason?: CompileMeta["reason"];
+      handbookIds?: string[];
+    };
+    json(
+      200,
+      sessions.patch(
+        sessionId,
+        payload.source ?? "",
+        { reason: payload.reason ?? "repair", handbooks: payload.handbookIds },
+        Boolean(payload.includeIr),
+      ),
+    );
+    return true;
+  }
+  if (action === "world" && req.method === "GET") {
+    json(200, sessions.world(sessionId));
+    return true;
+  }
+  if ((action === "data" || action === "state") && req.method === "POST") {
+    const payload = JSON.parse((await readBody(req)) || "{}") as {
+      path?: string;
+      value?: unknown;
+    };
+    json(200, sessions.set(sessionId, action, payload.path ?? "", payload.value));
+    return true;
+  }
+  if (action === "simulate" && req.method === "POST") {
+    const payload = JSON.parse((await readBody(req)) || "{}") as {
+      ticks?: number;
+      events?: { type: string; target: string; event?: Record<string, unknown> }[];
+    };
+    json(200, sessions.simulate(sessionId, payload));
+    return true;
+  }
+  if (action === "provenance" && req.method === "GET") {
+    json(200, { sessionId, records: sessions.provenance(sessionId) });
+    return true;
+  }
+  if (action === "bundle" && (req.method === "GET" || req.method === "POST")) {
+    json(200, sessions.bundle(sessionId));
+    return true;
+  }
+  return false;
+}
+
+async function handlePipelineRoutes(
+  url: URL,
+  req: import("node:http").IncomingMessage,
+  json: (status: number, body: unknown) => void,
+  sessions: ReturnType<typeof createSessionFacade>,
+): Promise<boolean> {
+  if (url.pathname === "/api/pipeline" && req.method === "GET") {
+    json(200, { pipelines: sessions.listPipelines() });
+    return true;
+  }
+  if (url.pathname === "/api/pipeline/run" && req.method === "POST") {
+    const payload = JSON.parse((await readBody(req)) || "{}") as {
+      id?: string;
+      sessionId?: string;
+      values?: Record<string, unknown>;
+      overrides?: Record<string, unknown>;
+    };
+    if (!payload.id || !payload.sessionId) {
+      json(400, { error: "id and sessionId are required" });
+      return true;
+    }
+    json(
+      200,
+      await sessions.runPipeline(payload.id, {
+        sessionId: payload.sessionId,
+        values: payload.values,
+        overrides: payload.overrides,
+      }),
+    );
+    return true;
+  }
+  if (url.pathname === "/api/pipeline/register" && req.method === "POST") {
+    const payload = JSON.parse((await readBody(req)) || "{}") as {
+      id?: string;
+      title?: string;
+      kind?: "inline" | "http-webhook";
+      url?: string;
+      description?: string;
+    };
+    if (!payload.id || !payload.title) {
+      json(400, { error: "id and title are required" });
+      return true;
+    }
+    json(
+      200,
+      sessions.registerPipeline({
+        id: payload.id,
+        title: payload.title,
+        kind: payload.kind,
+        url: payload.url,
+        description: payload.description,
+      }),
+    );
+    return true;
+  }
+  if (url.pathname === "/api/pipeline/cancel" && req.method === "POST") {
+    const payload = JSON.parse((await readBody(req)) || "{}") as { runId?: string };
+    if (!payload.runId) {
+      json(400, { error: "runId is required" });
+      return true;
+    }
+    json(200, await sessions.cancelPipeline(payload.runId));
+    return true;
+  }
+  const runMatch = url.pathname.match(/^\/api\/pipeline\/([^/]+)$/);
+  if (runMatch && req.method === "GET") {
+    json(200, sessions.getPipelineRun(decodeURIComponent(runMatch[1]!)));
+    return true;
+  }
+  return false;
 }
 
 function readBody(req: import("node:http").IncomingMessage): Promise<string> {
@@ -266,6 +450,22 @@ function openApiSpec(): Record<string, unknown> {
             },
           },
         },
+      },
+      "/api/session": {
+        get: { summary: "List headless sessions" },
+        post: { summary: "Create a headless VivaSession" },
+      },
+      "/api/session/{id}/compile": {
+        post: { summary: "Compile source into a session (records provenance)" },
+      },
+      "/api/session/{id}/patch": {
+        post: { summary: "Patch session source with statePolicy" },
+      },
+      "/api/session/{id}/world": { get: { summary: "Read session state/data" } },
+      "/api/session/{id}/bundle": { get: { summary: "Export provenance bundle" } },
+      "/api/pipeline": { get: { summary: "List registered pipelines" } },
+      "/api/pipeline/run": {
+        post: { summary: "Run a pipeline against a session (inline.set or webhook)" },
       },
       "/api/export": {
         post: {

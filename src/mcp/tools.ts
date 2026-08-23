@@ -5,6 +5,10 @@ import { exportArtifact, type ExportFormat } from "../export/index.js";
 import { SYSTEM_PROMPT } from "../llm/system-prompt.js";
 import { createNodePromptService } from "../agent/prompt.node.js";
 import { describeModelSlots, resolveModelsConfig } from "../check/models/index.js";
+import type { VivaAgentHost } from "../agent/host.js";
+import { attachBuiltinPipelines, getRemoteAgentHost } from "../agent/remote-host.js";
+import { createSessionFacade } from "../agent/session-api.js";
+import type { CompileMeta, StatePolicy } from "../agent/types.js";
 
 const handbookIdsSchema = z.array(z.string()).optional();
 
@@ -18,6 +22,7 @@ export function textResult(text: string, isError = false) {
 export async function handleMcpTool(
   name: string,
   args: Record<string, unknown>,
+  host?: VivaAgentHost,
 ): Promise<{ content: { type: "text"; text: string }[]; isError?: boolean }> {
   try {
     switch (name) {
@@ -31,6 +36,10 @@ export async function handleMcpTool(
         return toolPrompt(args);
       case "viva_models":
         return toolModels(args);
+      case "viva_session":
+        return await toolSession(args, ensureHost(host));
+      case "viva_pipeline":
+        return await toolPipeline(args, ensureHost(host));
       default:
         return textResult(`Unknown tool: ${name}`, true);
     }
@@ -124,6 +133,112 @@ function toolModels(args: Record<string, unknown>) {
   return textResult(JSON.stringify(describeModelSlots(resolveModelsConfig(configPath)), null, 2));
 }
 
+function ensureHost(host?: VivaAgentHost): VivaAgentHost {
+  const resolved = host ?? getRemoteAgentHost();
+  attachBuiltinPipelines(resolved);
+  return resolved;
+}
+
+async function toolSession(args: Record<string, unknown>, host: VivaAgentHost) {
+  const api = createSessionFacade(host);
+  const action = String(args.action ?? "list");
+  const sessionId = args.sessionId ? String(args.sessionId) : "";
+  const includeIr = Boolean(args.includeIr);
+  const meta: CompileMeta = {
+    reason: (args.reason as CompileMeta["reason"]) ?? undefined,
+    handbooks: args.handbookIds as string[] | undefined,
+  };
+
+  switch (action) {
+    case "create":
+      return textResult(
+        JSON.stringify(
+          api.create({
+            handbooks: args.handbookIds as string[] | undefined,
+            statePolicy: args.statePolicy as StatePolicy | undefined,
+            title: args.title ? String(args.title) : undefined,
+          }),
+        ),
+      );
+    case "list":
+      return textResult(JSON.stringify({ sessions: api.list() }));
+    case "get":
+      return textResult(JSON.stringify(api.get(sessionId)));
+    case "compile": {
+      const compiled = api.compile(sessionId, String(args.source ?? ""), meta, includeIr);
+      return textResult(JSON.stringify(compiled), !compiled.ok);
+    }
+    case "patch":
+      return textResult(
+        JSON.stringify(api.patch(sessionId, String(args.source ?? ""), meta, includeIr)),
+      );
+    case "world":
+      return textResult(JSON.stringify(api.world(sessionId)));
+    case "set":
+      return textResult(
+        JSON.stringify(
+          api.set(
+            sessionId,
+            args.target === "state" ? "state" : "data",
+            String(args.path ?? ""),
+            args.value,
+          ),
+        ),
+      );
+    case "simulate":
+      return textResult(
+        JSON.stringify(
+          api.simulate(sessionId, {
+            ticks: typeof args.ticks === "number" ? args.ticks : 0,
+          }),
+        ),
+      );
+    case "provenance":
+      return textResult(JSON.stringify({ sessionId, records: api.provenance(sessionId) }));
+    case "bundle":
+      return textResult(JSON.stringify(api.bundle(sessionId)));
+    case "dispose":
+      return textResult(JSON.stringify(api.dispose(sessionId)));
+    default:
+      return textResult(`Unknown viva_session action: ${action}`, true);
+  }
+}
+
+async function toolPipeline(args: Record<string, unknown>, host: VivaAgentHost) {
+  const api = createSessionFacade(host);
+  const action = String(args.action ?? "list");
+  switch (action) {
+    case "list":
+      return textResult(JSON.stringify({ pipelines: api.listPipelines() }));
+    case "run": {
+      const sessionId = String(args.sessionId ?? "");
+      const id = String(args.id ?? "inline.set");
+      const handle = await api.runPipeline(id, {
+        sessionId,
+        values: (args.values as Record<string, unknown> | undefined) ?? {},
+      });
+      return textResult(JSON.stringify(handle), handle.status === "error");
+    }
+    case "register":
+      return textResult(
+        JSON.stringify(
+          api.registerPipeline({
+            id: String(args.id ?? ""),
+            title: String(args.title ?? args.id ?? "pipeline"),
+            kind: args.kind === "inline" ? "inline" : "http-webhook",
+            url: args.url ? String(args.url) : undefined,
+          }),
+        ),
+      );
+    case "cancel":
+      return textResult(JSON.stringify(await api.cancelPipeline(String(args.runId ?? ""))));
+    case "get":
+      return textResult(JSON.stringify(api.getPipelineRun(String(args.runId ?? ""))));
+    default:
+      return textResult(`Unknown viva_pipeline action: ${action}`, true);
+  }
+}
+
 export const MCP_TOOL_DEFINITIONS = [
   {
     name: "viva_compile",
@@ -188,6 +303,66 @@ export const MCP_TOOL_DEFINITIONS = [
       },
     },
   },
+  {
+    name: "viva_session",
+    description:
+      "Headless VivaSession: create/compile/patch/world/set/simulate/provenance/bundle/dispose.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        action: {
+          type: "string",
+          enum: [
+            "create",
+            "list",
+            "get",
+            "compile",
+            "patch",
+            "world",
+            "set",
+            "simulate",
+            "provenance",
+            "bundle",
+            "dispose",
+          ],
+        },
+        sessionId: { type: "string" },
+        source: { type: "string" },
+        handbookIds: { type: "array", items: { type: "string" } },
+        statePolicy: { type: "string", enum: ["reset", "preserve", "preserve-data"] },
+        title: { type: "string" },
+        path: { type: "string" },
+        target: { type: "string", enum: ["data", "state"] },
+        value: {},
+        ticks: { type: "number" },
+        includeIr: { type: "boolean" },
+        reason: {
+          type: "string",
+          enum: ["generate", "repair", "user-edit", "pipeline", "restore"],
+        },
+      },
+      required: ["action"],
+    },
+  },
+  {
+    name: "viva_pipeline",
+    description:
+      "Run / list / register pipelines (inline.set or http-webhook) against a session.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        action: { type: "string", enum: ["run", "list", "register", "cancel", "get"] },
+        id: { type: "string" },
+        sessionId: { type: "string" },
+        values: { type: "object" },
+        kind: { type: "string", enum: ["inline", "http-webhook"] },
+        url: { type: "string" },
+        title: { type: "string" },
+        runId: { type: "string" },
+      },
+      required: ["action"],
+    },
+  },
 ] as const;
 
 // Zod schemas for registerTool if using McpServer high-level API
@@ -216,5 +391,43 @@ export const mcpToolSchemas = {
   },
   viva_models: {
     configPath: z.string().optional(),
+  },
+  viva_session: {
+    action: z.enum([
+      "create",
+      "list",
+      "get",
+      "compile",
+      "patch",
+      "world",
+      "set",
+      "simulate",
+      "provenance",
+      "bundle",
+      "dispose",
+    ]),
+    sessionId: z.string().optional(),
+    source: z.string().optional(),
+    handbookIds: handbookIdsSchema,
+    statePolicy: z.enum(["reset", "preserve", "preserve-data"]).optional(),
+    title: z.string().optional(),
+    path: z.string().optional(),
+    target: z.enum(["data", "state"]).optional(),
+    value: z.any().optional(),
+    ticks: z.number().optional(),
+    includeIr: z.boolean().optional(),
+    reason: z
+      .enum(["generate", "repair", "user-edit", "pipeline", "restore"])
+      .optional(),
+  },
+  viva_pipeline: {
+    action: z.enum(["run", "list", "register", "cancel", "get"]),
+    id: z.string().optional(),
+    sessionId: z.string().optional(),
+    values: z.record(z.string(), z.any()).optional(),
+    kind: z.enum(["inline", "http-webhook"]).optional(),
+    url: z.string().optional(),
+    title: z.string().optional(),
+    runId: z.string().optional(),
   },
 };

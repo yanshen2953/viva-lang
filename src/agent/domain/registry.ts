@@ -119,6 +119,7 @@ export function createDomainViewRegistry(host: () => VivaAgentHost): DomainViewR
   registry.register(createVivaInlineView());
   registry.register(createImageView());
   registry.register(createIframeView());
+  registry.register(createJsonTableView());
   return registry;
 }
 
@@ -242,6 +243,112 @@ function createIframeView(): DomainView {
   };
 }
 
+function createJsonTableView(): DomainView {
+  return {
+    id: "builtin.json-table",
+    title: "JSON Table",
+    accept: ["application/json", "text/csv", "text/tab-separated-values"],
+    mount(el, ctx) {
+      el.innerHTML = "";
+      const wrap = document.createElement("div");
+      wrap.style.cssText =
+        "overflow:auto;max-height:100%;font:12px/1.45 ui-monospace,SFMono-Regular,monospace";
+      el.appendChild(wrap);
+      return {
+        async load(resource) {
+          const text = await loadVivaSourceFromUri(resource.uri);
+          const { headers, rows } = parseTable(text, resource.mediaType);
+          wrap.innerHTML = "";
+          const table = document.createElement("table");
+          table.style.cssText = "border-collapse:collapse;width:100%";
+          const thead = document.createElement("thead");
+          const hr = document.createElement("tr");
+          for (const h of headers) {
+            const th = document.createElement("th");
+            th.textContent = h;
+            th.style.cssText = "text-align:left;padding:4px 8px;border-bottom:1px solid #cbd5e1";
+            hr.appendChild(th);
+          }
+          thead.appendChild(hr);
+          table.appendChild(thead);
+          const tbody = document.createElement("tbody");
+          rows.forEach((row, i) => {
+            const tr = document.createElement("tr");
+            tr.style.cursor = "pointer";
+            for (const h of headers) {
+              const td = document.createElement("td");
+              td.textContent = stringifyCell(row[h]);
+              td.style.cssText = "padding:4px 8px;border-bottom:1px solid #e2e8f0";
+              tr.appendChild(td);
+            }
+            tr.addEventListener("click", () => {
+              const id = String(row.id ?? row.name ?? i);
+              ctx.bridge.setDomainSelection({
+                kind: "row",
+                ids: [id],
+                payload: row,
+              });
+              ctx.bridge.pushToViva("selectedId", id);
+            });
+            tbody.appendChild(tr);
+          });
+          table.appendChild(tbody);
+          wrap.appendChild(table);
+        },
+        dispose() {
+          el.innerHTML = "";
+        },
+      };
+    },
+  };
+}
+
+function parseTable(
+  text: string,
+  mediaType: string,
+): { headers: string[]; rows: Record<string, unknown>[] } {
+  if (mediaType.includes("csv") || mediaType.includes("tab-separated")) {
+    const sep = mediaType.includes("tab") ? "\t" : ",";
+    const lines = text.split(/\r?\n/).filter((l) => l.length > 0);
+    const headers = (lines[0] ?? "").split(sep).map((h) => h.trim());
+    const rows = lines.slice(1).map((line) => {
+      const cells = line.split(sep);
+      const row: Record<string, unknown> = {};
+      headers.forEach((h, i) => {
+        row[h] = cells[i]?.trim() ?? "";
+      });
+      return row;
+    });
+    return { headers, rows };
+  }
+  const parsed = JSON.parse(text) as unknown;
+  if (Array.isArray(parsed)) {
+    const rows = parsed.map((item) =>
+      item && typeof item === "object"
+        ? (item as Record<string, unknown>)
+        : { value: item },
+    );
+    const headerSet = new Set<string>();
+    for (const row of rows) for (const k of Object.keys(row)) headerSet.add(k);
+    return { headers: [...headerSet], rows };
+  }
+  if (parsed && typeof parsed === "object") {
+    const rows = Object.entries(parsed as Record<string, unknown>).map(([k, v]) => ({
+      key: k,
+      value: v,
+    }));
+    return { headers: ["key", "value"], rows };
+  }
+  return { headers: ["value"], rows: [{ value: parsed }] };
+}
+
+function stringifyCell(value: unknown): string {
+  if (value == null) return "";
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  return JSON.stringify(value);
+}
+
 /** Suggest opening a domain view for a pipeline artifact (host UI helper). */
 export function suggestViewForArtifact(
   registry: DomainViewRegistry,
@@ -252,6 +359,13 @@ export function suggestViewForArtifact(
   }
   if (/viva/i.test(artifact.mediaType) || artifact.mediaType === "application/vnd.viva") {
     return registry.list().find((v) => v.id === VIVA_INLINE_PLUGIN_ID);
+  }
+  if (
+    artifact.mediaType === "application/json" ||
+    artifact.mediaType === "text/csv" ||
+    artifact.mediaType === "text/tab-separated-values"
+  ) {
+    return registry.list().find((v) => v.id === "builtin.json-table");
   }
   return registry.resolve(artifact.mediaType);
 }

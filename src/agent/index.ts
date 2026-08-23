@@ -17,6 +17,14 @@ export {
   createInlinePipeline,
   type PipelineDefFull,
 } from "./pipeline/port.js";
+export { createHttpWebhookPipeline } from "./pipeline/adapters/http-webhook.js";
+export {
+  getRemoteAgentHost,
+  resetRemoteAgentHost,
+  attachBuiltinPipelines,
+} from "./remote-host.js";
+export { createSessionFacade } from "./session-api.js";
+export type { SessionFacade, PipelineInfo, CompileSummary } from "./session-api.js";
 // Node-only adapter: import from `./pipeline/adapters/local-command.js` (not bundled into playground).
 export {
   createDomainViewRegistry,

@@ -88,6 +88,8 @@ export type PipelineResult = {
 };
 
 export type PipelineInput = {
+  /** Preferred over values.__sessionId */
+  sessionId?: string;
   values?: Record<string, unknown>;
   overrides?: Record<string, unknown>;
 };
@@ -172,7 +174,14 @@ export type PipelineDef = {
 };
 
 export type PipelinePort = {
-  register(def: PipelineDef): void;
+  register(def: {
+    id: string;
+    title: string;
+    description?: string;
+    outputs: PipelineBinding[];
+    inputs?: PipelineBinding[];
+    launch: (ctx: never) => Promise<PipelineResult>;
+  }): void;
   unregister(id: string): void;
   list(): PipelineDef[];
   run(id: string, input?: PipelineInput): Promise<PipelineHandle>;

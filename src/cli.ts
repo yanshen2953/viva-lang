@@ -21,6 +21,8 @@ import { simulate } from "./simulate.js";
 import { SYSTEM_PROMPT } from "./llm/system-prompt.js";
 import { createNodePromptService } from "./agent/prompt.node.js";
 import { startAgentHttpServer } from "./agent/http-server.js";
+import { createVivaAgentHost } from "./agent/host.js";
+import { attachBuiltinPipelines } from "./agent/remote-host.js";
 import { resolveCompileHandbooks } from "./style/compile-handbooks.js";
 
 async function main(): Promise<void> {
@@ -70,6 +72,7 @@ async function main(): Promise<void> {
     console.log(`GET  ${base}/api/health`);
     console.log(`GET  ${base}/api/openapi.json`);
     console.log(`POST ${base}/api/compile | /api/check | /api/export`);
+    console.log(`POST ${base}/api/session | /api/pipeline/run`);
     console.log(`GET  ${base}/embed/viva-embed.js`);
     return;
   }
@@ -196,6 +199,34 @@ async function main(): Promise<void> {
     return;
   }
 
+  if (command === "provenance") {
+    const host = createVivaAgentHost();
+    attachBuiltinPipelines(host);
+    const session = host.createSession({
+      mount: null,
+      handbooks: handbookIds.length ? handbookIds : undefined,
+    });
+    const compiled = session.compile(source, {
+      reason: "generate",
+      handbooks: handbookIds.length ? handbookIds : undefined,
+    });
+    if (!compiled.ok) {
+      console.error(compiled.error ?? "compile failed");
+      process.exitCode = 1;
+      return;
+    }
+    const bundle = session.exportProvenanceBundle();
+    const json = JSON.stringify(bundle, null, 2);
+    if (outPath) {
+      await mkdir(path.dirname(path.resolve(outPath)), { recursive: true });
+      await writeFile(outPath, json, "utf8");
+      console.log(outPath);
+    } else {
+      console.log(json);
+    }
+    return;
+  }
+
   if (command === "simulate") {
     const result = compileSource(source, input, handbookIds.length ? { handbookIds } : undefined);
     if (!result.ir) {
@@ -257,6 +288,7 @@ Commands:
   svg <file> [-o out.svg]          Export static SVG
   export <file> -f <fmt>           Export svg|png|jpg|pdf (repeat --handbook for style)
   simulate <file> [--ticks N] Headless world JSON
+  provenance <file> [-o out.json]  Compile via session and export provenance bundle
   prompt [--handbook id]      Print system prompt (+ handbooks)
   serve [--port 8765] [--host 0.0.0.0]  Agent HTTP bridge (REST + embed JS)
   version                     Print package version

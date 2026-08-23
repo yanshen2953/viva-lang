@@ -36,6 +36,7 @@ export function createPipelinePort(deps: {
 }): PipelinePort {
   const defs = new Map<string, PipelineDefFull>();
   const runs = new Map<string, PipelineHandle>();
+  const aborts = new Map<string, AbortController>();
   let runSeq = 0;
 
   return {
@@ -52,25 +53,29 @@ export function createPipelinePort(deps: {
       return runs.get(runId);
     },
     async cancel(runId: string) {
+      aborts.get(runId)?.abort();
       const handle = runs.get(runId);
       if (handle && handle.status === "running") {
         handle.status = "cancelled";
+        handle.result = handle.result
+          ? { ...handle.result, status: "cancelled" }
+          : { runId, status: "cancelled" };
       }
     },
     async run(id: string, input: PipelineInput = {}) {
       const def = defs.get(id);
       if (!def) throw new Error(`pipeline not registered: ${id}`);
 
-      // Prefer explicit sessionId in values; else require caller to bind via input.values.__sessionId
       const sessionId = String(
-        input.values?.__sessionId ??
+        input.sessionId ??
+          input.values?.__sessionId ??
           input.overrides?.__sessionId ??
           "",
       );
       const session = sessionId ? deps.getSession(sessionId) : undefined;
       if (!session) {
         throw new Error(
-          "pipeline.run requires input.values.__sessionId with an active session",
+          "pipeline.run requires input.sessionId (or values.__sessionId) with an active session",
         );
       }
 
@@ -90,6 +95,7 @@ export function createPipelinePort(deps: {
       });
 
       const ac = new AbortController();
+      aborts.set(runId, ac);
       const sampled = sampleInputs(def, session, input);
       const logs: string[] = [];
 
@@ -101,6 +107,16 @@ export function createPipelinePort(deps: {
           log: (line) => logs.push(line),
         });
         result.runId = result.runId || runId;
+        if (handle.status === "cancelled" || ac.signal.aborted) {
+          handle.status = "cancelled";
+          handle.result = { ...result, runId, status: "cancelled" };
+          deps.events.emit({
+            type: "pipeline-end",
+            sessionId: session.id,
+            detail: { runId, result: handle.result },
+          });
+          return handle;
+        }
         handle.result = result;
         handle.status = result.status === "ok" ? "ok" : result.status;
 
@@ -132,15 +148,22 @@ export function createPipelinePort(deps: {
 
         return handle;
       } catch (err) {
+        const aborted = ac.signal.aborted || handle.status === "cancelled";
         const error = err instanceof Error ? err.message : String(err);
-        handle.status = "error";
-        handle.result = { runId, status: "error", error };
+        handle.status = aborted ? "cancelled" : "error";
+        handle.result = {
+          runId,
+          status: aborted ? "cancelled" : "error",
+          error: aborted ? "cancelled" : error,
+        };
         deps.events.emit({
           type: "pipeline-end",
           sessionId: session.id,
-          detail: { runId, error },
+          detail: { runId, error: handle.result.error },
         });
         return handle;
+      } finally {
+        aborts.delete(runId);
       }
     },
   };

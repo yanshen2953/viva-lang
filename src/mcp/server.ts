@@ -54,6 +54,25 @@ export async function runVivaMcpServer(): Promise<void> {
     async (args) => handleMcpTool("viva_models", args),
   );
 
+  server.registerTool(
+    "viva_session",
+    {
+      description:
+        "Headless VivaSession: create/compile/patch/world/set/simulate/provenance/bundle.",
+      inputSchema: mcpToolSchemas.viva_session,
+    },
+    async (args) => handleMcpTool("viva_session", args),
+  );
+
+  server.registerTool(
+    "viva_pipeline",
+    {
+      description: "Run or register pipelines (inline.set / http-webhook) on a session.",
+      inputSchema: mcpToolSchemas.viva_pipeline,
+    },
+    async (args) => handleMcpTool("viva_pipeline", args),
+  );
+
   server.registerPrompt(
     "viva_generate",
     {
