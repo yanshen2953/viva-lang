@@ -20,6 +20,8 @@ HTTP (`viva serve`) and MCP solve the same problems; pick one per host:
 | `viva_export` | svg/png/jpg/pdf (base64 or `outputPath`) |
 | `viva_prompt` | System prompt + handbooks |
 | `viva_models` | Resolved base/vision model slots |
+| `viva_session` | Headless session: `create` / `compile` / `patch` / `world` / `set` / `simulate` / `provenance` / `bundle` / `dispose` |
+| `viva_pipeline` | `run` / `list` / `register` (`inline` or `http-webhook`) / `cancel` |
 
 **Prompt:** `viva_generate` — template for “write a new artifact” turns.
 

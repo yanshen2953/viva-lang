@@ -14,7 +14,10 @@ viva export examples/charts.viva -f jpg --width 1600 -o charts.jpg
 viva export examples/charts.viva -f pdf -o charts.pdf      # vector PDF (geometry 1:1, default)
 viva export examples/charts.viva -f pdf-raster -o r.pdf   # PNG-in-PDF fallback
 viva simulate examples/exam/P1_param_lab.viva --ticks 10
+viva check examples/figure-atlas.viva --visual --handbook print-nature
+viva provenance examples/hello.viva
 viva prompt --handbook print-nature
+viva mcp
 viva serve --port 8765
 ```
 

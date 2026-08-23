@@ -61,7 +61,7 @@ Cursor 配置示例（`mcp-config.example.json`）：
 }
 ```
 
-工具：`viva_compile`、`viva_check`、`viva_export`、`viva_prompt`、`viva_models`。
+工具：`viva_compile`、`viva_check`、`viva_export`、`viva_prompt`、`viva_models`、`viva_session`、`viva_pipeline`。
 
 详见 [`hosts/mcp.md`](hosts/mcp.md)。
 
@@ -96,6 +96,8 @@ Cursor 配置示例（`mcp-config.example.json`）：
 | POST | `/api/compile` | 编译 → IR JSON |
 | POST | `/api/check` | 结构 / 像素 / 多模态检查 |
 | POST | `/api/export` | 导出 svg/png/jpg/pdf |
+| POST | `/api/session` | 无头 Session；`/:id/compile\|patch\|world\|bundle` |
+| POST | `/api/pipeline/run` | 对 Session 跑 `inline.set` 或已注册 webhook |
 | GET | `/embed` | 演示页（内联插件 + API 按钮） |
 | GET | `/embed/viva-embed.js` | ES 模块 embed 包 |
 

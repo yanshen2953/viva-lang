@@ -22,7 +22,9 @@ Dependency refresh on pod start is `npm install` (see environment update script)
 | Prune artifact screenshots | `node scripts/cleanup-artifacts.mjs` |
 | **One-click deploy** | `docker compose up -d --build` or `bash install/one-click.sh` |
 | Agent HTTP API | `viva serve --host 0.0.0.0 --port 8765` — see `docs/DEPLOY.md` |
-| MCP (Cursor) | `viva mcp` or `viva-mcp` — see `docs/hosts/mcp.md` |
+| MCP (Cursor) | `viva mcp` or `viva-mcp` — tools include `viva_session` / `viva_pipeline`; see `docs/hosts/mcp.md` |
+| Provenance CLI | `npx vite-node src/cli.ts -- provenance examples/hello.viva` |
+| Gap checklist | `docs/GAPS.md` — PLAN §1 victory conditions |
 | **Handoff doc** | `docs/HANDOFF.md` — context for new Cloud Agents |
 | Review brief demo | `npm run demo:review` |
 | Agent HTTP bridge | `npx vite-node src/cli.ts -- serve --port 8765` |

@@ -25,10 +25,11 @@
 
 | 项 | 状态 |
 | --- | --- |
-| 工作分支 | `cursor/style-handbook-hook-a8c1`（与 `origin` 同步，working tree clean） |
-| 最新提交 | `033c253` — MCP stdio server |
-| 测试 | `npm test` → **108 passed**（20 files） |
+| 工作分支 | `cursor/style-handbook-hook-a8c1` |
+| 最新提交 | Session/Pipeline/Provenance 对外接入 + CI + GAPS（见 git log） |
+| 测试 | `npm test` → **115+ passed**（见当前 `vitest`） |
 | `build:lib` | `npm run build:lib` 通过 |
+| CI | `.github/workflows/ci.yml`：`npm ci` / `build:lib` / `npm test` / Atlas `--visual` |
 | `npm run build` | 可能因 playground/runtime 严格 tsc 失败；日常用 `vite-node` + vitest |
 
 ### PR #9 已包含的主要交付（按提交顺序）
@@ -43,6 +44,8 @@
 | 默认内联 embed | `createVivaInlineEmbed()`、`builtin.viva-inline`、`docs/hosts/inline-embed.md` |
 | 安装与部署 | `pack:release`、Docker、`install/one-click.sh`、`viva serve` HTTP API |
 | **MCP** | `viva mcp` / `viva-mcp`；工具见 `docs/hosts/mcp.md` |
+| Session API | HTTP `/api/session` + MCP `viva_session`；Pipeline `inline.set` / http-webhook |
+| 缺口清单 | `docs/GAPS.md`（PLAN §1 六条胜利条件） |
 
 ### 其它开放 PR（较旧，可能已被 #9 覆盖或需合并策略）
 
@@ -110,12 +113,12 @@ Vision 检查需 `viva.models.json`（见 `viva.models.json.example`）或 env `
 
 按优先级：
 
-1. **PR #9 收尾** — 审阅 diff、补 CI（当前 PR 无 reported checks）、按需把 DRAFT → ready（**仅用户明确要求时**）
-2. **AGENTS.md** — 补一行 MCP：`viva mcp` / `docs/hosts/mcp.md`
-3. **Playground** — 状态栏已有结构检查；浏览器内 vision/MCP 不现实（无 headless resvg 同等环境）
+1. **PR #9 收尾** — CI 已加；按需把 DRAFT → ready（**仅用户明确要求时**）。勿自动 merge
+2. **AGENTS.md / MCP** — 已含 `viva mcp`；现增 `viva_session` / `viva_pipeline`
+3. **Playground** — 状态栏已有结构检查；浏览器内 vision/MCP 不现实
 4. **Agent exam** — `npm run test:agent-exam` 需 `DEEPSEEK_API_KEY`（Pi+DeepSeek SUT）
 5. **发布包实跑** — `npm run pack:release`，在干净环境验证 `release/` 与 Docker
-6. **PLAN.md §1** — 对照 6 条胜利条件做缺口清单（pipeline/domain/provenance 是否对外「可说超过」）
+6. **PLAN §9.1 联合验收** — 见 `docs/GAPS.md`：拖参→pipeline 回流、领域选中桥、第三方复盘演示仍欠
 
 ### 已知约束 / 坑
 

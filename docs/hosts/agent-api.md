@@ -57,6 +57,24 @@ Response: same as `compileSource()` — `ir`, `diagnostics`, `error`.
 
 Returns binary body (`application/pdf`, etc.).
 
+### Session / Pipeline / Provenance
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| POST | `/api/session` | Create headless session (`handbooks`, `statePolicy`) |
+| GET | `/api/session` | List sessions |
+| POST | `/api/session/:id/compile` | Compile source (records provenance) |
+| POST | `/api/session/:id/patch` | Patch with session `statePolicy` |
+| GET | `/api/session/:id/world` | Read `state` / `data` |
+| POST | `/api/session/:id/data` | `{ path, value }` → `setData` |
+| POST | `/api/session/:id/simulate` | Headless ticks/events |
+| GET | `/api/session/:id/bundle` | Provenance export bundle |
+| GET | `/api/pipeline` | Registered pipelines (`inline.set` builtin) |
+| POST | `/api/pipeline/run` | `{ id, sessionId, values }` |
+| POST | `/api/pipeline/register` | `{ id, title, kind, url }` webhook or inline |
+
+CLI: `viva provenance file.viva` compiles via a temporary session and prints the bundle.
+
 ## Embed assets
 
 | Path | Content |
