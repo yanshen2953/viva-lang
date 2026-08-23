@@ -11,7 +11,7 @@ import { withIrStyleContext } from "./style-context.js";
 export type { CheckDiagnostic, CheckOptions, CheckResult, CheckSeverity } from "./types.js";
 export { withIrStyleContext } from "./style-context.js";
 export { runStructuralChecks } from "./structural.js";
-export { runVisualChecks } from "./visual.js";
+export { figureCellsFromIr, runVisualChecks } from "./visual.js";
 export { runVisionChecks } from "./vision.js";
 export { rasterizeIr } from "./raster.js";
 export {
