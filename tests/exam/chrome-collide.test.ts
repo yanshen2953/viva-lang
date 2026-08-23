@@ -21,6 +21,18 @@ describe("paper chrome collision", () => {
     }
   });
 
+  it("keeps leftover words on the last line when capped", () => {
+    const lines = wrapTextLines(
+      "Serum concentration of inflammatory cytokine",
+      40,
+      9,
+      0.2,
+      3,
+    );
+    expect(lines.length).toBe(3);
+    expect(lines.join("").replace(/\s/g, "")).toMatch(/cytokine/);
+  });
+
   it("drops overlapping x-tick labels but keeps the ends", () => {
     const kept = thinXTicks([
       { label: "January", x: 10 },

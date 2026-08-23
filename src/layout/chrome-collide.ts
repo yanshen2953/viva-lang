@@ -108,6 +108,7 @@ export function wrapTextLines(
   maxWidth: number,
   font: number,
   tracking = 0.35,
+  maxLines = 0,
 ): string[] {
   const src = text.trim();
   if (!src) return [];
@@ -135,7 +136,11 @@ export function wrapTextLines(
     }
   }
   flush();
-  return lines.length ? lines : [src];
+  const out = lines.length ? lines : [src];
+  if (maxLines > 0 && out.length > maxLines) {
+    return [...out.slice(0, maxLines - 1), out.slice(maxLines - 1).join(" ")];
+  }
+  return out;
 }
 
 export function estimateTextWidthPx(text: string, font: number, tracking = 0): number {
@@ -337,7 +342,7 @@ export function placePaperChrome(
   }
   if (title) {
     const maxW = Math.max(TITLE_FONT * 4, box.px1 - titleX - 4);
-    titleLines = wrapTextLines(title, maxW, TITLE_FONT, 0.35).slice(0, 3);
+    titleLines = wrapTextLines(title, maxW, TITLE_FONT, 0.35, 3);
     if (!titleLines.length) titleLines = [title];
     if (titleLines.length > 1) {
       titleY -= (titleLines.length - 1) * (TITLE_FONT + 2);
@@ -346,13 +351,13 @@ export function placePaperChrome(
   }
   if (xCap) {
     const maxW = Math.max(AXIS_FONT * 4, box.px1 - box.px0);
-    xTitleLines = wrapTextLines(xCap, maxW, AXIS_FONT, 0.2).slice(0, 3);
+    xTitleLines = wrapTextLines(xCap, maxW, AXIS_FONT, 0.2, 3);
     if (!xTitleLines.length) xTitleLines = [xCap];
     rects = build();
   }
   if (yCap) {
     const maxW = Math.max(AXIS_FONT * 4, box.py1 - box.py0);
-    yTitleLines = wrapTextLines(yCap, maxW, AXIS_FONT, 0.2).slice(0, 3);
+    yTitleLines = wrapTextLines(yCap, maxW, AXIS_FONT, 0.2, 3);
     if (!yTitleLines.length) yTitleLines = [yCap];
     rects = build();
   }
