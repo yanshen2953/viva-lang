@@ -21,8 +21,11 @@ import { domainMap, parseTimeValue, scaleKind, type ScaleKind } from "./space.js
 import { COLUMN_MM, sceneScaleOf } from "./space/scene-box.js";
 import { estimateBoardBands } from "./layout/board-chrome.js";
 import {
+  clampChartInsets,
   growInsetsForChrome,
   growInsetsForNeighbors,
+  INSET_CAP_FIT,
+  INSET_CAP_SOFT,
   placePaperChrome,
   thinXTicks,
   thinYTicks,
@@ -1008,17 +1011,14 @@ function expandLayoutFigure(
   const scale = sceneScaleOf({ unit });
   const toScene = (px: number) => px / Math.max(scale, 1e-6);
   const pad = toScene(3);
+  const floor = { l: toScene(10), r: toScene(8), t: toScene(8), b: toScene(10) };
   const clampInset = (
     l: number,
     r: number,
     t: number,
     b: number,
-  ): { l: number; r: number; t: number; b: number } => ({
-    l: Math.min(Math.max(toScene(10), l), cellW * 0.38),
-    r: Math.min(Math.max(toScene(8), r), cellW * 0.38),
-    t: Math.min(Math.max(toScene(8), t), cellH * 0.28),
-    b: Math.min(Math.max(toScene(10), b), cellH * 0.32),
-  });
+    cap = INSET_CAP_SOFT,
+  ) => clampChartInsets({ l, r, t, b }, cellW, cellH, floor, cap);
 
   type CellPlan = {
     name: string;
@@ -1064,7 +1064,13 @@ function expandLayoutFigure(
           .map((layout) => ({ cell: layout.cell, rects: layout.rects }));
         const grow = growInsetsForNeighbors(layouts[i]!.rects, layouts[i]!.cell, neighbors, pad);
         if (grow.l <= 0.5 && grow.r <= 0.5 && grow.t <= 0.5 && grow.b <= 0.5) continue;
-        const next = clampInset(plan.l + grow.l, plan.r + grow.r, plan.t + grow.t, plan.b + grow.b);
+        const next = clampInset(
+          plan.l + grow.l,
+          plan.r + grow.r,
+          plan.t + grow.t,
+          plan.b + grow.b,
+          iter >= 3 ? INSET_CAP_FIT : INSET_CAP_SOFT,
+        );
         if (
           next.l - plan.l > 0.4 ||
           next.r - plan.r > 0.4 ||
@@ -2412,18 +2418,21 @@ function fitChartInsets(
   const toScene = (px: number) => px / Math.max(scale, 1e-6);
   const pad = toScene(3);
   const extras = chartChromeExtras(artifact, chart);
-  let l = toScene(10);
-  let r = toScene(8);
-  let t = toScene(8);
-  let b = toScene(10);
+  const floor = { l: toScene(10), r: toScene(8), t: toScene(8), b: toScene(10) };
+  let l = floor.l;
+  let r = floor.r;
+  let t = floor.t;
+  let b = floor.b;
+  let cap = INSET_CAP_SOFT;
   const clamp = () => {
-    l = Math.min(Math.max(toScene(10), l), cellW * 0.38);
-    r = Math.min(Math.max(toScene(8), r), cellW * 0.38);
-    t = Math.min(Math.max(toScene(8), t), cellH * 0.28);
-    b = Math.min(Math.max(toScene(10), b), cellH * 0.32);
+    const next = clampChartInsets({ l, r, t, b }, cellW, cellH, floor, cap);
+    l = next.l;
+    r = next.r;
+    t = next.t;
+    b = next.b;
   };
   clamp();
-  for (let iter = 0; iter < 8; iter++) {
+  for (let iter = 0; iter < 12; iter++) {
     const geom: Record<string, Expr> = {
       ...chart.props,
       areaX: literal([cellX0 + l, Math.max(cellX0 + l + 8, cellX0 + cellW - r)]),
@@ -2440,6 +2449,7 @@ function fitChartInsets(
       y1: cellY0 + cellH,
     }, pad);
     if (grow.l <= 0.5 && grow.r <= 0.5 && grow.t <= 0.5 && grow.b <= 0.5) break;
+    if (iter >= 7) cap = INSET_CAP_FIT;
     l += grow.l;
     r += grow.r;
     t += grow.t;

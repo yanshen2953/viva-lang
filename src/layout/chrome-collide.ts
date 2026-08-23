@@ -518,6 +518,28 @@ export function growInsetsForChrome(
   return out;
 }
 
+export type InsetBox = { l: number; r: number; t: number; b: number };
+
+/** First-pass plot budget. Paper chrome may still overflow. */
+export const INSET_CAP_SOFT = { l: 0.38, r: 0.38, t: 0.28, b: 0.32 };
+/** Second pass: shrink the plot so wrapped chrome can stay in the cell. */
+export const INSET_CAP_FIT = { l: 0.5, r: 0.5, t: 0.4, b: 0.42 };
+
+export function clampChartInsets(
+  insets: InsetBox,
+  cellW: number,
+  cellH: number,
+  floor: InsetBox,
+  cap: { l: number; r: number; t: number; b: number } = INSET_CAP_SOFT,
+): InsetBox {
+  return {
+    l: Math.min(Math.max(floor.l, insets.l), cellW * cap.l),
+    r: Math.min(Math.max(floor.r, insets.r), cellW * cap.r),
+    t: Math.min(Math.max(floor.t, insets.t), cellH * cap.t),
+    b: Math.min(Math.max(floor.b, insets.b), cellH * cap.b),
+  };
+}
+
 export type NeighborChrome = {
   cell: CellBox;
   rects: ChromeRect[];

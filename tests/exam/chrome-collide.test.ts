@@ -490,4 +490,47 @@ widget chart.line
       }
     }
   });
+
+  it("grows past the soft inset cap so a cramped right legend stays in the cell", () => {
+    const result = compileSource(
+      `artifact Cram
+data rows = [
+  { x: 1, y: 2, grp: "placebo-control-arm" }
+  { x: 2, y: 4, grp: "active-treatment-arm" }
+]
+scene
+  size: 220 160
+  background: #ffffff
+widget chart.line
+  data: rows
+  xField: x
+  yField: y
+  group: grp
+  xlim: 0 3
+  ylim: 0 5
+  yLabel: "Serum inflammatory cytokine concentration"
+  legend: right
+  interactive: false
+`,
+      "cram.viva",
+      { handbookIds: ["print-nature"] },
+    );
+    expect(result.error).toBeNull();
+    const ir = result.ir!;
+    const env = [ir.state, ir.data];
+    const frame = ir.frames[0]!;
+    const cellX = evaluate(frame.props.cellX!, env) as number[];
+    const plotX = evaluate(frame.props.x, env) as number[];
+    expect(cellX[1]! - plotX[1]!).toBeGreaterThan(220 * 0.38 + 1);
+    const labels = ir.scene.layers
+      .flatMap((l) => l.items)
+      .filter((i) => i.kind === "node" && /legLbl_/.test(i.name));
+    expect(labels.length).toBeGreaterThan(0);
+    for (const node of labels) {
+      if (node.kind !== "node") continue;
+      const x = evaluate(node.props.x, env) as number;
+      const text = String(evaluate(node.props.text, env));
+      expect(x + estimateTextWidthPx(text, 8, 0.1)).toBeLessThanOrEqual(cellX[1]! + 2);
+    }
+  });
 });
