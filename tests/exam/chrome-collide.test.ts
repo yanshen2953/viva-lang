@@ -6,9 +6,20 @@ import {
   placePaperChrome,
   rectsOverlap,
   thinXTicks,
+  wrapTextLines,
 } from "../../src/layout/chrome-collide.js";
 
 describe("paper chrome collision", () => {
+  it("wraps a long title on spaces before mid-word breaks", () => {
+    const lines = wrapTextLines("Survival and response by treatment cohort", 80, 12, 0.35);
+    expect(lines.length).toBeGreaterThan(1);
+    expect(lines.join(" ")).toMatch(/Survival/);
+    expect(lines.join(" ")).toMatch(/cohort/);
+    for (const line of lines) {
+      expect(estimateTextWidthPx(line, 12, 0.35)).toBeLessThanOrEqual(80 + 12);
+    }
+  });
+
   it("drops overlapping x-tick labels but keeps the ends", () => {
     const kept = thinXTicks([
       { label: "January", x: 10 },
@@ -191,5 +202,35 @@ widget chart.bar
     expect(labels[0]).toBe("January");
     expect(labels[labels.length - 1]).toBe("April");
     expect(labels.length).toBeLessThan(4);
+  });
+
+  it("emits wrapped chart title lines on a narrow scene", () => {
+    const result = compileSource(
+      `artifact Wrap
+data rows = [{ x: 1, y: 2 }, { x: 2, y: 4 }]
+scene
+  size: 160 140
+  background: #ffffff
+widget chart.line
+  data: rows
+  xField: x
+  yField: y
+  xlim: 0 3
+  ylim: 0 5
+  title: "Survival and response by treatment cohort"
+  interactive: false
+`,
+      "wrap.viva",
+      { handbookIds: ["print-nature"] },
+    );
+    expect(result.error).toBeNull();
+    const axes = result.ir!.scene.layers.find((l) => l.name.endsWith("_axes"))!;
+    const titles = axes.items.filter((i) => i.kind === "node" && /_title(_\d+)?$/.test(i.name));
+    expect(titles.length).toBeGreaterThan(1);
+    const texts = titles.map((i) =>
+      i.kind === "node" ? String(evaluate(i.props.text, [{}, {}])) : "",
+    );
+    expect(texts.join(" ")).toMatch(/Survival/);
+    expect(texts.join(" ")).toMatch(/cohort/);
   });
 });

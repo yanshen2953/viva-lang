@@ -467,14 +467,14 @@ function expandChart(
       ...(props.axisColor ?? props.axisStroke ? { stroke: props.axisColor ?? props.axisStroke! } : {}),
     }),
     ...(title
-      ? [
-          node(`${frameName}_title`, {
+      ? (chrome?.titleLines?.length ? chrome.titleLines : [title]).map((line, i) =>
+          node(`${frameName}_title${i ? `_${i}` : ""}`, {
             role: literal("title"),
             x: titleX,
-            y: titleYExpr,
-            text: literal(title),
+            y: chrome ? literal(chrome.titleY + i * 14) : titleYExpr,
+            text: literal(line),
           }),
-        ]
+        )
       : []),
     ...(seriesField && legendAt !== "off"
       ? expandSeriesLegend(frameName, artifact, dataName, seriesField, geom, legendAt, span, chrome)
