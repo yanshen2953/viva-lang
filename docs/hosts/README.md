@@ -8,6 +8,7 @@ How to embed Viva in chat/IDE agents and human review loops.
 | [`web-embed.md`](./web-embed.md) | Browser iframe / `postMessage` |
 | [`inline-embed.md`](./inline-embed.md) | Default interactive inline card (`print-nature`) |
 | [`mcp.md`](./mcp.md) | MCP stdio tools (`viva mcp`) |
+| [`../HANDOFF.md`](../HANDOFF.md) | Agent 接续任务上下文 |
 | [`../DEPLOY.md`](../DEPLOY.md) | 一键部署与多 Agent 接入 |
 | [`bash.md`](./bash.md) | `viva` CLI + `viva serve` HTTP bridge |
 | [`review.md`](./review.md) | Visual selection + rich feedback → `agentBrief` repair |
