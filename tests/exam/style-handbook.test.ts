@@ -158,6 +158,48 @@ widget chart.bar
     expect(marks).toBeDefined();
   });
 
+  it("lightens print-nature chrome text on a dark scene", () => {
+    const src = `
+artifact "Dark"
+scene
+  size: 200 120
+  background: #070b14
+  layer main
+    node t
+      role: title
+      x: 20
+      y: 20
+      text: "Hello"
+`;
+    const ir = compile(parse(src), { handbookIds: ["print-nature"] });
+    const node = ir.scene.layers[0]?.items[0];
+    expect(node?.kind).toBe("node");
+    if (node?.kind === "node") {
+      expect(node.props.fill).toMatchObject({ kind: "string", value: "#f8fafc" });
+    }
+  });
+
+  it("keeps print-nature chrome text dark on a white scene", () => {
+    const src = `
+artifact "Light"
+scene
+  size: 200 120
+  background: #ffffff
+  layer main
+    node t
+      role: title
+      x: 20
+      y: 20
+      text: "Hello"
+`;
+    const ir = compile(parse(src), { handbookIds: ["print-nature"] });
+    const node = ir.scene.layers[0]?.items[0];
+    expect(node?.kind).toBe("node");
+    if (node?.kind === "node") {
+      expect(node.props.fill).toMatchObject({ kind: "string", value: "#111827" });
+    }
+  });
+
   it("resolves sequential palette by numeric tier", () => {
     const preset = resolveStylePresets(["dashboard"]);
     setStyleContext({ meta: { handbookIds: ["dashboard"], preset: preset! } });

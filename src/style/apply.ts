@@ -2,6 +2,7 @@ import type { Expr, SceneItem, Artifact, LayerDecl } from "../ast.js";
 import type { Span } from "../diagnostics.js";
 import type { RoleStyle, StylePreset, StyleRole } from "./types.js";
 import { inferRole, literalString, hasProp, roleTypographyKey } from "./roles.js";
+import { contrastPreset } from "./contrast.js";
 
 const PAINT_KEYS = [
   "fill",
@@ -170,9 +171,16 @@ function applyLayers(layers: LayerDecl[], preset: StylePreset): void {
   }
 }
 
+function sceneBackgroundHex(artifact: Artifact, preset: StylePreset): string | undefined {
+  const expr = artifact.scene?.props.background;
+  if (expr?.kind === "string") return expr.value;
+  return preset.scene?.background ?? preset.palette?.background;
+}
+
 /** Apply handbook preset defaults to an artifact (post widget-expand). */
 export function applyStyleToArtifact(artifact: Artifact, preset: StylePreset): Artifact {
-  applyScene(artifact, preset);
-  if (artifact.scene) applyLayers(artifact.scene.layers, preset);
+  const effective = contrastPreset(preset, sceneBackgroundHex(artifact, preset));
+  applyScene(artifact, effective);
+  if (artifact.scene) applyLayers(artifact.scene.layers, effective);
   return artifact;
 }
