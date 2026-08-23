@@ -5,6 +5,7 @@ import {
   ellipsizeToWidth,
   estimateTextWidthPx,
   growInsetsForNeighbors,
+  minWidthForLines,
   placePaperChrome,
   rectsOverlap,
   thinXTicks,
@@ -27,6 +28,17 @@ describe("paper chrome collision", () => {
     for (const line of lines) {
       expect(estimateTextWidthPx(line, 12, 0.35)).toBeLessThanOrEqual(80 + 12);
     }
+  });
+
+  it("measures the width a caption needs to avoid a capped ellipsis", () => {
+    const need = minWidthForLines("normalized expression (log2)", 9, 0.2, 2);
+    expect(need).toBeGreaterThan(40);
+    expect(wrapTextLines("normalized expression (log2)", need, 9, 0.2, 2).join("")).not.toMatch(
+      /\.\.\.$/,
+    );
+    expect(wrapTextLines("normalized expression (log2)", need, 9, 0.2, 0).length).toBeLessThanOrEqual(
+      2,
+    );
   });
 
   it("ellipsizes leftover words on the last line when capped", () => {

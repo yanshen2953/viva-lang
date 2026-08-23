@@ -60,7 +60,7 @@
 
 ## 下一刀（质量，不再铺接口）
 
-1. 更完整的排版求解（跨页、栏宽文法）；图/轴标题、图例键和色条标签会按栏宽折行，封顶后尾行省略，重叠刻度会抽稀，相邻格 chrome 会再让一档
+1. 更完整的排版求解（跨页、栏宽文法）；图/轴标题、图例键和色条标签会按栏宽折行；色条/右图例先按场景剩余宽度和 inset 让路，仍装不下才省略，重叠刻度会抽稀，相邻格 chrome 会再让一档
 2. linked selection 已藏热图、折线、box/violin；高亮有 scale 缓动，仍缺时间轴动画
 3. 再扩 CJK 或允许宿主挂全库；`scripts/subset-cjk-font.py` 可从 Droid 重建
 4. `layout.board play` 遮罩画在图表之上，Runtime 用 220ms CSS opacity 淡入淡出（不是时间轴）；`export --beats` / MCP `beats` 默认 PNG 序列，`gif|mp4` 只是 ffmpeg 幻灯，不是成片时间轴

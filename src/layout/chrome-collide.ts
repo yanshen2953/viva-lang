@@ -133,6 +133,28 @@ export function ellipsizeToWidth(
   return cut ? `${cut}${ELLIPSIS}` : ELLIPSIS;
 }
 
+/** Narrowest width that holds `text` in `maxLines` without ellipsis. */
+export function minWidthForLines(
+  text: string,
+  font: number,
+  tracking: number,
+  maxLines: number,
+): number {
+  const src = text.trim();
+  if (!src) return 0;
+  const full = estimateTextWidthPx(src, font, tracking);
+  if (maxLines <= 1) return full;
+  let lo = font;
+  let hi = Math.max(font, full);
+  if (wrapTextLines(src, hi, font, tracking, 0).length > maxLines) return full;
+  while (hi - lo > 0.5) {
+    const mid = (lo + hi) / 2;
+    if (wrapTextLines(src, mid, font, tracking, 0).length <= maxLines) hi = mid;
+    else lo = mid;
+  }
+  return hi;
+}
+
 export function wrapTextLines(
   text: string,
   maxWidth: number,
@@ -251,9 +273,12 @@ export function placePaperChrome(
   let cbarTitleLines: string[] = [];
   let cbarTitleX = cbarX + toScene(14);
   let cbarTitleY = box.py0 - toScene(AXIS_FONT + 2);
+  let cbarNeedW = 0;
+  let legendNeedW = 0;
   const cbarLabelW = () =>
     Math.max(
       TICK_FONT,
+      cbarNeedW,
       ...cbarLines.flatMap((lines) => lines.map((s) => estimateTextWidthPx(s, TICK_FONT, 0.08))),
       ...cbarTitleLines.map((s) => estimateTextWidthPx(s, AXIS_FONT, 0.2)),
     );
@@ -360,6 +385,7 @@ export function placePaperChrome(
       });
       if (cbarTitleLines.length) {
         const tw = Math.max(
+          cbarNeedW,
           ...cbarTitleLines.map((line) => estimateTextWidthPx(line, AXIS_FONT, 0.2)),
         );
         rects.push({
@@ -375,6 +401,7 @@ export function placePaperChrome(
       for (const [i, key] of keys.entries()) {
         const lines = legendLines[i] ?? [key];
         const tw = Math.max(
+          extras.legendAt === "right" ? legendNeedW : 0,
           ...lines.map((line) => estimateTextWidthPx(line, TICK_FONT, 0.1)),
         );
         const x = extras.legendAt === "bottom" ? legendX + i * legendStep : legendX;
@@ -457,6 +484,9 @@ export function placePaperChrome(
       const lines = wrapTextLines(key, maxW, TICK_FONT, 0.1, 2);
       return lines.length ? lines : [key];
     });
+    if (extras.legendAt === "right") {
+      legendNeedW = Math.max(0, ...keys.map((key) => minWidthForLines(key, TICK_FONT, 0.1, 2)));
+    }
     const extra = Math.max(0, ...legendLines.map((lines) => lines.length - 1));
     if (extras.legendAt !== "bottom" && extra > 0) {
       legendStep = toScene(14) + extra * legendLine;
@@ -468,10 +498,12 @@ export function placePaperChrome(
       ? Math.max(TICK_FONT * 4, cell.x1 - (cbarX + toScene(14)) - 4)
       : toScene(compact ? 36 : 56);
     cbarLines = cbarLabels.map((label) => {
+      cbarNeedW = Math.max(cbarNeedW, minWidthForLines(label, TICK_FONT, 0.08, 2));
       const lines = wrapTextLines(label, leftover, TICK_FONT, 0.08, 2);
       return lines.length ? lines : [label];
     });
     if (zCap) {
+      cbarNeedW = Math.max(cbarNeedW, minWidthForLines(zCap, AXIS_FONT, 0.2, 2));
       cbarTitleLines = wrapTextLines(zCap, leftover, AXIS_FONT, 0.2, 2);
       if (!cbarTitleLines.length) cbarTitleLines = [zCap];
       cbarTitleX = cbarX + toScene(14);

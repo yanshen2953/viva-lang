@@ -373,7 +373,7 @@ function expandChart(
       props: {
         x: areaXExpr,
         y: areaYExpr,
-        ...(!boundPanel && createdFrame && !hasAreaX && !hasAreaY
+        ...(!boundPanel && createdFrame
           ? {
               cellX: literal([0, sceneExtentOf(artifact).w]),
               cellY: literal([0, sceneExtentOf(artifact).h]),
