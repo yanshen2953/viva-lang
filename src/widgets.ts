@@ -21,6 +21,7 @@ import { domainMap, parseTimeValue, scaleKind, type ScaleKind } from "./space.js
 import { COLUMN_MM, mmToPx, pageColumnMeasure, parsePage, sceneScaleOf } from "./space/scene-box.js";
 import { estimateBoardBands, measureChipWidth } from "./layout/board-chrome.js";
 import { figureCopyDefaults, figureCopyPlace, figureGapDefaults } from "./layout/figure-gap.js";
+import { packCopyLinesToPages } from "./layout/copy-flow.js";
 import { figurePageReserves, packFigureCellsToPages } from "./layout/figure-page.js";
 import {
   chartHostBox,
@@ -35,6 +36,7 @@ import {
   clampChartInsets,
   growInsetsForChrome,
   growInsetsForNeighbors,
+  ellipsizeToWidth,
   wrapTextLines,
   INSET_CAP_FIT,
   INSET_CAP_SOFT,
@@ -1469,12 +1471,15 @@ function expandLayoutBoard(
   const typeCols = Math.max(0, Math.floor(numProp(props, "typeGridCols", 0) || numProp(props, "typeCols", 0)));
   const snapType = (n: number) =>
     typeGrid ? Math.max(typeStep, Math.round(n / typeStep) * typeStep) : n;
+  const unit = sceneUnitOf(artifact);
+  const scale = sceneScaleOf({ unit });
+  const toScene = (px: number) => px / Math.max(scale, 1e-6);
   const bands = estimateBoardBands({
-    width,
-    height,
-    safe: props.safe !== undefined ? numProp(props, "safe", 64) : undefined,
-    titleH: props.titleH !== undefined ? numProp(props, "titleH", 72) : undefined,
-    lowerH: props.lowerH !== undefined ? numProp(props, "lowerH", 96) : undefined,
+    width: width * scale,
+    height: height * scale,
+    safe: props.safe !== undefined ? numProp(props, "safe", 64) * scale : undefined,
+    titleH: props.titleH !== undefined ? numProp(props, "titleH", 72) * scale : undefined,
+    lowerH: props.lowerH !== undefined ? numProp(props, "lowerH", 96) * scale : undefined,
     title: staticCopyText(titleExpr),
     subtitle: staticCopyText(subtitleExpr),
     caption: staticCopyText(captionExpr),
@@ -1484,9 +1489,12 @@ function expandLayoutBoard(
     controlKeys,
     hasBind: Boolean(controlBind),
   });
-  const safe = snapType(bands.safe);
-  const titleH = snapType(bands.titleH);
-  const lowerH = snapType(bands.lowerH);
+  const safe = snapType(toScene(bands.safe));
+  const titleH = snapType(toScene(bands.titleH));
+  const lowerH = snapType(toScene(bands.lowerH));
+  const hudW = toScene(bands.hudW);
+  const chipH = toScene(bands.chipH);
+  const chipWs = bands.chipWs.map((w) => toScene(w));
   const prefix = stringProp(props, ["prefix"]) ?? "";
   const nameOf = (slot: string) => (prefix ? `${prefix}_${slot}` : slot);
 
@@ -1502,7 +1510,6 @@ function expandLayoutBoard(
   const trimY0 = originY + bleed;
   const trimX1 = originX + width - bleed;
   const trimY1 = originY + height - bleed;
-  const hudW = bands.hudW;
   const slots: { name: string; x: [number, number]; y: [number, number] }[] = [
     { name: nameOf("safe"), x: [safeX0, safeX1], y: [safeY0, safeY1] },
     { name: nameOf("title"), x: [safeX0, safeX1], y: [safeY0, titleY1] },
@@ -1521,7 +1528,7 @@ function expandLayoutBoard(
 
   const splits = Math.max(0, Math.floor(numProp(props, "splits", 0) || numProp(props, "bodyCols", 0)));
   if (splits >= 2) {
-    const gutter = numProp(props, "splitGutter", 24);
+    const gutter = numProp(props, "splitGutter", toScene(24));
     const bodyW = safeX1 - safeX0;
     const cellW = (bodyW - gutter * (splits - 1)) / splits;
     for (let i = 0; i < splits; i++) {
@@ -1550,7 +1557,7 @@ function expandLayoutBoard(
   const beats = Math.max(0, Math.floor(numProp(props, "beats", 0) || numProp(props, "shots", 0)));
   const beatRects: { x0: number; x1: number; y0: number; y1: number }[] = [];
   if (beats >= 2) {
-    const gutter = numProp(props, "beatGutter", 16);
+    const gutter = numProp(props, "beatGutter", toScene(16));
     const bodyW = safeX1 - safeX0;
     const cellW = (bodyW - gutter * (beats - 1)) / beats;
     for (let i = 0; i < beats; i++) {
@@ -1592,8 +1599,8 @@ function expandLayoutBoard(
         : [
             node(`${id}_title`, {
               role: literal("label"),
-              x: literal(safeX0 + 8),
-              y: literal(safeY0 + 22),
+              x: literal(safeX0 + toScene(8)),
+              y: literal(safeY0 + toScene(22)),
               text: literal("title"),
             }),
           ]),
@@ -1602,14 +1609,14 @@ function expandLayoutBoard(
         : [
             node(`${id}_lower`, {
               role: literal("label"),
-              x: literal(safeX0 + 8),
-              y: literal(lowerY0 + 22),
+              x: literal(safeX0 + toScene(8)),
+              y: literal(lowerY0 + toScene(22)),
               text: literal("lower"),
             }),
           ]),
     ];
     if (beats >= 2) {
-      const gutter = numProp(props, "beatGutter", 16);
+      const gutter = numProp(props, "beatGutter", toScene(16));
       const bodyW = safeX1 - safeX0;
       const cellW = (bodyW - gutter * (beats - 1)) / beats;
       for (let i = 0; i < beats; i++) {
@@ -1617,8 +1624,8 @@ function expandLayoutBoard(
         guideItems.push(
           node(`${id}_beat_${i}`, {
             role: literal("label"),
-            x: literal(x0 + 8),
-            y: literal(titleY1 + 18),
+            x: literal(x0 + toScene(8)),
+            y: literal(titleY1 + toScene(18)),
             text: literal(String(i + 1)),
           }),
         );
@@ -1633,8 +1640,8 @@ function expandLayoutBoard(
   }
 
   const copyItems: SceneItem[] = [];
-  const copyW = Math.max(40, safeX1 - safeX0);
-  let titleCursor = safeY0 + 16;
+  const copyW = Math.max(toScene(40), safeX1 - safeX0);
+  let titleCursor = safeY0 + toScene(16);
   if (titleExpr) {
     const lines = bands.titleLines.length ? bands.titleLines : [null];
     for (const [i, line] of lines.entries()) {
@@ -1647,7 +1654,7 @@ function expandLayoutBoard(
           text: line === null ? titleExpr : literal(line),
         }),
       );
-      titleCursor += 16;
+      titleCursor += toScene(16);
     }
   }
   if (subtitleExpr) {
@@ -1662,12 +1669,12 @@ function expandLayoutBoard(
           text: line === null ? subtitleExpr : literal(line),
         }),
       );
-      titleCursor += 14;
+      titleCursor += toScene(14);
     }
   }
   if (captionExpr) {
-    const capW = Math.max(40, copyW - (hudW ? hudW + 12 : 0));
-    let capCursor = lowerY0 + Math.min(16, lowerH * 0.4);
+    const capW = Math.max(toScene(40), copyW - (hudW ? hudW + toScene(12) : 0));
+    let capCursor = lowerY0 + Math.min(toScene(16), lowerH * 0.4);
     const lines = bands.captionLines.length ? bands.captionLines : [null];
     for (const [i, line] of lines.entries()) {
       copyItems.push(
@@ -1679,28 +1686,63 @@ function expandLayoutBoard(
           text: line === null ? captionExpr : literal(line),
         }),
       );
-      capCursor += 12;
+      capCursor += toScene(12);
     }
   }
   if (bodyExpr) {
     const host =
       slots.find((s) => s.name === nameOf("left")) ?? slots.find((s) => s.name === nameOf("body"));
     if (host) {
-      const bodyW = Math.max(40, host.x[1] - host.x[0]);
+      const bodyW = Math.max(toScene(40), host.x[1] - host.x[0]);
       const staticBody = staticCopyText(bodyExpr);
-      const lines = staticBody ? wrapTextLines(staticBody, bodyW, 12, 0.12, 18) : [null];
-      let bodyCursor = host.y[0] + 16;
-      for (const [i, line] of lines.entries()) {
+      const wrapW = Math.max(40, bodyW * scale);
+      const pageSpec = parsePage(stringProp(artifact.scene?.props ?? {}, ["page"]));
+      const pageH = pageSpec
+        ? unit === "mm" || unit === "pt"
+          ? pageSpec.h
+          : mmToPx(pageSpec.h)
+        : 0;
+      const reserves = pageH ? figurePageReserves(unit) : { top: 0, bottom: 0, pad: 0 };
+      const lines = staticBody
+        ? wrapTextLines(staticBody, wrapW, 12, 0.12, pageH ? 0 : 24)
+        : [];
+      if (staticBody) {
+        const packed = packCopyLinesToPages(lines, {
+          x: host.x[0],
+          startY: host.y[0] + toScene(16),
+          lineH: toScene(18),
+          pageH: pageH || undefined,
+          hostBottom: pageH ? undefined : host.y[1] - toScene(4),
+          topReserve: reserves.top,
+          bottomReserve: reserves.bottom,
+        });
+        if (pageH) growSceneHeight(artifact, packed.bottom + reserves.bottom);
+        const last = packed.places.length - 1;
+        for (const [i, place] of packed.places.entries()) {
+          const text =
+            packed.clipped && i === last
+              ? ellipsizeToWidth(place.text, wrapW, 12, 0.12)
+              : place.text;
+          copyItems.push(
+            node(`${id}_docBody${i ? `_${i}` : ""}`, {
+              role: literal("label"),
+              x: literal(place.x),
+              y: literal(place.y),
+              w: literal(bodyW),
+              text: literal(text),
+            }),
+          );
+        }
+      } else {
         copyItems.push(
-          node(`${id}_docBody${i ? `_${i}` : ""}`, {
+          node(`${id}_docBody`, {
             role: literal("label"),
             x: literal(host.x[0]),
-            y: literal(bodyCursor),
+            y: literal(host.y[0] + toScene(16)),
             w: literal(bodyW),
-            text: line === null ? bodyExpr : literal(line),
+            text: bodyExpr,
           }),
         );
-        bodyCursor += 20;
       }
     }
   }
@@ -1714,14 +1756,13 @@ function expandLayoutBoard(
   }
 
   if (controlKeys.length) {
-    const chipH = bands.chipH;
-    const gap = 8;
-    const chipY = lowerY0 + Math.max(8, (lowerH - chipH) / 2);
-    let cursorX = safeX1 - 4;
+    const gap = toScene(8);
+    const chipY = lowerY0 + Math.max(toScene(8), (lowerH - chipH) / 2);
+    let cursorX = safeX1 - toScene(4);
     const ctlItems: SceneItem[] = [];
     for (let i = controlKeys.length - 1; i >= 0; i--) {
       const key = controlKeys[i]!;
-      const chipW = bands.chipWs[i] ?? 44;
+      const chipW = chipWs[i] ?? toScene(44);
       cursorX -= chipW;
       const chipName = `${id}_ctl_${i}`;
       const selected =
@@ -1743,7 +1784,7 @@ function expandLayoutBoard(
         node(lblName, {
           role: literal("label"),
           x: literal(cursorX + chipW / 2),
-          y: literal(chipY + 14),
+          y: literal(chipY + chipH * 0.7),
           text: literal(key),
           align: literal("center"),
           ...paint,
