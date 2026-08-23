@@ -10,8 +10,8 @@
 
 | 轴 | 之前说法 | 实际 |
 | --- | --- | --- |
-| 1 内联活世界 | 齐 | **接口齐 / 产品未齐**：Runtime 能拖点 tick；内联卡几乎没有错误/检查/修复壳 |
-| 2 度量科学图 | 齐 | **静态骨架齐 / 出版未齐**：线性 frame + chart.* 能出图；轴语义、误差、热图、导出曾明显弱于 Runtime |
+| 1 内联活世界 | 齐 | **接口齐 / 产品未齐**：Runtime 能拖点 tick；图表默认有数据域 brush/高亮；内联卡几乎没有错误/检查/修复壳 |
+| 2 度量科学图 | 齐 | **骨架齐 / 出版未齐**：linear/log/band + chart.*（含 vector/funnel）能出图；图例外置刚补；时间/统计图种仍缺 |
 | 3 通用 Agent 接口 | 齐 | **接入齐 / 闭环未齐**：CLI/MCP/HTTP 能编能导；LLM 生成可靠性和自动 repair 未进 CI |
 | 4 流水线 | 部分 | 仍部分：Port + webhook 在，缺拖参回流演示 |
 | 5 领域视图 | 部分 | 仍部分：槽位在，重领域插件刻意不做 |
@@ -21,48 +21,48 @@
 
 ## 粗糙的根因（不是缺再一个 HTTP 路由）
 
-1. **图核语义不够** — 只有 tick 数字、没有轴标题/单位；误差棒/热图靠手摆节点。
-2. **chart.* 默认是静图** — hover/刷选/联动要作者手写 event；相对 matplotlib 的优势没落到默认路径。
-3. **导出 ≠ 预览** — SVG 曾丢掉字族、字重、虚线；PDF 仍无 CJK。投稿看的是导出件。
-4. **Agent 闭环没产品化** — 语法能过、图不对；session 只跑结构启发式；agent-exam 不在 CI。
+1. **图核语义仍缺统计层** — 有轴标题/单位/band/log，没有时间轴、box/violin、显著性。
+2. **默认交互还不是 linked view** — `__brush` 已反演到数据域并变淡圈外点，但不是共享 selection 集合。
+3. **导出 ≠ 预览** — SVG 已接近 Runtime；PDF CJK 靠系统字体，缺字环境会回退 Helvetica。
+4. **Agent 闭环没产品化** — session compile 附带 visual diagnostics，但不挡成功；生成成功率未测。
 5. **手册只涂颜料** — print-nature 改色和线宽，不强制图语法。
 
-## 本轮已补的图核（相对「接口堆砌」）
+## 本轮已补（相对「接口堆砌」）
 
 | 项 | 行为 |
 | --- | --- |
 | 轴标题 / 单位 | `xLabel` `yLabel` `xUnit` `yUnit` → `Time (week)` |
 | 误差棒 | `errorField` / `yerr` → stem + caps |
 | `chart.heatmap` | 数据格 + 右侧色条刻度 |
-| 默认悬停 | hover mark/bar/linePt/heatCell → `__tip` HUD（`interactive: false` 可关） |
+| `chart.vector` / `chart.funnel` | 数据域位移箭头；横向漏斗（`orient: h` 也对 bar 生效） |
+| band / 分类轴 | 字符串列自动 band；`xScale: band` + `xCats`/`yCats`；log 刻度为 10ⁿ |
+| 图例外置 | 默认 `legend: right`；`bottom` / `inside` / `false` |
+| 默认悬停 / 刷选 | `__tip` + `__hover` + `__brush.{dx*}` + `__highlightGrp`；点图例也写高亮 |
 | 折线按 x 排序 | 源数据乱序也能连对 |
 | SVG 导出 | `font-family` / `font-weight` / `letter-spacing` / `stroke-dasharray` / 旋转轴标题 |
+| 动态 widget 插件 | `registerWidget()` / `listWidgets()` |
+| `layout.figure` | `cols/rows/gutter/margin/inset*` → frame + `(a)` 标签 |
+| `layout.board` | `safe`/`title`/`body`/`lower`；`splits: 2` → `left`/`right` |
+| 图表对位 | `panel: a` 吃已有 frame |
+| 投稿尺寸 | `unit: mm` + `column: single\|double` |
+| Agent 热路径 | slim prompt 默认；session compile 附 visual diagnostics |
 
 ## 仍然很粗（按用户可见排序）
 
-1. PDF 已嵌 CJK 字体（系统 Droid/Noto）；仍无随包子集，缺字环境会回退 Helvetica
-2. 有 log 轴；仍无时间 / 分类轴、box/violin、显著性括号
-3. Atlas (a–d) 已迁 `layout.figure` + heatmap；(e) 向量场 / (f) 漏斗仍手摆
-4. 默认有 `__hover` / `__brush` / `__highlightGrp`；刷选仍是场景坐标，不是完整数据域 filter
-5. session HTTP/MCP compile 会附带 visual diagnostics（不挡编译成功）
-6. MCP/HTTP/CLI prompt 默认 slim；`--full` / `variant=full` 仍可取玩具模板。生成成功率未测
-
-## 本轮已补的语言脊柱（相对「硬编码 switch」）
-
-| 项 | 行为 |
-| --- | --- |
-| 动态 widget 插件 | `registerWidget()` / `listWidgets()`；内置 `timeline` `chart.*` `layout.figure` |
-| `layout.figure` | `cols/rows/gutter/margin/inset*` → frame `a` `b`… + `(a)` 标签 |
-| 图表对位 | `panel: a`（或 `frame: a`）吃已有 frame，不再强制 `areaX/areaY` |
-| 未知 widget | 编译失败，并列出已注册名 |
-| 愿景对照 | `docs/VISION.md` — 三柱同时成立才算那门语言；现在仍是三套骨架 |
+1. PDF 已嵌 CJK 字体（系统 Droid/Noto）；仍无随包子集
+2. 仍无时间轴、box/violin、显著性括号
+3. Atlas (a–f) 已走 `layout.figure` + chart 插件；(e)(f) 不再手摆像素
+4. `__brush` 是单图数据域 marquee，不是多图共享 filter
+5. session visual diagnostics 不挡编译成功
+6. MCP/HTTP/CLI prompt 默认 slim；生成成功率未测
+7. 小栏宽 mm 图的默认 HUD / 留白仍不像投稿成品
 
 ## 下一刀（质量，不再铺接口）
 
-1. PDF 字体嵌入或 CJK 回退策略；scene `unit: mm` + 单栏 89 mm
-2. Atlas 迁到 `layout.figure` + `chart.heatmap`，消灭 (d)(e)(f) 魔法数
-3. `layout.board` 插件（16:9 安全框），仍无新关键字
-4. session.compile 默认带 visual 检查，embed 回传 diagnostics
-5. slim prompt 作为 MCP/HTTP 默认；确定性 repair 种子进 `npm test`
+1. 时间轴 + 统计图种（插件，不是关键字）
+2. linked selection：`__brush` / `__highlightGrp` 跨 panel 共享 filter
+3. 随包 CJK 子集
+4. `layout.board` 时间分镜
+5. agent-exam 进 CI
 
 对照真源：`docs/VISION.md`。

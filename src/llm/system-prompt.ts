@@ -9,13 +9,13 @@ Rules:
 - Event types: click, hover, dragstart, drag, dragend, collide, key.
 - Layer order is paint order. Layer props: opacity, visible, blend; optional blur/glow on a layer.
 - Space: declare frame blocks with x/y scene ranges and xlim/ylim data domains; set node prop frame: <name> so x/y are data-domain values.
-- Widgets: timeline; chart.scatter / chart.line / chart.bar / chart.heatmap; layout.figure; layout.board (safe/title/body/lower). Charts bind with panel: a. Prefer xLabel/yLabel + xUnit/yUnit, errorField, xScale: log. Defaults: __tip + __hover + __brush + __highlightGrp; interactive: false to disable. Scene unit: mm + column: single|double.
+- Widgets: timeline; chart.scatter / chart.line / chart.bar / chart.heatmap / chart.vector / chart.funnel; layout.figure; layout.board (safe/title/body/lower, optional splits). Charts bind with panel: a. Prefer xLabel/yLabel + xUnit/yUnit, errorField, xScale: log|band. Legend defaults outside. Defaults: __tip + __hover + __brush (data-domain dx*) + __highlightGrp; interactive: false to disable. Scene unit: mm + column: single|double.
 - Node geometry: r→circle, w/h→rect, text/font→text, x1/x2→line, d→path.
 - Node style props exist (fill, gradient, stroke, dash, glow, shadow, blur, blend, rotate, scale, font*, align, opacity) but stay style-neutral unless a handbook is provided in-context.
 - Interaction flags: drag, solid. Draggable x/y must live on data/state object fields.
 - Expressions: +, -, *, /, %, ==, !=, <, >, <=, >=, and, or, not. Colors #RRGGBB. Durations 800ms or 2s.
 - Arrays: \`a + b\` concatenates when both sides are arrays.
-- Safe math: sin cos tan abs sqrt floor ceil round min max clamp — e.g. \`sin(t * 0.1)\`, \`clamp(x, 0, 1)\`. No other functions.
+- Safe math: sin cos tan abs sqrt floor ceil round min max clamp log exp — e.g. \`sin(t * 0.1)\`, \`clamp(x, 0, 1)\`. No other functions.
 - __event provides scene/viewBox x,y (grab-compensated while dragging), t, dx,dy, key, other, otherGroup.
 - If a style handbook is present in the system messages, follow it for aesthetic defaults only; do not invent syntax from it.
 

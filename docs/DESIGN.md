@@ -183,7 +183,9 @@ layer marks
 | `timeline` | 时间 scrub 宏 | ✅ |
 | `chart.line` / `bar` / `scatter` | 展开 frame+axis+marks | ✅ MVP |
 | `chart.heat` / `chart.heatmap` | 热力 + 色条 | ✅ MVP |
-| `figure` 多面板 | 边距、对齐、(a)(b) 标签 | 规划（结构在 widget，外观在 handbook） |
+| `chart.vector` / `chart.funnel` | 数据域箭头；横向漏斗 | ✅ 插件 |
+| `layout.figure` 多面板 | 边距、对齐、(a)(b) 标签 | ✅ 插件（不是关键字） |
+| `layout.board` | 安全框 / 字幕条 / splits | ✅ 插件 |
 
 规则：**结构展开 = widget；审美纪律 = handbook。**
 

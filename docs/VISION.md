@@ -19,15 +19,15 @@
 
 | 柱 | 愿景里的样子 | 今天实际 | 差在哪 |
 | --- | --- | --- | --- |
-| 交互 | 汇报件本身就是活世界：点、刷、拖、联动、时间，和游戏同一套原语 | Runtime 有 click/hover/drag/collide/key/tick；图表默认只多了 `__tip` 字符串 | 交互是游戏栈；图是另一套宏。没有「刷选 / 跨面板高亮 / 数据域 tooltip」这种汇报交互 |
-| 图表 | 轴、误差、分组、色标、投稿可读，由编译器长出来 | `chart.scatter/line/bar/heatmap` + 线性 `frame`；轴标题/误差/热图刚补上 | 无 log/时间/分类轴；无 box/violin；图例仍在图内；PDF 仍 Helvetica，CJK → `?` |
-| 排版 | 作者只说「2×2 图、单栏 89 mm、安全框」；格子、出血、字幕条、对位由编译器算 | 多面板靠 `areaX/areaY` 魔法数；Atlas (d)(e)(f) 手摆 | **没有图像/视频构图层**。本轮补了 `layout.figure` 网格（插件，不是新关键字），仍无 mm/栏宽/16:9 安全区 |
-| 语法 | 原语极小，新能力只加插件名 | 核还算小；widget 曾是 `expandWidgets` 里的硬编码 `switch` | 本轮改成 `registerWidget()`。语言表面没涨关键字 |
-| 编译器 | 度量、避让、对齐、交互默认、导出保真全在编译/运行时 | 线性 scale + handbook 涂颜料 + 部分图核 | handbook **不**执行图语法；导出 ≠ 预览 |
-| 插件 | 宿主运行时注册：图种、排版、领域视图，agent 可发现 | 风格手册可注册；领域视图可注册；**结构宏直到本轮才可注册** | 还不是热加载 / 沙箱包；未知 widget 现在会编译失败并列出已注册名 |
-| Agent | 内联写短意图 → 编译 → 交互卡 → 检查 → 补丁 | CLI / MCP / HTTP / SDK 能编能导 | session 默认只做结构启发式；LLM 默认 prompt 仍偏玩具模板 |
+| 交互 | 汇报件本身就是活世界：点、刷、拖、联动、时间，和游戏同一套原语 | Runtime 有 click/hover/drag/collide/key/tick；图表默认 `__tip` / `__hover` / `__brush`（数据域） / `__highlightGrp` | 刷选还不是完整 linked selection；无动画过渡；内联卡上的检查/修复壳仍弱 |
+| 图表 | 轴、误差、分组、色标、投稿可读，由编译器长出来 | `chart.scatter/line/bar/heatmap/vector/funnel` + 线性/log/band frame；轴标题/误差/热图/图例外置 | 无时间轴、box/violin、显著性括号；默认 HUD 在小 mm 图上仍粗；PDF CJK 靠系统字体 |
+| 排版 | 作者只说「2×2 图、单栏 89 mm、安全框」；格子、出血、字幕条、对位由编译器算 | `layout.figure` 网格；`layout.board` 安全框 + `splits`；`unit: mm` + 单/双栏 | 无出血/裁切、字级网格、跨页、时间轴分镜 |
+| 语法 | 原语极小，新能力只加插件名 | 核还算小；widget 走 `registerWidget()` | 语言表面没涨关键字。不要为图种/槽位加关键字 |
+| 编译器 | 度量、避让、对齐、交互默认、导出保真全在编译/运行时 | band/log/linear + handbook 涂颜料 + 图核默认交互 | handbook **不**执行图语法；导出保真仍有缺口 |
+| 插件 | 宿主运行时注册：图种、排版、领域视图，agent 可发现 | 手册 / 领域视图 / 结构宏都可注册 | 还不是热加载 / 沙箱包；未知 widget 编译失败并列出已注册名 |
+| Agent | 内联写短意图 → 编译 → 交互卡 → 检查 → 补丁 | CLI / MCP / HTTP / SDK 能编能导；prompt 默认 slim；session compile 附带 visual diagnostics | 生成成功率未测；visual 不挡编译成功 |
 
-一句话：今天是 **World 演示 + Space 骨架 + Paint 手册** 粘在一起。愿景是 **同一套极小原语**，三柱都是编译器展开，插件只换展开器。
+一句话：今天是 **World + Space + Paint** 粘在一起，脊柱已能同时展开三柱，但出版观感与 agent 闭环都还没齐。愿景是 **同一套极小原语**，三柱都是编译器展开，插件只换展开器。
 
 ---
 
@@ -51,10 +51,10 @@
    Runtime 负责交互、度量、图层、时间
 ```
 
-本轮对齐这一条的具体动作：
+对齐这一条的具体动作：
 
 - `registerWidget()` / `listWidgets()`（`src/plugins/registry.ts`）
-- 内置插件：`timeline`、`chart.*`、`layout.figure`
+- 内置插件：`timeline`、`chart.*`（含 vector/funnel）、`layout.figure`、`layout.board`
 - 图表用 `panel: a` 吃排版插件吐出的 frame，不再强迫手写 `areaX/areaY`
 - `layout.*` 先于 `chart.*` 展开，源码顺序无所谓
 
@@ -66,18 +66,17 @@
 
 ### 3.1 游戏式交互
 
-有：节点可拖、碰撞、键盘、tick、图层、Arena/Atelier 示例。  
-没有：图表作为一等交互对象（刷选、联动、动画过渡）、HUD 与数据域的统一、内联卡上的检查/修复壳。
+有：节点可拖、碰撞、键盘、tick、图层；图表默认数据域 tooltip、brush 反演、跨面板 group 高亮、点图例高亮。  
+没有：真正的 linked selection（多图共享 filter 集合）、动画过渡、内联卡上的检查/修复壳。
 
 ### 3.2 论文级图表
 
-有：线性 frame、四类 chart 宏、轴标题/单位、误差棒、热图色条、默认 hover、SVG 更接近 Runtime。  
-没有：投稿尺寸（89 / 183 mm）、PDF/CJK、统计图种、图外图例、显著性、Atlas 后三格仍手摆。
+有：线性 / log / band 轴、四类基础图 + vector/funnel、轴标题/单位、误差棒、热图色条、图例外置、投稿 mm、SVG 更接近 Runtime、PDF 嵌系统 CJK。  
+没有：时间轴、box/violin、显著性、随包 CJK 子集、小栏宽上的出版级留白。
 
 ### 3.3 图像 / 视频级排版
 
-有（本轮）：`layout.figure` — `cols/rows/gutter/margin/inset*`，自动 `(a)(b)(c)`，图表 `panel:` 对位。  
-有（本轮）：`layout.board` — `safe` / `title` / `body` / `lower` 槽位。  
+有：`layout.figure` 网格 + `(a)(b)`；`layout.board` 的 `safe` / `title` / `body` / `lower` + `splits`；`unit: mm` + 栏宽。  
 没有：出血/裁切、字级网格、跨页、时间轴分镜。这些必须继续是**插件**，不能变成语法。
 
 ---
@@ -88,9 +87,9 @@
 | --- | --- | --- | --- |
 | 生成物 | matplotlib / React / 静态图 | 可编译的活汇报件 | 能编，默认观感仍粗 |
 | 改法 | 改代码重跑 | 改意图、热替换 | patch/session 接口在，产品环不在 |
-| 交互 | 图是附件 | 图就是世界 | 游戏示例强，汇报默认弱 |
-| 排版 | 手调或 CSS | 编译器网格 / 安全框 | 刚有 figure 网格 |
-| 扩展 | 再学一个库 | 注册插件 | 手册 + 本轮 widget 注册表 |
+| 交互 | 图是附件 | 图就是世界 | 默认有刷选/高亮，仍不是游戏级汇报 |
+| 排版 | 手调或 CSS | 编译器网格 / 安全框 | figure + board + mm，无分镜 |
+| 扩展 | 再学一个库 | 注册插件 | 手册 + widget 注册表 |
 
 未齐三柱质量之前，**不要**说超过 Claude Science，也不要说 Nature 级。
 
@@ -98,10 +97,10 @@
 
 ## 5. 下一刀（只服务三柱，不铺路由）
 
-1. 把 Atlas (d)(e)(f) 迁到 `chart.heatmap` + `layout.figure`，消灭魔法数
-2. `layout.board` 插件：安全区 + 具名槽，仍无新关键字
-3. PDF 字体 / CJK；`unit: mm` + 单栏宽度
-4. 图交互从 `__tip` 升到数据域 tooltip / brush
-5. session 热路径带 visual；slim prompt 作 MCP/HTTP 默认
+1. 时间轴 / box-violin / 显著性括号（仍走插件）
+2. brush 升级成可共享的数据域 selection，而不只是单图变淡
+3. 随包 CJK 子集，导出不依赖系统字体
+4. `layout.board` 时间轴分镜（仍无新关键字）
+5. agent 生成成功率进 CI；不要把 visual diagnostics 误报成「已经闭环」
 
 发现插件：`viva widgets` 或 `listWidgets()`。

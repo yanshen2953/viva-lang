@@ -87,7 +87,7 @@ layer marks
       r: 3
 ```
 
-节点上的 `frame:` 表示 x/y（及 x1/y1/x2/y2）是**数据域**坐标，由线性 scale 映射到 frame 的场景矩形（y 轴向上）。
+节点上的 `frame:` 表示 x/y（及 x1/y1/x2/y2）是**数据域**坐标，由 frame 的 scale（`linear` / `log` / `band`）映射到场景矩形（y 轴向上）。字符串类别会映射到 band 下标。
 
 ## 图表 widgets
 
@@ -102,7 +102,7 @@ widget chart.scatter
   areaY: 70 400
 ```
 
-`chart.line` / `chart.bar` / `chart.heatmap` 同理。结构展开为 frame + 轴 + marks；审美仍走 handbook。
+`chart.line` / `chart.bar` / `chart.heatmap` / `chart.vector` / `chart.funnel` 同理。结构展开为 frame + 轴 + marks；审美仍走 handbook。
 
 多面板不要手写 `areaX` / `areaY`。先用排版插件出格子，图表用 `panel:` 对位（`layout.*` 总会先于 `chart.*` 展开）：
 
@@ -138,9 +138,19 @@ widget layout.board
 
 得到 frame `safe` `title` `body` `lower`。图表可 `panel: body`。
 
-投稿尺寸：`scene` 上写 `unit: mm` 与 `column: single`（89 mm）或 `double`（183 mm）。轴可 `xScale: log` / `yScale: log`（frame 或 chart 属性）。
+投稿尺寸：`scene` 上写 `unit: mm` 与 `column: single`（89 mm）或 `double`（183 mm）。
 
-图表默认交互（`interactive: false` 可关）：`__tip` 字符串、`__hover` 对象、`__brush` 框选、同 `group` 跨面板 `__highlightGrp`。
+轴尺度（frame 或 chart 属性，不是新关键字）：
+
+- `xScale: log` / `yScale: log`
+- `xScale: band` / `category`（字符串列会自动 band）；也可用 `xCats` / `yCats`
+- 图例默认在图外右侧：`legend: right|bottom|inside|false`
+
+`layout.board` 可选 `splits: 2` → 在 `body` 里再切 `left` / `right`。
+
+图表默认交互（`interactive: false` 可关）：`__tip` 字符串、`__hover` 对象、`__brush`（场景框 + 数据域 `dx0/dy0/dx1/dy1`，刷选外的点变淡）、同 `group` 跨面板 `__highlightGrp`。点图例色块也会写 `__highlightGrp`。
+
+插件图种：`chart.scatter|line|bar|heatmap|vector|funnel`。`chart.vector` 用 `xField/yField` + `uField/vField`（数据域位移）。`chart.funnel` 是横向 `chart.bar`（`orient: h` 也对 `chart.bar` 生效）。
 
 出版级常用 props（均为 widget 属性，不是新关键字）：
 
@@ -231,6 +241,6 @@ layer cards
 `+ - * / % == != < > <= >= and or not`
 
 - 两边都是数组时，`+` 表示拼接：`series = series + [{ t: t, v: x }]`
-- 安全数学调用（仅这些）：`sin cos tan abs sqrt floor ceil round min max clamp`
+- 安全数学调用（仅这些）：`sin cos tan abs sqrt floor ceil round min max clamp log exp`
   例：`v = param * sin(t * 0.15)`，`x = clamp(__event.x, 40, 400)`
 - 不要发明 `pow` / 自定义 JS 函数

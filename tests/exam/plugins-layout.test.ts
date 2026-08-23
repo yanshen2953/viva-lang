@@ -23,9 +23,11 @@ scene
     expect(listWidgets()).toEqual(
       expect.arrayContaining([
         "chart.bar",
+        "chart.funnel",
         "chart.heatmap",
         "chart.line",
         "chart.scatter",
+        "chart.vector",
         "layout.board",
         "layout.figure",
         "timeline",

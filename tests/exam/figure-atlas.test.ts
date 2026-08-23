@@ -12,7 +12,7 @@ describe("figure-atlas example", () => {
     expect(result.ir?.name).toBe("Figure Atlas");
     expect(result.ir?.scene.layers.length).toBeGreaterThan(8);
     expect(result.ir?.frames.map((f) => f.name)).toEqual(
-      expect.arrayContaining(["a", "b", "c", "d", "e"]),
+      expect.arrayContaining(["a", "b", "c", "d", "e", "f"]),
     );
     const hasHeat = result.ir?.scene.layers.some((l) =>
       l.items.some((i) => i.kind === "for" && i.body.some((b) => b.kind === "node" && b.name === "heatCell")),
