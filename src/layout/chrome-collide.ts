@@ -109,6 +109,30 @@ export function thinYTicks<T extends { label: string; y: number }>(
   return kept;
 }
 
+const ELLIPSIS = "...";
+
+export function ellipsizeToWidth(
+  text: string,
+  maxWidth: number,
+  font: number,
+  tracking = 0.35,
+): string {
+  const src = text.trim();
+  if (!src) return "";
+  if (estimateTextWidthPx(src, font, tracking) <= maxWidth) return src;
+  if (estimateTextWidthPx(ELLIPSIS, font, tracking) > maxWidth) {
+    let cut = src;
+    while (cut && estimateTextWidthPx(cut, font, tracking) > maxWidth) cut = cut.slice(0, -1);
+    return cut;
+  }
+  let cut = src;
+  while (cut && estimateTextWidthPx(`${cut}${ELLIPSIS}`, font, tracking) > maxWidth) {
+    cut = cut.slice(0, -1).trimEnd();
+  }
+  while (cut.endsWith("-")) cut = cut.slice(0, -1).trimEnd();
+  return cut ? `${cut}${ELLIPSIS}` : ELLIPSIS;
+}
+
 export function wrapTextLines(
   text: string,
   maxWidth: number,
@@ -148,7 +172,8 @@ export function wrapTextLines(
   flush();
   const out = lines.length ? lines : [src];
   if (maxLines > 0 && out.length > maxLines) {
-    return [...out.slice(0, maxLines - 1), out.slice(maxLines - 1).join(" ")];
+    const last = ellipsizeToWidth(out.slice(maxLines - 1).join(" "), maxWidth, font, tracking);
+    return [...out.slice(0, maxLines - 1), last];
   }
   return out;
 }

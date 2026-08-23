@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { compileSource } from "../../src/pipeline.js";
 import { evaluate } from "../../src/eval.js";
 import {
+  ellipsizeToWidth,
   estimateTextWidthPx,
   growInsetsForNeighbors,
   placePaperChrome,
@@ -28,7 +29,7 @@ describe("paper chrome collision", () => {
     }
   });
 
-  it("keeps leftover words on the last line when capped", () => {
+  it("ellipsizes leftover words on the last line when capped", () => {
     const lines = wrapTextLines(
       "Serum concentration of inflammatory cytokine",
       40,
@@ -37,7 +38,9 @@ describe("paper chrome collision", () => {
       3,
     );
     expect(lines.length).toBe(3);
-    expect(lines.join("").replace(/\s/g, "")).toMatch(/cytokine/);
+    expect(lines[2]).toMatch(/\.\.\.$/);
+    expect(estimateTextWidthPx(lines[2]!, 9, 0.2)).toBeLessThanOrEqual(40 + 0.01);
+    expect(ellipsizeToWidth("inflammatory cytokine", 40, 9, 0.2)).toMatch(/\.\.\.$/);
   });
 
   it("drops overlapping x-tick labels but keeps the ends", () => {
@@ -350,6 +353,37 @@ widget chart.line
     expect(texts.join(" ")).toMatch(/cohort/);
   });
 
+  it("ellipsizes a capped chart title instead of overflowing the last line", () => {
+    const result = compileSource(
+      `artifact TitleCap
+data rows = [{ x: 1, y: 2 }, { x: 2, y: 4 }]
+scene
+  size: 160 140
+  background: #ffffff
+widget chart.line
+  data: rows
+  xField: x
+  yField: y
+  xlim: 0 3
+  ylim: 0 5
+  title: "Serum concentration of inflammatory cytokine in the virtual clinical cohort after randomization"
+  interactive: false
+`,
+      "title-cap.viva",
+      { handbookIds: ["print-nature"] },
+    );
+    expect(result.error).toBeNull();
+    const axes = result.ir!.scene.layers.find((l) => l.name.endsWith("_axes"))!;
+    const titles = axes.items.filter((i) => i.kind === "node" && /_title(_\d+)?$/.test(i.name));
+    expect(titles.length).toBe(3);
+    const last = titles[titles.length - 1];
+    expect(last?.kind).toBe("node");
+    if (last?.kind === "node") {
+      const text = String(evaluate(last.props.text, [{}, {}]));
+      expect(text).toMatch(/\.\.\.$/);
+    }
+  });
+
   it("emits wrapped axis title lines on a short plot", () => {
     const result = compileSource(
       `artifact AxisWrap
@@ -378,7 +412,7 @@ widget chart.line
     const texts = [...xTitles, ...yTitles].map((i) =>
       i.kind === "node" ? String(evaluate(i.props.text, [{}, {}])) : "",
     );
-    expect(texts.join(" ")).toMatch(/Follow-up|randomization|Serum|cytokine/);
+    expect(texts.join(" ")).toMatch(/Follow-up|randomization|Serum|inflammatory|cytokine/);
     const y0 = yTitles.find((i) => i.kind === "node" && i.name.endsWith("_yTitle"));
     const y1 = yTitles.find((i) => i.kind === "node" && i.name.endsWith("_yTitle_1"));
     if (y0?.kind === "node" && y1?.kind === "node") {
