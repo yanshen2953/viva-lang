@@ -566,11 +566,11 @@ function expandChart(
   };
   if (kind === "chart.heatmap") {
     if (!xCats.length) {
-      const ticks = discreteDataTicks(uniqueFieldNumbers(artifact, dataName, resolvedXField));
+      const ticks = discreteDataTicks(uniqueFieldNumbers(artifact, dataName, resolvedXField), true);
       if (ticks) geom.xTickVals = literal(ticks);
     }
     if (!yCats.length) {
-      const ticks = discreteDataTicks(uniqueFieldNumbers(artifact, dataName, resolvedYField));
+      const ticks = discreteDataTicks(uniqueFieldNumbers(artifact, dataName, resolvedYField), true);
       if (ticks) geom.yTickVals = literal(ticks);
     }
   } else if (
@@ -585,6 +585,14 @@ function expandChart(
     if (!yCats.length) {
       const ticks = discreteDataTicks(uniqueFieldNumbers(artifact, dataName, resolvedYField));
       if (ticks) geom.yTickVals = literal(ticks);
+    }
+  } else if (kind === "chart.line" || kind === "chart.scatter" || kind === "chart.vector") {
+    if (!xCats.length) {
+      const ticks = categoryTickVals(
+        uniqueFieldNumbers(artifact, dataName, resolvedXField),
+        numericPair(geom.xlim, null),
+      );
+      if (ticks) geom.xTickVals = literal(ticks);
     }
   }
 
@@ -2245,10 +2253,24 @@ function gridPitch(values: number[], fallback = 1): number {
 }
 
 /** Discrete numeric axis ticks (heat cells, bar/box visits). Too many → niceTicks. */
-function discreteDataTicks(values: number[]): number[] | null {
+function discreteDataTicks(values: number[], allowFloats = false): number[] | null {
   if (values.length < 1 || values.length > 16) return null;
   if (values.every((v) => Number.isInteger(v))) return values;
-  return values.length <= 8 ? values : null;
+  return allowFloats && values.length <= 8 ? values : null;
+}
+
+/**
+ * Integer marks that fill most of xlim (weeks, visits). Sparse points on a
+ * wide domain keep niceTicks + pinned ends (scatter 10/40 in 0…70).
+ */
+function categoryTickVals(values: number[], lim: [number, number] | null): number[] | null {
+  const ticks = discreteDataTicks(values);
+  if (!ticks) return null;
+  if (!lim) return ticks;
+  const dataSpan = ticks[ticks.length - 1]! - ticks[0]!;
+  const limSpan = Math.abs(lim[1] - lim[0]);
+  if (limSpan > 1e-9 && dataSpan < limSpan * 0.45) return null;
+  return ticks;
 }
 
 function numberListFromExpr(expr?: Expr): number[] {
@@ -2633,7 +2655,10 @@ function numericLiteral(expr: Expr | undefined): number | null {
   return null;
 }
 
-function numericPair(expr: Expr | undefined, fallback: [number, number]): [number, number] | null {
+function numericPair(
+  expr: Expr | undefined,
+  fallback: [number, number] | null = null,
+): [number, number] | null {
   if (expr?.kind === "array" && expr.items.length >= 2) {
     const a = numericLiteral(expr.items[0]);
     const b = numericLiteral(expr.items[1]);

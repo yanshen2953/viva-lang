@@ -429,6 +429,38 @@ widget chart.scatter
     expect(xTitleText).not.toMatch(/^\)$/);
   });
 
+  it("ticks a weekly line at the sample weeks, not a nice 5", () => {
+    const src = `artifact "Weeks"
+data rows = [
+  { wk: 0, hr: 74 }
+  { wk: 2, hr: 73 }
+  { wk: 4, hr: 72 }
+  { wk: 6, hr: 71 }
+  { wk: 8, hr: 70 }
+  { wk: 10, hr: 69 }
+  { wk: 12, hr: 68 }
+]
+scene
+  size: 400 240
+widget chart.line
+  data: rows
+  xField: wk
+  yField: hr
+  xlim: 0 12
+  ylim: 50 80
+  interactive: false
+`;
+    const result = compileSource(src, "weeks.viva", { handbookIds: ["print-nature"] });
+    expect(result.error).toBeNull();
+    const axes = result.ir!.scene.layers.find((l) => l.name.endsWith("_axes"))!;
+    const xs = axes.items
+      .filter((i) => i.kind === "node" && /_xtick_\d+$/.test(i.name))
+      .map((i) => (i.kind === "node" && i.props.text?.kind === "string" ? i.props.text.value : ""));
+    expect(xs[0]).toBe("0");
+    expect(xs[xs.length - 1]).toBe("12");
+    expect(xs).not.toContain("5");
+  });
+
   it("ticks a numeric bar axis at the visits, not xlim padding", () => {
     const src = `artifact "Visits"
 data rows = [

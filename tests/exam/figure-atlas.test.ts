@@ -115,6 +115,13 @@ describe("figure-atlas example", () => {
     expect(visitTicks[visitTicks.length - 1]).toBe("6");
     expect(visitTicks).not.toContain("0");
     expect(visitTicks).not.toContain("7");
+    const bAxes = result.ir!.scene.layers.find((l) => l.name === "__b_axes")!;
+    const weekTicks = bAxes.items
+      .filter((i) => i.kind === "node" && /_xtick_\d+$/.test(i.name))
+      .map((i) => (i.kind === "node" && i.props.text?.kind === "string" ? i.props.text.value : ""));
+    expect(weekTicks[0]).toBe("0");
+    expect(weekTicks[weekTicks.length - 1]).toBe("12");
+    expect(weekTicks).not.toContain("5");
     const dAxes = result.ir!.scene.layers.find((l) => l.name === "__d_axes")!;
     const heatTicks = (suffix: string) =>
       dAxes.items
