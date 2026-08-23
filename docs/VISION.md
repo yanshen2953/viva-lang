@@ -76,7 +76,7 @@
 
 ### 3.3 图像 / 视频级排版
 
-有：`layout.figure` 网格 + `(a)(b)` + 格子甲板；不写 `inset*` 时编译器按该格 chart 的刻度/标题/图例/色条迭代估留白；不写 `x/y/w/h` 时铺满场景，或 `panel: body` 吃 board 槽；`title`/`subtitle`/`caption` 由编译器画；两张以上未绑 panel 的 chart 自动成网格；`layout.board` 的 `safe` / `title` / `body` / `lower` + 题注属性 + `splits` / `beats` / `bleed` / `typeGrid`；不写 `safe`/`titleH`/`lowerH` 时按题注折行和芯片宽度估条带（仍不是 InDesign）；`unit: mm` + 栏宽；CLI/MCP/HTTP `--beats` 按 `__beat` 导出 PNG 序列，`-f gif|mp4` 用 ffmpeg 把这些栅格拼成幻灯（2 fps，不是时间轴 / 成片）。  
+有：`layout.figure` 网格 + `(a)(b)` + 格子甲板；图表 `span: 2` 跨栏（插件属性，不是关键字）；不写 `inset*` 时编译器按该格 chart 的刻度/标题/图例/色条迭代估留白；不写 `x/y/w/h` 时铺满场景，或 `panel: body` 吃 board 槽；`title`/`subtitle`/`caption` 由编译器画；两张以上未绑 panel 的 chart 自动成网格；`layout.board` 的 `safe` / `title` / `body` / `lower` + 题注属性 + `splits` / `beats` / `bleed` / `typeGrid`；不写 `safe`/`titleH`/`lowerH` 时按题注折行和芯片宽度估条带（仍不是 InDesign）；`unit: mm` + 栏宽；CLI/MCP/HTTP `--beats` 按 `__beat` 导出 PNG 序列，`-f gif|mp4` 用 ffmpeg 把这些栅格拼成幻灯（2 fps，不是时间轴 / 成片）。  
 没有：跨页、剪辑时间轴、真正的碰撞求解。`typeGrid` 是安全框上的基线与 `type0`… 栏，不是 InDesign 级网格系统。这些必须继续是**插件**，不能变成语法。`play` 仍是拍遮罩。
 
 ---

@@ -1,0 +1,67 @@
+artifact "Figure Span"
+
+data lead = [
+  { x: 0, y: 12 }
+  { x: 2, y: 18 }
+  { x: 4, y: 16 }
+  { x: 6, y: 28 }
+  { x: 8, y: 24 }
+]
+
+data left = [
+  { arm: "placebo", y: 12 }
+  { arm: "placebo", y: 14 }
+  { arm: "drug-A", y: 20 }
+  { arm: "drug-A", y: 22 }
+  { arm: "drug-B", y: 16 }
+  { arm: "drug-B", y: 17 }
+]
+
+data right = [
+  { x: 1, y: 18 }
+  { x: 2, y: 24 }
+  { x: 3, y: 22 }
+  { x: 4, y: 36 }
+]
+
+scene
+  size: 880 520
+  background: #ffffff
+
+widget layout.figure
+  title: "Wide lead panel · compiler span"
+  cols: 2
+  rows: 2
+
+widget chart.line
+  panel: a
+  span: 2
+  data: lead
+  xField: x
+  yField: y
+  xlim: 0 8
+  ylim: 0 40
+  xLabel: Time
+  yLabel: Response
+  interactive: false
+
+widget chart.box
+  panel: b
+  data: left
+  xField: arm
+  yField: y
+  ylim: 8 28
+  xLabel: Arm
+  yLabel: Score
+  interactive: false
+
+widget chart.scatter
+  panel: c
+  data: right
+  xField: x
+  yField: y
+  xlim: 0 5
+  ylim: 0 40
+  xLabel: Time
+  yLabel: Score
+  interactive: false

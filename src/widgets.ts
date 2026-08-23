@@ -1060,31 +1060,49 @@ function expandLayoutFigure(
     r: number,
     t: number,
     b: number,
+    width: number,
+    height: number,
     cap = INSET_CAP_SOFT,
-  ) => clampChartInsets({ l, r, t, b }, cellW, cellH, floor, cap);
+  ) => clampChartInsets({ l, r, t, b }, width, height, floor, cap);
 
   type CellPlan = {
     name: string;
     cellX0: number;
     cellY0: number;
+    cellW: number;
+    cellH: number;
     l: number;
     r: number;
     t: number;
     b: number;
   };
-  const plans: CellPlan[] = names.map((name, i) => {
-    const col = i % cols;
-    const row = Math.floor(i / cols);
-    const cellX0 = gridX + margin + col * (cellW + gutter);
-    const cellY0 = gridY + margin + row * (cellH + gutter);
-    const estimated = estimatePanelInsets(artifact, name, cellX0, cellY0, cellW, cellH);
-    const raw = {
+  const plans: CellPlan[] = placeFigureCells(
+    names,
+    cols,
+    rows,
+    gridX,
+    gridY,
+    margin,
+    cellW,
+    cellH,
+    gutter,
+    (name) => panelColSpan(artifact, name, cols),
+  ).map((cell) => {
+    const estimated = estimatePanelInsets(
+      artifact,
+      cell.name,
+      cell.cellX0,
+      cell.cellY0,
+      cell.cellW,
+      cell.cellH,
+    );
+    return {
+      ...cell,
       l: explicitL ? numProp(props, "insetL", numProp(props, "plotPadL", estimated.l)) : estimated.l,
       r: explicitR ? numProp(props, "insetR", numProp(props, "plotPadR", estimated.r)) : estimated.r,
       t: explicitT ? numProp(props, "insetT", numProp(props, "plotPadT", estimated.t)) : estimated.t,
       b: explicitB ? numProp(props, "insetB", numProp(props, "plotPadB", estimated.b)) : estimated.b,
     };
-    return { name, cellX0, cellY0, ...raw };
   });
 
   const explicitAny = explicitL || explicitR || explicitT || explicitB;
@@ -1094,10 +1112,18 @@ function expandLayoutFigure(
         cell: {
           x0: plan.cellX0,
           y0: plan.cellY0,
-          x1: plan.cellX0 + cellW,
-          y1: plan.cellY0 + cellH,
+          x1: plan.cellX0 + plan.cellW,
+          y1: plan.cellY0 + plan.cellH,
         },
-        rects: chromeRectsForPanel(artifact, plan.name, plan.cellX0, plan.cellY0, cellW, cellH, plan),
+        rects: chromeRectsForPanel(
+          artifact,
+          plan.name,
+          plan.cellX0,
+          plan.cellY0,
+          plan.cellW,
+          plan.cellH,
+          plan,
+        ),
       }));
       let grew = false;
       for (let i = 0; i < plans.length; i++) {
@@ -1112,6 +1138,8 @@ function expandLayoutFigure(
           plan.r + grow.r,
           plan.t + grow.t,
           plan.b + grow.b,
+          plan.cellW,
+          plan.cellH,
           iter >= 3 ? INSET_CAP_FIT : INSET_CAP_SOFT,
         );
         if (
@@ -1132,17 +1160,17 @@ function expandLayoutFigure(
   }
 
   for (const plan of plans) {
-    const { name, cellX0, cellY0, l: insetL, r: insetR, t: insetT, b: insetB } = plan;
+    const { name, cellX0, cellY0, cellW: spanW, cellH: spanH, l: insetL, r: insetR, t: insetT, b: insetB } = plan;
     const plotX0 = cellX0 + insetL;
     const plotY0 = cellY0 + insetT;
-    const plotX1 = cellX0 + cellW - insetR;
-    const plotY1 = cellY0 + cellH - insetB;
+    const plotX1 = cellX0 + spanW - insetR;
+    const plotY1 = cellY0 + spanH - insetB;
     const existing = artifact.frames.find((f) => f.name === name);
     const frameProps = {
       x: literal([plotX0, plotX1]),
       y: literal([plotY0, plotY1]),
-      cellX: literal([cellX0, cellX0 + cellW]),
-      cellY: literal([cellY0, cellY0 + cellH]),
+      cellX: literal([cellX0, cellX0 + spanW]),
+      cellY: literal([cellY0, cellY0 + spanH]),
       xlim: existing?.props.xlim ?? literal([0, 10]),
       ylim: existing?.props.ylim ?? literal([0, 100]),
     };
@@ -1157,8 +1185,8 @@ function expandLayoutFigure(
           role: literal("subpanel"),
           x: literal(cellX0),
           y: literal(cellY0),
-          w: literal(cellW),
-          h: literal(cellH),
+          w: literal(spanW),
+          h: literal(spanH),
           radius: literal(6),
         }),
       );
@@ -2376,6 +2404,56 @@ function sceneExtentOf(artifact: Artifact): { w: number; h: number } {
     w = COLUMN_MM[column];
   }
   return { w, h };
+}
+
+function panelColSpan(artifact: Artifact, panelName: string, cols: number): number {
+  const chart = chartForPanel(artifact, panelName);
+  if (!chart) return 1;
+  const raw = numProp(chart.props, "span", numProp(chart.props, "colspan", 1));
+  if (!Number.isFinite(raw)) return 1;
+  return Math.max(1, Math.min(cols, Math.floor(raw)));
+}
+
+function placeFigureCells(
+  names: string[],
+  cols: number,
+  rows: number,
+  gridX: number,
+  gridY: number,
+  margin: number,
+  cellW: number,
+  cellH: number,
+  gutter: number,
+  spanOf: (name: string) => number,
+): { name: string; cellX0: number; cellY0: number; cellW: number; cellH: number }[] {
+  const taken = Array.from({ length: rows }, () => Array.from({ length: cols }, () => false));
+  const out: { name: string; cellX0: number; cellY0: number; cellW: number; cellH: number }[] = [];
+  for (const name of names) {
+    const span = spanOf(name);
+    let placed = false;
+    for (let r = 0; r < rows && !placed; r++) {
+      for (let c = 0; c <= cols - span && !placed; c++) {
+        let free = true;
+        for (let k = 0; k < span; k++) {
+          if (taken[r]![c + k]) {
+            free = false;
+            break;
+          }
+        }
+        if (!free) continue;
+        for (let k = 0; k < span; k++) taken[r]![c + k] = true;
+        out.push({
+          name,
+          cellX0: gridX + margin + c * (cellW + gutter),
+          cellY0: gridY + margin + r * (cellH + gutter),
+          cellW: cellW * span + gutter * Math.max(0, span - 1),
+          cellH,
+        });
+        placed = true;
+      }
+    }
+  }
+  return out;
 }
 
 function chartForPanel(

@@ -41,7 +41,7 @@
 | 折线按 x 排序 | 源数据乱序也能连对 |
 | SVG 导出 | `font-family` / `font-weight` / `letter-spacing` / `stroke-dasharray` / 旋转轴标题 |
 | 动态 widget 插件 | `registerWidget()` / `listWidgets()` |
-| `layout.figure` | `cols/rows/gutter/margin`；不写 `inset*` / `x/y/w/h` 时按绑定 chart 估留白并铺满；相邻格再长 inset；`title`/`subtitle`/`caption`/`plate` 由编译器画。linked-summary / figure-grid 已不再手写 inset/gutter |
+| `layout.figure` | `cols/rows/gutter/margin`；图表 `span: 2` 跨栏；不写 `inset*` / `x/y/w/h` 时按绑定 chart 估留白并铺满；相邻格再长 inset；`title`/`subtitle`/`caption`/`plate` 由编译器画。仍不是跨页 |
 | `layout.board` | `safe`/`title`/`body`/`lower`/`hud`；题注 + `controls`/`bind` 芯片（选中亮、不另画绑定值）；不写 `w/h` 铺满场景；不写 `safe`/`titleH`/`lowerH` 时按题注折行和芯片估条带；`splits` / `beats` / `bleed` / `typeGrid`；`--beats` 出 PNG 序列，可选 ffmpeg 拼 GIF/MP4 幻灯 |
 | 图表对位 | `panel: a` 吃已有 frame |
 | 投稿尺寸 | `unit: mm` + `column: single\|double` |
@@ -51,7 +51,7 @@
 
 1. PDF 随包 `assets/fonts/VivaSansFallback.ttf`（Droid 子集，examples + 论文用字）；缺字仍可能 `?`
 2. 有 time / box / violin（KDE 轮廓）/ 显著性括号；轴刻度在场景坐标。`print-nature` 刻度 8 / 轴标题 9。观感仍粗，不是投稿成品
-3. Atlas / figure-grid 已去掉 `inset*`、手摆 panel 卡、页面 title 和基因按钮；`layout.board` 出题注 + `controls`/`bind` HUD 芯片（选中芯片亮、不再另画绑定值），不写 `safe`/`titleH`/`lowerH` 时按题注折行和芯片估条带。`layout.figure` 吃 `body`。chrome 有盒子碰撞消解；图/轴标题和图例键按栏宽折行（Y 轴折行后自上而下阅读；行数封顶后尾行 `...`），重叠刻度抽稀，相邻格互叠时再长 inset。仍不是跨页排版器
+3. Atlas / figure-grid 已去掉 `inset*`、手摆 panel 卡、页面 title 和基因按钮；`layout.board` 出题注 + `controls`/`bind` HUD 芯片（选中芯片亮、不再另画绑定值），不写 `safe`/`titleH`/`lowerH` 时按题注折行和芯片估条带。`layout.figure` 吃 `body`，图表 `span: 2` 可跨栏。chrome 有盒子碰撞消解；图/轴标题和图例键按栏宽折行（Y 轴折行后自上而下阅读；行数封顶后尾行 `...`），重叠刻度抽稀，相邻格互叠时再长 inset。仍不是跨页排版器
 4. `__sel` 默认跨面板藏行；box 四分位、violin 密度和折线线段按选中行重算/重连。本地 brush 松手后保持选择窗，路径够长切套索。高亮、藏行、`play` 遮罩和 box/折线几何缓 220ms；violin `d` 仍硬切。仍无时间轴动画
 5. session visual diagnostics 不挡编译成功
 6. MCP/HTTP/CLI prompt 默认 slim；生成成功率未测
@@ -60,7 +60,7 @@
 
 ## 下一刀（质量，不再铺接口）
 
-1. 更完整的排版求解（跨页、栏宽文法）；`layout.figure` 省略 gutter/margin/titleH 时按 mm/像素估缝和题注带；图/轴标题、图例键和色条标签会按栏宽折行；色条/右图例先按场景剩余宽度和 inset 让路，仍装不下才省略，重叠刻度会抽稀，相邻格 chrome 会再让一档
+1. 更完整的排版求解（跨页仍缺）；`layout.figure` 已能 `span` 跨栏，省略 gutter/margin/titleH 时按 mm/像素估缝和题注带；图/轴标题、图例键和色条标签会按栏宽折行；色条/右图例先按场景剩余宽度和 inset 让路，仍装不下才省略，重叠刻度会抽稀，相邻格 chrome 会再让一档
 2. linked selection 已藏热图、折线、box/violin；box 四分位、violin KDE 和折线线段会按 `__sel` 行重算/重连。Runtime 对 box/折线几何做 220ms 插值，violin `d` 仍硬切。仍缺时间轴动画
 3. 再扩 CJK 或允许宿主挂全库；`scripts/subset-cjk-font.py` 可从 Droid 重建
 4. `layout.board play` 遮罩画在图表之上，Runtime 用 220ms CSS opacity 淡入淡出（不是时间轴）；`export --beats` / MCP `beats` 默认 PNG 序列，`gif|mp4` 只是 ffmpeg 幻灯，不是成片时间轴

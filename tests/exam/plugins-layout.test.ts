@@ -174,6 +174,27 @@ widget layout.figure
     expect(plot[0]! - cell[0]!).toBeGreaterThan(12);
   });
 
+  it("lets a chart span two figure columns without magic x/y/w/h", () => {
+    const src = readFileSync(path.resolve("examples/figure-span.viva"), "utf8");
+    const result = compileSource(src, "figure-span.viva", { handbookIds: ["print-nature"] });
+    expect(result.error).toBeNull();
+    expect(src).not.toMatch(/insetL|insetR|areaX|areaY|gutter:|margin:/);
+    const ir = result.ir!;
+    const a = ir.frames.find((f) => f.name === "a")!;
+    const b = ir.frames.find((f) => f.name === "b")!;
+    const c = ir.frames.find((f) => f.name === "c")!;
+    expect(a && b && c).toBeTruthy();
+    const aCell = evaluate(a.props.cellX!, [ir.state, ir.data]) as number[];
+    const bCell = evaluate(b.props.cellX!, [ir.state, ir.data]) as number[];
+    const cCell = evaluate(c.props.cellX!, [ir.state, ir.data]) as number[];
+    const aY = evaluate(a.props.cellY!, [ir.state, ir.data]) as number[];
+    const bY = evaluate(b.props.cellY!, [ir.state, ir.data]) as number[];
+    expect(aCell[1]! - aCell[0]!).toBeGreaterThan((bCell[1]! - bCell[0]!) * 1.6);
+    expect(aCell[1]!).toBeCloseTo(cCell[1]!, 0);
+    expect(bY[0]!).toBeGreaterThan(aY[1]! - 1);
+    expect(ir.frames.some((f) => f.name === "d")).toBe(false);
+  });
+
   it("paints title/subtitle/caption and fills the scene without x/y/w/h", () => {
     const result = compileSource(
       `artifact Titled
