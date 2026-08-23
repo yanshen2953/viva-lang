@@ -61,6 +61,29 @@ function rowHasKey(row: Record<string, unknown>, key: unknown): boolean {
   });
 }
 
+export function filterSummaryRows(
+  rows: unknown,
+  groupKey: unknown,
+  groupField: string,
+  cats: unknown[],
+  selKeys: unknown[],
+): Record<string, unknown>[] {
+  if (!Array.isArray(rows)) return [];
+  const groupKeys = cats.length ? cats : groupField ? [groupKey] : [];
+  const selectedGroups = selKeys.filter((k) => groupKeys.some((g) => sameKey(g, k)));
+  const selectedXs = selKeys.filter((k) => !groupKeys.some((g) => sameKey(g, k)));
+  const out: Record<string, unknown>[] = [];
+  for (const raw of rows) {
+    if (!raw || typeof raw !== "object") continue;
+    const row = raw as Record<string, unknown>;
+    if (groupField && !sameKey(row[groupField], groupKey)) continue;
+    if (selectedGroups.length && !selectedGroups.some((k) => sameKey(k, groupKey))) continue;
+    if (selectedXs.length && !selectedXs.some((k) => rowHasKey(row, k))) continue;
+    out.push(row);
+  }
+  return out;
+}
+
 export function filterSummaryValues(
   rows: unknown,
   groupKey: unknown,
@@ -69,27 +92,18 @@ export function filterSummaryValues(
   cats: unknown[],
   selKeys: unknown[],
 ): number[] {
-  if (!Array.isArray(rows)) return [];
-  const groupKeys = cats.length ? cats : [groupKey];
-  const selectedGroups = selKeys.filter((k) => groupKeys.some((g) => sameKey(g, k)));
-  const selectedXs = selKeys.filter((k) => !groupKeys.some((g) => sameKey(g, k)));
-  const out: number[] = [];
-  for (const raw of rows) {
-    if (!raw || typeof raw !== "object") continue;
-    const row = raw as Record<string, unknown>;
-    if (!sameKey(row[xField], groupKey)) continue;
-    if (selectedGroups.length && !selectedGroups.some((k) => sameKey(k, groupKey))) continue;
-    if (selectedXs.length && !selectedXs.some((k) => rowHasKey(row, k))) continue;
-    const y = Number(row[yField]);
-    if (Number.isFinite(y)) out.push(y);
-  }
-  return out;
+  return filterSummaryRows(rows, groupKey, xField, cats, selKeys)
+    .map((row) => Number(row[yField]))
+    .filter((y) => Number.isFinite(y));
 }
 
 export function applySelSummary(
   props: Record<string, unknown>,
   ctx: SummaryCtx,
 ): Record<string, unknown> {
+  if (typeof props.__lineData === "string" && props.__lineData) {
+    return applyLineSummary(props, ctx);
+  }
   const isViolin = typeof props.__violinData === "string" && props.__violinData;
   const dataName = isViolin ? props.__violinData : props.__boxData;
   if (typeof dataName !== "string" || !dataName) return props;
@@ -127,6 +141,42 @@ export function applySelSummary(
     next.visible = Number.isFinite(y) && (y < lo || y > hi) && values.includes(y);
   }
   return next;
+}
+
+function applyLineSummary(
+  props: Record<string, unknown>,
+  ctx: SummaryCtx,
+): Record<string, unknown> {
+  const dataName = String(props.__lineData ?? "");
+  const sel = (ctx.state?.__sel ?? {}) as { n?: unknown; keys?: unknown };
+  const n = Number(sel.n ?? 0);
+  if (!(n > 0) || !dataName) return props;
+  const brush = (ctx.state?.__brush ?? {}) as { frame?: unknown };
+  const ownFrame = props.frame ?? props.__lineFrame;
+  if (brush.frame != null && String(brush.frame) === String(ownFrame ?? "")) return props;
+  const groupField = String(props.__lineSeries ?? "");
+  const xPos = String(props.__lineXPos ?? props.__lineXField ?? "");
+  const yField = String(props.__lineYField ?? "");
+  const rows = filterSummaryRows(
+    ctx.data?.[dataName],
+    props.__lineKey,
+    groupField,
+    asKeys(props.__lineCats),
+    asKeys(sel.keys),
+  ).slice()
+    .sort((a, b) => Number(a[xPos] ?? 0) - Number(b[xPos] ?? 0));
+  const index = Number(props.__lineIndex ?? 0);
+  if (rows.length < 2 || index < 0 || index >= rows.length - 1) {
+    return { ...props, visible: false };
+  }
+  const a = rows[index]!;
+  const b = rows[index + 1]!;
+  const x1 = Number(a[xPos]);
+  const y1 = Number(a[yField]);
+  const x2 = Number(b[xPos]);
+  const y2 = Number(b[yField]);
+  if (![x1, y1, x2, y2].every(Number.isFinite)) return { ...props, visible: false };
+  return { ...props, visible: true, x1, y1, x2, y2 };
 }
 
 function applyViolinSummary(

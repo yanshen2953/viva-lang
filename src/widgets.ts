@@ -764,6 +764,7 @@ function expandLineSegments(
       groups.set(key, list);
     }
     const items: SceneItem[] = [];
+    const allKeys = [...groups.keys()];
     let seg = 0;
     for (const [gkey, grows] of groups) {
       grows.sort((a, b) => objectNumber(a, xField) - objectNumber(b, xField));
@@ -780,6 +781,14 @@ function expandLineSegments(
             role: literal("mark-line"),
             frame: literal(frameName),
             ...markSelKeysVisible([gkey], frameName, span),
+            __lineData: literal(dataName),
+            __lineKey: literal(gkey),
+            __lineSeries: literal(seriesField),
+            __lineXPos: literal(xField),
+            __lineYField: literal(yField),
+            __lineCats: literal(allKeys),
+            __lineIndex: literal(i),
+            __lineFrame: literal(frameName),
             x1: ax,
             y1: ay,
             x2: bx,
@@ -824,6 +833,14 @@ function expandLineSegments(
       node(`seg_${i}`, {
         role: literal("mark-line"),
         frame: literal(frameName),
+        __lineData: literal(dataName),
+        __lineKey: literal(""),
+        __lineSeries: literal(""),
+        __lineXPos: literal(xField),
+        __lineYField: literal(yField),
+        __lineCats: literal([]),
+        __lineIndex: literal(i),
+        __lineFrame: literal(frameName),
         x1: ax,
         y1: ay,
         x2: bx,

@@ -67,7 +67,7 @@
 ### 3.1 游戏式交互
 
 有：节点可拖、碰撞、键盘、tick、图层；图表默认数据域 tooltip、brush 反演（按 frame 隔离，同名 xField 联动）、跨面板 group 高亮、点图例高亮。有效刷选松手后保持选择窗；拖路径明显长于对角时用套索，否则矩形。  
-没有：完整游戏级过渡曲线。内联卡有只读结构检查条，仍无 visual/raster、也没有自动修复。`__sel.keys` 默认让其它面板 **藏行**（含 box / violin / 折线线段；box 四分位和 violin KDE 按选中行重算；`link: dim` 可改回变淡）。Runtime 用 CSS `opacity` + 命中组 `scale` 做 220ms 缓动（含 `layout.board play` 拍遮罩）；静态导出仍是硬切。不是时间轴。
+没有：完整游戏级过渡曲线。内联卡有只读结构检查条，仍无 visual/raster、也没有自动修复。`__sel.keys` 默认让其它面板 **藏行**（含 box / violin / 折线；box 四分位、violin KDE 和折线线段按选中行重算/重连；`link: dim` 可改回变淡）。Runtime 用 CSS `opacity` + 命中组 `scale` 做 220ms 缓动（含 `layout.board play` 拍遮罩）；静态导出仍是硬切。不是时间轴。
 
 ### 3.2 论文级图表
 
@@ -98,7 +98,7 @@
 ## 5. 下一刀（只服务三柱，不铺路由）
 
 1. 跨页 / 栏宽文法（`layout.figure` 省略 gutter/margin/titleH 时按 mm/像素估缝和题注带；图/轴标题、图例键和色条标签已按栏宽折行，封顶后尾行省略，重叠刻度会抽稀，相邻格会再让 inset；软顶装不下时 inset 可再长到约半格，还不是通用排版器）
-2. `__sel` 已是共享 key 集并藏行；box / violin 按选中行重算摘要；高亮和 play 遮罩走 CSS opacity/scale 220ms，仍缺时间轴和折线按行重连
+2. `__sel` 已是共享 key 集并藏行；box / violin / 折线按选中行重算或重连；高亮和 play 遮罩走 CSS opacity/scale 220ms，仍缺时间轴
 3. 再扩 CJK 或允许宿主挂全库；缺字仍可能 `?`
 4. `layout.board play` / `typeGrid` 已在；省略 `safe`/`titleH`/`lowerH` 时按题注估条带；`--beats` 默认 PNG 序列，`-f gif|mp4` 只是 ffmpeg 幻灯，不是成片时间轴
 5. 例子与 exam 种子编译已进 CI；LLM 生成成功率仍未测。不要把 visual diagnostics 误报成「已经闭环」

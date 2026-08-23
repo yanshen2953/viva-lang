@@ -476,7 +476,64 @@ widget chart.scatter
     expect(src).not.toMatch(/^\s+(x|y|w|h|gutter|margin):/m);
     const result = compileSource(src, "linked-summary.viva", { handbookIds: ["print-nature"] });
     expect(result.error).toBeNull();
-    expect(result.ir!.frames.map((f) => f.name)).toEqual(expect.arrayContaining(["a", "b", "c"]));
+    expect(result.ir!.frames.map((f) => f.name)).toEqual(expect.arrayContaining(["a", "b", "c", "d"]));
+  });
+
+  it("reconnects line segments from visit keys in __sel instead of hiding the series", () => {
+    const result = compileSource(
+      readFileSync("examples/linked-summary.viva", "utf8"),
+      "linked-summary.viva",
+    );
+    expect(result.error).toBeNull();
+    const marks = result.ir!.scene.layers.find((l) => l.name === "__d_marks")!;
+    const seg = marks.items.find((i) => i.kind === "node" && i.name === "seg_0");
+    expect(seg?.kind).toBe("node");
+    if (seg?.kind === "node") {
+      expect(seg.props.__lineData).toMatchObject({ kind: "string", value: "rows" });
+      expect(seg.props.__lineKey).toMatchObject({ kind: "string", value: "placebo" });
+    }
+    const data = result.ir!.data as Record<string, unknown>;
+    const raw = {
+      __lineData: "rows",
+      __lineKey: "placebo",
+      __lineSeries: "arm",
+      __lineXPos: "t",
+      __lineYField: "score",
+      __lineCats: ["placebo", "drug-A", "drug-B"],
+      __lineIndex: 0,
+      __lineFrame: "d",
+      frame: "d",
+      x1: 1,
+      y1: 12,
+      x2: 2,
+      y2: 14,
+    };
+    const skip = applySelSummary(raw, {
+      data,
+      state: { __sel: { n: 1, keys: [1] }, __brush: { frame: "a" } },
+    });
+    expect(skip.visible).toBe(false);
+    const hop = applySelSummary(raw, {
+      data,
+      state: { __sel: { n: 2, keys: [1, 3] }, __brush: { frame: "a" } },
+    });
+    expect(hop.visible).toBe(true);
+    expect(hop.x1).toBe(1);
+    expect(hop.y1).toBe(12);
+    expect(hop.x2).toBe(3);
+    expect(hop.y2).toBe(11);
+    const other = applySelSummary(raw, {
+      data,
+      state: { __sel: { n: 1, keys: ["drug-A"] }, __brush: { frame: "a" } },
+    });
+    expect(other.visible).toBe(false);
+    const ir = structuredClone(result.ir!);
+    Object.assign(ir.state, { __sel: { n: 2, keys: [1, 3] }, __brush: { frame: "a" } });
+    const segs = flattenNodesFromIr(ir).nodes.filter((n) => String(n.name).startsWith("seg_"));
+    const painted = segs.filter((n) => n.props.visible);
+    expect(painted).toHaveLength(3);
+    const placebo = painted.find((n) => n.props.__lineKey === "placebo");
+    expect(placebo?.props.y1).toBeDefined();
   });
 
   it("links a scatter brush onto a box summary through shared __sel keys", () => {
