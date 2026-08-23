@@ -195,6 +195,14 @@ widget chart.heatmap
       expect(x).toBeGreaterThanOrEqual(10);
       expect(x).toBeLessThan(72);
     }
+    const yMark = axes.items.find((i) => i.kind === "node" && i.name.includes("_ytickMark_"));
+    expect(yMark?.kind).toBe("node");
+    if (yMark?.kind === "node") {
+      expect(yMark.props.frame).toBeUndefined();
+      const x1 = yMark.props.x1?.kind === "number" ? yMark.props.x1.value : 0;
+      const x2 = yMark.props.x2?.kind === "number" ? yMark.props.x2.value : 99;
+      expect(x2 - x1).toBeLessThan(10);
+    }
     const svg = renderSvgFromIr(result.ir!);
     expect(svg).not.toMatch(/NaN|Infinity/);
     const tickXs = [...svg.matchAll(/data-viva-name="[^"]+_ytick_\d+"[^>]*\sx="([\d.]+)"/g)].map(

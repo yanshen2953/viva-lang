@@ -1609,7 +1609,15 @@ function expandAxisTicks(
   const compact = box ? isCompactPlot(box, unit) : isCompactScene(artifact);
   const font = compact ? 8 : 11;
   const ySpan = binary("-", ylimHigh(props), ylimLow(props), span);
-  const tickLen = binary("*", ySpan, literal(0.02), span);
+  const dataTickLen = binary("*", ySpan, literal(0.02), span);
+  const sceneTick =
+    box == null
+      ? 6
+      : unit === "mm" || unit === "pt"
+        ? Math.min(compact ? 1.3 : 1.8, (box.px1 - box.px0) * 0.02)
+        : compact
+          ? 4
+          : 6;
 
   for (let i = 0; i < xTicks.length; i++) {
     const tick = xTicks[i]!;
@@ -1626,6 +1634,14 @@ function expandAxisTicks(
           align: literal("center"),
           fill: literal("#3d3d3d"),
         }),
+        node(`${frameName}_xtickMark_${i}`, {
+          role: literal("axis"),
+          x1: literal(sx),
+          y1: literal(box.py1),
+          x2: literal(sx),
+          y2: literal(box.py1 + sceneTick),
+          strokeWidth: literal(compact ? 0.8 : 1),
+        }),
       );
     } else {
       const xSpan = binary("-", xlimHigh(props), xlimLow(props), span);
@@ -1640,19 +1656,17 @@ function expandAxisTicks(
           font: literal(font),
           align: literal("center"),
         }),
+        node(`${frameName}_xtickMark_${i}`, {
+          role: literal("axis"),
+          frame: literal(frameName),
+          x1: literal(tick.value),
+          y1: ylimLow(props),
+          x2: literal(tick.value),
+          y2: binary("-", ylimLow(props), dataTickLen, span),
+          strokeWidth: literal(1),
+        }),
       );
     }
-    items.push(
-      node(`${frameName}_xtickMark_${i}`, {
-        role: literal("axis"),
-        frame: literal(frameName),
-        x1: literal(tick.value),
-        y1: ylimLow(props),
-        x2: literal(tick.value),
-        y2: binary("-", ylimLow(props), tickLen, span),
-        strokeWidth: literal(1),
-      }),
-    );
   }
 
   for (let i = 0; i < yTicks.length; i++) {
@@ -1670,6 +1684,14 @@ function expandAxisTicks(
           align: literal("right"),
           fill: literal("#3d3d3d"),
         }),
+        node(`${frameName}_ytickMark_${i}`, {
+          role: literal("axis"),
+          x1: literal(box.px0),
+          y1: literal(sy),
+          x2: literal(box.px0 + sceneTick),
+          y2: literal(sy),
+          strokeWidth: literal(compact ? 0.8 : 1),
+        }),
       );
     } else {
       const xSpan = binary("-", xlimHigh(props), xlimLow(props), span);
@@ -1684,19 +1706,17 @@ function expandAxisTicks(
           font: literal(font),
           align: literal("right"),
         }),
+        node(`${frameName}_ytickMark_${i}`, {
+          role: literal("axis"),
+          frame: literal(frameName),
+          x1: xlimLow(props),
+          y1: literal(tick.value),
+          x2: binary("+", xlimLow(props), dataTickLen, span),
+          y2: literal(tick.value),
+          strokeWidth: literal(1),
+        }),
       );
     }
-    items.push(
-      node(`${frameName}_ytickMark_${i}`, {
-        role: literal("axis"),
-        frame: literal(frameName),
-        x1: xlimLow(props),
-        y1: literal(tick.value),
-        x2: binary("+", xlimLow(props), tickLen, span),
-        y2: literal(tick.value),
-        strokeWidth: literal(1),
-      }),
-    );
   }
 
   return items;
@@ -2254,7 +2274,7 @@ function gaussianKDE(values: number[], y0: number, y1: number, n: number): numbe
   const variance =
     values.reduce((s, v) => s + (v - mean) * (v - mean), 0) / Math.max(1, values.length);
   const std = Math.sqrt(variance) || span / 8;
-  const h = Math.max(span / 18, 1.06 * std * Math.pow(Math.max(1, values.length), -0.2));
+  const h = Math.max(span / 28, 0.85 * std * Math.pow(Math.max(1, values.length), -0.2));
   const dens: number[] = [];
   for (let i = 0; i < n; i++) {
     const y = y0 + (i / Math.max(1, n - 1)) * span;
@@ -2264,6 +2284,10 @@ function gaussianKDE(values: number[], y0: number, y1: number, n: number): numbe
       s += Math.exp(-0.5 * u * u);
     }
     dens.push(s);
+  }
+  if (dens.length) {
+    dens[0] = 0;
+    dens[dens.length - 1] = 0;
   }
   return dens;
 }
@@ -2337,14 +2361,17 @@ function expandViolinMarks(
       span,
     };
     if (box) {
-      const ymin = box.ymin;
-      const ymax = box.ymax;
-      const dens = gaussianKDE(values, ymin, ymax, 28);
+      const dataMin = Math.min(...values);
+      const dataMax = Math.max(...values);
+      const pad = Math.max((dataMax - dataMin) * 0.18, (box.ymax - box.ymin) * 0.04);
+      const ymin = Math.max(box.ymin, dataMin - pad);
+      const ymax = Math.min(box.ymax, dataMax + pad);
+      const dens = gaussianKDE(values, ymin, ymax, 48);
       const cx = domainMap(x, [box.xmin, box.xmax], [box.px0, box.px1], false, box.xScale);
       const halfStep =
         Math.abs(
-          domainMap(x + 0.42, [box.xmin, box.xmax], [box.px0, box.px1], false, box.xScale) - cx,
-        ) || (box.px1 - box.px0) / (2 * nGroups);
+          domainMap(x + 0.36, [box.xmin, box.xmax], [box.px0, box.px1], false, box.xScale) - cx,
+        ) || (box.px1 - box.px0) / (2.4 * nGroups);
       items.push(
         node("violin", {
           role: literal("mark"),
