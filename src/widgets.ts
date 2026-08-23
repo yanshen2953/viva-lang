@@ -20,6 +20,7 @@ import {
 import { domainMap, parseTimeValue, scaleKind, type ScaleKind } from "./space.js";
 import { COLUMN_MM, sceneScaleOf } from "./space/scene-box.js";
 import { estimateBoardBands } from "./layout/board-chrome.js";
+import { figureGapDefaults } from "./layout/figure-gap.js";
 import {
   clampChartInsets,
   growInsetsForChrome,
@@ -991,8 +992,13 @@ function expandLayoutFigure(
   const gridH = Math.max(32, height - titleH - headGap - capH - footGap);
   const cols = Math.max(1, Math.floor(numProp(props, "cols", 2)));
   const rows = Math.max(1, Math.floor(numProp(props, "rows", 2)));
-  const gutter = numProp(props, "gutter", 28);
-  const margin = numProp(props, "margin", 16);
+  const gaps = figureGapDefaults({
+    unit: sceneUnitOf(artifact),
+    width,
+    cols,
+  });
+  const gutter = numProp(props, "gutter", gaps.gutter);
+  const margin = numProp(props, "margin", gaps.margin);
   const explicitL = props.insetL !== undefined || props.plotPadL !== undefined;
   const explicitR = props.insetR !== undefined || props.plotPadR !== undefined;
   const explicitT = props.insetT !== undefined || props.plotPadT !== undefined;
