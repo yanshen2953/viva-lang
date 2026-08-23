@@ -102,7 +102,28 @@ widget chart.scatter
   areaY: 70 400
 ```
 
-`chart.line` / `chart.bar` 同理。结构展开为 frame + 轴 + marks；审美仍走 handbook。
+`chart.line` / `chart.bar` / `chart.heatmap` 同理。结构展开为 frame + 轴 + marks；审美仍走 handbook。
+
+出版级常用 props（均为 widget 属性，不是新关键字）：
+
+```viva
+widget chart.scatter
+  data: series
+  xField: t
+  yField: p
+  errorField: err
+  xLabel: Time
+  xUnit: week
+  yLabel: Pressure
+  yUnit: kPa
+  xlim: 0 10
+  ylim: 0 100
+```
+
+- `xLabel` / `yLabel` + `xUnit` / `yUnit` → 轴标题（如 `Time (week)`）
+- `errorField` / `yerr` → 竖直误差棒
+- `chart.heatmap`：`valueField` + `zlim`，右侧连续色条
+- 默认 `hover` 把读数写入 `__tip`（`interactive: false` 可关）
 
 ## 图层（z-order = 声明顺序）
 

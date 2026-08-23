@@ -27,7 +27,7 @@
 | --- | --- |
 | 工作分支 | `cursor/style-handbook-hook-a8c1` |
 | 最新提交 | Session/Pipeline/Provenance 对外接入 + CI + GAPS（见 git log） |
-| 测试 | `npm test` → **113 passed**（22 files） |
+| 测试 | `npm test` — 见当前 vitest（图核质量测试已加） |
 | `build:lib` | `npm run build:lib` 通过 |
 | CI | `.github/workflows/ci.yml`：`npm ci` / `build:lib` / `npm test` / Atlas `--visual` |
 | `npm run build` | 可能因 playground/runtime 严格 tsc 失败；日常用 `vite-node` + vitest |
@@ -118,7 +118,7 @@ Vision 检查需 `viva.models.json`（见 `viva.models.json.example`）或 env `
 3. **Playground** — 状态栏已有结构检查；浏览器内 vision/MCP 不现实
 4. **Agent exam** — `npm run test:agent-exam` 需 `DEEPSEEK_API_KEY`（Pi+DeepSeek SUT）
 5. **发布包实跑** — `npm run pack:release`，在干净环境验证 `release/` 与 Docker
-6. **PLAN §9.1 联合验收** — 见 `docs/GAPS.md`：拖参→pipeline 回流、领域选中桥、第三方复盘演示仍欠
+6. **图核质量** — 轴标题/误差棒/热图/导出保真已起步；见 `docs/GAPS.md` 诚实版。下一刀：PDF/CJK、mm 栏宽、Atlas 迁 heatmap、session visual 检查
 
 ### 已知约束 / 坑
 
