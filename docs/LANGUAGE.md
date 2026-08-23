@@ -141,6 +141,7 @@ widget layout.board
 轴尺度（frame 或 chart 属性，不是新关键字）：
 
 - `xScale: log` / `yScale: log`
+- 热图第三轴：`zLabel` / `zUnit`（与 `xLabel` 同类属性，不是新关键字）；色条数字和标题按剩余栏宽折行
 - `xScale: band` / `category`（字符串列会自动 band）；也可用 `xCats` / `yCats`
 - 图例默认在图外右侧：`legend: right|bottom|inside|false`
 
