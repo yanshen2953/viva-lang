@@ -301,7 +301,9 @@ widget chart.scatter
       expect.arrayContaining(["safe", "title", "body", "lower", "beat0", "beat3"]),
     );
     expect(result.ir!.scene.layers.some((l) => l.name === "__beat0_marks")).toBe(true);
-    expect(result.ir!.scene.layers.some((l) => l.name === "__board_play")).toBe(true);
+    const layerNames = result.ir!.scene.layers.map((l) => l.name);
+    expect(layerNames).toContain("__board_play");
+    expect(layerNames.indexOf("__board_play")).toBeGreaterThan(layerNames.indexOf("__beat0_marks"));
     expect(Object.keys(result.ir!.state)).toContain("__beat");
     expect(result.ir!.ticks.length).toBeGreaterThan(0);
     const world = simulate(result.ir!, { ticks: 1 });

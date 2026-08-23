@@ -42,5 +42,26 @@ describe("static SVG + raster/pdf export", () => {
     expect(frames[0]!.bytes.byteLength).toBeGreaterThan(100);
     expect(String.fromCharCode(...frames[0]!.bytes.slice(0, 8))).toContain("PNG");
     expect(Buffer.from(frames[0]!.bytes).equals(Buffer.from(frames[1]!.bytes))).toBe(false);
+    const sharp = (await import("sharp")).default;
+    const meanBand = async (bytes: Uint8Array, x0: number, x1: number) => {
+      const { data, info } = await sharp(bytes).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+      let sum = 0;
+      let n = 0;
+      const left = Math.floor(info.width * x0);
+      const right = Math.floor(info.width * x1);
+      const top = Math.floor(info.height * 0.28);
+      const bottom = Math.floor(info.height * 0.72);
+      for (let y = top; y < bottom; y++) {
+        for (let x = left; x < right; x++) {
+          const i = (y * info.width + x) * info.channels;
+          sum += data[i]! + data[i + 1]! + data[i + 2]!;
+          n += 3;
+        }
+      }
+      return sum / Math.max(1, n);
+    };
+    const beat0Left = await meanBand(frames[0]!.bytes, 0.06, 0.24);
+    const beat1Left = await meanBand(frames[1]!.bytes, 0.06, 0.24);
+    expect(beat0Left).toBeGreaterThan(beat1Left + 15);
   }, 30_000);
 });

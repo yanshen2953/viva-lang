@@ -94,7 +94,17 @@ export function expandWidgets(artifact: Artifact): Artifact {
       index,
     });
   }
+  liftPlayLayers(next);
   return next;
+}
+
+/** `layout.board play` veils must paint after chart marks (layout expands first). */
+function liftPlayLayers(artifact: Artifact): void {
+  const layers = artifact.scene?.layers;
+  if (!layers?.length) return;
+  const play = layers.filter((layer) => /_play$/.test(layer.name));
+  if (!play.length) return;
+  artifact.scene!.layers = [...layers.filter((layer) => !/_play$/.test(layer.name)), ...play];
 }
 
 function expandTimeline(artifact: Artifact, props: Record<string, Expr>): void {
