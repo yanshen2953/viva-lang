@@ -37,7 +37,7 @@
 | `chart.vector` / `chart.funnel` | 数据域位移箭头；横向漏斗（`orient: h` 也对 bar 生效） |
 | band / 分类轴 | 字符串列自动 band；`xScale: band` + `xCats`/`yCats`；log 刻度为 10ⁿ |
 | 图例外置 | 默认 `legend: right`；`bottom` / `inside` / `false` |
-| 默认悬停 / 刷选 | `__tip` + `__hover` + `__brush.{dx*}` + `__highlightGrp`；点图例也写高亮 |
+| 默认悬停 / 刷选 | `__tip` + 跟手 `__tipX`/`__tipY` + `__hover` + `__brush.{dx*}` + `__highlightGrp`；点图例也写高亮；`__event` 是作者场景单位 |
 | 折线按 x 排序 | 源数据乱序也能连对 |
 | SVG 导出 | `font-family` / `font-weight` / `letter-spacing` / `stroke-dasharray` / 旋转轴标题 |
 | 动态 widget 插件 | `registerWidget()` / `listWidgets()` |
@@ -51,16 +51,17 @@
 | typeGrid 灌文 | 12 导轨仍画 `type0`…；`body:` 按可读 2–3 栏从上到下、从左到右灌槽，不是 InDesign |
 | 续页跑页眉 | 多页 `page:` 续页顶栏重复 figure `(continued)` 或 board 题注；仍不是对页/章节标 |
 | play 当前拍可点 | 当前拍遮罩 `visible: false`（220ms 淡出 + pointer-events none）；storyboard/board 图不再写 `interactive: false` |
+| mm 跟手 tip | 紧凑/投稿图不再靠常驻角 HUD；`chartTip` 跟 `__event` 走，空字不画；HUD/brush 不抢指针。paper-cjk / paper-column / figure-grid / figure-span / box / violin / time-axis / brackets 默认可交互。`__event.x/y` 是作者场景单位（mm 不再二次缩放刷选）。paper-pages / paper-spread 仍关交互（页切片演示） |
 
 ## 仍然很粗（按用户可见排序）
 
 1. PDF 默认随包 `assets/fonts/VivaSansFallback.ttf`（Droid 子集，覆盖当前 examples + 论文用字；`scripts/subset-cjk-font.py` 可重建）。宿主可用 `VIVA_PDF_CJK_FONT`、`--cjk-font` 或导出 `cjkFontPath` 覆盖；未覆盖的字仍可能 `?`。不是全库
 2. 有 time / box / violin（KDE 轮廓）/ 显著性括号；轴刻度在场景坐标。`print-nature` 刻度 8 / 轴标题 9。观感仍粗，不是投稿成品
 3. Atlas / figure-grid / board / storyboard / linked-filter / science-studio 图表已去掉 `inset*`、手摆 headline / lowerThird、`safe`/`titleH`/`gutter`/`areaX` 魔法数；作者 `role: panel` / `role: plot` 升成 frame；`science-studio` 左栏文案和四宫格吃 `layout.board` / `layout.figure` 槽（`body:` 折进 `left`，图吃 `right`，PCA `panel: d`），不再手摆 `chartDeck` / `x: 48`；矢量场已改 `chart.vector`；PCA 投影走 `pcaPlotBg` frame，不再写 980/78；PCA 点默认吃图表 `__tip` / 高亮，`colorBy` 图例、plot `title` 和 `+`/`-` 缩放芯片由编译器画。`layout.board` 出题注 + `controls`/`bind` HUD 芯片，空题注不再默认占 72/96。`layout.figure` 吃 `body`，图表 `span: 2` 可跨栏。`page: a4` 切 PDF 页并盖 `n / N`；有 `page` 时 `column` 是 89/183 mm 图栏（纸页仍是 210 mm），figure 行避开页缝并拉高场景；`layout.board` 的 `body:` 按栏宽折行，触到页刀进下一页（无 `page` 时停在槽底，不画进图）。仍不是报纸分栏。chrome 有盒子碰撞消解；图/轴标题和图例键按栏宽折行（像素量宽、场景落位；Y 轴折行后自上而下阅读；行数封顶后尾行 `...`），重叠刻度抽稀，相邻格互叠时再长 inset。仍不是栏宽排版器
-4. `__sel` 默认跨面板藏行；box 四分位、violin 密度和折线线段按选中行重算/重连。挂了 `frame:` 的 World 点默认 tooltip/高亮/`__sel`（投影坐标不绑 brush）。本地 brush 松手后保持选择窗，路径够长切套索。高亮、藏行、`play` 遮罩、box/折线几何和同骨架 violin `d` 缓 220ms。当前拍遮罩让出指针，storyboard 图默认可刷选。仍无时间轴动画
+4. `__sel` 默认跨面板藏行；box 四分位、violin 密度和折线线段按选中行重算/重连。挂了 `frame:` 的 World 点默认 tooltip/高亮/`__sel`（投影坐标不绑 brush）。本地 brush 松手后保持选择窗，路径够长切套索。高亮、藏行、`play` 遮罩、box/折线几何和同骨架 violin `d` 缓 220ms。当前拍遮罩让出指针，storyboard 图默认可刷选。投稿 mm 图跟手 `__tip`（`__event` 为场景毫米），paper-cjk 等旗舰图默认可交互。仍无时间轴动画
 5. MCP/HTTP compile 已附 visual QA，仍不挡 IR 成功；空栏检查优先用 figure `cellX`/`cellY`，不是瞎切 2×2。结构层会警告标题/轴题/图例出格（旋转 Y 轴不再被量成横条假溢出）。内联卡无 raster；无自动修复
 6. MCP/HTTP/CLI prompt 默认 slim；生成成功率未测
-7. 小栏宽 mm 图默认不再画常驻 `__tip` HUD；不写 `areaX` 时编译器按场景估绘图区，并停在作者节点/手写 frame 腾出的最大空矩形；两张以上未绑 chart 自动成网格时同样避开题注，满幅氛围层不占空位。inset 先按 38% 软顶，装不下再让到约半格，仍可能溢出，不是投稿成品碰撞求解
+7. 小栏宽 mm 图默认跟手 `__tip`（空字不画，打印无鬼影），不再靠常驻角 HUD。不写 `areaX` 时编译器按场景估绘图区，并停在作者节点/手写 frame 腾出的最大空矩形；两张以上未绑 chart 自动成网格时同样避开题注，满幅氛围层不占空位。inset 先按 38% 软顶，装不下再让到约半格，仍可能溢出，不是投稿成品碰撞求解
 8. `typeGrid` 仍画基线 + `type0`… 栏；`body:` 会按可读栏宽（12 导轨 → 3 栏）从上到下、从左到右灌进这些槽，仍不是跨页报纸或视频时间轴
 
 ## 下一刀（质量，不再铺接口）

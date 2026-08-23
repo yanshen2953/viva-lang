@@ -243,7 +243,7 @@ widget chart.heatmap
     expect(svg).not.toMatch(/NaN|Infinity/);
   });
 
-  it("keeps the mm paper HUD to the brush overlay (no standing tip)", () => {
+  it("paints a follow-cursor tip on mm paper instead of a standing corner HUD", () => {
     const result = compileSource(
       `artifact "Mm"
 data series = [{ x: 1, y: 2 }, { x: 4, y: 6 }]
@@ -270,7 +270,15 @@ widget chart.scatter
       .filter((i) => i.kind === "node")
       .map((i) => (i.kind === "node" ? i.name : ""));
     expect(names).toContain("brushRect");
-    expect(names).not.toContain("chartTip");
+    expect(names).toContain("chartTip");
+    const tip = hud!.items.find((i) => i.kind === "node" && i.name === "chartTip");
+    expect(tip?.kind).toBe("node");
+    if (tip?.kind === "node") {
+      expect(tip.props.x?.kind).not.toBe("number");
+      expect(JSON.stringify(tip.props.x)).toContain("__tipX");
+      expect(JSON.stringify(tip.props.y)).toContain("__tipY");
+      expect(JSON.stringify(tip.props.visible)).toContain("__tip");
+    }
   });
 
   it("scales path d with unit: mm so violin/scene paths stay aligned", () => {

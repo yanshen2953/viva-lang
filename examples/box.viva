@@ -21,4 +21,3 @@ widget chart.box
   xLabel: Arm
   yLabel: Score
   title: "Box · compiler quartiles"
-  interactive: false

@@ -145,7 +145,7 @@ widget layout.board
 
 跨面板：`__brush` 按 frame 隔离，同名 `xField` 联动；刷选写入 `__sel.keys`。有效刷选在 `dragend` 后 **保持** 选择窗（`__brush.on` 仍为 1），空点 `dragend` 才清。拖路径明显长于对角时切到数据域套索（`inside` + `pathd`），否则仍是矩形窗。其它图默认 **藏起** 不在集合里的行（含 heatmap 格子、折线线段、box / violin 摘要）。Runtime 用 opacity + 命中组 `scale`、box/折线几何和同骨架 violin 路径做约 220ms 缓动，不是时间轴。点图例色块也会写入 `__sel`（再点一次清空）。`link: dim` 可改回变淡。
 
-图表默认交互（`interactive: false` 可关）：`__tip` 字符串、`__hover` 对象、`__brush`（场景框 + 数据域 `dx0/dy0/dx1/dy1`，刷选外的点变淡）、同 `group` 跨面板 `__highlightGrp`。点图例色块也会写 `__highlightGrp`。同一套默认也落到挂了 `frame:` 的 World 点上（投影/表达式坐标不绑 brush，以免和作者拖轨道抢手）。
+图表默认交互（`interactive: false` 可关）：`__tip` 字符串、跟手 `__tipX` / `__tipY`（作者场景单位；空 `__tip` 时 tip 不画，打印件没有鬼影）、`__hover` 对象、`__brush`（场景框 + 数据域 `dx0/dy0/dx1/dy1`，刷选外的点变淡）、同 `group` 跨面板 `__highlightGrp`。点图例色块也会写 `__highlightGrp`。同一套默认也落到挂了 `frame:` 的 World 点上（投影/表达式坐标不绑 brush，以免和作者拖轨道抢手）。`__event.x` / `__event.y` 是作者场景单位（`unit: mm` 时是毫米），不是 viewBox 像素。
 
 插件图种：`chart.scatter|line|bar|heatmap|vector|funnel`。`chart.vector` 用 `xField/yField` + `uField/vField`（数据域位移）。`chart.funnel` 是横向 `chart.bar`（`orient: h` 也对 `chart.bar` 生效）。
 
@@ -168,7 +168,7 @@ widget chart.scatter
 - `xLabel` / `yLabel` + `xUnit` / `yUnit` → 轴标题（如 `Time (week)`）
 - `errorField` / `yerr` → 竖直误差棒
 - `chart.heatmap`：`valueField` + `zlim`，右侧连续色条
-- 默认 `hover` 把读数写入 `__tip`（`interactive: false` 可关）
+- 默认 `hover` 把读数写入 `__tip`，指针写入 `__tipX` / `__tipY`（跟手 tip；`interactive: false` 可关）
 
 ## 图层（z-order = 声明顺序）
 

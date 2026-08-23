@@ -50,7 +50,6 @@ widget chart.scatter
   xLabel: Time
   xUnit: week
   yLabel: Score
-  interactive: false
 
 widget chart.line
   panel: b
@@ -61,7 +60,6 @@ widget chart.line
   ylim: 0 40
   xLabel: Time
   yLabel: Response
-  interactive: false
 
 widget chart.bar
   panel: c
@@ -72,7 +70,6 @@ widget chart.bar
   ylim: 0 80
   xLabel: Visit
   yLabel: Percent
-  interactive: false
 
 widget chart.heatmap
   panel: d
@@ -83,4 +80,3 @@ widget chart.heatmap
   xlim: -0.5 2.5
   ylim: -0.5 2.5
   zlim: 0 1
-  interactive: false

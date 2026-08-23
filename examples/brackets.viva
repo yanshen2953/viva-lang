@@ -22,4 +22,3 @@ widget chart.bar
     { a: "placebo", b: "drug-A", label: "**" }
     { a: "drug-A", b: "drug-B", label: "ns" }
   ]
-  interactive: false

@@ -60,6 +60,20 @@ export function sceneScaleOf(sceneProps: Record<string, unknown>): number {
   return 1;
 }
 
+/**
+ * Pointer / viewBox CSS px → author scene units.
+ * `unit: mm` scenes keep __event.x/y in millimetres so brush invert and HUD
+ * tips share the same space as areaX / node x (scaleSceneGeom then paints px).
+ */
+export function viewBoxToScene(
+  x: number,
+  y: number,
+  scale: number,
+): { x: number; y: number } {
+  const s = Number.isFinite(scale) && scale > 0 ? scale : 1;
+  return { x: x / s, y: y / s };
+}
+
 const SCENE_GEOM_KEYS = ["x", "y", "w", "h", "width", "height", "x1", "y1", "x2", "y2", "r", "size"] as const;
 
 /** Scale simple path `d` numbers (M/L/C/Z). Used when `unit: mm` expands to px. */

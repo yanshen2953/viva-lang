@@ -23,4 +23,3 @@ widget chart.line
   yUnit: mg/L
   ylim: 0 32
   title: "ISO dates · xScale time"
-  interactive: false

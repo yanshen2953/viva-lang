@@ -2963,21 +2963,7 @@ function sceneUnitOf(artifact: Artifact): string {
 function isCompactScene(artifact: Artifact): boolean {
   const unit = sceneUnitOf(artifact);
   if (unit === "mm" || unit === "pt") return true;
-  const size = artifact.scene?.props.size;
-  const widthExpr = artifact.scene?.props.width;
-  const heightExpr = artifact.scene?.props.height;
-  const w =
-    widthExpr?.kind === "number"
-      ? widthExpr.value
-      : size?.kind === "array" && size.items[0]?.kind === "number"
-        ? size.items[0].value
-        : 880;
-  const h =
-    heightExpr?.kind === "number"
-      ? heightExpr.value
-      : size?.kind === "array" && size.items[1]?.kind === "number"
-        ? size.items[1].value
-        : 480;
+  const { w, h } = sceneExtentOf(artifact);
   return w <= 320 && h <= 240;
 }
 
@@ -4179,7 +4165,7 @@ function bindFramedWorldInteract(artifact: Artifact): void {
       type: "hover",
       target: mark.target,
       body: [
-        assign(["__tip"], tipExpr),
+        ...hoverTipAssigns(tipExpr),
         assign(["__hover"], hoverObj),
         ...(mark.colorBy ? [assign(["__highlightGrp"], ident(mark.colorBy))] : []),
       ],
@@ -4696,9 +4682,23 @@ function authorTitleNear(
   return false;
 }
 
+function hoverTipAssigns(tipExpr: Expr): Statement[] {
+  return [
+    assign(["__tip"], tipExpr),
+    assign(["__tipX"], ident("__event.x")),
+    assign(["__tipY"], ident("__event.y")),
+  ];
+}
+
 function ensureInteractStates(artifact: Artifact, span: { line: number; column: number }): void {
   if (!artifact.states.some((s) => s.name === "__tip")) {
     artifact.states.push({ name: "__tip", value: literal(""), span });
+  }
+  if (!artifact.states.some((s) => s.name === "__tipX")) {
+    artifact.states.push({ name: "__tipX", value: literal(0), span });
+  }
+  if (!artifact.states.some((s) => s.name === "__tipY")) {
+    artifact.states.push({ name: "__tipY", value: literal(0), span });
   }
   if (!artifact.states.some((s) => s.name === "__hover")) {
     artifact.states.push({
@@ -4767,23 +4767,39 @@ function ensureBrushState(artifact: Artifact, span: { line: number; column: numb
 function ensureChartHud(artifact: Artifact, span: { line: number; column: number }): void {
   if (!artifact.scene) return;
   if (artifact.scene.layers.some((l) => l.name === "__chart_hud")) return;
-  const size = artifact.scene.props.size;
-  const width = size?.kind === "array" && size.items[0]?.kind === "number" ? size.items[0].value : 880;
-  const height = size?.kind === "array" && size.items[1]?.kind === "number" ? size.items[1].value : 480;
+  const { w: width, h: height } = sceneExtentOf(artifact);
   const compact = isCompactScene(artifact);
-  const hudItems: SceneItem[] = [];
-  if (!compact) {
-    hudItems.push(
-      node("chartTip", {
-        role: literal("hud"),
-        x: literal(Math.max(16, width - 220)),
-        y: literal(Math.max(16, height - 16)),
-        text: ident("__tip"),
-        font: literal(11),
-        align: literal("right"),
-      }),
-    );
-  }
+  const ox = compact ? 3 : 12;
+  const oy = compact ? 4 : 14;
+  const font = compact ? 8 : 11;
+  const pad = compact ? 2 : 8;
+  const hudItems: SceneItem[] = [
+    node("chartTip", {
+      role: literal("hud"),
+      x: callExpr(
+        "clamp",
+        [
+          binary("+", ident("__tipX"), literal(ox), span),
+          literal(pad),
+          literal(Math.max(pad, width - pad)),
+        ],
+        span,
+      ),
+      y: callExpr(
+        "clamp",
+        [
+          binary("-", ident("__tipY"), literal(oy), span),
+          literal(pad + font),
+          literal(Math.max(pad + font, height - pad)),
+        ],
+        span,
+      ),
+      text: ident("__tip"),
+      font: literal(font),
+      align: literal("left"),
+      visible: ident("__tip"),
+    }),
+  ];
   hudItems.push(
     node("brushRect", {
       role: literal("chrome"),
@@ -4887,7 +4903,7 @@ function ensureChartInteract(
       type: "hover",
       target,
       body: [
-        assign(["__tip"], tipExpr),
+        ...hoverTipAssigns(tipExpr),
         assign(["__hover"], hoverObj),
         ...(seriesField ? [assign(["__highlightGrp"], ident(seriesField))] : []),
       ],

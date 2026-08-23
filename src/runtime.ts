@@ -18,7 +18,13 @@ import {
   type FrameScales,
 } from "./space.js";
 import { propsToBBox as nodePropsToBBox } from "./layout/node-bbox.js";
-import { evalSceneProps, resolveSceneBox, scaleSceneGeom, sceneScaleOf } from "./space/scene-box.js";
+import {
+  evalSceneProps,
+  resolveSceneBox,
+  scaleSceneGeom,
+  sceneScaleOf,
+  viewBoxToScene,
+} from "./space/scene-box.js";
 import { DEFAULT_SCENE_BACKGROUND, resetPaletteSeries, setStyleContext } from "./style/index.js";
 import { STYLE_META_PROPS } from "./style/types.js";
 import {
@@ -71,7 +77,7 @@ type HitShape =
 
 /**
  * Game-oriented runtime: click/hover/drag/dragend/collide/key + tick.
- * Scene coordinates are always in viewBox space (Godot-like local space).
+ * __event.x/y are author scene units (mm when unit: mm). px/py stay viewBox CSS px.
  */
 export class Runtime {
   private readonly ir: VisualIR;
@@ -462,6 +468,7 @@ export class Runtime {
         : num(p.scale, 1);
     const paint = markPaintState(visible, opacity, scale);
     applyMarkPaintCss(el, paint);
+    if (hudIgnoresPointer(node.name, p.role)) el.style.pointerEvents = "none";
     const prevHide = this.hideTimers.get(node.id);
     if (prevHide) window.clearTimeout(prevHide);
     if (paint.hideAfterMs !== null) {
@@ -616,7 +623,7 @@ export class Runtime {
 
       if (this.isDraggable(target) || this.hasHandler("drag", target) || this.hasHandler("dragend", target)) {
         const scene = this.pointerToScene(event);
-        const anchor = this.anchorOf(target);
+        const anchor = this.sceneAnchorOf(target);
         this.drag = {
           node: target,
           pointerId: event.pointerId,
@@ -629,8 +636,8 @@ export class Runtime {
         this.fire("dragstart", target, event, {
           x: anchor.x,
           y: anchor.y,
-          px: scene.x,
-          py: scene.y,
+          px: scene.px,
+          py: scene.py,
           t: scene.t,
           dx: 0,
           dy: 0,
@@ -647,8 +654,8 @@ export class Runtime {
       this.fire("dragend", target, event, {
         x,
         y,
-        px: scene.x,
-        py: scene.y,
+        px: scene.px,
+        py: scene.py,
         t: scene.t,
         dx: x - this.drag.originX,
         dy: y - this.drag.originY,
@@ -736,8 +743,8 @@ export class Runtime {
     this.fire("drag", target, event, {
       x,
       y,
-      px: scene.x,
-      py: scene.y,
+      px: scene.px,
+      py: scene.py,
       t: scene.t,
       dx,
       dy,
@@ -807,8 +814,8 @@ export class Runtime {
     const payload = {
       x: scene.x,
       y: scene.y,
-      px: scene.x,
-      py: scene.y,
+      px: scene.px,
+      py: scene.py,
       t: scene.t,
       dx: 0,
       dy: 0,
@@ -832,29 +839,44 @@ export class Runtime {
     this.render();
   }
 
+  private sceneScale(): number {
+    return sceneScaleOf(evalSceneProps(this.ir.scene.props, this.scopes()));
+  }
+
+  private sceneAnchorOf(node: RenderNode): { x: number; y: number } {
+    const css = this.anchorOf(node);
+    return viewBoxToScene(css.x, css.y, this.sceneScale());
+  }
+
   private pointerToScene(event: PointerEvent): PointerScene {
     const svg = this.svg!;
     const pt = svg.createSVGPoint();
     pt.x = event.clientX;
     pt.y = event.clientY;
     const ctm = svg.getScreenCTM();
+    let localX: number;
+    let localY: number;
+    let t: number;
     if (ctm) {
       const local = pt.matrixTransform(ctm.inverse());
       const vb = svg.viewBox.baseVal;
-      const t = Math.min(1, Math.max(0, local.x / Math.max(vb.width || 1, 1)));
-      return { x: local.x, y: local.y, t, px: local.x, py: local.y };
+      localX = local.x;
+      localY = local.y;
+      t = Math.min(1, Math.max(0, local.x / Math.max(vb.width || 1, 1)));
+    } else {
+      // Fallback if CTM unavailable (rare headless edge case).
+      const rect = svg.getBoundingClientRect();
+      const vb = svg.viewBox.baseVal;
+      const width = Math.max(rect.width, 1);
+      const height = Math.max(rect.height, 1);
+      const vbW = vb.width || 1;
+      const vbH = vb.height || 1;
+      localX = ((event.clientX - rect.left) / width) * vbW;
+      localY = ((event.clientY - rect.top) / height) * vbH;
+      t = Math.min(1, Math.max(0, (event.clientX - rect.left) / width));
     }
-    // Fallback if CTM unavailable (rare headless edge case).
-    const rect = svg.getBoundingClientRect();
-    const vb = svg.viewBox.baseVal;
-    const width = Math.max(rect.width, 1);
-    const height = Math.max(rect.height, 1);
-    const vbW = vb.width || 1;
-    const vbH = vb.height || 1;
-    const x = ((event.clientX - rect.left) / width) * vbW;
-    const y = ((event.clientY - rect.top) / height) * vbH;
-    const t = Math.min(1, Math.max(0, (event.clientX - rect.left) / width));
-    return { x, y, t, px: x, py: y };
+    const scene = viewBoxToScene(localX, localY, this.sceneScale());
+    return { x: scene.x, y: scene.y, t, px: localX, py: localY };
   }
 
   private targetOf(event: PointerEvent): RenderNode | null {
@@ -1021,5 +1043,11 @@ function renderNodeToSelected(node: RenderNode): {
 
 function propsToBBox(p: Record<string, unknown>): { x: number; y: number; w: number; h: number } {
   return nodePropsToBBox(p);
+}
+
+/** HUD / brush overlays must not steal hover from marks (follow-cursor tip). */
+function hudIgnoresPointer(name: string, role: unknown): boolean {
+  const r = role === undefined || role === null ? "" : String(role);
+  return r === "hud" || name === "chartTip" || name === "brushRect" || name === "brushPath";
 }
 

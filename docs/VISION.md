@@ -19,7 +19,7 @@
 
 | 柱 | 愿景里的样子 | 今天实际 | 差在哪 |
 | --- | --- | --- | --- |
-| 交互 | 汇报件本身就是活世界：点、刷、拖、联动、时间，和游戏同一套原语 | Runtime 有 click/hover/drag/collide/key/tick；图表默认 `__tip` / `__hover` / `__brush`（数据域） / `__highlightGrp`；挂了 `frame:` 的 World 点走同一套（投影坐标不绑 brush） | 刷选还不是完整 linked selection；无动画过渡；内联卡上的检查/修复壳仍弱 |
+| 交互 | 汇报件本身就是活世界：点、刷、拖、联动、时间，和游戏同一套原语 | Runtime 有 click/hover/drag/collide/key/tick；图表默认跟手 `__tip`（`__tipX`/`__tipY` 为作者场景单位） / `__hover` / `__brush`（数据域） / `__highlightGrp`；挂了 `frame:` 的 World 点走同一套（投影坐标不绑 brush） | 刷选还不是完整 linked selection；无动画过渡；内联卡上的检查/修复壳仍弱 |
 | 图表 | 轴、误差、分组、色标、投稿可读，由编译器长出来 | `chart.scatter/line/bar/heatmap/vector/funnel/box/violin` + 线性/log/band/time；轴标题在场景坐标；violin 为 KDE 轮廓；`print-nature` 接管刻度/轴标题字号与字距；PDF 默认 CJK 子集，宿主可挂全库 | 小栏宽间距仍粗；默认子集不是全库；不是投稿成品 |
 | 排版 | 作者只说「2×2 图、单栏 89 mm、安全框」；格子、出血、字幕条、对位由编译器算 | `layout.figure` 网格（不写 `inset*` 时按绑定 chart 估留白）；`layout.board` 安全框 + `splits` / `beats` / `bleed` / `typeGrid`（不写 `safe`/`titleH`/`lowerH` 时按题注和芯片估条带）；`unit: mm` + 单/双栏；`page: a4` PDF 切片 + `n / N` 页戳；figure 格子避开页缝；`--beats` 出 PNG 序列，可选 ffmpeg 拼 GIF/MP4 幻灯 | 页装箱不是栏宽重排；估 inset ≠ 碰撞求解；`play` 仍是拍遮罩，不是成片时间轴 |
 | 语法 | 原语极小，新能力只加插件名 | 核还算小；widget 走 `registerWidget()` | 语言表面没涨关键字。不要为图种/槽位加关键字 |
@@ -72,7 +72,7 @@
 ### 3.2 论文级图表
 
 有：线性 / log / band / time 轴、scatter/line/bar/heatmap/vector/funnel/box、轴标题/单位、误差棒、热图色条、图例外置、投稿 mm、SVG 更接近 Runtime、PDF 默认随包 CJK 子集（examples + 论文用字；`VIVA_PDF_CJK_FONT` / `--cjk-font` / `cjkFontPath` 可挂宿主全库）。`print-nature` 会覆盖 widget 硬编码字号，刻度 8 / 轴标题 9 带字距。编译器按字号和 `unit: mm` 比例放置轴标题/刻度/图例；单图不写 `areaX`/`areaY` 时按场景估绘图区，并避开作者节点/手写 frame 占的空位，避免小栏宽把标题推出画布。  
-没有：完整 CJK 字库、通用排版求解（跨页、栏宽文法）。有 time / box / violin（KDE 轮廓）/ 显著性括号；轴刻度已离开数据域。chrome 盒子会互推一档（标题避开 `(a)`，y 轴标题避开刻度，图例避开色条）；图/轴标题按栏宽折行（最多三行；封顶后尾行 `...`；Y 轴 −90° 后从上往下读），折行宽度按像素字宽量、落位按场景单位（mm 栏不再把 60 mm 当成 60 px），图例键和色条标签按剩余栏宽折行（含连字符，最多两行；无连字符的拉丁图例键先按整词让 inset，避免 `treatmen` / `t`；色条/右图例先让 inset，仍装不下才省略），热图可用 `zLabel`/`zUnit`，重叠刻度抽稀，相邻格 chrome 互叠时再长 inset（互叠缝跟场景 `pad` 走）；inset 封顶后标题/轴题/图例尽量收回格内，不推进刻度。审查 / Runtime / 结构检查共用旋转感知盒子（CJK 字宽，mm 场景先 `scaleSceneGeom`）。仍不是 InDesign。小栏宽 mm 图默认不再画常驻 HUD 读数。
+没有：完整 CJK 字库、通用排版求解（跨页、栏宽文法）。有 time / box / violin（KDE 轮廓）/ 显著性括号；轴刻度已离开数据域。chrome 盒子会互推一档（标题避开 `(a)`，y 轴标题避开刻度，图例避开色条）；图/轴标题按栏宽折行（最多三行；封顶后尾行 `...`；Y 轴 −90° 后从上往下读），折行宽度按像素字宽量、落位按场景单位（mm 栏不再把 60 mm 当成 60 px），图例键和色条标签按剩余栏宽折行（含连字符，最多两行；无连字符的拉丁图例键先按整词让 inset，避免 `treatmen` / `t`；色条/右图例先让 inset，仍装不下才省略），热图可用 `zLabel`/`zUnit`，重叠刻度抽稀，相邻格 chrome 互叠时再长 inset（互叠缝跟场景 `pad` 走）；inset 封顶后标题/轴题/图例尽量收回格内，不推进刻度。审查 / Runtime / 结构检查共用旋转感知盒子（CJK 字宽，mm 场景先 `scaleSceneGeom`）。仍不是 InDesign。小栏宽 mm 图默认跟手 `__tip`（空字不画），不再靠常驻角 HUD。
 
 ### 3.3 图像 / 视频级排版
 

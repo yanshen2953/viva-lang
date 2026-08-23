@@ -25,4 +25,3 @@ widget chart.scatter
   xLabel: Dose
   yLabel: Response
   title: "Single-column 89 mm"
-  interactive: false

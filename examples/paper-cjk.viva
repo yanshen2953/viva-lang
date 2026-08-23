@@ -25,4 +25,3 @@ widget chart.scatter
   yLabel: "心率"
   yUnit: "次每分"
   title: "单栏投稿图"
-  interactive: false

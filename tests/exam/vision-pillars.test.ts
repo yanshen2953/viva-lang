@@ -8,8 +8,8 @@ import { exportArtifact } from "../../src/export/index.js";
 import { domainMap, domainUnmap, scalesFromFrameProps } from "../../src/space.js";
 import { resolveCjkFontPath } from "../../src/export/pdf-font.js";
 import { flattenNodesFromIr } from "../../src/export/static-svg.js";
-import { evaluate } from "../../src/eval.js";
-import { mmToPx, resolveSceneBox, scenePageCount, COLUMN_MM, PAGE_MM } from "../../src/space/scene-box.js";
+import { evaluate, truthy } from "../../src/eval.js";
+import { mmToPx, resolveSceneBox, scenePageCount, viewBoxToScene, COLUMN_MM, PAGE_MM } from "../../src/space/scene-box.js";
 import { PDFDocument } from "pdf-lib";
 import { handleMcpTool } from "../../src/mcp/tools.js";
 import { SYSTEM_PROMPT_SLIM } from "../../src/llm/system-prompt-slim.js";
@@ -136,13 +136,73 @@ widget chart.scatter
     );
     expect(result.error).toBeNull();
     expect(Object.keys(result.ir!.state).sort()).toEqual(
-      expect.arrayContaining(["__brush", "__highlightGrp", "__hover", "__sel", "__tip"]),
+      expect.arrayContaining([
+        "__brush",
+        "__highlightGrp",
+        "__hover",
+        "__sel",
+        "__tip",
+        "__tipX",
+        "__tipY",
+      ]),
     );
     expect(result.ir!.events.some((e) => e.type === "hover" && e.target === "mark")).toBe(true);
     expect(result.ir!.events.some((e) => e.type === "dragstart")).toBe(true);
     const hover = result.ir!.events.find((e) => e.type === "hover")!;
     expect(hover.body.some((s) => s.kind === "assign" && s.target[0] === "__hover")).toBe(true);
     expect(hover.body.some((s) => s.kind === "assign" && s.target[0] === "__highlightGrp")).toBe(true);
+    expect(hover.body.some((s) => s.kind === "assign" && s.target[0] === "__tipX")).toBe(true);
+  });
+
+  it("keeps paper-cjk live: follow-cursor tip in scene millimetres", () => {
+    for (const file of [
+      "paper-cjk.viva",
+      "paper-column.viva",
+      "figure-grid.viva",
+      "figure-span.viva",
+      "box.viva",
+      "violin.viva",
+      "time-axis.viva",
+      "brackets.viva",
+    ]) {
+      expect(readFileSync(`examples/${file}`, "utf8")).not.toMatch(/interactive:\s*false/);
+    }
+    const src = readFileSync("examples/paper-cjk.viva", "utf8");
+    const result = compileSource(src, "paper-cjk.viva", { handbookIds: ["print-nature"] });
+    expect(result.error).toBeNull();
+    expect(Object.keys(result.ir!.state)).toEqual(
+      expect.arrayContaining(["__tip", "__tipX", "__tipY", "__hover", "__brush"]),
+    );
+    expect(viewBoxToScene(mmToPx(89), mmToPx(68), mmToPx(1)).x).toBeCloseTo(89);
+    const world = simulate(result.ir!, {
+      events: [
+        {
+          type: "hover",
+          target: "mark",
+          event: { x: 40, y: 28 },
+          item: { x: 2, y: 18.4 },
+        },
+      ],
+    });
+    expect(world.state.__tip).toBe("2, 18.4");
+    expect(world.state.__tipX).toBe(40);
+    expect(world.state.__tipY).toBe(28);
+    const tip = result.ir!.scene.layers
+      .find((l) => l.name === "__chart_hud")
+      ?.items.find((i) => i.kind === "node" && i.name === "chartTip");
+    expect(tip?.kind).toBe("node");
+    if (tip?.kind === "node") {
+      const x = evaluate(tip.props.x!, [world.state]);
+      const y = evaluate(tip.props.y!, [world.state]);
+      expect(x).toBeGreaterThan(40);
+      expect(x).toBeLessThan(89);
+      expect(y).toBeGreaterThan(0);
+      expect(y).toBeLessThan(28);
+      expect(truthy(evaluate(tip.props.visible!, [{ __tip: "" }]))).toBe(false);
+      expect(truthy(evaluate(tip.props.visible!, [world.state]))).toBe(true);
+    }
+    const svg = renderSvgFromIr(result.ir!);
+    expect(svg).not.toMatch(/>2, 18\.4</);
   });
 
   it("lets a host CJK font win over the bundled subset", () => {

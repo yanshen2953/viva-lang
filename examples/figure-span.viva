@@ -43,7 +43,6 @@ widget chart.line
   ylim: 0 40
   xLabel: Time
   yLabel: Response
-  interactive: false
 
 widget chart.box
   panel: b
@@ -53,7 +52,6 @@ widget chart.box
   ylim: 8 28
   xLabel: Arm
   yLabel: Score
-  interactive: false
 
 widget chart.scatter
   panel: c
@@ -64,4 +62,3 @@ widget chart.scatter
   ylim: 0 40
   xLabel: Time
   yLabel: Score
-  interactive: false
