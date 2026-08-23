@@ -66,8 +66,8 @@
 
 ### 3.1 游戏式交互
 
-有：节点可拖、碰撞、键盘、tick、图层；图表默认数据域 tooltip、brush 反演（按 frame 隔离，同名 xField 联动）、跨面板 group 高亮、点图例高亮。  
-没有：完整游戏级过渡曲线、内联卡上的检查/修复壳。`__sel.keys` 默认让其它面板 **藏行**（含 box / violin / 折线线段；`link: dim` 可改回变淡）。Runtime 用现有 opacity 做 180ms 淡入淡出，静态导出仍是硬切。
+有：节点可拖、碰撞、键盘、tick、图层；图表默认数据域 tooltip、brush 反演（按 frame 隔离，同名 xField 联动）、跨面板 group 高亮、点图例高亮。有效刷选松手后保持矩形选择窗。  
+没有：套索、完整游戏级过渡曲线、内联卡上的检查/修复壳。`__sel.keys` 默认让其它面板 **藏行**（含 box / violin / 折线线段；`link: dim` 可改回变淡）。Runtime 用现有 opacity 做 180ms 淡入淡出，静态导出仍是硬切。
 
 ### 3.2 论文级图表
 
@@ -77,7 +77,7 @@
 ### 3.3 图像 / 视频级排版
 
 有：`layout.figure` 网格 + `(a)(b)` + 格子甲板；不写 `inset*` 时编译器按该格 chart 的刻度/标题/图例/色条迭代估留白；不写 `x/y/w/h` 时铺满场景，或 `panel: body` 吃 board 槽；`title`/`subtitle`/`caption` 由编译器画；两张以上未绑 panel 的 chart 自动成网格；`layout.board` 的 `safe` / `title` / `body` / `lower` + 题注属性 + `splits` / `beats` / `bleed` / `typeGrid`；`unit: mm` + 栏宽；CLI/MCP/HTTP `--beats` 按 `__beat` 导出 PNG 序列。  
-没有：跨页、导出视频、真正的碰撞求解。Atlas 基因 HUD 仍是手摆节点。`typeGrid` 是安全框上的基线与 `type0`… 栏，不是 InDesign 级网格系统。这些必须继续是**插件**，不能变成语法。`play` 仍是拍遮罩。
+没有：跨页、导出视频、真正的碰撞求解。`typeGrid` 是安全框上的基线与 `type0`… 栏，不是 InDesign 级网格系统。这些必须继续是**插件**，不能变成语法。`play` 仍是拍遮罩。
 
 ---
 
