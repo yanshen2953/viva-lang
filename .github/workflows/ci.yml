@@ -1,0 +1,24 @@
+name: CI
+
+on:
+  push:
+    branches: [main, "cursor/**"]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      - run: npm run build:lib
+      - run: npm test
+      - name: Visual check (Figure Atlas)
+        run: node dist/cli.js check examples/figure-atlas.viva --visual --handbook print-nature
+      - name: MCP tools smoke
+        run: node dist/cli.js prompt --handbook print-nature | head -c 200
