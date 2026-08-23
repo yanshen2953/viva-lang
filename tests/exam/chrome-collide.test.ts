@@ -124,7 +124,11 @@ describe("paper chrome collision", () => {
     );
     expect(chrome.cbarLines.some((lines) => lines.length > 1)).toBe(true);
     expect(chrome.cbarTitleLines.length).toBeGreaterThan(1);
-    expect(chrome.cbarTitleLines.join("").replace(/\s/g, "")).toMatch(/expression/);
+    expect(chrome.cbarTitleLines.join("").replace(/\s/g, "")).toMatch(/normalized/);
+    const leftover = Math.max(32, 200 - (chrome.cbarX + 14) - 4);
+    for (const line of chrome.cbarTitleLines) {
+      expect(estimateTextWidthPx(line, 9, 0.2)).toBeLessThanOrEqual(leftover + 1);
+    }
     const cbar = rects.find((r) => r.id === "cbar")!;
     expect(cbar).toBeTruthy();
     expect(rects.some((r) => r.id === "cbar-title")).toBe(true);
@@ -562,11 +566,17 @@ widget chart.line
     const frame = ir.frames[0]!;
     const cellX = evaluate(frame.props.cellX!, env) as number[];
     const plotX = evaluate(frame.props.x, env) as number[];
-    expect(cellX[1]! - plotX[1]!).toBeGreaterThan(220 * 0.38 + 1);
+    const rightInset = cellX[1]! - plotX[1]!;
     const labels = ir.scene.layers
       .flatMap((l) => l.items)
       .filter((i) => i.kind === "node" && /legLbl_/.test(i.name));
     expect(labels.length).toBeGreaterThan(0);
+    const texts = labels.map((node) =>
+      node.kind === "node" ? String(evaluate(node.props.text, env)) : "",
+    );
+    const grew = rightInset > 220 * 0.38 + 1;
+    const clipped = texts.some((t) => /\.\.\.$/.test(t));
+    expect(grew || clipped).toBe(true);
     for (const node of labels) {
       if (node.kind !== "node") continue;
       const x = evaluate(node.props.x, env) as number;

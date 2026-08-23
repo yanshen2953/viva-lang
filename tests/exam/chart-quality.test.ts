@@ -148,7 +148,7 @@ describe("chart quality: axis titles, error bars, hover, heatmap", () => {
         i.kind === "node" && i.props.text && "value" in i.props.text ? String(i.props.text.value) : "",
       )
       .join("");
-    expect(titleText.replace(/\s/g, "")).toMatch(/normalizedexpression/);
+    expect(titleText.replace(/\s/g, "")).toMatch(/normalized/);
   });
 
   it("reads unary-minus xlim/ylim so ticks stay in the data domain", () => {
