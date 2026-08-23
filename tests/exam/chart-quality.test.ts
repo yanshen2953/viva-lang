@@ -429,6 +429,38 @@ widget chart.scatter
     expect(xTitleText).not.toMatch(/^\)$/);
   });
 
+  it("ticks a numeric bar axis at the visits, not xlim padding", () => {
+    const src = `artifact "Visits"
+data rows = [
+  { visit: 1, pct: 38 }
+  { visit: 2, pct: 41 }
+  { visit: 3, pct: 44 }
+  { visit: 4, pct: 46 }
+  { visit: 5, pct: 48 }
+  { visit: 6, pct: 50 }
+]
+scene
+  size: 400 240
+widget chart.bar
+  data: rows
+  xField: visit
+  yField: pct
+  xlim: 0 7
+  ylim: 0 100
+  interactive: false
+`;
+    const result = compileSource(src, "visits.viva", { handbookIds: ["print-nature"] });
+    expect(result.error).toBeNull();
+    const axes = result.ir!.scene.layers.find((l) => l.name.endsWith("_axes"))!;
+    const xs = axes.items
+      .filter((i) => i.kind === "node" && /_xtick_\d+$/.test(i.name))
+      .map((i) => (i.kind === "node" && i.props.text?.kind === "string" ? i.props.text.value : ""));
+    expect(xs[0]).toBe("1");
+    expect(xs[xs.length - 1]).toBe("6");
+    expect(xs).not.toContain("0");
+    expect(xs).not.toContain("7");
+  });
+
   it("pins author xlim/ylim ends onto linear ticks", () => {
     const src = `artifact "Ends"
 data rows = [

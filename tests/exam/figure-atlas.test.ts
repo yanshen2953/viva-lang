@@ -107,6 +107,14 @@ describe("figure-atlas example", () => {
       .map((i) => (i.kind === "node" ? String(evaluate(i.props.text, env)) : ""));
     expect(bLegs.join(" ")).toMatch(/treatment/);
     expect(bLegs.some((t) => t === "t" || t === "treatmen")).toBe(false);
+    const aAxes = result.ir!.scene.layers.find((l) => l.name === "__a_axes")!;
+    const visitTicks = aAxes.items
+      .filter((i) => i.kind === "node" && /_xtick_\d+$/.test(i.name))
+      .map((i) => (i.kind === "node" && i.props.text?.kind === "string" ? i.props.text.value : ""));
+    expect(visitTicks[0]).toBe("1");
+    expect(visitTicks[visitTicks.length - 1]).toBe("6");
+    expect(visitTicks).not.toContain("0");
+    expect(visitTicks).not.toContain("7");
     const dAxes = result.ir!.scene.layers.find((l) => l.name === "__d_axes")!;
     const heatTicks = (suffix: string) =>
       dAxes.items

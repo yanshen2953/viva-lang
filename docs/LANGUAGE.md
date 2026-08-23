@@ -166,7 +166,7 @@ widget chart.scatter
 ```
 
 - `xLabel` / `yLabel` + `xUnit` / `yUnit` → 轴标题（如 `Time (week)`）。未加引号的多词（`xLabel: Sum score`）会拼成一句，不必写成 `"Sum score"`
-- 线性轴会键上作者 `xlim` / `ylim` 端点（`0 70` 会画出 `70`），中间仍走 nice step；挤时抽稀保留两端
+- 线性轴会键上作者 `xlim` / `ylim` 端点（`0 70` 会画出 `70`），中间仍走 nice step；挤时抽稀保留两端。`chart.bar` / `box` / `violin` 的少量整数类目轴刻在取值上（`visit` 1–6 不会因为 `xlim: 0 7` 画出 0 和 7）；漏斗的数值轴仍键端点
 - `errorField` / `yerr` → 竖直误差棒
 - `chart.heatmap`：`valueField` + `zlim`，右侧连续色条。色条宽高按场景比例（mm 不再把 10/40 px 当成毫米），`zLabel` 在色标数字右侧 −90° 竖排，和 `yLabel` 同一套轴标题，按绘图区高度折行。未写 `cellW`/`cellH` 时按相邻唯一 x/y 的中位步长铺格；离散数值轴刻度落在格心（`xlim: -0.5 7.5` 不再把 −0.5 / 7.5 画成刻度）；格子白缝按短边比例，不是 1 个场景单位
 - 默认 `hover` 把读数写入 `__tip`，指针写入 `__tipX` / `__tipY`（跟手 tip；`interactive: false` 可关）

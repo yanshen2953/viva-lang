@@ -566,11 +566,24 @@ function expandChart(
   };
   if (kind === "chart.heatmap") {
     if (!xCats.length) {
-      const ticks = discreteHeatTicks(uniqueFieldNumbers(artifact, dataName, resolvedXField));
+      const ticks = discreteDataTicks(uniqueFieldNumbers(artifact, dataName, resolvedXField));
       if (ticks) geom.xTickVals = literal(ticks);
     }
     if (!yCats.length) {
-      const ticks = discreteHeatTicks(uniqueFieldNumbers(artifact, dataName, resolvedYField));
+      const ticks = discreteDataTicks(uniqueFieldNumbers(artifact, dataName, resolvedYField));
+      if (ticks) geom.yTickVals = literal(ticks);
+    }
+  } else if (
+    (kind === "chart.bar" || kind === "chart.box" || kind === "chart.violin") &&
+    !horizontal
+  ) {
+    if (!xCats.length) {
+      const ticks = discreteDataTicks(uniqueFieldNumbers(artifact, dataName, resolvedXField));
+      if (ticks) geom.xTickVals = literal(ticks);
+    }
+  } else if (kind === "chart.bar" && horizontal) {
+    if (!yCats.length) {
+      const ticks = discreteDataTicks(uniqueFieldNumbers(artifact, dataName, resolvedYField));
       if (ticks) geom.yTickVals = literal(ticks);
     }
   }
@@ -2231,8 +2244,8 @@ function gridPitch(values: number[], fallback = 1): number {
   return diffs[Math.floor(diffs.length / 2)]!;
 }
 
-/** Cell-center ticks for a discrete numeric heatmap axis. Too many → niceTicks. */
-function discreteHeatTicks(values: number[]): number[] | null {
+/** Discrete numeric axis ticks (heat cells, bar/box visits). Too many → niceTicks. */
+function discreteDataTicks(values: number[]): number[] | null {
   if (values.length < 1 || values.length > 16) return null;
   if (values.every((v) => Number.isInteger(v))) return values;
   return values.length <= 8 ? values : null;
