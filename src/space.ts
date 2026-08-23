@@ -25,7 +25,7 @@ export function asPair(value: unknown, fallback: [number, number]): [number, num
   return fallback;
 }
 
-export type ScaleKind = "linear" | "log" | "band";
+export type ScaleKind = "linear" | "log" | "band" | "time";
 
 export type FrameScales = {
   name: string;
@@ -49,7 +49,18 @@ export function scaleKind(value: unknown): ScaleKind {
   if (raw === "band" || raw === "category" || raw === "categorical" || raw === "ordinal") {
     return "band";
   }
+  if (raw === "time" || raw === "temporal" || raw === "date") return "time";
   return "linear";
+}
+
+/** Parse year / ISO / unix ms into a numeric domain value. */
+export function parseTimeValue(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value !== "string") return null;
+  const raw = value.trim();
+  if (/^\d{4}$/.test(raw)) return Number(raw);
+  const ms = Date.parse(raw);
+  return Number.isNaN(ms) ? null : ms;
 }
 
 export function catsFrom(value: unknown): string[] {
@@ -218,8 +229,35 @@ export function layoutChartGeom(
   frames: FrameScales[],
 ): Record<string, unknown> {
   if (props.__chartBar) return layoutChartBar(props, frames);
+  if (props.__chartBox) return layoutChartBox(props, frames);
   if (props.__chartHeat) return layoutChartHeat(props, frames);
   return props;
+}
+
+/** Box body: x/y already scene-mapped (center / q3); h still data (q3-q1). */
+export function layoutChartBox(
+  props: Record<string, unknown>,
+  frames: FrameScales[],
+): Record<string, unknown> {
+  if (!props.__chartBox) return props;
+  const frameName = props.frame !== undefined ? String(props.frame) : "";
+  const frame = frames.find((f) => f.name === frameName);
+  if (!frame) return props;
+  const cx = typeof props.x === "number" ? props.x : 0;
+  const top = typeof props.y === "number" ? props.y : 0;
+  const q1 = typeof props.q1 === "number" ? props.q1 : 0;
+  const bot = domainMap(q1, [frame.ymin, frame.ymax], [frame.y0, frame.y1], true, frame.yScale);
+  const boxW = typeof props.w === "number" ? props.w : 0.45;
+  const sceneW = Math.abs(
+    linearMap(boxW, [0, frame.xmax - frame.xmin], [0, frame.x1 - frame.x0], false),
+  );
+  return {
+    ...props,
+    x: cx - sceneW / 2,
+    y: Math.min(top, bot),
+    w: sceneW,
+    h: Math.max(1, Math.abs(bot - top)),
+  };
 }
 
 export function layoutChartBar(
