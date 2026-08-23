@@ -27,7 +27,7 @@
 | --- | --- |
 | 工作分支 | `cursor/style-handbook-hook-a8c1` |
 | 最新提交 | Session/Pipeline/Provenance 对外接入 + CI + GAPS（见 git log） |
-| 测试 | `npm test` → **115+ passed**（见当前 `vitest`） |
+| 测试 | `npm test` → **113 passed**（22 files） |
 | `build:lib` | `npm run build:lib` 通过 |
 | CI | `.github/workflows/ci.yml`：`npm ci` / `build:lib` / `npm test` / Atlas `--visual` |
 | `npm run build` | 可能因 playground/runtime 严格 tsc 失败；日常用 `vite-node` + vitest |

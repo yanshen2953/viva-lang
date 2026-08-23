@@ -50,9 +50,9 @@ curl http://localhost:8765/api/health
 
 | Surface | Entry |
 | --- | --- |
-| CLI | `viva compile\|check\|export\|serve` |
-| MCP stdio | `viva mcp` (Cursor / Claude) |
-| HTTP REST | `POST /api/compile`, `/api/check`, `/api/export` |
+| CLI | `viva compile\|check\|export\|provenance\|serve` |
+| MCP stdio | `viva mcp` (`viva_session` / `viva_pipeline` too) |
+| HTTP REST | `POST /api/compile`, `/api/check`, `/api/export`, `/api/session`, `/api/pipeline/run` |
 | Browser SDK | `import from "viva-lang/embed"` |
 | Node SDK | `import from "viva-lang/agent"` |
 
