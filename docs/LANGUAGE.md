@@ -146,7 +146,9 @@ widget layout.board
 - `xScale: band` / `category`（字符串列会自动 band）；也可用 `xCats` / `yCats`
 - 图例默认在图外右侧：`legend: right|bottom|inside|false`
 
-`layout.board` 可选 `splits: 2` → 在 `body` 里再切 `left` / `right`。
+`layout.board` 可选 `splits: 2` → 在 `body` 里再切 `left` / `right`；`beats: 4` → 分镜槽 `beat0`…`beat3`。
+
+`xScale: time`（或 ISO 日期字符串列自动识别）出时间刻度。`chart.box` 由编译器算四分位，不是新关键字。跨面板 brush：同名 `xField` 会联动，不同域的图只看自己的 frame。
 
 图表默认交互（`interactive: false` 可关）：`__tip` 字符串、`__hover` 对象、`__brush`（场景框 + 数据域 `dx0/dy0/dx1/dy1`，刷选外的点变淡）、同 `group` 跨面板 `__highlightGrp`。点图例色块也会写 `__highlightGrp`。
 

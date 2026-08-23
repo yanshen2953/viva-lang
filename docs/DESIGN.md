@@ -183,7 +183,7 @@ layer marks
 | `timeline` | 时间 scrub 宏 | ✅ |
 | `chart.line` / `bar` / `scatter` | 展开 frame+axis+marks | ✅ MVP |
 | `chart.heat` / `chart.heatmap` | 热力 + 色条 | ✅ MVP |
-| `chart.vector` / `chart.funnel` | 数据域箭头；横向漏斗 | ✅ 插件 |
+| `chart.vector` / `chart.funnel` / `chart.box` | 数据域箭头；横向漏斗；四分位箱线 | ✅ 插件 |
 | `layout.figure` 多面板 | 边距、对齐、(a)(b) 标签 | ✅ 插件（不是关键字） |
 | `layout.board` | 安全框 / 字幕条 / splits | ✅ 插件 |
 

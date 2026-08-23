@@ -31,6 +31,9 @@ describe("vision pillars: board, mm, log, hover object, CJK pdf", () => {
     expect(box.height).toBeCloseTo(mmToPx(68));
     const paper = compileSource(readFileSync("examples/paper-column.viva", "utf8"), "paper.viva");
     expect(paper.error).toBeNull();
+    expect(evaluate(paper.ir!.frames[0]!.props.xScale!, [paper.ir!.state, paper.ir!.data])).toBe(
+      "log",
+    );
     const svg = renderSvgFromIr(paper.ir!);
     expect(svg).toMatch(/viewBox="0 0 336/);
   });
@@ -196,6 +199,100 @@ widget chart.scatter
     expect(result.ir!.scene.layers.some((l) => l.name === "__f_marks")).toBe(true);
     const fFrame = result.ir!.frames.find((f) => f.name === "f")!;
     expect(evaluate(fFrame.props.yScale!, [result.ir!.state, result.ir!.data])).toBe("band");
+  });
+
+  it("links brush across panels that share xField and isolates the rest", () => {
+    const result = compileSource(
+      `artifact L
+data left = [{ t: 1, y: 2 }, { t: 5, y: 8 }]
+data right = [{ t: 1, y: 4 }, { t: 5, y: 9 }]
+data other = [{ z: 1, y: 2 }]
+scene
+  size: 600 240
+widget layout.figure
+  x: 0
+  y: 0
+  w: 600
+  h: 240
+  cols: 2
+  rows: 1
+  labels: false
+widget chart.scatter
+  panel: a
+  data: left
+  xField: t
+  yField: y
+  xlim: 0 10
+  ylim: 0 10
+widget chart.scatter
+  panel: b
+  data: right
+  xField: t
+  yField: y
+  xlim: 0 10
+  ylim: 0 10
+`,
+      "link.viva",
+    );
+    expect(result.error).toBeNull();
+    const start = result.ir!.events.find(
+      (e) => e.type === "dragstart" && e.target === "a_plotBg",
+    );
+    expect(start?.body.some((s) => s.kind === "assign" && s.target[1] === "xField")).toBe(
+      true,
+    );
+    const marks = result.ir!.scene.layers.find((l) => l.name === "__b_marks")!;
+    const forItem = marks.items.find((i) => i.kind === "for");
+    expect(forItem?.kind).toBe("for");
+    if (forItem?.kind === "for") {
+      const mark = forItem.body[0];
+      expect(mark?.kind).toBe("node");
+      if (mark?.kind === "node") {
+        const src = JSON.stringify(mark.props.opacity);
+        expect(src).toContain('["__brush","xField"]');
+        expect(src).toContain('["__brush","frame"]');
+      }
+    }
+  });
+
+  it("parses ISO dates as a time axis and formats month ticks", () => {
+    const src = readFileSync("examples/time-axis.viva", "utf8");
+    const result = compileSource(src, "time-axis.viva");
+    expect(result.error).toBeNull();
+    const frame = result.ir!.frames[0]!;
+    expect(evaluate(frame.props.xScale!, [result.ir!.state, result.ir!.data])).toBe("time");
+    const rows = result.ir!.data.visits as { __timeX?: number }[];
+    expect(rows[0]?.__timeX).toBe(Date.parse("2024-01-07"));
+    const axes = result.ir!.scene.layers.find((l) => l.name.endsWith("_axes"))!;
+    const labels = axes.items
+      .filter((i) => i.kind === "node" && i.name.includes("_xtick_"))
+      .map((i) => (i.kind === "node" ? evaluate(i.props.text, [{}, {}]) : ""));
+    expect(labels.some((t) => String(t).includes("2024-") || String(t).includes("/"))).toBe(
+      true,
+    );
+  });
+
+  it("layout.board beats cut a storyboard strip", () => {
+    const src = readFileSync("examples/storyboard.viva", "utf8");
+    const result = compileSource(src, "storyboard.viva");
+    expect(result.error).toBeNull();
+    expect(result.ir!.frames.map((f) => f.name)).toEqual(
+      expect.arrayContaining(["safe", "title", "body", "lower", "beat0", "beat3"]),
+    );
+    expect(result.ir!.scene.layers.some((l) => l.name === "__beat0_marks")).toBe(true);
+  });
+
+  it("chart.box expands compiler quartiles onto a band axis", () => {
+    const src = readFileSync("examples/box.viva", "utf8");
+    const result = compileSource(src, "box.viva", { handbookIds: ["print-nature"] });
+    expect(result.error).toBeNull();
+    const marks = result.ir!.scene.layers.find((l) => l.name.endsWith("_marks"))!;
+    const names = marks.items
+      .filter((i) => i.kind === "node")
+      .map((i) => (i.kind === "node" ? i.name : ""));
+    expect(names.some((n) => n === "box")).toBe(true);
+    expect(names.some((n) => n.startsWith("boxWhisker_"))).toBe(true);
+    expect(names.some((n) => n.startsWith("boxMed_"))).toBe(true);
   });
 
   it("layout.board splits body into left/right frames", () => {

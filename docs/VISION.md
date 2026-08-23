@@ -66,18 +66,18 @@
 
 ### 3.1 游戏式交互
 
-有：节点可拖、碰撞、键盘、tick、图层；图表默认数据域 tooltip、brush 反演、跨面板 group 高亮、点图例高亮。  
-没有：真正的 linked selection（多图共享 filter 集合）、动画过渡、内联卡上的检查/修复壳。
+有：节点可拖、碰撞、键盘、tick、图层；图表默认数据域 tooltip、brush 反演（按 frame 隔离，同名 xField 联动）、跨面板 group 高亮、点图例高亮。  
+没有：共享 selection 集合、动画过渡、内联卡上的检查/修复壳。
 
 ### 3.2 论文级图表
 
-有：线性 / log / band 轴、四类基础图 + vector/funnel、轴标题/单位、误差棒、热图色条、图例外置、投稿 mm、SVG 更接近 Runtime、PDF 嵌系统 CJK。  
-没有：时间轴、box/violin、显著性、完整 CJK 字库（现有随包子集）、小栏宽上的出版级留白。
+有：线性 / log / band / time 轴、scatter/line/bar/heatmap/vector/funnel/box、轴标题/单位、误差棒、热图色条、图例外置、投稿 mm、SVG 更接近 Runtime、PDF 随包 CJK 子集。  
+没有：violin、显著性括号、完整 CJK 字库、小栏宽上的出版级留白。
 
 ### 3.3 图像 / 视频级排版
 
 有：`layout.figure` 网格 + `(a)(b)`；`layout.board` 的 `safe` / `title` / `body` / `lower` + `splits`；`unit: mm` + 栏宽。  
-没有：出血/裁切、字级网格、跨页、时间轴分镜。这些必须继续是**插件**，不能变成语法。
+没有：出血/裁切、字级网格、跨页。`layout.board` 已有 `splits` / `beats` 分镜槽。这些必须继续是**插件**，不能变成语法。
 
 ---
 

@@ -50,7 +50,7 @@
 ## 仍然很粗（按用户可见排序）
 
 1. PDF 随包 `assets/fonts/VivaSansFallback.ttf`（Droid 子集）；缺字仍可能回退 Helvetica
-2. 仍无时间轴、box/violin、显著性括号
+2. 有 time 轴与 `chart.box`；仍无 violin、显著性括号
 3. Atlas (a–f) 已走 `layout.figure` + chart 插件；(e)(f) 不再手摆像素
 4. `__brush` 是单图数据域 marquee，不是多图共享 filter
 5. session visual diagnostics 不挡编译成功
