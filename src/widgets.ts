@@ -686,6 +686,7 @@ function expandChart(
         dataName,
         frameName,
         markXField,
+        resolvedXField,
         resolvedYField,
         seriesField,
         geom,
@@ -694,7 +695,16 @@ function expandChart(
     );
   } else if (kind === "chart.violin") {
     marks.push(
-      ...expandViolinMarks(artifact, dataName, frameName, markXField, resolvedYField, geom, span),
+      ...expandViolinMarks(
+        artifact,
+        dataName,
+        frameName,
+        markXField,
+        resolvedXField,
+        resolvedYField,
+        geom,
+        span,
+      ),
     );
   }
 
@@ -3111,11 +3121,30 @@ function expandColorbar(
   return items;
 }
 
+function rowGroupKey(row: Extract<Expr, { kind: "object" }>, field: string): string {
+  const xf = objectField(row, field);
+  if (xf?.kind === "number") return String(xf.value);
+  if (xf?.kind === "string") return xf.value;
+  return "0";
+}
+
+function rowGroupX(
+  row: Extract<Expr, { kind: "object" }>,
+  field: string,
+  fallback: number,
+): number {
+  const xf = objectField(row, field);
+  if (xf?.kind === "number" && Number.isFinite(xf.value)) return xf.value;
+  const n = Number(rowGroupKey(row, field));
+  return Number.isFinite(n) ? n : fallback;
+}
+
 function expandBoxMarks(
   artifact: Artifact,
   dataName: string,
   frameName: string,
   xField: string,
+  sourceXField: string,
   yField: string,
   seriesField: string | null,
   geom: Record<string, Expr>,
@@ -3123,37 +3152,34 @@ function expandBoxMarks(
 ): SceneItem[] {
   const decl = artifact.data.find((d) => d.name === dataName);
   if (!decl || decl.value.kind !== "array") return [];
-  const groups = new Map<string, number[]>();
+  const idField = sourceXField || xField;
+  const groups = new Map<string, { values: number[]; x: number }>();
   for (const row of decl.value.items) {
     if (row.kind !== "object") continue;
-    const xf = objectField(row, xField);
     const yv = objectField(row, yField);
     if (yv?.kind !== "number") continue;
-    const key =
-      xf?.kind === "number" ? String(xf.value) : xf?.kind === "string" ? xf.value : "0";
-    const list = groups.get(key) ?? [];
-    list.push(yv.value);
-    groups.set(key, list);
+    const key = rowGroupKey(row, idField);
+    const g = groups.get(key) ?? { values: [], x: rowGroupX(row, xField, groups.size) };
+    g.values.push(yv.value);
+    groups.set(key, g);
   }
   const cats = catsFromExpr(geom.xCats);
   const allKeys = [...groups.keys()];
   const items: SceneItem[] = [];
   let i = 0;
-  for (const [key, values] of groups) {
+  for (const [key, { values, x }] of groups) {
     const stats = boxStats(values);
     if (!stats) continue;
     const { q1, med, q3, whiskLo, whiskHi } = stats;
     const iqr = q3 - q1;
     const loFence = q1 - 1.5 * iqr;
     const hiFence = q3 + 1.5 * iqr;
-    const xNum = Number(key);
-    const x = Number.isFinite(xNum) ? xNum : i;
     const label = cats[x] ?? key;
     const selVis = markSelKeysVisible([key, label], frameName, span);
     const boxMeta = {
       __boxData: literal(dataName),
       __boxKey: literal(key),
-      __boxXField: literal(xField),
+      __boxXField: literal(idField),
       __boxYField: literal(yField),
       __boxCats: literal(allKeys),
     };
@@ -3313,23 +3339,23 @@ function expandViolinMarks(
   dataName: string,
   frameName: string,
   xField: string,
+  sourceXField: string,
   yField: string,
   geom: Record<string, Expr>,
   span: { line: number; column: number },
 ): SceneItem[] {
   const decl = artifact.data.find((d) => d.name === dataName);
   if (!decl || decl.value.kind !== "array") return [];
-  const groups = new Map<string, number[]>();
+  const idField = sourceXField || xField;
+  const groups = new Map<string, { values: number[]; x: number }>();
   for (const row of decl.value.items) {
     if (row.kind !== "object") continue;
-    const xf = objectField(row, xField);
     const yv = objectField(row, yField);
     if (yv?.kind !== "number") continue;
-    const key =
-      xf?.kind === "number" ? String(xf.value) : xf?.kind === "string" ? xf.value : "0";
-    const list = groups.get(key) ?? [];
-    list.push(yv.value);
-    groups.set(key, list);
+    const key = rowGroupKey(row, idField);
+    const g = groups.get(key) ?? { values: [], x: rowGroupX(row, xField, groups.size) };
+    g.values.push(yv.value);
+    groups.set(key, g);
   }
   const box = plotBoxOf(geom);
   const cats = catsFromExpr(geom.xCats);
@@ -3337,15 +3363,13 @@ function expandViolinMarks(
   const items: SceneItem[] = [];
   let gi = 0;
   const nGroups = Math.max(1, groups.size);
-  for (const [key, values] of groups) {
-    const xNum = Number(key);
-    const x = Number.isFinite(xNum) ? xNum : gi;
+  for (const [key, { values, x }] of groups) {
     const label = cats[x] ?? key;
     const selVis = markSelKeysVisible([key, label], frameName, span);
     const violinMeta = {
       __violinData: literal(dataName),
       __violinKey: literal(key),
-      __violinXField: literal(xField),
+      __violinXField: literal(idField),
       __violinYField: literal(yField),
       __violinCats: literal(allKeys),
       __violinFrame: literal(frameName),

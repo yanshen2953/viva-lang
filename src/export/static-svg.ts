@@ -91,7 +91,7 @@ function buildSvgParts(ir: VisualIR): {
     const opacity = lp.opacity === undefined ? 1 : num(lp.opacity, 1);
     const visible = lp.visible === undefined ? true : Boolean(lp.visible);
     if (!visible) continue;
-    const children = nodes.map((n) => nodeToSvg(n)).join("\n");
+    const children = nodes.filter((n) => nodePainted(n.props)).map((n) => nodeToSvg(n)).join("\n");
     layersXml.push(
       `<g data-viva-layer="${esc(layer.name)}" data-viva-layer-id="${esc(layer.id)}" opacity="${opacity}">\n${children}\n</g>`,
     );
@@ -150,6 +150,10 @@ function flattenItems(
       );
     });
   }
+}
+
+export function nodePainted(props: Record<string, unknown>): boolean {
+  return props.visible === undefined ? true : Boolean(props.visible);
 }
 
 function nodeToSvg(node: FlatNode): string {

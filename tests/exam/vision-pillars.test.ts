@@ -439,6 +439,37 @@ widget chart.scatter
     expect(ownBrush.d).toBe("M 0,0 Z");
   });
 
+  it("keeps source category keys on band-axis box/violin so visit 1 is not drug-A", () => {
+    const result = compileSource(
+      readFileSync("examples/linked-summary.viva", "utf8"),
+      "linked-summary.viva",
+    );
+    expect(result.error).toBeNull();
+    const boxMarks = result.ir!.scene.layers.find((l) => l.name === "__b_marks")!;
+    const boxNode = boxMarks.items.find((i) => i.kind === "node" && i.name === "box");
+    expect(boxNode?.kind).toBe("node");
+    if (boxNode?.kind !== "node") return;
+    expect(boxNode.props.__boxKey).toMatchObject({ kind: "string", value: "placebo" });
+    expect(boxNode.props.__boxXField).toMatchObject({ kind: "string", value: "arm" });
+    const ir = structuredClone(result.ir!);
+    Object.assign(ir.state, { __sel: { n: 1, keys: [1] }, __brush: { frame: "a" } });
+    const boxes = flattenNodesFromIr(ir).nodes.filter((n) => n.name === "box");
+    const vis = boxes.filter((n) => n.props.visible);
+    expect(vis).toHaveLength(3);
+    expect(boxes.find((n) => n.props.__boxKey === "placebo")?.props.q1).toBe(12);
+    expect(boxes.find((n) => n.props.__boxKey === "drug-A")?.props.q1).toBe(20);
+    const violins = flattenNodesFromIr(ir).nodes.filter((n) => n.name === "violin");
+    expect(violins.filter((n) => n.props.visible)).toHaveLength(3);
+    expect(violins[0]?.props.d).not.toBeUndefined();
+    const baseline = flattenNodesFromIr(result.ir!).nodes.find((n) => n.name === "violin");
+    expect(String(violins[0]?.props.d)).not.toBe(String(baseline?.props.d));
+    const drugA = structuredClone(result.ir!);
+    Object.assign(drugA.state, { __sel: { n: 1, keys: ["drug-A"] }, __brush: { frame: "a" } });
+    const svg = renderSvgFromIr(drugA);
+    expect(svg.match(/data-viva-name="violin"/g)?.length).toBe(1);
+    expect(svg.match(/data-viva-name="box"/g)?.length).toBe(1);
+  });
+
   it("lets the compiler own linked-summary chrome instead of inset magic numbers", () => {
     const src = readFileSync("examples/linked-summary.viva", "utf8");
     expect(src).not.toMatch(/insetL|insetR|insetT|insetB|areaX|areaY/);

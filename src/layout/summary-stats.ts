@@ -55,7 +55,10 @@ function sameKey(a: unknown, b: unknown): boolean {
 }
 
 function rowHasKey(row: Record<string, unknown>, key: unknown): boolean {
-  return Object.values(row).some((v) => sameKey(v, key));
+  return Object.entries(row).some(([field, v]) => {
+    if (field.startsWith("__")) return false;
+    return sameKey(v, key);
+  });
 }
 
 export function filterSummaryValues(

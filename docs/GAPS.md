@@ -23,7 +23,7 @@
 
 1. **图核语义仍缺出版层** — 有轴标题/单位/band/log/time/box/violin/括号；`print-nature` 已接管字号/字距。编译器按字号估盒子，并对标题/刻度/图例/色条/`(a)` 做一轮重叠消解；图/轴标题按栏宽折行，封顶后尾行省略，重叠刻度抽稀，相邻格 chrome 再长一档 inset。仍不是通用排版求解。
 2. **默认交互还不是完整 linked view** — `__sel.keys` 已跨面板藏行（含 box / violin / 折线）；box 四分位和 violin KDE 会按选中行重算。Runtime 用 CSS opacity + highlight `scale` 缓 220ms（含 play 拍遮罩），不是时间轴动画。本地 brush 默认矩形窗，路径够长时切套索。
-3. **导出 ≠ 预览** — SVG 已接近 Runtime；PNG/JPG 现在填场景底色（投稿白底不再透成黑卡）；PDF 随包 CJK 子集，缺字仍可能 `?`。
+3. **导出 ≠ 预览** — SVG/PDF 已接近 Runtime，并硬切藏 `visible: false` 的 linked 摘要（不是 220ms 缓动）；PNG/JPG 填场景底色；PDF 随包 CJK 子集，缺字仍可能 `?`。
 4. **Agent 闭环没产品化** — session compile 附带 visual diagnostics，但不挡成功；内联卡只画结构检查条，不自动修；生成成功率未测。
 5. **手册仍不执行图语法** — 会覆盖 widget 字号；深色场景上会把标题/刻度字色翻亮。仍不做避让或栏宽文法。
 
@@ -61,7 +61,7 @@
 ## 下一刀（质量，不再铺接口）
 
 1. 更完整的排版求解（跨页、栏宽文法）；`layout.figure` 省略 gutter/margin/titleH 时按 mm/像素估缝和题注带；图/轴标题、图例键和色条标签会按栏宽折行；色条/右图例先按场景剩余宽度和 inset 让路，仍装不下才省略，重叠刻度会抽稀，相邻格 chrome 会再让一档
-2. linked selection 已藏热图、折线、box/violin；box 四分位和 violin KDE 会按 `__sel` 行重算（访视点刷选不再只藏整组）；折线仍只藏段。高亮有 scale 缓动，仍缺时间轴动画
+2. linked selection 已藏热图、折线、box/violin；box 四分位和 violin KDE 会按 `__sel` 行重算（访视点刷选不再只藏整组；匹配时忽略 `__bandX` 等编译器列，避免和访视编号撞车）；折线仍只藏段。高亮有 scale 缓动，仍缺时间轴动画
 3. 再扩 CJK 或允许宿主挂全库；`scripts/subset-cjk-font.py` 可从 Droid 重建
 4. `layout.board play` 遮罩画在图表之上，Runtime 用 220ms CSS opacity 淡入淡出（不是时间轴）；`export --beats` / MCP `beats` 默认 PNG 序列，`gif|mp4` 只是 ffmpeg 幻灯，不是成片时间轴
 5. agent-exam 种子编译进 CI；生成成功率仍未测（要 LLM）

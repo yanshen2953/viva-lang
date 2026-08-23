@@ -1,6 +1,6 @@
 import { PDFDocument, rgb, type PDFFont, type PDFPage, type RGB } from "pdf-lib";
 import { DEFAULT_SCENE_BACKGROUND } from "../style/defaults.js";
-import { flattenNodesFromIr, type FlatNode } from "./static-svg.js";
+import { flattenNodesFromIr, nodePainted, type FlatNode } from "./static-svg.js";
 import { embedPdfFonts, pdfSafeText, pdfTextWidth, pickPdfFont, type PdfTextFonts } from "./pdf-font.js";
 import { evalSceneProps, pxToPdfPt, resolveSceneBox } from "../space/scene-box.js";
 import type { VisualIR } from "../ir.js";
@@ -34,6 +34,7 @@ export async function renderVectorPdfFromIr(
   page.drawRectangle({ x: 0, y: 0, width: pageW, height: pageH, color: bg });
 
   for (const node of nodes) {
+    if (!nodePainted(node.props)) continue;
     drawNode(page, fonts, node, pageH, scale);
   }
 
