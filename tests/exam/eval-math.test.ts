@@ -33,6 +33,26 @@ data a = [1] + [2, 3]
     expect(evaluate(expr, [{}])).toEqual([1, 2, 3]);
   });
 
+  it("tests point-in-polygon with inside() and pathd()", () => {
+    const result = compileSource(
+      `artifact P
+state hit = inside(2, 2, [{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 4 }, { x: 0, y: 4 }])
+state miss = inside(9, 9, [{ x: 0, y: 0 }, { x: 4, y: 0 }, { x: 4, y: 4 }, { x: 0, y: 4 }])
+state d = pathd([{ x: 1, y: 2 }, { x: 3, y: 4 }, { x: 5, y: 0 }])
+scene
+  layer a
+    node t
+      x: 1
+      y: 1
+`,
+      "pip.viva",
+    );
+    expect(result.error).toBeNull();
+    expect(result.ir!.state.hit).toBe(true);
+    expect(result.ir!.state.miss).toBe(false);
+    expect(result.ir!.state.d).toBe("M 1 2 L 3 4 L 5 0 Z");
+  });
+
   it("tests membership with has()", () => {
     const result = compileSource(
       `artifact H

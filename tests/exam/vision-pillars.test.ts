@@ -485,6 +485,42 @@ widget chart.scatter
     expect(cleared.state.__brush).toMatchObject({ on: 0 });
   });
 
+  it("uses a lasso window when the brush trail is longer than a box", () => {
+    const result = compileSource(
+      `artifact Lasso
+data series = [{ x: 2, y: 2, grp: "A" }, { x: 8, y: 8, grp: "B" }]
+scene
+  size: 400 240
+widget chart.scatter
+  data: series
+  xField: x
+  yField: y
+  group: grp
+  xlim: 0 10
+  ylim: 0 10
+  areaX: 0 200
+  areaY: 0 200
+`,
+      "lasso.viva",
+    );
+    expect(result.error).toBeNull();
+    const world = simulate(result.ir!, {
+      events: [
+        { type: "dragstart", target: "__chart_1_plotBg", event: { x: 20, y: 180 } },
+        { type: "drag", target: "__chart_1_plotBg", event: { x: 60, y: 180 } },
+        { type: "drag", target: "__chart_1_plotBg", event: { x: 60, y: 140 } },
+        { type: "drag", target: "__chart_1_plotBg", event: { x: 20, y: 140 } },
+        { type: "drag", target: "__chart_1_plotBg", event: { x: 20, y: 175 } },
+      ],
+    });
+    const brush = world.state.__brush as { mode: boolean; on: number };
+    expect(brush.mode).toBe(true);
+    expect(brush.on).toBe(1);
+    const sel = world.state.__sel as { keys: unknown[] };
+    expect(sel.keys).toContain("A");
+    expect(sel.keys).not.toContain("B");
+  });
+
   it("expands significance brackets and violin density", () => {
     const br = compileSource(readFileSync("examples/brackets.viva", "utf8"), "br.viva");
     expect(br.error).toBeNull();

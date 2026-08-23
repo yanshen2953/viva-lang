@@ -192,9 +192,17 @@ function applyCall(callee: string, args: Value[]): Value {
     }
     return false;
   }
+  if (callee === "inside") {
+    return pointInPolygon(num(args[0]), num(args[1]), args[2]);
+  }
+  if (callee === "pathd") {
+    return pointsToPath(args[0]);
+  }
   const fn = NUM_BUILTINS[callee];
   if (!fn) {
-    const allowed = [...Object.keys(NUM_BUILTINS), "palette", "paletteStroke", "has"].join(", ");
+    const allowed = [...Object.keys(NUM_BUILTINS), "palette", "paletteStroke", "has", "inside", "pathd"].join(
+      ", ",
+    );
     throw new Error(`unknown function '${callee}' (allowed: ${allowed})`);
   }
   return fn(...args.map(num));
@@ -226,6 +234,39 @@ function equals(left: Value, right: Value): boolean {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function pointPair(value: Value): { x: number; y: number } | null {
+  if (Array.isArray(value) && value.length >= 2) return { x: num(value[0]), y: num(value[1]) };
+  if (isRecord(value)) return { x: num(value.x as Value), y: num(value.y as Value) };
+  return null;
+}
+
+function pointInPolygon(x: number, y: number, raw: Value): boolean {
+  if (!Array.isArray(raw) || raw.length < 3) return false;
+  const pts = raw.map(pointPair).filter((p): p is { x: number; y: number } => p !== null);
+  if (pts.length < 3) return false;
+  let inside = false;
+  for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+    const a = pts[i]!;
+    const b = pts[j]!;
+    const hit =
+      a.y > y !== b.y > y && x < ((b.x - a.x) * (y - a.y)) / (b.y - a.y || 1e-12) + a.x;
+    if (hit) inside = !inside;
+  }
+  return inside;
+}
+
+function pointsToPath(raw: Value): string {
+  if (!Array.isArray(raw) || !raw.length) return "";
+  const pts = raw.map(pointPair).filter((p): p is { x: number; y: number } => p !== null);
+  if (!pts.length) return "";
+  const head = pts[0]!;
+  const rest = pts
+    .slice(1)
+    .map((p) => `L ${p.x} ${p.y}`)
+    .join(" ");
+  return pts.length >= 3 ? `M ${head.x} ${head.y} ${rest} Z` : `M ${head.x} ${head.y} ${rest}`;
 }
 
 export function cloneValue<T>(value: T): T {

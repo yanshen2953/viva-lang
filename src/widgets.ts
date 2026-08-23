@@ -3349,21 +3349,37 @@ function markInteractOpacity(
     const hiX = callExpr("max", [ident("__brush.dx0"), ident("__brush.dx1")], span);
     const loY = callExpr("min", [ident("__brush.dy0"), ident("__brush.dy1")], span);
     const hiY = callExpr("max", [ident("__brush.dy0"), ident("__brush.dy1")], span);
-    const outX = binary(
+    const outRectX = binary(
       "or",
       binary("<", ident(`row.${xField}`), loX, span),
       binary(">", ident(`row.${xField}`), hiX, span),
       span,
     );
-    const outY = binary(
+    const outRectY = binary(
       "or",
       binary("<", ident(`row.${yField}`), loY, span),
       binary(">", ident(`row.${yField}`), hiY, span),
       span,
     );
+    const outPoly = {
+      kind: "unary" as const,
+      op: "not" as const,
+      expr: callExpr(
+        "inside",
+        [ident(`row.${xField}`), ident(`row.${yField}`), ident("__brush.dpts")],
+        span,
+      ),
+      span,
+    };
+    const outBox = binary(
+      "or",
+      binary("and", { kind: "unary", op: "not", expr: ident("__brush.mode"), span }, binary("or", outRectX, outRectY, span), span),
+      binary("and", ident("__brush.mode"), outPoly, span),
+      span,
+    );
     const local = binary("==", ident("__brush.frame"), literal(frameName), span);
     parts.push(
-      binary("and", ident("__brush.on"), binary("and", local, binary("or", outX, outY, span), span), span),
+      binary("and", ident("__brush.on"), binary("and", local, outBox, span), span),
     );
     if (linkXField) {
       const linked = binary(
@@ -3372,7 +3388,13 @@ function markInteractOpacity(
         binary("==", ident("__brush.xField"), literal(linkXField), span),
         span,
       );
-      parts.push(binary("and", ident("__brush.on"), binary("and", linked, outX, span), span));
+      const outLink = binary(
+        "or",
+        binary("and", { kind: "unary", op: "not", expr: ident("__brush.mode"), span }, outRectX, span),
+        binary("and", ident("__brush.mode"), outPoly, span),
+        span,
+      );
+      parts.push(binary("and", ident("__brush.on"), binary("and", linked, outLink, span), span));
     }
     if (includeSelDim) {
       const hide = selHideExpr(seriesField, xField, frameName, span);
@@ -3459,6 +3481,12 @@ function ensureChartInteract(
           { key: "on", value: literal(0) },
           { key: "frame", value: literal("") },
           { key: "xField", value: literal("") },
+          { key: "pts", value: { kind: "array", items: [], span } },
+          { key: "dpts", value: { kind: "array", items: [], span } },
+          { key: "len", value: literal(0) },
+          { key: "lx", value: literal(0) },
+          { key: "ly", value: literal(0) },
+          { key: "mode", value: literal(0) },
         ],
         span,
       ),
@@ -3501,7 +3529,25 @@ function ensureChartInteract(
             span,
           ),
           fill: literal("#0072B2"),
-          opacity: binary("*", ident("__brush.on"), literal(0.18), span),
+          opacity: binary(
+            "*",
+            ident("__brush.on"),
+            binary("*", binary("-", literal(1), ident("__brush.mode"), span), literal(0.18), span),
+            span,
+          ),
+        }),
+        node("brushPath", {
+          role: literal("chrome"),
+          d: callExpr("pathd", [ident("__brush.pts")], span),
+          fill: literal("#0072B2"),
+          stroke: literal("#0072B2"),
+          strokeWidth: literal(1.25),
+          opacity: binary(
+            "*",
+            ident("__brush.on"),
+            binary("*", ident("__brush.mode"), literal(0.2), span),
+            span,
+          ),
         }),
     );
     artifact.scene.layers.push({
@@ -3563,6 +3609,39 @@ function ensureChartInteract(
   if (!artifact.events.some((e) => e.type === "dragstart" && e.target === plotName)) {
     const invertX = invertSceneXExpr(ident("__event.x"), geom, span);
     const invertY = invertSceneYExpr(ident("__event.y"), geom, span);
+    const eventPt = objectExpr(
+      [
+        { key: "x", value: ident("__event.x") },
+        { key: "y", value: ident("__event.y") },
+      ],
+      span,
+    );
+    const dataPt = objectExpr(
+      [
+        { key: "x", value: invertSceneXExpr(ident("__event.x"), geom, span) },
+        { key: "y", value: invertSceneYExpr(ident("__event.y"), geom, span) },
+      ],
+      span,
+    );
+    const onePt = (pt: Expr): Expr => ({ kind: "array", items: [pt], span });
+    const step = callExpr(
+      "sqrt",
+      [
+        binary(
+          "+",
+          binary("*", binary("-", ident("__event.x"), ident("__brush.lx"), span), binary("-", ident("__event.x"), ident("__brush.lx"), span), span),
+          binary("*", binary("-", ident("__event.y"), ident("__brush.ly"), span), binary("-", ident("__event.y"), ident("__brush.ly"), span), span),
+          span,
+        ),
+      ],
+      span,
+    );
+    const boxManhattan = binary(
+      "+",
+      callExpr("abs", [binary("-", ident("__brush.x1"), ident("__brush.x0"), span)], span),
+      callExpr("abs", [binary("-", ident("__brush.y1"), ident("__brush.y0"), span)], span),
+      span,
+    );
     artifact.events.push({
       type: "dragstart",
       target: plotName,
@@ -3578,6 +3657,12 @@ function ensureChartInteract(
         assign(["__brush", "on"], literal(1)),
         assign(["__brush", "frame"], literal(frameName)),
         assign(["__brush", "xField"], literal(xField)),
+        assign(["__brush", "pts"], onePt(eventPt)),
+        assign(["__brush", "dpts"], onePt(objectExpr([{ key: "x", value: invertX }, { key: "y", value: invertY }], span))),
+        assign(["__brush", "len"], literal(0)),
+        assign(["__brush", "lx"], ident("__event.x")),
+        assign(["__brush", "ly"], ident("__event.y")),
+        assign(["__brush", "mode"], literal(0)),
         ...collectSelStmts(dataName, markXField, markYField, seriesField, span),
       ],
       span,
@@ -3593,6 +3678,27 @@ function ensureChartInteract(
         assign(["__brush", "on"], literal(1)),
         assign(["__brush", "frame"], literal(frameName)),
         assign(["__brush", "xField"], literal(xField)),
+        {
+          kind: "if",
+          cond: binary(">", step, literal(3), span),
+          body: [
+            assign(["__brush", "pts"], binary("+", ident("__brush.pts"), onePt(eventPt), span)),
+            assign(["__brush", "dpts"], binary("+", ident("__brush.dpts"), onePt(dataPt), span)),
+            assign(["__brush", "len"], binary("+", ident("__brush.len"), step, span)),
+            assign(["__brush", "lx"], ident("__event.x")),
+            assign(["__brush", "ly"], ident("__event.y")),
+          ],
+          span,
+        },
+        assign(
+          ["__brush", "mode"],
+          binary(
+            ">",
+            ident("__brush.len"),
+            binary("*", literal(1.6), boxManhattan, span),
+            span,
+          ),
+        ),
         ...collectSelStmts(dataName, markXField, markYField, seriesField, span),
       ],
       span,
@@ -3618,6 +3724,10 @@ function ensureChartInteract(
           cond: binary("and", tinyX, tinyY, span),
           body: [
             assign(["__brush", "on"], literal(0)),
+            assign(["__brush", "mode"], literal(0)),
+            assign(["__brush", "pts"], { kind: "array", items: [], span }),
+            assign(["__brush", "dpts"], { kind: "array", items: [], span }),
+            assign(["__brush", "len"], literal(0)),
             assign(["__sel", "keys"], { kind: "array", items: [], span }),
             assign(["__sel", "n"], literal(0)),
             assign(["__sel", "xField"], literal("")),
@@ -3642,16 +3752,33 @@ function collectSelStmts(
   const hiX = callExpr("max", [ident("__brush.dx0"), ident("__brush.dx1")], span);
   const loY = callExpr("min", [ident("__brush.dy0"), ident("__brush.dy1")], span);
   const hiY = callExpr("max", [ident("__brush.dy0"), ident("__brush.dy1")], span);
-  const inX = binary(
+  const inRectX = binary(
     "and",
     binary(">=", ident(`row.${xField}`), loX, span),
     binary("<=", ident(`row.${xField}`), hiX, span),
     span,
   );
-  const inY = binary(
+  const inRectY = binary(
     "and",
     binary(">=", ident(`row.${yField}`), loY, span),
     binary("<=", ident(`row.${yField}`), hiY, span),
+    span,
+  );
+  const inPoly = callExpr(
+    "inside",
+    [ident(`row.${xField}`), ident(`row.${yField}`), ident("__brush.dpts")],
+    span,
+  );
+  const inX = binary(
+    "or",
+    binary("and", { kind: "unary", op: "not", expr: ident("__brush.mode"), span }, inRectX, span),
+    binary("and", ident("__brush.mode"), inPoly, span),
+    span,
+  );
+  const inY = binary(
+    "or",
+    binary("and", { kind: "unary", op: "not", expr: ident("__brush.mode"), span }, inRectY, span),
+    ident("__brush.mode"),
     span,
   );
   const key = seriesField ? ident(`row.${seriesField}`) : ident(`row.${xField}`);
