@@ -20,6 +20,8 @@ Dependency refresh on pod start is `npm install` (see environment update script)
 | Multimodal check | `npx vite-node src/cli.ts -- check file.viva --vision` (see `viva.models.json.example`) |
 | Model slots | `npx vite-node src/cli.ts -- models` |
 | Prune artifact screenshots | `node scripts/cleanup-artifacts.mjs` |
+| **One-click deploy** | `docker compose up -d --build` or `bash install/one-click.sh` |
+| Agent HTTP API | `viva serve --host 0.0.0.0 --port 8765` — see `docs/DEPLOY.md` |
 | Review brief demo | `npm run demo:review` |
 | Agent HTTP bridge | `npx vite-node src/cli.ts -- serve --port 8765` |
 | Exam UI scene runner | `npm run dev` then `node scripts/exam-layers-ui.mjs` |

@@ -1,45 +1,61 @@
 #!/usr/bin/env bash
-# Build npm tarball + copy platform installers into release/
+# Build production dist + npm tarball + release folder (installers, docker, docs).
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 mkdir -p release
-npm pack --pack-destination release
-cp -f install/install.sh install/install.ps1 release/
-cat > release/README.md <<'EOF'
-# Viva-lang release packages
 
-## npm (all platforms with Node ≥ 18)
+echo "==> TypeScript lib"
+npm run build:lib
+
+echo "==> Browser embed bundle"
+npx vite build --config vite.embed.config.ts
+
+echo "==> npm pack"
+npm pack --pack-destination release
+
+cp -f install/install.sh install/install.ps1 install/one-click.sh release/
+cp -f Dockerfile docker-compose.yml release/
+cp -f viva.models.json.example viva.models.schema.json release/
+cp -f docs/DEPLOY.md release/DEPLOY.md
+
+cat > release/README.md <<'EOF'
+# Viva-lang release bundle
+
+## 1) npm (all platforms, Node ≥ 18)
 
 ```bash
 npm install -g ./viva-lang-*.tgz
-# or from registry once published:
-# npm install -g viva-lang
 viva version
+viva serve --host 0.0.0.0 --port 8765
 ```
 
-## Linux / macOS installer
+## 2) One-click shell install
 
 ```bash
 bash install.sh
-# or from a git checkout:
-bash install/install.sh
+# or from internet:
+# curl -fsSL .../install/one-click.sh | bash
 ```
 
-## Windows installer
+## 3) Docker one-command deploy
 
-```powershell
-.\install.ps1
+```bash
+docker compose up -d --build
+curl http://localhost:8765/api/health
 ```
 
-## Agent surfaces after install
+## Agent surfaces
 
-| Surface | Command / API |
+| Surface | Entry |
 | --- | --- |
-| Bash | `viva compile\|export\|serve\|prompt` |
-| Web embed | `import { createVivaWebEmbed } from "viva-lang/embed"` |
-| HTTP bridge | `viva serve --port 8765` |
-| Export | `viva export file.viva -f pdf\|jpg\|png\|svg` |
+| CLI | `viva compile\|check\|export\|serve` |
+| HTTP REST | `POST /api/compile`, `/api/check`, `/api/export` |
+| Browser SDK | `import from "viva-lang/embed"` |
+| Node SDK | `import from "viva-lang/agent"` |
+
+Full guide: `DEPLOY.md` (also in repo `docs/DEPLOY.md`).
 EOF
-echo "Wrote release/ :"
+
+echo "==> release/"
 ls -la release/

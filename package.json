@@ -29,6 +29,10 @@
       "types": "./dist/review/index.d.ts",
       "import": "./dist/review/index.js"
     },
+    "./check": {
+      "types": "./dist/check/index.d.ts",
+      "import": "./dist/check/index.js"
+    },
     "./package.json": "./package.json"
   },
   "files": [
@@ -36,6 +40,10 @@
     "examples",
     "docs",
     "install",
+    "docker-compose.yml",
+    "Dockerfile",
+    "viva.models.json.example",
+    "viva.models.schema.json",
     "README.md",
     "LICENSE"
   ],
@@ -43,7 +51,7 @@
     "dev": "vite",
     "build": "tsc -p tsconfig.build.json && vite build && vite build --config vite.embed.config.ts",
     "build:lib": "tsc -p tsconfig.build.json",
-    "pack:release": "npm run build:lib && npm pack && bash install/pack-release.sh",
+    "pack:release": "bash install/pack-release.sh",
     "test": "vitest run",
     "test:exam": "vitest run tests/exam tests/parser.test.ts",
     "test:agent-exam": "vite-node scripts/run-agent-exam.ts --track hard",

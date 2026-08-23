@@ -90,8 +90,7 @@ export async function runVisionChecks(
   const raster = await rasterizeIr(ir, opts);
   const structuralSummary =
     structural
-      ?.filter((d) => d.severity !== "info")
-      .map((d) => `- [${d.severity}] ${d.code}: ${d.message}`)
+      ?.map((d) => `- [${d.severity}] ${d.code}: ${d.message}`)
       .join("\n") ?? "";
 
   const user = buildVisionCheckUserPrompt({

@@ -1,4 +1,5 @@
-import { createVivaAgentHost, type VivaAgentHost, type VivaSession } from "../agent/index.js";
+import { createVivaAgentHost, type VivaAgentHost } from "../agent/host.js";
+import type { VivaSession } from "../agent/session.js";
 import { SYSTEM_PROMPT } from "../llm/system-prompt.js";
 import type {
   FeedbackKind,

@@ -19,7 +19,8 @@ export {
   createInlinePipeline,
   fingerprint,
 } from "./agent/index.js";
-export type { VivaAgentHost, VivaSession, ProvenanceBundle } from "./agent/index.js";
+export type { VivaAgentHost, VivaSession } from "./agent/index.js";
+export type { ProvenanceBundle } from "./agent/types.js";
 export { createVivaWebEmbed } from "./embed/web.js";
 export type { WebEmbedCommand, WebEmbedMessage, WebEmbedOptions } from "./embed/web.js";
 export {

@@ -23,12 +23,12 @@ npm run dev
 ### 安装 CLI（Win / Mac / Linux）
 
 ```bash
-# npm
 npm install -g .
-# 或
-bash install/install.sh          # Linux/macOS
-# Windows: powershell -File install\install.ps1
+# 或一键: bash install/one-click.sh
+# Docker: docker compose up -d --build
 ```
+
+部署与其它 Agent 接入：[`docs/DEPLOY.md`](docs/DEPLOY.md)
 
 ```bash
 viva version
@@ -91,6 +91,7 @@ install/      Win/Mac/Linux 安装脚本
 | 文档 | 用途 |
 | --- | --- |
 | [`docs/hosts/minimal-host.md`](docs/hosts/minimal-host.md) | Session / Host 最小接入 |
+| [`docs/DEPLOY.md`](docs/DEPLOY.md) | 一键部署 + HTTP/CLI/SDK 接入 |
 | [`docs/hosts/web-embed.md`](docs/hosts/web-embed.md) | iframe / postMessage |
 | [`docs/hosts/bash.md`](docs/hosts/bash.md) | `viva` CLI |
 | [`docs/hosts/review.md`](docs/hosts/review.md) | 圈选标注 → `agentBrief` |
