@@ -171,6 +171,8 @@ const NUM_BUILTINS: Record<string, (...args: number[]) => number> = {
   min: (...xs) => Math.min(...xs),
   max: (...xs) => Math.max(...xs),
   clamp: (x, lo, hi) => Math.min(Math.max(x, lo), hi),
+  log: (x) => Math.log(Math.max(x, 1e-12)),
+  exp: (x) => Math.exp(x),
 };
 
 function applyCall(callee: string, args: Value[]): Value {

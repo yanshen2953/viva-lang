@@ -25,7 +25,7 @@ export function asPair(value: unknown, fallback: [number, number]): [number, num
   return fallback;
 }
 
-export type ScaleKind = "linear" | "log";
+export type ScaleKind = "linear" | "log" | "band";
 
 export type FrameScales = {
   name: string;
@@ -39,11 +39,49 @@ export type FrameScales = {
   ymax: number;
   xScale: ScaleKind;
   yScale: ScaleKind;
+  xCats: string[];
+  yCats: string[];
 };
 
-function scaleKind(value: unknown): ScaleKind {
+export function scaleKind(value: unknown): ScaleKind {
   const raw = String(value ?? "linear").toLowerCase();
-  return raw === "log" || raw === "logarithmic" ? "log" : "linear";
+  if (raw === "log" || raw === "logarithmic") return "log";
+  if (raw === "band" || raw === "category" || raw === "categorical" || raw === "ordinal") {
+    return "band";
+  }
+  return "linear";
+}
+
+export function catsFrom(value: unknown): string[] {
+  if (Array.isArray(value)) return value.map((item) => String(item));
+  if (typeof value === "string" && value.trim()) {
+    return value.split(/[,|]/).map((part) => part.trim()).filter(Boolean);
+  }
+  return [];
+}
+
+/** Map a data value (number or category label) onto the numeric domain. */
+export function categoryIndex(value: unknown, cats: string[]): number | null {
+  if (!cats.length) return null;
+  if (typeof value === "string") {
+    const i = cats.indexOf(value);
+    return i >= 0 ? i : null;
+  }
+  if (typeof value === "number" && Number.isFinite(value)) {
+    const labeled = cats.indexOf(String(value));
+    if (labeled >= 0) return labeled;
+    if (Number.isInteger(value) && value >= 0 && value < cats.length) return value;
+  }
+  return null;
+}
+
+export function domainValue(value: unknown, cats: string[] = []): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    const labeled = cats.length ? categoryIndex(value, cats) : null;
+    return labeled === null ? value : labeled;
+  }
+  const idx = categoryIndex(value, cats);
+  return idx;
 }
 
 export function domainMap(
@@ -60,6 +98,24 @@ export function domainMap(
     return linearMap(v, [d0, d1], range, invert);
   }
   return linearMap(value, domain, range, invert);
+}
+
+/** Inverse of domainMap: scene coordinate → data domain. */
+export function domainUnmap(
+  scene: number,
+  domain: [number, number],
+  range: [number, number],
+  invert = false,
+  kind: ScaleKind = "linear",
+): number {
+  const mapped = invert ? range[0] + range[1] - scene : scene;
+  if (kind === "log") {
+    const d0 = Math.log(Math.max(domain[0], 1e-12));
+    const d1 = Math.log(Math.max(domain[1], 1e-12));
+    const v = linearMap(mapped, range, [d0, d1], false);
+    return Math.exp(v);
+  }
+  return linearMap(mapped, range, domain, false);
 }
 
 export function scalesFromFrameProps(
@@ -83,7 +139,21 @@ export function scalesFromFrameProps(
     ymax,
     xScale: scaleKind(props.xScale ?? props.xscale),
     yScale: scaleKind(props.yScale ?? props.yscale),
+    xCats: catsFrom(props.xCats ?? props.xcats ?? props.categories),
+    yCats: catsFrom(props.yCats ?? props.ycats),
   };
+}
+
+function mapFrameX(frame: FrameScales, value: unknown): number | null {
+  const v = domainValue(value, frame.xCats);
+  if (v === null) return null;
+  return domainMap(v, [frame.xmin, frame.xmax], [frame.x0, frame.x1], false, frame.xScale);
+}
+
+function mapFrameY(frame: FrameScales, value: unknown): number | null {
+  const v = domainValue(value, frame.yCats);
+  if (v === null) return null;
+  return domainMap(v, [frame.ymin, frame.ymax], [frame.y0, frame.y1], true, frame.yScale);
 }
 
 /** Map data-domain props into scene space when `frame` is set. */
@@ -97,18 +167,18 @@ export function applyFrameToProps(
   const frame = frames.find((f) => f.name === name);
   if (!frame) return props;
 
-  const mapX = (v: number) =>
-    domainMap(v, [frame.xmin, frame.xmax], [frame.x0, frame.x1], false, frame.xScale);
-  const mapY = (v: number) =>
-    domainMap(v, [frame.ymin, frame.ymax], [frame.y0, frame.y1], true, frame.yScale);
-
   const next = { ...props };
-  if (typeof next.x === "number") next.x = mapX(next.x);
-  if (typeof next.y === "number") next.y = mapY(next.y);
-  if (typeof next.x1 === "number") next.x1 = mapX(next.x1);
-  if (typeof next.y1 === "number") next.y1 = mapY(next.y1);
-  if (typeof next.x2 === "number") next.x2 = mapX(next.x2);
-  if (typeof next.y2 === "number") next.y2 = mapY(next.y2);
+  const apply = (key: string, mapper: (value: unknown) => number | null) => {
+    if (!(key in next) || next[key] === undefined || next[key] === null) return;
+    const mapped = mapper(next[key]);
+    if (mapped !== null) next[key] = mapped;
+  };
+  apply("x", (v) => mapFrameX(frame, v));
+  apply("y", (v) => mapFrameY(frame, v));
+  apply("x1", (v) => mapFrameX(frame, v));
+  apply("y1", (v) => mapFrameY(frame, v));
+  apply("x2", (v) => mapFrameX(frame, v));
+  apply("y2", (v) => mapFrameY(frame, v));
   return next;
 }
 
@@ -161,13 +231,43 @@ export function layoutChartBar(
   const frame = frames.find((f) => f.name === frameName);
   if (!frame) return props;
 
+  const orient = String(props.__chartBarOrient ?? props.orient ?? "v").toLowerCase();
+  if (orient === "h" || orient === "horizontal") {
+    const right = typeof props.x === "number" ? props.x : 0;
+    const cy = typeof props.y === "number" ? props.y : 0;
+    const barHData = typeof props.h === "number" ? props.h : Number(props.w) || 0.6;
+    const sceneH = Math.abs(
+      linearMap(barHData, [0, frame.ymax - frame.ymin], [0, frame.y1 - frame.y0], false),
+    );
+    const baseline = domainMap(
+      frame.xmin,
+      [frame.xmin, frame.xmax],
+      [frame.x0, frame.x1],
+      false,
+      frame.xScale,
+    );
+    return {
+      ...props,
+      x: Math.min(baseline, right),
+      y: cy - sceneH / 2,
+      w: Math.max(0, Math.abs(right - baseline)),
+      h: sceneH,
+    };
+  }
+
   const dataX = typeof props.x === "number" ? props.x : 0;
   const dataYTop = typeof props.y === "number" ? props.y : 0;
   const barWData = typeof props.w === "number" ? props.w : Number(props.w) || 0.6;
   const sceneW = Math.abs(
     linearMap(barWData, [0, frame.xmax - frame.xmin], [0, frame.x1 - frame.x0], false),
   );
-  const baseline = linearMap(frame.ymin, [frame.ymin, frame.ymax], [frame.y0, frame.y1], true);
+  const baseline = domainMap(
+    frame.ymin,
+    [frame.ymin, frame.ymax],
+    [frame.y0, frame.y1],
+    true,
+    frame.yScale,
+  );
   const top = dataYTop;
   const height = Math.max(0, baseline - top);
   return {
