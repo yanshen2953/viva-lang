@@ -8,6 +8,12 @@ export const MM_PER_IN = 25.4;
 export const CSS_PX_PER_IN = 96;
 export const PDF_PT_PER_IN = 72;
 export const COLUMN_MM = { single: 89, double: 183 } as const;
+export const PAGE_MM = {
+  a4: { w: 210, h: 297 },
+  letter: { w: 215.9, h: 279.4 },
+} as const;
+
+export type ScenePage = { name: "a4" | "letter"; w: number; h: number };
 
 export type SceneBox = {
   width: number;
@@ -15,6 +21,7 @@ export type SceneBox = {
   background: string;
   unit: SceneUnit;
   column?: "single" | "double";
+  page?: ScenePage;
 };
 
 function num(value: unknown, fallback: number): number {
@@ -102,7 +109,22 @@ function toPx(value: number, unit: SceneUnit): number {
 }
 
 /** Resolve scene size. `unit: mm` and `column: single|double` convert into CSS px. */
-const SCENE_META_KEYS = ["unit", "column"] as const;
+const SCENE_META_KEYS = ["unit", "column", "page"] as const;
+
+export function parsePage(value: unknown): ScenePage | undefined {
+  const raw = str(value, "").toLowerCase().replace(/\s+/g, "");
+  if (raw === "a4") return { name: "a4", ...PAGE_MM.a4 };
+  if (raw === "letter" || raw === "usletter") return { name: "letter", ...PAGE_MM.letter };
+  return undefined;
+}
+
+/** How many PDF pages a scene needs. SVG/PNG stay one tall canvas. Not a reflow. */
+export function scenePageCount(box: SceneBox): number {
+  if (!box.page) return 1;
+  const pageH = toPx(box.page.h, "mm");
+  if (!(pageH > 0)) return 1;
+  return Math.max(1, Math.ceil(box.height / pageH - 1e-6));
+}
 
 export function evalSceneProps(
   exprs: Record<string, Expr>,
@@ -131,8 +153,14 @@ export function resolveSceneBox(
   const columnRaw = str(sceneProps.column, "");
   const column =
     columnRaw === "single" || columnRaw === "double" ? columnRaw : undefined;
-  if (column && sceneProps.width === undefined && !Array.isArray(sceneProps.size)) {
+  const page = parsePage(sceneProps.page);
+  const sizeExplicit = Array.isArray(sceneProps.size);
+  if (column && sceneProps.width === undefined && !sizeExplicit) {
     width = COLUMN_MM[column];
+  }
+  if (page && unit === "mm") {
+    if (sceneProps.width === undefined && !sizeExplicit && !column) width = page.w;
+    if (sceneProps.height === undefined && !sizeExplicit) height = page.h;
   }
 
   return {
@@ -141,5 +169,6 @@ export function resolveSceneBox(
     background: str(sceneProps.background, defaults?.background ?? DEFAULT_SCENE_BACKGROUND),
     unit,
     column,
+    page,
   };
 }

@@ -92,7 +92,10 @@ export async function exportArtifact(
   if (fmt === "pdf" || fmt === "pdf-raster") {
     const mode = fmt === "pdf-raster" ? "raster" : (opts.pdfMode ?? "vector");
     if (mode === "vector") {
-      const bytes = await renderVectorPdfFromIr(result.ir, { scale: opts.scale ?? 1 });
+      const bytes = await renderVectorPdfFromIr(
+        result.ir,
+        opts.scale !== undefined ? { scale: opts.scale } : {},
+      );
       return { format: "pdf", bytes, mime: "application/pdf", svg, vector: true };
     }
     const raster = await rasterize(svg, { ...opts, background: opts.background ?? sceneBg });

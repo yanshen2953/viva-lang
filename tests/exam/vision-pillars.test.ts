@@ -7,7 +7,8 @@ import { domainMap, domainUnmap, scalesFromFrameProps } from "../../src/space.js
 import { resolveCjkFontPath } from "../../src/export/pdf-font.js";
 import { flattenNodesFromIr } from "../../src/export/static-svg.js";
 import { evaluate } from "../../src/eval.js";
-import { mmToPx, resolveSceneBox, COLUMN_MM } from "../../src/space/scene-box.js";
+import { mmToPx, resolveSceneBox, scenePageCount, COLUMN_MM, PAGE_MM } from "../../src/space/scene-box.js";
+import { PDFDocument } from "pdf-lib";
 import { handleMcpTool } from "../../src/mcp/tools.js";
 import { SYSTEM_PROMPT_SLIM } from "../../src/llm/system-prompt-slim.js";
 import { simulate } from "../../src/simulate.js";
@@ -39,6 +40,27 @@ describe("vision pillars: board, mm, log, hover object, CJK pdf", () => {
     );
     const svg = renderSvgFromIr(paper.ir!);
     expect(svg).toMatch(/viewBox="0 0 336/);
+  });
+
+  it("sizes an omitted A4 page and slices a tall column into two PDF pages", async () => {
+    const sheet = resolveSceneBox({ unit: "mm", page: "a4" });
+    expect(sheet.page?.name).toBe("a4");
+    expect(sheet.width).toBeCloseTo(mmToPx(PAGE_MM.a4.w));
+    expect(sheet.height).toBeCloseTo(mmToPx(PAGE_MM.a4.h));
+    expect(scenePageCount(sheet)).toBe(1);
+    const tall = resolveSceneBox({ unit: "mm", page: "a4", column: "single", height: 400 });
+    expect(tall.width).toBeCloseTo(mmToPx(COLUMN_MM.single));
+    expect(tall.height).toBeCloseTo(mmToPx(400));
+    expect(scenePageCount(tall)).toBe(2);
+    const src = readFileSync("examples/paper-pages.viva", "utf8");
+    expect(src).not.toMatch(/insetL|areaX|areaY/);
+    const pdf = await exportArtifact(src, "pdf", { handbookIds: ["print-nature"] }, "paper-pages.viva");
+    expect(pdf.vector).toBe(true);
+    const doc = await PDFDocument.load(pdf.bytes);
+    expect(doc.getPageCount()).toBe(2);
+    const size = doc.getPage(0)!.getSize();
+    expect(size.height).toBeCloseTo(mmToPx(PAGE_MM.a4.h) * (72 / 96), 0);
+    expect(size.width).toBeCloseTo(mmToPx(COLUMN_MM.single) * (72 / 96), 0);
   });
 
   it("maps log scales through domainMap", () => {

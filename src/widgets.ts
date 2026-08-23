@@ -18,7 +18,7 @@ import {
   setWidgetBuiltinSeed,
 } from "./plugins/registry.js";
 import { domainMap, parseTimeValue, scaleKind, type ScaleKind } from "./space.js";
-import { COLUMN_MM, sceneScaleOf } from "./space/scene-box.js";
+import { COLUMN_MM, parsePage, sceneScaleOf } from "./space/scene-box.js";
 import { estimateBoardBands } from "./layout/board-chrome.js";
 import { figureCopyDefaults, figureCopyPlace, figureGapDefaults } from "./layout/figure-gap.js";
 import { boxStats, quantile } from "./layout/summary-stats.js";
@@ -2402,6 +2402,11 @@ function sceneExtentOf(artifact: Artifact): { w: number; h: number } {
     props.size === undefined
   ) {
     w = COLUMN_MM[column];
+  }
+  const page = parsePage(stringProp(props, ["page"]));
+  if (page && stringProp(props, ["unit"]) === "mm") {
+    if (props.width === undefined && props.size === undefined && !column) w = page.w;
+    if (props.height === undefined && props.size === undefined) h = page.h;
   }
   return { w, h };
 }

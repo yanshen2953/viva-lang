@@ -2,7 +2,7 @@ import { PDFDocument, rgb, type PDFFont, type PDFPage, type RGB } from "pdf-lib"
 import { DEFAULT_SCENE_BACKGROUND } from "../style/defaults.js";
 import { flattenNodesFromIr, nodePainted, type FlatNode } from "./static-svg.js";
 import { embedPdfFonts, pdfSafeText, pdfTextWidth, pickPdfFont, type PdfTextFonts } from "./pdf-font.js";
-import { evalSceneProps, pxToPdfPt, resolveSceneBox } from "../space/scene-box.js";
+import { evalSceneProps, mmToPx, pxToPdfPt, resolveSceneBox, scenePageCount } from "../space/scene-box.js";
 import type { VisualIR } from "../ir.js";
 
 export type VectorPdfOptions = {
@@ -22,20 +22,25 @@ export async function renderVectorPdfFromIr(
   const box = resolveSceneBox(evalSceneProps(ir.scene.props, [ir.state, ir.data]));
   const autoScale = box.unit === "mm" || box.unit === "pt" ? pxToPdfPt(1) : 1;
   const scale = opts.scale ?? autoScale;
+  const pages = scenePageCount(box);
+  const sliceH = box.page ? mmToPx(box.page.h) : scene.height;
   const pageW = scene.width * scale;
-  const pageH = scene.height * scale;
+  const pageH = sliceH * scale;
 
   const pdf = await PDFDocument.create();
-  const page = pdf.addPage([pageW, pageH]);
   const fonts = await embedPdfFonts(pdf);
-
-  // Background
   const bg = parseColor(scene.background) ?? parseColor(DEFAULT_SCENE_BACKGROUND) ?? rgb(1, 1, 1);
-  page.drawRectangle({ x: 0, y: 0, width: pageW, height: pageH, color: bg });
 
-  for (const node of nodes) {
-    if (!nodePainted(node.props)) continue;
-    drawNode(page, fonts, node, pageH, scale);
+  for (let i = 0; i < pages; i++) {
+    const page = pdf.addPage([pageW, pageH]);
+    page.drawRectangle({ x: 0, y: 0, width: pageW, height: pageH, color: bg });
+    const originY = i * sliceH;
+    const y1 = originY + sliceH;
+    for (const node of nodes) {
+      if (!nodePainted(node.props)) continue;
+      if (!nodeHitsSlice(node.props, originY, y1)) continue;
+      drawNode(page, fonts, node, pageH, scale, originY);
+    }
   }
 
   return pdf.save();
@@ -47,14 +52,16 @@ function drawNode(
   node: FlatNode,
   pageH: number,
   scale: number,
+  originY = 0,
 ): void {
   const p = node.props;
   const opacity = p.opacity === undefined ? 1 : clamp01(Number(p.opacity) || 1);
   const tag = inferTag(p);
+  const sy = (value: number) => (value - originY) * scale;
 
   if (tag === "circle") {
     const cx = num(p.x) * scale;
-    const cy = flipY(num(p.y) * scale, pageH);
+    const cy = flipY(sy(num(p.y)), pageH);
     const r = num(p.r ?? p.size, 16) * scale;
     const fill = parseColor(str(p.fill ?? p.color, "#38bdf8"));
     page.drawCircle({
@@ -74,8 +81,8 @@ function drawNode(
     const x = num(p.x) * scale;
     const w = num(p.w ?? p.width, 80) * scale;
     const h = num(p.h ?? p.height, 24) * scale;
-    const yTop = num(p.y) * scale;
-    const y = pageH - yTop * 1 - h; // bottom-left in PDF
+    const yTop = sy(num(p.y));
+    const y = pageH - yTop - h; // bottom-left in PDF
     const fill = parseColor(str(p.fill ?? p.color, "#1e293b"));
     page.drawRectangle({
       x,
@@ -93,9 +100,9 @@ function drawNode(
 
   if (tag === "line") {
     const x1 = num(p.x1, num(p.x)) * scale;
-    const y1 = flipY(num(p.y1, num(p.y)) * scale, pageH);
+    const y1 = flipY(sy(num(p.y1, num(p.y))), pageH);
     const x2 = num(p.x2, num(p.x) + 40) * scale;
-    const y2 = flipY(num(p.y2, num(p.y)) * scale, pageH);
+    const y2 = flipY(sy(num(p.y2, num(p.y))), pageH);
     const stroke = parseColor(str(p.stroke ?? p.fill, "#64748b")) ?? rgb(0.4, 0.45, 0.5);
     page.drawLine({
       start: { x: x1, y: y1 },
@@ -116,7 +123,7 @@ function drawNode(
     const size = num(p.font ?? p.fontSize, 14) * scale;
     const x = num(p.x) * scale;
     // SVG text y is baseline; PDF drawText y is baseline too after flip
-    const y = flipY(num(p.y) * scale, pageH);
+    const y = flipY(sy(num(p.y)), pageH);
     const fill = parseColor(str(p.fill ?? p.color, "#e2e8f0")) ?? rgb(0.9, 0.92, 0.94);
     const align = str(p.align, "start");
     let drawX = x;
@@ -145,14 +152,28 @@ function drawNode(
       const a = pts[i - 1]!;
       const b = pts[i]!;
       page.drawLine({
-        start: { x: a.x * scale, y: flipY(a.y * scale, pageH) },
-        end: { x: b.x * scale, y: flipY(b.y * scale, pageH) },
+        start: { x: a.x * scale, y: flipY(sy(a.y), pageH) },
+        end: { x: b.x * scale, y: flipY(sy(b.y), pageH) },
         thickness: num(p.strokeWidth, 1) * scale,
         color: stroke,
         opacity,
       });
     }
   }
+}
+
+function nodeHitsSlice(props: Record<string, unknown>, y0: number, y1: number): boolean {
+  const ys: number[] = [];
+  for (const key of ["y", "y1", "y2"] as const) {
+    const value = props[key];
+    if (typeof value === "number" && Number.isFinite(value)) ys.push(value);
+  }
+  const top = ys.length ? Math.min(...ys) : 0;
+  let bot = ys.length ? Math.max(...ys) : top;
+  const h = typeof props.h === "number" ? props.h : typeof props.height === "number" ? props.height : 0;
+  if (Number.isFinite(h) && h > 0 && typeof props.y === "number") bot = Math.max(bot, props.y + h);
+  if (!ys.length && !(h > 0)) return true;
+  return bot >= y0 - 0.5 && top < y1 + 0.5;
 }
 
 function flipY(y: number, pageH: number): number {
