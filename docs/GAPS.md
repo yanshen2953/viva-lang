@@ -21,7 +21,7 @@
 
 ## 粗糙的根因（不是缺再一个 HTTP 路由）
 
-1. **图核语义仍缺统计层** — 有轴标题/单位/band/log，没有时间轴、box/violin、显著性。
+1. **图核语义仍缺出版层** — 有轴标题/单位/band/log/time/box/violin/括号；缺的是字距、出血和投稿级间距，不是再一个图种。
 2. **默认交互还不是 linked view** — `__brush` 已反演到数据域并变淡圈外点，但不是共享 selection 集合。
 3. **导出 ≠ 预览** — SVG 已接近 Runtime；PDF CJK 靠系统字体，缺字环境会回退 Helvetica。
 4. **Agent 闭环没产品化** — session compile 附带 visual diagnostics，但不挡成功；生成成功率未测。
@@ -50,19 +50,19 @@
 ## 仍然很粗（按用户可见排序）
 
 1. PDF 随包 `assets/fonts/VivaSansFallback.ttf`（Droid 子集）；缺字仍可能回退 Helvetica
-2. 有 time / box / violin / 显著性括号；观感仍粗，不是投稿成品
+2. 有 time / box / violin（KDE 轮廓）/ 显著性括号；轴刻度在场景坐标。观感仍粗，不是投稿成品
 3. Atlas (a–f) 已走 `layout.figure` + chart 插件；(e)(f) 不再手摆像素
 4. `__brush` 是单图数据域 marquee，不是多图共享 filter
 5. session visual diagnostics 不挡编译成功
 6. MCP/HTTP/CLI prompt 默认 slim；生成成功率未测
-7. 小栏宽 mm 图的默认 HUD / 留白仍不像投稿成品
+7. 小栏宽 mm 图默认不再画常驻 `__tip` HUD，只留 brush 框；留白仍不像投稿成品
 
 ## 下一刀（质量，不再铺接口）
 
-1. 时间轴 + 统计图种（插件，不是关键字）
-2. linked selection：`__brush` / `__highlightGrp` 跨 panel 共享 filter
+1. 投稿级留白 / 字距 / 出血（仍走编译器，不加关键字）
+2. linked selection：`__sel` 升级成可隐藏行的共享 filter，而不只是变淡
 3. 扩大随包 CJK 子集（现在只覆盖 examples + 一小撮论文用字）
-4. `layout.board` 时间分镜
+4. `layout.board` 时间分镜（播放，不只是空间槽）
 5. agent-exam 进 CI
 
 对照真源：`docs/VISION.md`。

@@ -148,7 +148,7 @@ widget layout.board
 
 `layout.board` 可选 `splits: 2` → 在 `body` 里再切 `left` / `right`；`beats: 4` → 分镜槽 `beat0`…`beat3`。
 
-`xScale: time`（或 ISO 日期字符串列自动识别）出时间刻度。`chart.box` / `chart.violin` 由编译器算四分位和密度。`brackets: [{ a, b, label }]` 画显著性括号。都不是新关键字。
+`xScale: time`（或 ISO 日期字符串列自动识别）出时间刻度。`chart.box` / `chart.violin` 由编译器算四分位和密度（violin 是高斯 KDE 闭合轮廓，不是直方切片）。`brackets: [{ a, b, label }]` 画显著性括号。轴刻度数字写在场景坐标（图框左侧 / 底侧），避免数据域 padding 把 y 标签裁进绘图区。都不是新关键字。
 
 跨面板：`__brush` 按 frame 隔离，同名 `xField` 联动；刷选还会写入 `__sel.keys` 集合，其它图用 `has()` 变淡不在集合里的组。
 

@@ -20,7 +20,7 @@
 | 柱 | 愿景里的样子 | 今天实际 | 差在哪 |
 | --- | --- | --- | --- |
 | 交互 | 汇报件本身就是活世界：点、刷、拖、联动、时间，和游戏同一套原语 | Runtime 有 click/hover/drag/collide/key/tick；图表默认 `__tip` / `__hover` / `__brush`（数据域） / `__highlightGrp` | 刷选还不是完整 linked selection；无动画过渡；内联卡上的检查/修复壳仍弱 |
-| 图表 | 轴、误差、分组、色标、投稿可读，由编译器长出来 | `chart.scatter/line/bar/heatmap/vector/funnel` + 线性/log/band frame；轴标题/误差/热图/图例外置 | 无时间轴、box/violin、显著性括号；默认 HUD 在小 mm 图上仍粗；PDF CJK 靠系统字体 |
+| 图表 | 轴、误差、分组、色标、投稿可读，由编译器长出来 | `chart.scatter/line/bar/heatmap/vector/funnel/box/violin` + 线性/log/band/time；轴标题在场景坐标；violin 为 KDE 轮廓 | 小栏宽间距仍粗；PDF CJK 子集有限；不是投稿成品 |
 | 排版 | 作者只说「2×2 图、单栏 89 mm、安全框」；格子、出血、字幕条、对位由编译器算 | `layout.figure` 网格；`layout.board` 安全框 + `splits`；`unit: mm` + 单/双栏 | 无出血/裁切、字级网格、跨页、时间轴分镜 |
 | 语法 | 原语极小，新能力只加插件名 | 核还算小；widget 走 `registerWidget()` | 语言表面没涨关键字。不要为图种/槽位加关键字 |
 | 编译器 | 度量、避让、对齐、交互默认、导出保真全在编译/运行时 | band/log/linear + handbook 涂颜料 + 图核默认交互 | handbook **不**执行图语法；导出保真仍有缺口 |
@@ -72,7 +72,7 @@
 ### 3.2 论文级图表
 
 有：线性 / log / band / time 轴、scatter/line/bar/heatmap/vector/funnel/box、轴标题/单位、误差棒、热图色条、图例外置、投稿 mm、SVG 更接近 Runtime、PDF 随包 CJK 子集。  
-没有：完整 CJK 字库、小栏宽上的出版级留白、投稿级间距。有 time / box / violin / 显著性括号。
+没有：完整 CJK 字库、投稿级字距与出血。有 time / box / violin（KDE 轮廓）/ 显著性括号；轴刻度已离开数据域，改钉在图框外侧。小栏宽 mm 图默认不再画常驻 HUD 读数。
 
 ### 3.3 图像 / 视频级排版
 
@@ -97,10 +97,10 @@
 
 ## 5. 下一刀（只服务三柱，不铺路由）
 
-1. 时间轴 / box-violin / 显著性括号（仍走插件）
-2. brush 升级成可共享的数据域 selection，而不只是单图变淡
-3. 随包 CJK 子集，导出不依赖系统字体
-4. `layout.board` 时间轴分镜（仍无新关键字）
+1. 投稿级留白 / 字距 / 出血（编译器，不加关键字）
+2. brush 升级成可共享的数据域 selection，而不只是变淡
+3. 扩大随包 CJK 子集
+4. `layout.board` 时间轴分镜（播放，不只是空间槽）
 5. agent 生成成功率进 CI；不要把 visual diagnostics 误报成「已经闭环」
 
 发现插件：`viva widgets` 或 `listWidgets()`。
