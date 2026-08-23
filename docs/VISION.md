@@ -67,7 +67,7 @@
 ### 3.1 游戏式交互
 
 有：节点可拖、碰撞、键盘、tick、图层；图表默认数据域 tooltip、brush 反演（按 frame 隔离，同名 xField 联动）、跨面板 group 高亮、点图例高亮。  
-没有：动画过渡、内联卡上的检查/修复壳。`__sel.keys` 默认让其它面板 **藏行**（含 box / violin / 折线线段；`link: dim` 可改回变淡），仍不是带过渡的完整 linked-view。
+没有：完整游戏级过渡曲线、内联卡上的检查/修复壳。`__sel.keys` 默认让其它面板 **藏行**（含 box / violin / 折线线段；`link: dim` 可改回变淡）。Runtime 用现有 opacity 做 180ms 淡入淡出，静态导出仍是硬切。
 
 ### 3.2 论文级图表
 

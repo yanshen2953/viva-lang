@@ -150,7 +150,7 @@ widget layout.board
 
 `xScale: time`（或 ISO 日期字符串列自动识别）出时间刻度。`chart.box` / `chart.violin` 由编译器算四分位和密度（violin 是高斯 KDE 闭合轮廓，不是直方切片）。`brackets: [{ a, b, label }]` 画显著性括号。轴刻度数字写在场景坐标（图框左侧 / 底侧），避免数据域 padding 把 y 标签裁进绘图区。都不是新关键字。
 
-跨面板：`__brush` 按 frame 隔离，同名 `xField` 联动；刷选写入 `__sel.keys`。其它图默认 **藏起** 不在集合里的行（含 heatmap 格子、折线线段、box / violin 摘要）。点图例色块也会写入 `__sel`（再点一次清空）。空点 `dragend` 清选择。`link: dim` 可改回变淡。
+跨面板：`__brush` 按 frame 隔离，同名 `xField` 联动；刷选写入 `__sel.keys`。其它图默认 **藏起** 不在集合里的行（含 heatmap 格子、折线线段、box / violin 摘要）。Runtime 用现有 opacity 做短淡入淡出。点图例色块也会写入 `__sel`（再点一次清空）。空点 `dragend` 清选择。`link: dim` 可改回变淡。
 
 图表默认交互（`interactive: false` 可关）：`__tip` 字符串、`__hover` 对象、`__brush`（场景框 + 数据域 `dx0/dy0/dx1/dy1`，刷选外的点变淡）、同 `group` 跨面板 `__highlightGrp`。点图例色块也会写 `__highlightGrp`。
 

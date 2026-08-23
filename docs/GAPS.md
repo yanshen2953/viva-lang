@@ -22,8 +22,8 @@
 ## 粗糙的根因（不是缺再一个 HTTP 路由）
 
 1. **图核语义仍缺出版层** — 有轴标题/单位/band/log/time/box/violin/括号；`print-nature` 已接管字号/字距；编译器按字号和 mm 比例堆叠刻度/标题。仍不是真正的碰撞求解。
-2. **默认交互还不是完整 linked view** — `__sel.keys` 已跨面板藏行（含 box / violin / 折线）；本地 brush 仍是 marquee，无过渡。
-3. **导出 ≠ 预览** — SVG 已接近 Runtime；PDF 随包 CJK 子集（examples + 论文用字），缺字仍可能 `?` / Helvetica。
+2. **默认交互还不是完整 linked view** — `__sel.keys` 已跨面板藏行（含 box / violin / 折线）；Runtime 用 opacity 淡 180ms，不是时间轴动画。本地 brush 仍是 marquee。
+3. **导出 ≠ 预览** — SVG 已接近 Runtime；PNG/JPG 现在填场景底色（投稿白底不再透成黑卡）；PDF 随包 CJK 子集，缺字仍可能 `?`。
 4. **Agent 闭环没产品化** — session compile 附带 visual diagnostics，但不挡成功；生成成功率未测。
 5. **手册仍不执行图语法** — 现在会覆盖 widget 字号，但不做避让、对齐或栏宽文法。
 
