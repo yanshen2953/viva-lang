@@ -812,7 +812,7 @@ function expandChart(
         ...interactVisible,
       }),
     );
-    axisItems.push(...expandColorbar(frameName, geom, span, chrome));
+    axisItems.push(...expandColorbar(artifact, frameName, geom, span, chrome));
   } else if (kind === "chart.vector") {
     const uField = fieldName(props.uField ?? props.dx ?? props.ux, "ux");
     const vField = fieldName(props.vField ?? props.dy ?? props.uy, "uy");
@@ -3748,6 +3748,7 @@ function meanOf(values: number[]): number {
 }
 
 function expandColorbar(
+  artifact: Artifact,
   frameName: string,
   props: Record<string, Expr>,
   span: { line: number; column: number },
@@ -3757,10 +3758,18 @@ function expandColorbar(
   const x1 = pairAt(props.areaX ?? props.x, 1, 720);
   const y0 = pairAt(props.areaY ?? props.y, 0, 60);
   const y1 = pairAt(props.areaY ?? props.y, 1, 400);
-  const barX = chrome?.cbarX ?? (x1.kind === "number" ? x1.value + 10 : 730);
+  const unit = sceneUnitOf(artifact);
+  const toScene = (px: number) => px / Math.max(sceneScaleOf({ unit }), 1e-6);
+  const barW = toScene(10);
+  const labelDx = toScene(14);
+  const labelDy = toScene(3);
+  const labelLh = toScene(10);
+  const minH = toScene(40);
+  const barX = chrome?.cbarX ?? (x1.kind === "number" ? x1.value + toScene(10) : 730);
   const top = y0.kind === "number" ? y0.value : 60;
   const bot = y1.kind === "number" ? y1.value : 400;
-  const h = Math.max(40, bot - top);
+  const h = Math.max(minH, bot - top);
+  const titleStep = chrome?.axisLineH ?? toScene(11);
   const steps = 7;
   const items: SceneItem[] = [];
   for (let i = 0; i < steps; i++) {
@@ -3770,7 +3779,7 @@ function expandColorbar(
         role: literal("colorbar"),
         x: literal(barX),
         y: literal(bot - ((i + 1) / steps) * h),
-        w: literal(10),
+        w: literal(barW),
         h: literal(h / steps),
         fill: {
           kind: "call",
@@ -3791,8 +3800,8 @@ function expandColorbar(
         items.push(
           node(`${frameName}_cbarLbl_${i}${li ? `_${li}` : ""}`, {
             role: literal("label"),
-            x: literal(barX + 14),
-            y: literal(bot - t * h + 3 + li * 10),
+            x: literal(barX + labelDx),
+            y: literal(bot - t * h + labelDy + li * labelLh),
             text: literal(line),
           }),
         );
@@ -3805,7 +3814,7 @@ function expandColorbar(
         node(`${frameName}_cbarTitle${i ? `_${i}` : ""}`, {
           role: literal("label"),
           x: literal(chrome.cbarTitleX),
-          y: literal(chrome.cbarTitleY + i * 11),
+          y: literal(chrome.cbarTitleY + i * titleStep),
           text: literal(line),
         }),
       );

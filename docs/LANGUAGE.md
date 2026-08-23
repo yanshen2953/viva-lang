@@ -168,7 +168,7 @@ widget chart.scatter
 - `xLabel` / `yLabel` + `xUnit` / `yUnit` → 轴标题（如 `Time (week)`）。未加引号的多词（`xLabel: Sum score`）会拼成一句，不必写成 `"Sum score"`
 - 线性轴会键上作者 `xlim` / `ylim` 端点（`0 70` 会画出 `70`），中间仍走 nice step；挤时抽稀保留两端
 - `errorField` / `yerr` → 竖直误差棒
-- `chart.heatmap`：`valueField` + `zlim`，右侧连续色条
+- `chart.heatmap`：`valueField` + `zlim`，右侧连续色条。色条宽高按场景比例（mm 不再把 10/40 px 当成毫米），`zLabel` 停在色带旁而不是叠进色带
 - 默认 `hover` 把读数写入 `__tip`，指针写入 `__tipX` / `__tipY`（跟手 tip；`interactive: false` 可关）
 
 ## 图层（z-order = 声明顺序）

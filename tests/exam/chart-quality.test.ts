@@ -147,6 +147,29 @@ describe("chart quality: axis titles, error bars, hover, heatmap", () => {
     expect(titleText.replace(/\s/g, "")).toMatch(/normalizedexpression/);
   });
 
+  it("keeps an mm heatmap colorbar in plot height and parks zLabel beside it", () => {
+    const src = readFileSync("examples/paper-linked-marks.viva", "utf8");
+    const result = compileSource(src, "paper-linked-marks.viva", { handbookIds: ["print-nature"] });
+    expect(result.error).toBeNull();
+    const axes = result.ir!.scene.layers.find((l) => l.name === "__b_axes")!;
+    const num = (name: string, key: "x" | "y" | "w" | "h") => {
+      const n = axes.items.find((i) => i.kind === "node" && i.name === name);
+      return n?.kind === "node" && n.props[key]?.kind === "number" ? n.props[key].value : NaN;
+    };
+    const barW = num("b_cbar_0", "w");
+    const barX = num("b_cbar_0", "x");
+    const topY = num("b_cbar_6", "y");
+    const titleX = num("b_cbarTitle", "x");
+    const titleY = num("b_cbarTitle", "y");
+    const plotY0 = result.ir!.frames.find((f) => f.name === "b")!.props.y;
+    const plotTop = plotY0?.kind === "array" && plotY0.items[0]?.kind === "number" ? plotY0.items[0].value : 0;
+    expect(barW).toBeGreaterThan(2);
+    expect(barW).toBeLessThan(4);
+    expect(titleX).toBeGreaterThan(barX + barW);
+    expect(topY).toBeGreaterThan(plotTop - 1);
+    expect(titleY).toBeLessThan(plotTop);
+  });
+
   it("reads unary-minus xlim/ylim so ticks stay in the data domain", () => {
     const result = compileSource(
       `artifact "Neg"
