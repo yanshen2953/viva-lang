@@ -18,6 +18,7 @@ import {
   setWidgetBuiltinSeed,
 } from "./plugins/registry.js";
 import { domainMap, parseTimeValue, scaleKind, type ScaleKind } from "./space.js";
+import { sceneScaleOf } from "./space/scene-box.js";
 
 export type { WidgetExpandContext, WidgetPlugin } from "./plugins/types.js";
 export { getWidget, listWidgets, registerWidget, resetWidgetPlugins };
@@ -312,12 +313,21 @@ function expandChart(
         ? ""
         : sentenceTitle(kind.replace("chart.", ""));
 
+  const legendKeys = seriesField ? uniqueSeriesKeys(artifact, dataName, seriesField) : [];
+  const chrome = paperChromeOf(geom, artifact, {
+    colorbar: kind === "chart.heatmap",
+    legendAt: seriesField && legendAt !== "off" ? legendAt : undefined,
+    legendKeys,
+    title,
+  });
   const titleX = pairAt(geom.areaX ?? geom.x, 0, 72);
-  const titleYExpr = (() => {
-    const top = pairAt(geom.areaY ?? geom.y, 0, 60);
-    if (top.kind === "number") return literal(Math.max(24, top.value - 24));
-    return literal(36);
-  })();
+  const titleYExpr = chrome
+    ? literal(chrome.titleY)
+    : (() => {
+        const top = pairAt(geom.areaY ?? geom.y, 0, 60);
+        if (top.kind === "number") return literal(Math.max(24, top.value - 24));
+        return literal(36);
+      })();
 
   const area = areaRect(geom, span);
   const markProps = markSeriesProps(props, seriesField);
@@ -337,8 +347,8 @@ function expandChart(
       ...(props.plotOpacity ? { opacity: props.plotOpacity } : {}),
     }),
     ...expandGridLines(frameName, geom, span),
-    ...expandAxisTicks(frameName, geom, span, artifact),
-    ...expandAxisTitles(frameName, geom, span, artifact),
+    ...expandAxisTicks(frameName, geom, span, artifact, chrome),
+    ...expandAxisTitles(frameName, geom, span, artifact, chrome),
     node(`${frameName}_xAxis`, {
       role: literal("axis"),
       frame: literal(frameName),
@@ -368,7 +378,7 @@ function expandChart(
         ]
       : []),
     ...(seriesField && legendAt !== "off"
-      ? expandSeriesLegend(frameName, artifact, dataName, seriesField, geom, legendAt, span)
+      ? expandSeriesLegend(frameName, artifact, dataName, seriesField, geom, legendAt, span, chrome)
       : []),
     ...expandBrackets(props, frameName, geom, xCats, span),
   ];
@@ -516,7 +526,7 @@ function expandChart(
         ...interactVisible,
       }),
     );
-    axisItems.push(...expandColorbar(frameName, geom, span));
+    axisItems.push(...expandColorbar(frameName, geom, span, chrome));
   } else if (kind === "chart.vector") {
     const uField = fieldName(props.uField ?? props.dx ?? props.ux, "ux");
     const vField = fieldName(props.vField ?? props.dy ?? props.uy, "uy");
@@ -566,6 +576,7 @@ function expandChart(
         markXField,
         resolvedYField,
         seriesField,
+        geom,
         span,
       ),
     );
@@ -646,6 +657,7 @@ function expandLineSegments(
           node(`seg_${seg++}`, {
             role: literal("mark-line"),
             frame: literal(frameName),
+            ...markSelKeysVisible([gkey], frameName, span),
             x1: ax,
             y1: ay,
             x2: bx,
@@ -1716,6 +1728,80 @@ function numericTicksFromProps(
   return niceTicks(lim[0], lim[1]);
 }
 
+function estimateTextWidthPx(text: string, font: number, tracking = 0): number {
+  let w = 0;
+  for (const ch of text) {
+    w += ch.charCodeAt(0) >= 0x3000 ? font : font * 0.58;
+    w += tracking;
+  }
+  return Math.max(font * 0.4, w);
+}
+
+type PaperChrome = {
+  yTickX: number;
+  xTickY: number;
+  yTitleX: number;
+  xTitleY: number;
+  titleY: number;
+  legendX: number;
+  legendY: number;
+  cbarX: number;
+  compact: boolean;
+};
+
+function paperChromeOf(
+  props: Record<string, Expr>,
+  artifact: Artifact,
+  extras: {
+    colorbar?: boolean;
+    legendAt?: LegendPlace;
+    legendKeys?: string[];
+    title?: string;
+  } = {},
+): PaperChrome | null {
+  const box = plotBoxOf(props);
+  if (!box) return null;
+  const unit = sceneUnitOf(artifact);
+  const scale = sceneScaleOf({ unit });
+  const compact = isCompactPlot(box, unit);
+  const toScene = (px: number) => px / Math.max(scale, 1e-6);
+  const tickFont = 8;
+  const axisFont = 9;
+  const titleFont = 12;
+  const gap = compact ? 3 : 5;
+  const yTickW = Math.max(
+    tickFont,
+    ...axisTicks(props, "y").map((t) => estimateTextWidthPx(t.label, tickFont, 0.08)),
+  );
+  const yTickX = box.px0 - toScene(gap);
+  const yTitleX = Math.max(
+    toScene(compact ? 4 : 8),
+    yTickX - toScene(yTickW + axisFont * 0.55 + gap),
+  );
+  const xTickY = box.py1 + toScene(tickFont + gap);
+  const xTitleY = xTickY + toScene(axisFont + gap);
+  const titleY = Math.max(toScene(compact ? 8 : 14), box.py0 - toScene(titleFont + gap));
+  const cbarX = box.px1 + toScene(compact ? 4 : 8);
+  const cbarRight = extras.colorbar
+    ? cbarX + toScene(10 + 4 + estimateTextWidthPx("0.00", tickFont, 0.08))
+    : box.px1;
+  const legendX =
+    extras.legendAt === "right"
+      ? (extras.colorbar ? cbarRight : box.px1) + toScene(compact ? 6 : 10)
+      : extras.legendAt === "inside"
+        ? box.px0 + toScene(12)
+        : box.px0 + toScene(8);
+  const legendY =
+    extras.legendAt === "bottom"
+      ? xTitleY + toScene(axisFont + gap)
+      : extras.legendAt === "inside"
+        ? box.py1 - toScene(14)
+        : box.py0 + toScene(12);
+  void extras.title;
+  void extras.legendKeys;
+  return { yTickX, xTickY, yTitleX, xTitleY, titleY, legendX, legendY, cbarX, compact };
+}
+
 function plotBoxOf(props: Record<string, Expr>): {
   px0: number;
   px1: number;
@@ -1787,6 +1873,7 @@ function expandAxisTicks(
   props: Record<string, Expr>,
   span: { line: number; column: number },
   artifact: Artifact,
+  chrome: PaperChrome | null = null,
 ): SceneItem[] {
   const xlim = numericPair(props.xlim, [0, 10]);
   const ylim = numericPair(props.ylim, [0, 100]);
@@ -1813,7 +1900,7 @@ function expandAxisTicks(
     const tick = xTicks[i]!;
     if (box) {
       const sx = domainMap(tick.value, [box.xmin, box.xmax], [box.px0, box.px1], false, box.xScale);
-      const sy = box.py1 + (compact ? 11 : 15);
+      const sy = chrome?.xTickY ?? box.py1 + (compact ? 11 : 15);
       items.push(
         node(`${frameName}_xtick_${i}`, {
           role: literal("label"),
@@ -1860,7 +1947,7 @@ function expandAxisTicks(
     const tick = yTicks[i]!;
     if (box) {
       const sy = domainMap(tick.value, [box.ymin, box.ymax], [box.py0, box.py1], true, box.yScale);
-      const sx = Math.max(compact ? 6 : 10, box.px0 - (compact ? 5 : 8));
+      const sx = chrome?.yTickX ?? Math.max(compact ? 6 : 10, box.px0 - (compact ? 5 : 8));
       items.push(
         node(`${frameName}_ytick_${i}`, {
           role: literal("label"),
@@ -1940,6 +2027,7 @@ function expandSeriesLegend(
   props: Record<string, Expr>,
   place: LegendPlace,
   span: { line: number; column: number },
+  chrome: PaperChrome | null = null,
 ): SceneItem[] {
   const keys = uniqueSeriesKeys(artifact, dataName, seriesField);
   if (!keys.length || place === "off") return [];
@@ -1959,14 +2047,14 @@ function expandSeriesLegend(
     let swatchX: number;
     let swatchY: number;
     if (place === "bottom") {
-      swatchX = plotX0 + 8 + i * 72;
-      swatchY = plotY1 + 32;
+      swatchX = (chrome?.legendX ?? plotX0 + 8) + i * 72;
+      swatchY = chrome?.legendY ?? plotY1 + 32;
     } else if (place === "inside") {
-      swatchX = plotX0 + 12;
-      swatchY = plotY1 - 14 - i * 14;
+      swatchX = chrome?.legendX ?? plotX0 + 12;
+      swatchY = (chrome?.legendY ?? plotY1 - 14) - i * 14;
     } else {
-      swatchX = plotX1 + 10;
-      swatchY = plotY0 + 12 + i * 14;
+      swatchX = chrome?.legendX ?? plotX1 + 10;
+      swatchY = (chrome?.legendY ?? plotY0 + 12) + i * 14;
     }
     items.push(
       node(`${frameName}_leg_${i}`, {
@@ -2087,6 +2175,7 @@ function expandAxisTitles(
   props: Record<string, Expr>,
   span: { line: number; column: number },
   artifact: Artifact,
+  chrome: PaperChrome | null = null,
 ): SceneItem[] {
   const items: SceneItem[] = [];
   const x0 = pairAt(props.areaX ?? props.x, 0, 80);
@@ -2096,7 +2185,7 @@ function expandAxisTitles(
   const midX = binary("+", x0, binary("*", binary("-", x1, x0, span), literal(0.5), span), span);
   const midY = binary("+", y0, binary("*", binary("-", y1, y0, span), literal(0.5), span), span);
   const box = plotBoxOf(props);
-  const compact = box ? isCompactPlot(box, sceneUnitOf(artifact)) : isCompactScene(artifact);
+  const compact = chrome?.compact ?? (box ? isCompactPlot(box, sceneUnitOf(artifact)) : isCompactScene(artifact));
   const xCap = axisCaption(props, "x");
   const yCap = axisCaption(props, "y");
   if (xCap) {
@@ -2104,14 +2193,16 @@ function expandAxisTitles(
       node(`${frameName}_xTitle`, {
         role: literal("annotation"),
         x: midX,
-        y: binary("+", y1, literal(compact ? 22 : 32), span),
+        y: chrome ? literal(chrome.xTitleY) : binary("+", y1, literal(compact ? 22 : 32), span),
         text: literal(xCap),
         align: literal("center"),
       }),
     );
   }
   if (yCap) {
-    const left = x0.kind === "number" ? Math.max(compact ? 8 : 14, x0.value - (compact ? 20 : 40)) : 16;
+    const left =
+      chrome?.yTitleX ??
+      (x0.kind === "number" ? Math.max(compact ? 8 : 14, x0.value - (compact ? 20 : 40)) : 16);
     items.push(
       node(`${frameName}_yTitle`, {
         role: literal("annotation"),
@@ -2247,12 +2338,13 @@ function expandColorbar(
   frameName: string,
   props: Record<string, Expr>,
   span: { line: number; column: number },
+  chrome: PaperChrome | null = null,
 ): SceneItem[] {
   const [z0, z1] = zlimPair(props);
   const x1 = pairAt(props.areaX ?? props.x, 1, 720);
   const y0 = pairAt(props.areaY ?? props.y, 0, 60);
   const y1 = pairAt(props.areaY ?? props.y, 1, 400);
-  const barX = x1.kind === "number" ? x1.value + 10 : 730;
+  const barX = chrome?.cbarX ?? (x1.kind === "number" ? x1.value + 10 : 730);
   const top = y0.kind === "number" ? y0.value : 60;
   const bot = y1.kind === "number" ? y1.value : 400;
   const h = Math.max(40, bot - top);
@@ -2306,6 +2398,7 @@ function expandBoxMarks(
   xField: string,
   yField: string,
   seriesField: string | null,
+  geom: Record<string, Expr>,
   span: { line: number; column: number },
 ): SceneItem[] {
   const decl = artifact.data.find((d) => d.name === dataName);
@@ -2322,6 +2415,7 @@ function expandBoxMarks(
     list.push(yv.value);
     groups.set(key, list);
   }
+  const cats = catsFromExpr(geom.xCats);
   const items: SceneItem[] = [];
   let i = 0;
   for (const [key, values] of groups) {
@@ -2337,6 +2431,8 @@ function expandBoxMarks(
     const whiskHi = inside[inside.length - 1] ?? q3;
     const xNum = Number(key);
     const x = Number.isFinite(xNum) ? xNum : i;
+    const label = cats[x] ?? key;
+    const selVis = markSelKeysVisible([key, label], frameName, span);
     const fill = seriesField
       ? {
           kind: "call" as const,
@@ -2352,6 +2448,7 @@ function expandBoxMarks(
       node(`boxWhisker_${i}`, {
         role: literal("mark-line"),
         frame: literal(frameName),
+        ...selVis,
         x1: literal(x),
         y1: literal(whiskLo),
         x2: literal(x),
@@ -2361,6 +2458,7 @@ function expandBoxMarks(
       node(`box`, {
         role: literal("mark"),
         frame: literal(frameName),
+        ...selVis,
         x: literal(x),
         y: literal(q3),
         q1: literal(q1),
@@ -2372,6 +2470,7 @@ function expandBoxMarks(
       node(`boxMed_${i}`, {
         role: literal("mark-line"),
         frame: literal(frameName),
+        ...selVis,
         x1: literal(x - 0.22),
         y1: literal(med),
         x2: literal(x + 0.22),
@@ -2385,6 +2484,7 @@ function expandBoxMarks(
         node(`boxOut_${i}_${v}`, {
           role: literal("mark"),
           frame: literal(frameName),
+          ...selVis,
           x: literal(x),
           y: literal(v),
           r: literal(2.4),
@@ -2559,6 +2659,7 @@ function expandViolinMarks(
     const xNum = Number(key);
     const x = Number.isFinite(xNum) ? xNum : gi;
     const label = cats[x] ?? key;
+    const selVis = markSelKeysVisible([key, label], frameName, span);
     const fill = {
       kind: "call" as const,
       callee: "palette",
@@ -2583,6 +2684,7 @@ function expandViolinMarks(
       items.push(
         node("violin", {
           role: literal("mark"),
+          ...selVis,
           d: literal(violinPathD(cx, dens, ymin, ymax, box.py0, box.py1, box.yScale, halfStep)),
           fill,
           stroke: literal("#1f2937"),
@@ -2609,6 +2711,7 @@ function expandViolinMarks(
           node("violin", {
             role: literal("mark-line"),
             frame: literal(frameName),
+            ...selVis,
             x1: literal(x - half),
             y1: literal((y0 + y1) / 2),
             x2: literal(x + half),
@@ -2623,6 +2726,7 @@ function expandViolinMarks(
       node(`violinMed_${gi}`, {
         role: literal("mark-line"),
         frame: literal(frameName),
+        ...selVis,
         x1: literal(x - 0.16),
         y1: literal(med),
         x2: literal(x + 0.16),
@@ -2689,6 +2793,32 @@ function markSelVisible(
 ): Record<string, Expr> {
   const hide = selHideExpr(seriesField, xField, frameName, span);
   if (!hide) return {};
+  return { visible: { kind: "unary", op: "not", expr: hide, span } };
+}
+
+function markSelKeysVisible(
+  keys: string[],
+  frameName: string,
+  span: { line: number; column: number },
+): Record<string, Expr> {
+  const uniq = [...new Set(keys.filter(Boolean))];
+  if (!uniq.length) return {};
+  const needles: Expr[] = [];
+  for (const key of uniq) {
+    needles.push(literal(key));
+    const n = Number(key);
+    if (Number.isFinite(n) && String(n) === key) needles.push(literal(n));
+  }
+  const inSel = needles
+    .map((needle) => callExpr("has", [ident("__sel.keys"), needle], span))
+    .reduce((acc, part) => binary("or", acc, part, span));
+  const otherFrame = binary("!=", ident("__brush.frame"), literal(frameName), span);
+  const hide = binary(
+    "and",
+    ident("__sel.n"),
+    binary("and", otherFrame, { kind: "unary", op: "not", expr: inSel, span }, span),
+    span,
+  );
   return { visible: { kind: "unary", op: "not", expr: hide, span } };
 }
 
