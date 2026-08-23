@@ -136,7 +136,7 @@ widget layout.board
   safe: 64
 ```
 
-得到 frame `safe` `title` `body` `lower`。图表可 `panel: body`。
+得到 frame `safe` `title` `body` `lower`。图表可 `panel: body`。`bleed: 16` 再出 `bleed` / `trim`，并默认画裁切十字（`crop: false` 可关）。
 
 投稿尺寸：`scene` 上写 `unit: mm` 与 `column: single`（89 mm）或 `double`（183 mm）。
 

@@ -62,7 +62,7 @@
 1. 投稿级留白 / 字距 / 出血（仍走编译器，不加关键字）
 2. linked selection：`__sel` 升级成可隐藏行的共享 filter，而不只是变淡
 3. 扩大随包 CJK 子集（现在只覆盖 examples + 一小撮论文用字）
-4. `layout.board` 时间分镜（播放，不只是空间槽）
+4. `layout.board` 已有 `bleed`/`trim`/裁切十字；时间分镜仍只是空间槽，不是播放
 5. agent-exam 进 CI
 
 对照真源：`docs/VISION.md`。

@@ -77,7 +77,7 @@
 ### 3.3 图像 / 视频级排版
 
 有：`layout.figure` 网格 + `(a)(b)`；`layout.board` 的 `safe` / `title` / `body` / `lower` + `splits`；`unit: mm` + 栏宽。  
-没有：出血/裁切、字级网格、跨页。`layout.board` 已有 `splits` / `beats` 分镜槽。这些必须继续是**插件**，不能变成语法。
+没有：字级网格、跨页。`layout.board` 已有 `splits` / `beats` 分镜槽，以及 `bleed`/`trim`/裁切十字。这些必须继续是**插件**，不能变成语法。时间分镜仍不是播放。
 
 ---
 
