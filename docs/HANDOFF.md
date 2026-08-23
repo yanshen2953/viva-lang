@@ -118,7 +118,7 @@ Vision 检查需 `viva.models.json`（见 `viva.models.json.example`）或 env `
 3. **Playground** — 状态栏已有结构检查；浏览器内 vision/MCP 不现实
 4. **Agent exam** — `npm run test:agent-exam` 需 `DEEPSEEK_API_KEY`（Pi+DeepSeek SUT）
 5. **发布包实跑** — `npm run pack:release`，在干净环境验证 `release/` 与 Docker
-6. **三柱推进中（未齐）** — `layout.figure` 可按 chrome 估 inset（Atlas/grid 已去掉魔法 `inset*`）；`layout.board`（含 bleed / play / typeGrid / `--beats` PNG 序列）、`unit: mm`/`column`、log/band/time、PDF CJK 子集、`__hover`/`__brush`/`__highlightGrp`/`__sel`、slim prompt、session visual。仍欠：真正碰撞求解、过渡动画、CJK 全库、成片视频、LLM 生成率。对照 `docs/VISION.md`。**不要**标愿景完成。
+6. **三柱推进中（未齐）** — `layout.figure` 可按 chrome 估 inset（Atlas/grid 已去掉魔法 `inset*`）；单栏 mm 图可不写 `areaX`/`areaY`；`layout.board`（含 bleed / play / typeGrid / `--beats` PNG 序列）、`unit: mm`/`column`、log/band/time、PDF CJK 子集、`__hover`/`__brush`/`__highlightGrp`/`__sel`、slim prompt、session visual。仍欠：真正碰撞求解、过渡动画、CJK 全库、成片视频、LLM 生成率。对照 `docs/VISION.md`。**不要**标愿景完成。
 
 ### 已知约束 / 坑
 

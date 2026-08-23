@@ -55,7 +55,7 @@
 4. `__sel` 默认跨面板藏行；本地 brush 仍是单图 marquee，没有过渡动画
 5. session visual diagnostics 不挡编译成功
 6. MCP/HTTP/CLI prompt 默认 slim；生成成功率未测
-7. 小栏宽 mm 图默认不再画常驻 `__tip` HUD，只留 brush 框；留白仍不像投稿成品
+7. 小栏宽 mm 图默认不再画常驻 `__tip` HUD；不写 `areaX` 时编译器按场景估绘图区。仍不是投稿成品碰撞求解
 8. `typeGrid` 是基线叠加 + `type0`… 栏，不是跨页或视频时间轴
 
 ## 下一刀（质量，不再铺接口）

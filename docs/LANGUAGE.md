@@ -125,7 +125,7 @@ widget chart.scatter
   ylim: 0 50
 ```
 
-`layout.figure` 会创建 frame `a` `b` `c`…，并画 `(a)(b)` 标签（`labels: false` 可关）。可选 `prefix: fig` → `fig_a`。不写 `inset*` 时，编译器按该格绑定的 chart（刻度宽度、轴标题、图例、色条）估算留白。这是插件名，不是新关键字。宿主可用 `registerWidget()` 再挂 `chart.*` / `layout.*`；`viva widgets` 列出当前注册表。未知 widget 编译失败。
+`layout.figure` 会创建 frame `a` `b` `c`…，并画 `(a)(b)` 标签（`labels: false` 可关）。可选 `prefix: fig` → `fig_a`。不写 `inset*` 时，编译器按该格绑定的 chart（刻度宽度、轴标题、图例、色条）估算留白。单图不写 `areaX`/`areaY` 时，编译器按场景（含 `unit: mm` + 栏宽）同样估绘图区。这是插件名，不是新关键字。宿主可用 `registerWidget()` 再挂 `chart.*` / `layout.*`；`viva widgets` 列出当前注册表。未知 widget 编译失败。
 
 影像板（同样不是新关键字）：
 

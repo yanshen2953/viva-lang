@@ -71,7 +71,7 @@
 
 ### 3.2 论文级图表
 
-有：线性 / log / band / time 轴、scatter/line/bar/heatmap/vector/funnel/box、轴标题/单位、误差棒、热图色条、图例外置、投稿 mm、SVG 更接近 Runtime、PDF 随包 CJK 子集（examples + 论文用字）。`print-nature` 会覆盖 widget 硬编码字号，刻度 8 / 轴标题 9 带字距。编译器按字号和 `unit: mm` 比例放置轴标题/刻度/图例，避免小栏宽把标题推出画布。  
+有：线性 / log / band / time 轴、scatter/line/bar/heatmap/vector/funnel/box、轴标题/单位、误差棒、热图色条、图例外置、投稿 mm、SVG 更接近 Runtime、PDF 随包 CJK 子集（examples + 论文用字）。`print-nature` 会覆盖 widget 硬编码字号，刻度 8 / 轴标题 9 带字距。编译器按字号和 `unit: mm` 比例放置轴标题/刻度/图例；单图不写 `areaX`/`areaY` 时按场景估绘图区，避免小栏宽把标题推出画布。  
 没有：完整 CJK 字库、真正的碰撞求解（只是字号感知的间距）。有 time / box / violin（KDE 轮廓）/ 显著性括号；轴刻度已离开数据域，改钉在图框外侧。小栏宽 mm 图默认不再画常驻 HUD 读数。
 
 ### 3.3 图像 / 视频级排版
