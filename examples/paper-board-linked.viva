@@ -1,0 +1,53 @@
+artifact "Paper Board Linked"
+
+data rows = [
+  { t: 1, score: 12, arm: "placebo" }
+  { t: 2, score: 14, arm: "placebo" }
+  { t: 3, score: 11, arm: "placebo" }
+  { t: 1, score: 20, arm: "drug-A" }
+  { t: 2, score: 22, arm: "drug-A" }
+  { t: 3, score: 24, arm: "drug-A" }
+  { t: 1, score: 16, arm: "drug-B" }
+  { t: 2, score: 17, arm: "drug-B" }
+  { t: 3, score: 15, arm: "drug-B" }
+]
+
+scene
+  unit: mm
+  page: a4
+  column: single
+  height: 400
+  background: #ffffff
+
+widget layout.board
+  title: "Safe · page knife · linked figure"
+  subtitle: "board right is the plot · column is the measure"
+  body: "Left column is board body. The compiler hops a figure row that would sit on the 297 mm knife into the next A4 slice, then keeps the lower-third on that last slice. 栏宽是度量，纸页是刀口. Same __sel stack as the pixel linked studio. Not a newspaper, not a timeline."
+  caption: "lower-third on the last slice"
+  splits: 2
+  guides: false
+
+widget layout.figure
+  panel: right
+  cols: 1
+  rows: 2
+
+widget chart.scatter
+  panel: a
+  data: rows
+  xField: t
+  yField: score
+  group: arm
+  xlim: 0 4
+  ylim: 8 28
+  xLabel: Visit
+  yLabel: Score
+
+widget chart.box
+  panel: b
+  data: rows
+  xField: arm
+  yField: score
+  ylim: 8 28
+  xLabel: Arm
+  yLabel: Score

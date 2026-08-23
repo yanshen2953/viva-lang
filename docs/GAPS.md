@@ -51,7 +51,7 @@
 | typeGrid 灌文 | 12 导轨仍画 `type0`…；`body:` 按可读 2–3 栏从上到下、从左到右灌槽，不是 InDesign |
 | 续页跑页眉 | 多页 `page:` 续页顶栏重复 figure `(continued)` 或 board 题注；仍不是对页/章节标 |
 | play 当前拍可点 | 当前拍遮罩 `visible: false`（220ms 淡出 + pointer-events none）；storyboard/board 图不再写 `interactive: false` |
-| mm 跟手 tip | 紧凑/投稿图不再靠常驻角 HUD；`chartTip` 跟 `__event` 走，空字不画；HUD/brush/folio 不抢指针。paper-cjk / paper-column / paper-pages / paper-spread / paper-linked-pages / figure-grid / figure-span / box / violin / time-axis / brackets 默认可交互。`__event.x/y` 是作者场景单位。分页 tip 夹在当前页带。`paper-linked-pages` 把 visit 刷选跨页刀送到第 2 页 box |
+| mm 跟手 tip | 紧凑/投稿图不再靠常驻角 HUD；`chartTip` 跟 `__event` 走，空字不画；HUD/brush/folio 不抢指针。paper-cjk / paper-column / paper-pages / paper-spread / paper-linked-pages / paper-board-linked / figure-grid / figure-span / box / violin / time-axis / brackets 默认可交互。绑了 board 槽的 figure 也会避页刀；场景拉高后 lower-third 跟到最后一页。`paper-board-linked` 是 board 安全框 + A4 页刀 + 跨页 `__sel` |
 
 ## 仍然很粗（按用户可见排序）
 

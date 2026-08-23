@@ -1239,7 +1239,8 @@ function expandLayoutFigure(
       : mmToPx(pageSpec.h)
     : 0;
   let cells = placed;
-  if (pageH > 0 && !boundSlot) {
+  if (pageH > 0) {
+    const sceneHBefore = sceneExtentOf(artifact).h;
     const reserves = figurePageReserves(unit);
     const packed = packFigureCellsToPages(placed, {
       pageH,
@@ -1250,6 +1251,7 @@ function expandLayoutFigure(
     const needed = packed.bottom + capH + footGap - originY;
     if (needed > height) height = needed;
     growSceneHeight(artifact, originY + height);
+    if (boundSlot) extendBoardAfterPageGrow(artifact, sceneHBefore, sceneExtentOf(artifact).h);
   }
   const plans: CellPlan[] = cells.map((cell) => {
     const estimated = estimatePanelInsets(
@@ -2689,6 +2691,54 @@ function resolveLayoutBox(
         : Math.max(1, extent.w - x);
   const h = props.h !== undefined ? numProp(props, "h", extent.h) : Math.max(1, extent.h - y);
   return { x, y, w, h };
+}
+
+/**
+ * After a slot-bound figure hops the page knife and grows the scene, keep
+ * board lower/hud/caption on the last slice and stretch body/right with it.
+ * Not a verso/recto reflow.
+ */
+function extendBoardAfterPageGrow(artifact: Artifact, oldH: number, newH: number): void {
+  const dy = newH - oldH;
+  if (!(dy > 1e-6)) return;
+  const lower = artifact.frames.find((f) => f.name === "lower" || f.name.endsWith("_lower"));
+  const lowerY = lower ? numericPair(lower.props.y, [oldH, oldH]) : null;
+  const oldLowerY0 = lowerY ? lowerY[0] : oldH;
+  const shiftBase = new Set(["lower", "hud"]);
+  const extendBase = new Set(["safe", "body", "left", "right", "bleed", "trim"]);
+  const baseOf = (name: string) => {
+    if (name.startsWith("type") || name.startsWith("beat") || name.startsWith("split")) return name;
+    const parts = name.split("_");
+    return parts[parts.length - 1] ?? name;
+  };
+  for (const frame of artifact.frames) {
+    const y = numericPair(frame.props.y, [0, 0]);
+    if (!y) continue;
+    const base = baseOf(frame.name);
+    if (shiftBase.has(base)) {
+      frame.props.y = literal([y[0] + dy, y[1] + dy]);
+    } else if (extendBase.has(base) || nameLooksLikeSplit(frame.name)) {
+      frame.props.y = literal([y[0], y[1] + dy]);
+    }
+  }
+  for (const layer of artifact.scene?.layers ?? []) {
+    if (
+      !layer.name.includes("_copy") &&
+      !layer.name.includes("_guides") &&
+      !layer.name.includes("_controls")
+    ) {
+      continue;
+    }
+    for (const item of layer.items) {
+      if (item.kind !== "node") continue;
+      const y = numericLiteral(item.props.y);
+      if (y !== null && y >= oldLowerY0 - 1) item.props.y = literal(y + dy);
+    }
+  }
+}
+
+function nameLooksLikeSplit(name: string): boolean {
+  return /^(type\d+|beat\d+|split\d+)$/.test(name) || /_(type\d+|beat\d+|split\d+)$/.test(name);
 }
 
 function growSceneHeight(artifact: Artifact, nextH: number): void {

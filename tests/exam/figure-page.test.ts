@@ -92,4 +92,22 @@ describe("figure page pack", () => {
     expect(b[1] - a[0]).toBeGreaterThan(160);
     expect(b[1] - a[0]).toBeLessThan(186);
   });
+
+  it("hops a right-slot figure row off the A4 knife", () => {
+    const src = readFileSync("examples/paper-board-linked.viva", "utf8");
+    const result = compileSource(src, "paper-board-linked.viva", { handbookIds: ["print-nature"] });
+    expect(result.error).toBeNull();
+    const scopes = [result.ir!.state, result.ir!.data];
+    const a = evaluate(result.ir!.frames.find((f) => f.name === "a")!.props.cellY!, scopes) as [
+      number,
+      number,
+    ];
+    const b = evaluate(result.ir!.frames.find((f) => f.name === "b")!.props.cellY!, scopes) as [
+      number,
+      number,
+    ];
+    expect(a[1]).toBeLessThanOrEqual(PAGE_MM.a4.h - 4);
+    expect(b[0]).toBeGreaterThanOrEqual(PAGE_MM.a4.h);
+    expect(b[1]).toBeLessThanOrEqual(PAGE_MM.a4.h * 2);
+  });
 });

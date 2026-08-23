@@ -167,6 +167,7 @@ widget chart.scatter
       "paper-pages.viva",
       "paper-spread.viva",
       "paper-linked-pages.viva",
+      "paper-board-linked.viva",
     ]) {
       expect(readFileSync(`examples/${file}`, "utf8")).not.toMatch(/interactive:\s*false/);
     }
@@ -289,6 +290,54 @@ widget chart.scatter
     expect(visit.y).toBe(12);
     const svg = renderSvgFromIr(result.ir!);
     expect(svg).not.toMatch(/placebo, 12/);
+  });
+
+  it("packs a board-bound figure across the A4 knife and keeps lower on the last slice", () => {
+    const src = readFileSync("examples/paper-board-linked.viva", "utf8");
+    expect(src).not.toMatch(/interactive:\s*false|areaX|areaY|safe:|titleH:|lowerH:/);
+    const result = compileSource(src, "paper-board-linked.viva", { handbookIds: ["print-nature"] });
+    expect(result.error).toBeNull();
+    expect(result.ir!.frames.map((f) => f.name)).toEqual(
+      expect.arrayContaining(["safe", "title", "body", "left", "right", "lower", "a", "b"]),
+    );
+    const scopes = [result.ir!.state, result.ir!.data];
+    const cellA = evaluate(result.ir!.frames.find((f) => f.name === "a")!.props.cellY!, scopes) as [
+      number,
+      number,
+    ];
+    const cellB = evaluate(result.ir!.frames.find((f) => f.name === "b")!.props.cellY!, scopes) as [
+      number,
+      number,
+    ];
+    const lower = evaluate(result.ir!.frames.find((f) => f.name === "lower")!.props.y!, scopes) as [
+      number,
+      number,
+    ];
+    expect(cellA[1]).toBeLessThanOrEqual(PAGE_MM.a4.h - 4);
+    expect(cellB[0]).toBeGreaterThanOrEqual(PAGE_MM.a4.h);
+    expect(lower[0]).toBeGreaterThanOrEqual(PAGE_MM.a4.h);
+    expect(lower[0]).toBeGreaterThan(cellB[0] - 1);
+    expect(result.ir!.events.some((e) => e.type === "hover" && e.target === "mark")).toBe(true);
+    const visit = applySelSummary(
+      {
+        __boxData: "rows",
+        __boxKey: "placebo",
+        __boxXField: "arm",
+        __boxYField: "score",
+        __boxCats: ["placebo", "drug-A", "drug-B"],
+        __boxPart: "body",
+        __chartBox: true,
+        frame: "b",
+        q1: 11,
+        y: 14,
+      },
+      {
+        data: result.ir!.data as Record<string, unknown>,
+        state: { __sel: { n: 1, keys: [1] }, __brush: { frame: "a" } },
+      },
+    );
+    expect(visit.visible).toBe(true);
+    expect(visit.q1).toBe(12);
   });
 
   it("lets a host CJK font win over the bundled subset", () => {
