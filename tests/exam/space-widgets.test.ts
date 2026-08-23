@@ -56,6 +56,8 @@ describe("space: linear scales (S1) — no magic numbers", () => {
       xmax: 10,
       ymin: 0,
       ymax: 100,
+      xScale: "linear",
+      yScale: "linear",
     });
   });
 
@@ -83,6 +85,8 @@ describe("space: linear scales (S1) — no magic numbers", () => {
       xmax: 10,
       ymin: 0,
       ymax: 100,
+      xScale: "linear",
+      yScale: "linear",
     };
     const mapped = applyFrameToProps(
       { frame: "plot", x1: 0, y1: 0, x2: 10, y2: 100 },

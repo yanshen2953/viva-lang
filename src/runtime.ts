@@ -16,6 +16,7 @@ import {
   scalesFromFrameProps,
   type FrameScales,
 } from "./space.js";
+import { evalSceneProps, resolveSceneBox, scaleSceneGeom, sceneScaleOf } from "./space/scene-box.js";
 import { DEFAULT_SCENE_BACKGROUND, resetPaletteSeries, setStyleContext } from "./style/index.js";
 import { STYLE_META_PROPS } from "./style/types.js";
 
@@ -217,8 +218,9 @@ export class Runtime {
   }
 
   private frameScales(): FrameScales[] {
+    const sceneScale = sceneScaleOf(evalSceneProps(this.ir.scene.props, this.scopes()));
     return (this.ir.frames ?? []).map((frame) =>
-      scalesFromFrameProps(frame.name, evalProps(frame.props, this.scopes())),
+      scalesFromFrameProps(frame.name, evalProps(frame.props, this.scopes()), sceneScale),
     );
   }
 
@@ -262,14 +264,12 @@ export class Runtime {
 
   private applySceneBox(): void {
     if (!this.svg) return;
-    const props = evalProps(this.ir.scene.props, this.scopes());
-    const size = asPair(props.size, [880, 480]);
-    const width = num(props.width, size[0]);
-    const height = num(props.height, size[1]);
-    this.svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+    const props = evalSceneProps(this.ir.scene.props, this.scopes());
+    const box = resolveSceneBox(props);
+    this.svg.setAttribute("viewBox", `0 0 ${box.width} ${box.height}`);
     this.svg.setAttribute("width", "100%");
     this.svg.setAttribute("height", "100%");
-    this.svg.style.background = str(props.background, DEFAULT_SCENE_BACKGROUND);
+    this.svg.style.background = box.background;
   }
 
   private flatten(): RenderNode[] {
@@ -300,7 +300,10 @@ export class Runtime {
   ): void {
     for (const item of items) {
       if (item.kind === "node") {
-        const raw = evalProps(item.props, scopes);
+        const raw = scaleSceneGeom(
+          evalProps(item.props, scopes),
+          sceneScaleOf(evalSceneProps(this.ir.scene.props, scopes)),
+        );
         const framed = applyFrameToProps(raw, this.frameScales());
         const props = layoutChartGeom(framed, this.frameScales());
         out.push({

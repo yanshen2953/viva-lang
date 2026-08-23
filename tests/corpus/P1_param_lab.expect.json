@@ -3,10 +3,12 @@
   "input": "examples/exam/P1_param_lab.viva",
   "expect": {
     "data": ["knob", "series"],
-    "state": ["__tip", "param", "t"],
+    "state": ["__brush", "__highlightGrp", "__hover", "__tip", "param", "t"],
     "events": [
       { "type": "drag", "target": "knob" },
-      { "type": "hover", "target": "linePt" }
+      { "type": "hover", "target": "linePt" },
+      { "type": "dragstart", "target": "__chart_1_plotBg" },
+      { "type": "drag", "target": "__chart_1_plotBg" }
     ],
     "ticks": 1,
     "minFrames": 1,

@@ -25,6 +25,8 @@ export function asPair(value: unknown, fallback: [number, number]): [number, num
   return fallback;
 }
 
+export type ScaleKind = "linear" | "log";
+
 export type FrameScales = {
   name: string;
   x0: number;
@@ -35,14 +37,53 @@ export type FrameScales = {
   xmax: number;
   ymin: number;
   ymax: number;
+  xScale: ScaleKind;
+  yScale: ScaleKind;
 };
 
-export function scalesFromFrameProps(name: string, props: Record<string, unknown>): FrameScales {
+function scaleKind(value: unknown): ScaleKind {
+  const raw = String(value ?? "linear").toLowerCase();
+  return raw === "log" || raw === "logarithmic" ? "log" : "linear";
+}
+
+export function domainMap(
+  value: number,
+  domain: [number, number],
+  range: [number, number],
+  invert = false,
+  kind: ScaleKind = "linear",
+): number {
+  if (kind === "log") {
+    const d0 = Math.log(Math.max(domain[0], 1e-12));
+    const d1 = Math.log(Math.max(domain[1], 1e-12));
+    const v = Math.log(Math.max(value, 1e-12));
+    return linearMap(v, [d0, d1], range, invert);
+  }
+  return linearMap(value, domain, range, invert);
+}
+
+export function scalesFromFrameProps(
+  name: string,
+  props: Record<string, unknown>,
+  sceneScale = 1,
+): FrameScales {
   const [x0, x1] = asPair(props.x ?? props.areaX, [72, 520]);
   const [y0, y1] = asPair(props.y ?? props.areaY, [64, 400]);
   const [xmin, xmax] = asPair(props.xlim, [0, 1]);
   const [ymin, ymax] = asPair(props.ylim, [0, 1]);
-  return { name, x0, x1, y0, y1, xmin, xmax, ymin, ymax };
+  return {
+    name,
+    x0: x0 * sceneScale,
+    x1: x1 * sceneScale,
+    y0: y0 * sceneScale,
+    y1: y1 * sceneScale,
+    xmin,
+    xmax,
+    ymin,
+    ymax,
+    xScale: scaleKind(props.xScale ?? props.xscale),
+    yScale: scaleKind(props.yScale ?? props.yscale),
+  };
 }
 
 /** Map data-domain props into scene space when `frame` is set. */
@@ -57,9 +98,9 @@ export function applyFrameToProps(
   if (!frame) return props;
 
   const mapX = (v: number) =>
-    linearMap(v, [frame.xmin, frame.xmax], [frame.x0, frame.x1], false);
+    domainMap(v, [frame.xmin, frame.xmax], [frame.x0, frame.x1], false, frame.xScale);
   const mapY = (v: number) =>
-    linearMap(v, [frame.ymin, frame.ymax], [frame.y0, frame.y1], true);
+    domainMap(v, [frame.ymin, frame.ymax], [frame.y0, frame.y1], true, frame.yScale);
 
   const next = { ...props };
   if (typeof next.x === "number") next.x = mapX(next.x);

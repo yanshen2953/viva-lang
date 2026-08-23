@@ -26,6 +26,7 @@ scene
         "chart.heatmap",
         "chart.line",
         "chart.scatter",
+        "layout.board",
         "layout.figure",
         "timeline",
       ]),

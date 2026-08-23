@@ -143,9 +143,7 @@ data flowYTicks = [
   { v: 6 }
 ]
 
-frame microFlow
-  x: 484 860
-  y: 552 848
+frame e
   xlim: 0 10
   ylim: 0 6
 
@@ -261,68 +259,6 @@ scene
       w: 408
       h: 348
 
-    node heatTitle
-      role: title
-      x: 60
-      y: 528
-      text: "GENE MODULE"
-      font: 12
-      letterSpacing: 1
-
-    node heatPlotBg
-      role: plot
-      x: 60
-      y: 552
-      w: 376
-      h: 296
-      radius: 6
-
-    for c in heatCells
-      node heatCell as heatTiles
-        role: mark-area
-        x: 72 + c.col * 44
-        y: 568 + c.row * 44
-        w: 40
-        h: 40
-        radius: 3
-        fill: palette(c.tier, "sequential")
-        stroke: "#94a3b8"
-        strokeWidth: 0.75
-        styleSkip: true
-
-    node colorbarBg
-      role: colorbar
-      x: 388
-      y: 576
-      w: 14
-      h: 248
-      radius: 3
-
-    for t in heatScale
-      node colorbarStep as colorbarSteps
-        role: colorbar
-        x: 390
-        y: 576 + t.i * 49.6
-        w: 10
-        h: 46
-        radius: 1
-        fill: palette(t.i, "sequential")
-        styleSkip: true
-
-    node colorbarHi
-      role: legend-label
-      x: 406
-      y: 586
-      text: "high"
-      font: 9
-
-    node colorbarLo
-      role: legend-label
-      x: 406
-      y: 812
-      text: "low"
-      font: 9
-
     node heatGeneLbl
       role: annotation
       x: 60
@@ -349,7 +285,7 @@ scene
 
     node flowGrid1
       role: grid
-      frame: microFlow
+      frame: e
       x1: 0
       y1: 1
       x2: 10
@@ -357,7 +293,7 @@ scene
 
     node flowGrid2
       role: grid
-      frame: microFlow
+      frame: e
       x1: 0
       y1: 2
       x2: 10
@@ -365,7 +301,7 @@ scene
 
     node flowGrid3
       role: grid
-      frame: microFlow
+      frame: e
       x1: 0
       y1: 3
       x2: 10
@@ -373,7 +309,7 @@ scene
 
     node flowGrid4
       role: grid
-      frame: microFlow
+      frame: e
       x1: 0
       y1: 4
       x2: 10
@@ -381,7 +317,7 @@ scene
 
     node flowGrid5
       role: grid
-      frame: microFlow
+      frame: e
       x1: 0
       y1: 5
       x2: 10
@@ -389,7 +325,7 @@ scene
 
     node flowGridV1
       role: grid
-      frame: microFlow
+      frame: e
       x1: 2
       y1: 0
       x2: 2
@@ -397,7 +333,7 @@ scene
 
     node flowGridV2
       role: grid
-      frame: microFlow
+      frame: e
       x1: 4
       y1: 0
       x2: 4
@@ -405,7 +341,7 @@ scene
 
     node flowGridV3
       role: grid
-      frame: microFlow
+      frame: e
       x1: 6
       y1: 0
       x2: 6
@@ -413,7 +349,7 @@ scene
 
     node flowGridV4
       role: grid
-      frame: microFlow
+      frame: e
       x1: 8
       y1: 0
       x2: 8
@@ -421,7 +357,7 @@ scene
 
     node flowAxisX
       role: axis
-      frame: microFlow
+      frame: e
       x1: 0
       y1: 0
       x2: 10
@@ -429,7 +365,7 @@ scene
 
     node flowAxisY
       role: axis
-      frame: microFlow
+      frame: e
       x1: 0
       y1: 0
       x2: 0
@@ -438,8 +374,9 @@ scene
     for t in flowXTicks
       node flowXLbl as flowXLbls
         role: label
-        x: 484 + t.v * 37.6
-        y: 854
+        frame: e
+        x: t.v
+        y: -0.35
         text: t.v
         font: 8
         align: center
@@ -447,8 +384,9 @@ scene
     for t in flowYTicks
       node flowYLbl as flowYLbls
         role: label
-        x: 476
-        y: 848 - t.v * 49.333
+        frame: e
+        x: -0.4
+        y: t.v
         text: t.v
         font: 8
         align: right
@@ -456,7 +394,7 @@ scene
     for v in flowV
       node flowShaft as flowLines
         role: mark-line
-        frame: microFlow
+        frame: e
         x1: v.ox
         y1: v.oy
         x2: v.ox + v.ux
@@ -468,7 +406,7 @@ scene
 
       node flowHead as flowTips
         role: mark
-        frame: microFlow
+        frame: e
         x: v.ox + v.ux
         y: v.oy + v.uy
         r: 4
@@ -585,39 +523,80 @@ event click on geneBtnB
 tick 40
   hint = "print-nature 默认 · 可选手册 dashboard / 无"
 
-# ── Widget 子图 (a)(b)(c) ─────────────────────────────────────
+# ── 顶栏三格 + 底栏热图：排版插件出格子，图表只写 panel ──
+
+widget layout.figure
+  id: top
+  x: 44
+  y: 140
+  w: 1272
+  h: 348
+  cols: 3
+  rows: 1
+  gutter: 24
+  margin: 0
+  insetL: 24
+  insetR: 20
+  insetT: 36
+  insetB: 28
+  labels: false
+
+widget layout.figure
+  id: bot
+  x: 44
+  y: 516
+  w: 1272
+  h: 348
+  cols: 3
+  rows: 1
+  gutter: 24
+  margin: 0
+  insetL: 16
+  insetR: 32
+  insetT: 36
+  insetB: 16
+  panels: [d, e, f]
+  labels: false
 
 widget chart.bar
+  panel: a
   data: cohortBars
   xField: visit
   yField: pct
   group: grp
   xlim: 0 7
   ylim: 0 100
-  areaX: 68 432
-  areaY: 176 460
   barWidth: 0.62
   title: "RESPONSE BY VISIT"
 
 widget chart.line
+  panel: b
   data: vitals
   xField: wk
   yField: hr
   group: grp
   xlim: 0 12
   ylim: 50 80
-  areaX: 484 856
-  areaY: 168 468
   title: "HEART RATE · 12 WEEKS"
 
 widget chart.scatter
+  panel: c
   data: biomarkers
   xField: il6
   yField: crp
   group: grp
   xlim: 0 12
   ylim: 5 130
-  areaX: 908 1280
-  areaY: 168 468
   title: "IL-6 vs CRP"
   r: 5.5
+
+widget chart.heatmap
+  panel: d
+  data: heatCells
+  xField: col
+  yField: row
+  valueField: tier
+  xlim: -0.5 7.5
+  ylim: -0.5 5.5
+  zlim: 0 4
+  title: "GENE MODULE"

@@ -9,7 +9,7 @@ import { withIrStyleContext } from "./style-context.js";
 const MARK_HINT =
   /bar|cell|dot|point|mark|tile|bin|rect|heat|flow|arrow|line|path|scatter/i;
 const CHROME_HINT =
-  /grid|axis|tick|title|caption|legend|label|border|frame|colorbar|chrome|subtitle|panel-label|plotbg|plot-bg|flowbg|flow-bg|panelbg/i;
+  /grid|axis|tick|title|caption|legend|label|border|frame|colorbar|chrome|subtitle|panel-label|plotbg|plot-bg|flowbg|flow-bg|panelbg|brush|hud/i;
 
 function push(
   out: CheckDiagnostic[],

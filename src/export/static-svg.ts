@@ -9,6 +9,7 @@ import {
   scalesFromFrameProps,
   type FrameScales,
 } from "../space.js";
+import { evalSceneProps, resolveSceneBox, scaleSceneGeom, sceneScaleOf } from "../space/scene-box.js";
 
 export type FlatNode = {
   id: string;
@@ -42,21 +43,22 @@ function flattenNodesFromIrInner(ir: VisualIR): { scene: SceneBox; nodes: FlatNo
   const state = { ...(ir.state as Record<string, unknown>) };
   const data = { ...(ir.data as Record<string, unknown>) };
   const scopes = (): Scope[] => [state, data];
+  const sceneProps = evalSceneProps(ir.scene.props, scopes());
+  const sceneScale = sceneScaleOf(sceneProps);
   const scales = (ir.frames ?? []).map((f) =>
-    scalesFromFrameProps(f.name, evalProps(f.props, scopes())),
+    scalesFromFrameProps(f.name, evalProps(f.props, scopes()), sceneScale),
   );
-  const sceneProps = evalProps(ir.scene.props, scopes());
-  const size = asPair(sceneProps.size, [880, 480]);
-  const width = num(sceneProps.width, size[0]);
-  const height = num(sceneProps.height, size[1]);
-  const background = str(sceneProps.background, DEFAULT_SCENE_BACKGROUND);
+  const box = resolveSceneBox(sceneProps);
+  const width = box.width;
+  const height = box.height;
+  const background = box.background;
 
   const nodes: FlatNode[] = [];
   for (const layer of ir.scene.layers) {
     const lp = evalProps(layer.props ?? {}, scopes());
     const visible = lp.visible === undefined ? true : Boolean(lp.visible);
     if (!visible) continue;
-    flattenItems(layer.items, scopes(), nodes, layer.name, layer.id, layer.name, scales);
+    flattenItems(layer.items, scopes(), nodes, layer.name, layer.id, layer.name, scales, sceneScale);
   }
   return { scene: { width, height, background }, nodes };
 }
@@ -70,20 +72,20 @@ function buildSvgParts(ir: VisualIR): {
   const state = { ...(ir.state as Record<string, unknown>) };
   const data = { ...(ir.data as Record<string, unknown>) };
   const scopes = (): Scope[] => [state, data];
+  const sceneProps = evalSceneProps(ir.scene.props, scopes());
+  const sceneScale = sceneScaleOf(sceneProps);
   const scales = (ir.frames ?? []).map((f) =>
-    scalesFromFrameProps(f.name, evalProps(f.props, scopes())),
+    scalesFromFrameProps(f.name, evalProps(f.props, scopes()), sceneScale),
   );
-
-  const sceneProps = evalProps(ir.scene.props, scopes());
-  const size = asPair(sceneProps.size, [880, 480]);
-  const width = num(sceneProps.width, size[0]);
-  const height = num(sceneProps.height, size[1]);
-  const background = str(sceneProps.background, DEFAULT_SCENE_BACKGROUND);
+  const box = resolveSceneBox(sceneProps);
+  const width = box.width;
+  const height = box.height;
+  const background = box.background;
 
   const layersXml: string[] = [];
   for (const layer of ir.scene.layers) {
     const nodes: FlatNode[] = [];
-    flattenItems(layer.items, scopes(), nodes, layer.name, layer.id, layer.name, scales);
+    flattenItems(layer.items, scopes(), nodes, layer.name, layer.id, layer.name, scales, sceneScale);
     const lp = evalProps(layer.props ?? {}, scopes());
     const opacity = lp.opacity === undefined ? 1 : num(lp.opacity, 1);
     const visible = lp.visible === undefined ? true : Boolean(lp.visible);
@@ -104,10 +106,11 @@ function flattenItems(
   layerId: string,
   layerName: string,
   scales: FrameScales[],
+  sceneScale: number,
 ): void {
   for (const item of items) {
     if (item.kind === "node") {
-      const raw = evalProps(item.props, scopes);
+      const raw = scaleSceneGeom(evalProps(item.props, scopes), sceneScale);
       const framed = applyFrameToProps(raw, scales);
       const props = layoutChartGeom(framed, scales);
       out.push({
@@ -121,7 +124,7 @@ function flattenItems(
     }
     if (item.kind === "if") {
       if (truthy(evaluate(item.cond, scopes))) {
-        flattenItems(item.body, scopes, out, `${prefix}:${item.id}`, layerId, layerName, scales);
+        flattenItems(item.body, scopes, out, `${prefix}:${item.id}`, layerId, layerName, scales, sceneScale);
       }
       continue;
     }
@@ -136,6 +139,7 @@ function flattenItems(
         layerId,
         layerName,
         scales,
+        sceneScale,
       );
     });
   }

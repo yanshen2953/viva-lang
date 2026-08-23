@@ -1,13 +1,8 @@
-import {
-  PDFDocument,
-  rgb,
-  type PDFFont,
-  type PDFPage,
-  type RGB,
-  StandardFonts,
-} from "pdf-lib";
+import { PDFDocument, rgb, type PDFFont, type PDFPage, type RGB } from "pdf-lib";
 import { DEFAULT_SCENE_BACKGROUND } from "../style/defaults.js";
 import { flattenNodesFromIr, type FlatNode } from "./static-svg.js";
+import { embedPdfFonts, pickPdfFont, type PdfTextFonts } from "./pdf-font.js";
+import { evalSceneProps, pxToPdfPt, resolveSceneBox } from "../space/scene-box.js";
 import type { VisualIR } from "../ir.js";
 
 export type VectorPdfOptions = {
@@ -24,20 +19,22 @@ export async function renderVectorPdfFromIr(
   opts: VectorPdfOptions = {},
 ): Promise<Uint8Array> {
   const { scene, nodes } = flattenNodesFromIr(ir);
-  const scale = opts.scale ?? 1;
+  const box = resolveSceneBox(evalSceneProps(ir.scene.props, [ir.state, ir.data]));
+  const autoScale = box.unit === "mm" || box.unit === "pt" ? pxToPdfPt(1) : 1;
+  const scale = opts.scale ?? autoScale;
   const pageW = scene.width * scale;
   const pageH = scene.height * scale;
 
   const pdf = await PDFDocument.create();
   const page = pdf.addPage([pageW, pageH]);
-  const font = await pdf.embedFont(StandardFonts.Helvetica);
+  const fonts = await embedPdfFonts(pdf);
 
   // Background
   const bg = parseColor(scene.background) ?? parseColor(DEFAULT_SCENE_BACKGROUND) ?? rgb(1, 1, 1);
   page.drawRectangle({ x: 0, y: 0, width: pageW, height: pageH, color: bg });
 
   for (const node of nodes) {
-    drawNode(page, font, node, pageH, scale);
+    drawNode(page, fonts, node, pageH, scale);
   }
 
   return pdf.save();
@@ -45,7 +42,7 @@ export async function renderVectorPdfFromIr(
 
 function drawNode(
   page: PDFPage,
-  font: PDFFont,
+  fonts: PdfTextFonts,
   node: FlatNode,
   pageH: number,
   scale: number,
@@ -112,8 +109,8 @@ function drawNode(
   if (tag === "text") {
     const raw = str(p.text ?? p.label ?? node.name, "");
     if (!raw) return;
-    const text = sanitizePdfText(raw);
-    if (!text) return;
+    const text = raw;
+    const font = pickPdfFont(fonts, text);
     const size = num(p.font ?? p.fontSize, 14) * scale;
     const x = num(p.x) * scale;
     // SVG text y is baseline; PDF drawText y is baseline too after flip
@@ -204,11 +201,6 @@ function parseColor(input: string): RGB | null {
     return rgb(clamp01(Number(m[1]) / 255), clamp01(Number(m[2]) / 255), clamp01(Number(m[3]) / 255));
   }
   return null;
-}
-
-function sanitizePdfText(text: string): string {
-  // WinAnsi subset — drop unsupported glyphs
-  return text.replace(/[^\x20-\x7E\u00A0-\u00FF]/g, "?");
 }
 
 function num(value: unknown, fallback = 0): number {

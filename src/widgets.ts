@@ -36,6 +36,10 @@ setWidgetBuiltinSeed(() => {
     name: "layout.figure",
     expand: (ctx) => expandLayoutFigure(ctx.artifact, ctx.props, ctx.index),
   });
+  registerWidget({
+    name: "layout.board",
+    expand: (ctx) => expandLayoutBoard(ctx.artifact, ctx.props, ctx.index),
+  });
 });
 
 export function expandWidgets(artifact: Artifact): Artifact {
@@ -168,11 +172,15 @@ function expandChart(
         y: props.areaY ?? (isPair(props.y) ? props.y : undefined) ?? literal([60, 400]),
         xlim: props.xlim ?? literal([0, 10]),
         ylim: props.ylim ?? literal([0, 100]),
+        ...(props.xScale ? { xScale: props.xScale } : {}),
+        ...(props.yScale ? { yScale: props.yScale } : {}),
       },
     });
   } else {
     if (props.xlim) existingFrame.props.xlim = props.xlim;
     if (props.ylim) existingFrame.props.ylim = props.ylim;
+    if (props.xScale) existingFrame.props.xScale = props.xScale;
+    if (props.yScale) existingFrame.props.yScale = props.yScale;
   }
 
   const dataName =
@@ -235,6 +243,7 @@ function expandChart(
       w: area.w,
       h: area.h,
       radius: literal(6),
+      ...(chartInteractive(props) ? { drag: literal(true), __chartBrush: literal(true) } : {}),
       ...(props.plotFill ? { fill: props.plotFill } : {}),
       ...(props.plotStroke ? { stroke: props.plotStroke } : {}),
       ...(props.plotStrokeWidth ? { strokeWidth: props.plotStrokeWidth } : {}),
@@ -308,6 +317,7 @@ function expandChart(
             ? { strokeWidth: props.markStrokeWidth ?? props.barStrokeWidth! }
             : {}),
           ...(props.hoverFill ? { hoverFill: props.hoverFill } : { hoverFill: literal("#E69F00") }),
+          ...highlightOpacity(seriesField, span),
         }),
         ...expandErrorBars(props, frameName, resolvedXField, resolvedYField, span, seriesField),
       ],
@@ -330,6 +340,7 @@ function expandChart(
           ...(props.markStroke ? { stroke: props.markStroke } : {}),
           ...(props.markStrokeWidth ? { strokeWidth: props.markStrokeWidth } : {}),
           ...(props.hoverFill ? { hoverFill: props.hoverFill } : { hoverFill: literal("#E69F00") }),
+          ...highlightOpacity(seriesField, span),
         }),
         ...expandErrorBars(props, frameName, resolvedXField, resolvedYField, span, seriesField),
       ],
@@ -380,6 +391,7 @@ function expandChart(
           ...(props.barRadius ? { radius: props.barRadius } : { radius: literal(3) }),
           __chartBar: literal(true),
           ...(props.hoverFill ? { hoverFill: props.hoverFill } : { hoverFill: literal("#E69F00") }),
+          ...highlightOpacity(seriesField, span),
         }),
         ...expandErrorBars(props, frameName, resolvedXField, resolvedYField, span, seriesField),
       ],
@@ -398,7 +410,16 @@ function expandChart(
 
   artifact.scene?.layers.push(axisLayer, markLayer);
   if (chartInteractive(props)) {
-    ensureChartInteract(artifact, kind, resolvedXField, resolvedYField, valueFieldName(props), span);
+    ensureChartInteract(
+      artifact,
+      kind,
+      frameName,
+      resolvedXField,
+      resolvedYField,
+      valueFieldName(props),
+      seriesField,
+      span,
+    );
   }
 }
 
@@ -616,8 +637,7 @@ function panelLetter(index: number): string {
 }
 
 function panelNamesFromProps(props: Record<string, Expr>, count: number, index: number): string[] {
-  const prefix =
-    stringProp(props, ["prefix"]) ?? (index > 1 ? (stringProp(props, ["id"]) ?? `fig${index}`) : "");
+  const prefix = stringProp(props, ["prefix"]) ?? "";
   if (props.panels?.kind === "array") {
     return props.panels.items.slice(0, count).map((item, i) => {
       const raw =
@@ -706,6 +726,83 @@ function expandLayoutFigure(
       span,
       props: {},
       items: labelItems,
+    });
+  }
+}
+
+function expandLayoutBoard(
+  artifact: Artifact,
+  props: Record<string, Expr>,
+  index: number,
+): void {
+  const span = artifact.span;
+  const id = stringProp(props, ["id"]) ?? (index > 1 ? `board${index}` : "board");
+  const originX = numProp(props, "x", 0);
+  const originY = numProp(props, "y", 0);
+  const width = numProp(props, "w", 1280);
+  const height = numProp(props, "h", 720);
+  const safe = numProp(props, "safe", 64);
+  const titleH = numProp(props, "titleH", 72);
+  const lowerH = numProp(props, "lowerH", 96);
+  const prefix = stringProp(props, ["prefix"]) ?? "";
+  const nameOf = (slot: string) => (prefix ? `${prefix}_${slot}` : slot);
+
+  const safeX0 = originX + safe;
+  const safeY0 = originY + safe;
+  const safeX1 = originX + width - safe;
+  const safeY1 = originY + height - safe;
+  const titleY1 = safeY0 + titleH;
+  const lowerY0 = safeY1 - lowerH;
+
+  const slots: { name: string; x: [number, number]; y: [number, number] }[] = [
+    { name: nameOf("safe"), x: [safeX0, safeX1], y: [safeY0, safeY1] },
+    { name: nameOf("title"), x: [safeX0, safeX1], y: [safeY0, titleY1] },
+    { name: nameOf("body"), x: [safeX0, safeX1], y: [titleY1, lowerY0] },
+    { name: nameOf("lower"), x: [safeX0, safeX1], y: [lowerY0, safeY1] },
+  ];
+
+  for (const slot of slots) {
+    const existing = artifact.frames.find((f) => f.name === slot.name);
+    const frameProps = {
+      x: literal(slot.x),
+      y: literal(slot.y),
+      xlim: existing?.props.xlim ?? literal([0, 1]),
+      ylim: existing?.props.ylim ?? literal([0, 1]),
+    };
+    if (existing) existing.props = { ...existing.props, ...frameProps };
+    else artifact.frames.push({ name: slot.name, span, props: frameProps });
+  }
+
+  if (boolProp(props, "guides", true)) {
+    artifact.scene?.layers.push({
+      name: `__${id}_guides`,
+      span,
+      props: {},
+      items: [
+        node(`${id}_safe`, {
+          role: literal("chrome"),
+          x: literal(safeX0),
+          y: literal(safeY0),
+          w: literal(safeX1 - safeX0),
+          h: literal(safeY1 - safeY0),
+          stroke: literal("#94a3b8"),
+          dash: literal("6 6"),
+        }),
+        node(`${id}_title`, {
+          role: literal("label"),
+          x: literal(safeX0 + 8),
+          y: literal(safeY0 + 22),
+          text: literal("title"),
+          font: literal(11),
+        }),
+        node(`${id}_lower`, {
+          role: literal("label"),
+          x: literal(safeX0 + 8),
+          y: literal(lowerY0 + 22),
+          text: literal("lower"),
+          font: literal(11),
+        }),
+      ],
     });
   }
 }
@@ -1312,16 +1409,83 @@ function expandColorbar(
   return items;
 }
 
+function noneExpr(span: { line: number; column: number }): Expr {
+  return { kind: "none", span };
+}
+
+function objectExpr(
+  entries: { key: string; value: Expr }[],
+  span: { line: number; column: number },
+): Expr {
+  return { kind: "object", entries, span };
+}
+
+function highlightOpacity(
+  seriesField: string | null,
+  span: { line: number; column: number },
+): Record<string, Expr> {
+  if (!seriesField) return {};
+  const dim = binary(
+    "*",
+    binary("!=", ident("__highlightGrp"), noneExpr(span), span),
+    binary("!=", ident(`row.${seriesField}`), ident("__highlightGrp"), span),
+    span,
+  );
+  return {
+    opacity: binary("-", literal(1), binary("*", literal(0.72), dim, span), span),
+  };
+}
+
+function callExpr(callee: string, args: Expr[], span: { line: number; column: number }): Expr {
+  return { kind: "call", callee, args, span };
+}
+
 function ensureChartInteract(
   artifact: Artifact,
   kind: string,
+  frameName: string,
   xField: string,
   yField: string,
   vField: string,
+  seriesField: string | null,
   span: { line: number; column: number },
 ): void {
   if (!artifact.states.some((s) => s.name === "__tip")) {
     artifact.states.push({ name: "__tip", value: literal(""), span });
+  }
+  if (!artifact.states.some((s) => s.name === "__hover")) {
+    artifact.states.push({
+      name: "__hover",
+      value: objectExpr(
+        [
+          { key: "x", value: noneExpr(span) },
+          { key: "y", value: noneExpr(span) },
+          { key: "v", value: noneExpr(span) },
+          { key: "grp", value: noneExpr(span) },
+        ],
+        span,
+      ),
+      span,
+    });
+  }
+  if (!artifact.states.some((s) => s.name === "__highlightGrp")) {
+    artifact.states.push({ name: "__highlightGrp", value: noneExpr(span), span });
+  }
+  if (!artifact.states.some((s) => s.name === "__brush")) {
+    artifact.states.push({
+      name: "__brush",
+      value: objectExpr(
+        [
+          { key: "x0", value: literal(0) },
+          { key: "y0", value: literal(0) },
+          { key: "x1", value: literal(0) },
+          { key: "y1", value: literal(0) },
+          { key: "on", value: literal(0) },
+        ],
+        span,
+      ),
+      span,
+    });
   }
   if (!artifact.scene) return;
   const hasHud = artifact.scene.layers.some((l) => l.name === "__chart_hud");
@@ -1342,30 +1506,85 @@ function ensureChartInteract(
           font: literal(11),
           align: literal("right"),
         }),
+        node("brushRect", {
+          role: literal("chrome"),
+          x: callExpr("min", [ident("__brush.x0"), ident("__brush.x1")], span),
+          y: callExpr("min", [ident("__brush.y0"), ident("__brush.y1")], span),
+          w: callExpr(
+            "abs",
+            [binary("-", ident("__brush.x1"), ident("__brush.x0"), span)],
+            span,
+          ),
+          h: callExpr(
+            "abs",
+            [binary("-", ident("__brush.y1"), ident("__brush.y0"), span)],
+            span,
+          ),
+          fill: literal("#0072B2"),
+          opacity: binary("*", ident("__brush.on"), literal(0.18), span),
+        }),
       ],
     });
   }
 
   const target =
     kind === "chart.bar" ? "bar" : kind === "chart.heatmap" ? "heatCell" : kind === "chart.line" ? "linePt" : "mark";
-  if (artifact.events.some((e) => e.type === "hover" && e.target === target)) return;
+  if (!artifact.events.some((e) => e.type === "hover" && e.target === target)) {
+    const tipExpr =
+      kind === "chart.heatmap"
+        ? binary(
+            "+",
+            binary("+", ident(xField), literal(", "), span),
+            binary("+", ident(yField), binary("+", literal(" · "), ident(vField), span), span),
+            span,
+          )
+        : binary("+", binary("+", ident(xField), literal(", "), span), ident(yField), span);
+    const hoverObj = objectExpr(
+      [
+        { key: "x", value: ident(xField) },
+        { key: "y", value: ident(yField) },
+        { key: "v", value: ident(vField) },
+        { key: "grp", value: seriesField ? ident(seriesField) : noneExpr(span) },
+      ],
+      span,
+    );
+    artifact.events.push({
+      type: "hover",
+      target,
+      body: [
+        assign(["__tip"], tipExpr),
+        assign(["__hover"], hoverObj),
+        ...(seriesField ? [assign(["__highlightGrp"], ident(seriesField))] : []),
+      ],
+      span,
+    });
+  }
 
-  const tipExpr =
-    kind === "chart.heatmap"
-      ? binary(
-          "+",
-          binary("+", ident(xField), literal(", "), span),
-          binary("+", ident(yField), binary("+", literal(" · "), ident(vField), span), span),
-          span,
-        )
-      : binary("+", binary("+", ident(xField), literal(", "), span), ident(yField), span);
-
-  artifact.events.push({
-    type: "hover",
-    target,
-    body: [assign(["__tip"], tipExpr)],
-    span,
-  });
+  const plotName = `${frameName}_plotBg`;
+  if (!artifact.events.some((e) => e.type === "dragstart" && e.target === plotName)) {
+    artifact.events.push({
+      type: "dragstart",
+      target: plotName,
+      body: [
+        assign(["__brush", "x0"], ident("__event.x")),
+        assign(["__brush", "y0"], ident("__event.y")),
+        assign(["__brush", "x1"], ident("__event.x")),
+        assign(["__brush", "y1"], ident("__event.y")),
+        assign(["__brush", "on"], literal(1)),
+      ],
+      span,
+    });
+    artifact.events.push({
+      type: "drag",
+      target: plotName,
+      body: [
+        assign(["__brush", "x1"], ident("__event.x")),
+        assign(["__brush", "y1"], ident("__event.y")),
+        assign(["__brush", "on"], literal(1)),
+      ],
+      span,
+    });
+  }
 }
 
 function objectNumber(obj: Extract<Expr, { kind: "object" }>, key: string): number {
