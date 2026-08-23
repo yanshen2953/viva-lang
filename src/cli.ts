@@ -16,7 +16,7 @@ import {
   resolveModelsConfig,
 } from "./check/index.js";
 import { renderStandaloneHtml } from "./html.js";
-import { exportArtifact, type ExportFormat } from "./export/index.js";
+import { exportArtifact, exportBeatSequence, type ExportFormat } from "./export/index.js";
 import { simulate } from "./simulate.js";
 import { SYSTEM_PROMPT } from "./llm/system-prompt.js";
 import { SYSTEM_PROMPT_SLIM } from "./llm/system-prompt-slim.js";
@@ -189,6 +189,21 @@ async function main(): Promise<void> {
     ) as ExportFormat;
     const width = Number(flagValue(argv, "--width") ?? "1280");
     try {
+      if (argv.includes("--beats")) {
+        const frames = await exportBeatSequence(
+          source,
+          { width, handbookIds: handbookIds.length ? handbookIds : undefined, beats: true },
+          input,
+        );
+        const stem = (outPath ?? input.replace(/\.viva$/i, "")).replace(/\.(png|jpg|jpeg|svg|pdf)$/i, "");
+        await mkdir(path.dirname(path.resolve(`${stem}-beat0.png`)), { recursive: true });
+        for (const frame of frames) {
+          const target = `${stem}-beat${frame.index}.png`;
+          await writeFile(target, frame.bytes);
+          console.log(target);
+        }
+        return;
+      }
       const result = await exportArtifact(
         source,
         format,
@@ -297,6 +312,7 @@ Commands:
   html <file> [-o out.html]        Standalone HTML shell
   svg <file> [-o out.svg]          Export static SVG
   export <file> -f <fmt>           Export svg|png|jpg|pdf (repeat --handbook for style)
+  export <file> --beats            PNG sequence from layout.board __beat (not a video file)
   simulate <file> [--ticks N] Headless world JSON
   provenance <file> [-o out.json]  Compile via session and export provenance bundle
   prompt [--handbook id]      Print system prompt (+ handbooks)

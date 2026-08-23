@@ -45,6 +45,48 @@ describe("agent HTTP server", () => {
 
     const openapi = await fetch(`${base}/api/openapi.json`);
     expect(openapi.ok).toBe(true);
+
+    const beatsSrc = `artifact "Beats"
+data a = [{ x: 0, y: 2 }, { x: 1, y: 5 }]
+data b = [{ x: 0, y: 8 }, { x: 1, y: 1 }]
+scene
+  size: 240 160
+  background: #ffffff
+widget layout.board
+  w: 240
+  h: 160
+  safe: 16
+  titleH: 24
+  lowerH: 24
+  beats: 2
+  play: true
+widget chart.line
+  panel: beat0
+  data: a
+  xField: x
+  yField: y
+  xlim: 0 1
+  ylim: 0 10
+  interactive: false
+widget chart.line
+  panel: beat1
+  data: b
+  xField: x
+  yField: y
+  xlim: 0 1
+  ylim: 0 10
+  interactive: false
+`;
+    const beats = await fetch(`${base}/api/export`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ source: beatsSrc, format: "png", width: 160, beats: true }),
+    });
+    const beatsJson = (await beats.json()) as { ok: boolean; beats: number; frames: { base64: string }[] };
+    expect(beatsJson.ok).toBe(true);
+    expect(beatsJson.beats).toBe(2);
+    expect(beatsJson.frames).toHaveLength(2);
+    expect(beatsJson.frames[0]!.base64).not.toBe(beatsJson.frames[1]!.base64);
   });
 
   it("compile matches pipeline compileSource", async () => {

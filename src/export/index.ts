@@ -2,6 +2,7 @@ import { PDFDocument } from "pdf-lib";
 import { Resvg } from "@resvg/resvg-js";
 import sharp from "sharp";
 import { compileSource } from "../pipeline.js";
+import type { VisualIR } from "../ir.js";
 import { flattenNodesFromIr, renderSvgFromIr } from "./static-svg.js";
 import { renderVectorPdfFromIr } from "./vector-pdf.js";
 
@@ -22,6 +23,18 @@ export type ExportOptions = {
   scale?: number;
   /** Style handbook ids applied at compile time (same as session handbooks). */
   handbookIds?: string[];
+  /**
+   * When true, export every `layout.board` beat as its own raster.
+   * No new language keyword — uses existing `__beat` state.
+   */
+  beats?: boolean;
+};
+
+export type BeatFrame = {
+  index: number;
+  bytes: Uint8Array;
+  mime: string;
+  svg: string;
 };
 
 export type ExportResult = {
@@ -105,6 +118,31 @@ async function rasterize(svg: string, opts: ExportOptions): Promise<Uint8Array> 
     background: opts.background ?? "#ffffff",
   });
   return resvg.render().asPng();
+}
+
+export function beatCountFromIr(ir: VisualIR): number {
+  return ir.frames.filter((f) => /(?:^|_)beat\d+$/.test(f.name)).length;
+}
+
+/** Raster one PNG per board beat by writing `__beat` (still not a video file). */
+export async function exportBeatSequence(
+  source: string,
+  opts: ExportOptions = {},
+  filename = "<input>",
+): Promise<BeatFrame[]> {
+  const result = compileSource(source, filename, { handbookIds: opts.handbookIds });
+  if (!result.ir) throw new Error(result.error ?? "compile failed");
+  const n = Math.max(1, beatCountFromIr(result.ir));
+  const sceneBg = flattenNodesFromIr(result.ir).scene.background;
+  const frames: BeatFrame[] = [];
+  for (let i = 0; i < n; i++) {
+    const ir = structuredClone(result.ir);
+    ir.state.__beat = i;
+    const svg = renderSvgFromIr(ir);
+    const bytes = await rasterize(svg, { ...opts, background: opts.background ?? sceneBg });
+    frames.push({ index: i, bytes, mime: "image/png", svg });
+  }
+  return frames;
 }
 
 export { renderSvgFromIr, flattenNodesFromIr } from "./static-svg.js";

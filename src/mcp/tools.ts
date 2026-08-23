@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { compileSource } from "../pipeline.js";
 import { runArtifactChecks } from "../check/index.js";
-import { exportArtifact, type ExportFormat } from "../export/index.js";
+import { exportArtifact, exportBeatSequence, type ExportFormat } from "../export/index.js";
 import { SYSTEM_PROMPT } from "../llm/system-prompt.js";
 import { SYSTEM_PROMPT_SLIM } from "../llm/system-prompt-slim.js";
 import { createNodePromptService } from "../agent/prompt.node.js";
@@ -94,6 +94,34 @@ async function toolExport(args: Record<string, unknown>) {
   const handbookIds = args.handbookIds as string[] | undefined;
   const width = typeof args.width === "number" ? args.width : undefined;
   const outputPath = args.outputPath ? String(args.outputPath) : undefined;
+  if (args.beats) {
+    const frames = await exportBeatSequence(source, { handbookIds, width, beats: true }, "mcp.viva");
+    if (outputPath) {
+      const { writeFile, mkdir } = await import("node:fs/promises");
+      const { dirname } = await import("node:path");
+      const stem = outputPath.replace(/\.(png|jpg|jpeg|svg|pdf)$/i, "");
+      await mkdir(dirname(stem), { recursive: true });
+      const paths: string[] = [];
+      for (const frame of frames) {
+        const target = `${stem}-beat${frame.index}.png`;
+        await writeFile(target, frame.bytes);
+        paths.push(target);
+      }
+      return textResult(JSON.stringify({ ok: true, beats: frames.length, paths, mime: "image/png" }));
+    }
+    return textResult(
+      JSON.stringify({
+        ok: true,
+        beats: frames.length,
+        mime: "image/png",
+        frames: frames.map((frame) => ({
+          index: frame.index,
+          bytes: frame.bytes.length,
+          base64: Buffer.from(frame.bytes).toString("base64"),
+        })),
+      }),
+    );
+  }
   const out = await exportArtifact(source, format, { handbookIds, width }, "mcp.viva");
   if (outputPath) {
     const { writeFile } = await import("node:fs/promises");
@@ -272,7 +300,8 @@ export const MCP_TOOL_DEFINITIONS = [
   },
   {
     name: "viva_export",
-    description: "Export artifact to svg|png|jpg|pdf. Returns base64 or writes outputPath.",
+    description:
+      "Export artifact to svg|png|jpg|pdf. beats:true writes one PNG per layout.board __beat (not a video).",
     inputSchema: {
       type: "object",
       properties: {
@@ -281,6 +310,7 @@ export const MCP_TOOL_DEFINITIONS = [
         handbookIds: { type: "array", items: { type: "string" } },
         width: { type: "number" },
         outputPath: { type: "string", description: "Optional file path to write bytes" },
+        beats: { type: "boolean", description: "PNG sequence from layout.board __beat (not a video file)" },
       },
       required: ["source", "format"],
     },
@@ -387,6 +417,7 @@ export const mcpToolSchemas = {
     handbookIds: handbookIdsSchema,
     width: z.number().optional(),
     outputPath: z.string().optional(),
+    beats: z.boolean().optional(),
   },
   viva_prompt: {
     handbookIds: handbookIdsSchema,

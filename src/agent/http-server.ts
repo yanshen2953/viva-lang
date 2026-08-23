@@ -7,7 +7,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { runArtifactChecks } from "../check/index.js";
 import { describeModelSlots, resolveModelsConfig } from "../check/models/index.js";
-import { exportArtifact, type ExportFormat } from "../export/index.js";
+import { exportArtifact, exportBeatSequence, type ExportFormat } from "../export/index.js";
 import { compileSource } from "../pipeline.js";
 import { SYSTEM_PROMPT } from "../llm/system-prompt.js";
 import { SYSTEM_PROMPT_SLIM } from "../llm/system-prompt-slim.js";
@@ -147,7 +147,30 @@ export function createAgentHttpServer(opts: AgentHttpOptions): Server {
           format?: ExportFormat;
           handbookIds?: string[];
           width?: number;
+          beats?: boolean;
         };
+        if (payload.beats) {
+          const frames = await exportBeatSequence(
+            payload.source ?? "",
+            {
+              width: payload.width,
+              handbookIds: payload.handbookIds,
+              beats: true,
+            },
+            "api.viva",
+          );
+          json(200, {
+            ok: true,
+            beats: frames.length,
+            mime: "image/png",
+            frames: frames.map((frame) => ({
+              index: frame.index,
+              bytes: frame.bytes.length,
+              base64: Buffer.from(frame.bytes).toString("base64"),
+            })),
+          });
+          return;
+        }
         const out = await exportArtifact(
           payload.source ?? "",
           payload.format ?? "svg",
@@ -471,7 +494,7 @@ function openApiSpec(): Record<string, unknown> {
       },
       "/api/export": {
         post: {
-          summary: "Export svg|png|jpg|pdf",
+          summary: "Export svg|png|jpg|pdf. beats:true returns PNG frames from layout.board __beat.",
           requestBody: {
             content: {
               "application/json": {
@@ -482,6 +505,7 @@ function openApiSpec(): Record<string, unknown> {
                     format: { type: "string" },
                     handbookIds: { type: "array", items: { type: "string" } },
                     width: { type: "number" },
+                    beats: { type: "boolean" },
                   },
                 },
               },

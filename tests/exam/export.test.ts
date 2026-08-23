@@ -33,4 +33,14 @@ describe("static SVG + raster/pdf export", () => {
     // PDF magic
     expect(String.fromCharCode(...pdf.bytes.slice(0, 4))).toBe("%PDF");
   }, 30_000);
+
+  it("exports a PNG frame per layout.board beat from __beat", async () => {
+    const { exportBeatSequence } = await import("../../src/export/index.js");
+    const src = readFileSync(path.resolve("examples/storyboard.viva"), "utf8");
+    const frames = await exportBeatSequence(src, { width: 320, handbookIds: ["print-nature"] }, "storyboard.viva");
+    expect(frames.length).toBe(4);
+    expect(frames[0]!.bytes.byteLength).toBeGreaterThan(100);
+    expect(String.fromCharCode(...frames[0]!.bytes.slice(0, 8))).toContain("PNG");
+    expect(Buffer.from(frames[0]!.bytes).equals(Buffer.from(frames[1]!.bytes))).toBe(false);
+  }, 30_000);
 });
