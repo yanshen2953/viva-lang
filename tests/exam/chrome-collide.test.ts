@@ -379,6 +379,13 @@ widget chart.line
       i.kind === "node" ? String(evaluate(i.props.text, [{}, {}])) : "",
     );
     expect(texts.join(" ")).toMatch(/Follow-up|randomization|Serum|cytokine/);
+    const y0 = yTitles.find((i) => i.kind === "node" && i.name.endsWith("_yTitle"));
+    const y1 = yTitles.find((i) => i.kind === "node" && i.name.endsWith("_yTitle_1"));
+    if (y0?.kind === "node" && y1?.kind === "node") {
+      const x0 = evaluate(y0.props.x, [{}, {}]) as number;
+      const x1 = evaluate(y1.props.x, [{}, {}]) as number;
+      expect(x0).toBeLessThan(x1);
+    }
   });
 
   it("emits wrapped legend label lines for a hyphenated series key", () => {

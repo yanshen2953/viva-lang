@@ -51,7 +51,7 @@
 
 1. PDF 随包 `assets/fonts/VivaSansFallback.ttf`（Droid 子集，examples + 论文用字）；缺字仍可能 `?`
 2. 有 time / box / violin（KDE 轮廓）/ 显著性括号；轴刻度在场景坐标。`print-nature` 刻度 8 / 轴标题 9。观感仍粗，不是投稿成品
-3. Atlas / figure-grid 已去掉 `inset*`、手摆 panel 卡、页面 title 和基因按钮；`layout.board` 出题注 + `controls`/`bind` HUD 芯片，不写 `safe`/`titleH`/`lowerH` 时按题注折行和芯片估条带。`layout.figure` 吃 `body`。chrome 有盒子碰撞消解；图/轴标题和图例键按栏宽折行，重叠刻度抽稀，相邻格互叠时再长 inset。仍不是跨页排版器
+3. Atlas / figure-grid 已去掉 `inset*`、手摆 panel 卡、页面 title 和基因按钮；`layout.board` 出题注 + `controls`/`bind` HUD 芯片，不写 `safe`/`titleH`/`lowerH` 时按题注折行和芯片估条带。`layout.figure` 吃 `body`。chrome 有盒子碰撞消解；图/轴标题和图例键按栏宽折行（Y 轴折行后自上而下阅读），重叠刻度抽稀，相邻格互叠时再长 inset。仍不是跨页排版器
 4. `__sel` 默认跨面板藏行；本地 brush 松手后保持选择窗，路径够长切套索。高亮点会放大并和藏行一起缓 220ms；`play` 拍遮罩走同一条 CSS opacity。仍无时间轴动画
 5. session visual diagnostics 不挡编译成功
 6. MCP/HTTP/CLI prompt 默认 slim；生成成功率未测

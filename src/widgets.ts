@@ -2892,7 +2892,7 @@ function expandAxisTitles(
       items.push(
         node(`${frameName}_yTitle${i ? `_${i}` : ""}`, {
           role: literal("annotation"),
-          x: literal(left - i * axisLine),
+          x: literal(left - (yLines.length - 1 - i) * axisLine),
           y: midY,
           text: literal(line),
           align: literal("center"),

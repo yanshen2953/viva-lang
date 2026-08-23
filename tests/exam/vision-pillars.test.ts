@@ -104,6 +104,8 @@ widget chart.scatter
       "时间 (周)",
       "心率 (次每分)",
       "单栏投稿图",
+      "多面板综合图",
+      "虚拟临床队列",
     ];
     for (const phrase of phrases) {
       expect(pdfSafeText(pickPdfFont(fonts, phrase), phrase)).toBe(phrase);
