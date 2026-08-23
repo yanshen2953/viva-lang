@@ -22,7 +22,7 @@ import { COLUMN_MM, mmToPx, parsePage, sceneScaleOf } from "./space/scene-box.js
 import { estimateBoardBands } from "./layout/board-chrome.js";
 import { figureCopyDefaults, figureCopyPlace, figureGapDefaults } from "./layout/figure-gap.js";
 import { figurePageReserves, packFigureCellsToPages } from "./layout/figure-page.js";
-import { chartHostBox } from "./layout/chart-fit.js";
+import { chartHostBox, promotePanelFrames } from "./layout/chart-fit.js";
 import { boxStats, quantile } from "./layout/summary-stats.js";
 import { gaussianKDE, violinPathD } from "./layout/violin-density.js";
 import {
@@ -79,6 +79,7 @@ export function expandWidgets(artifact: Artifact): Artifact {
     next.scene = { props: {}, layers: [], span: artifact.span };
   }
 
+  promotePanelFrames(next);
   implicitFigureIfNeeded(next);
   const widgets = [...next.widgets];
   const layoutRank = (name: string) => {

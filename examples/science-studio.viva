@@ -426,27 +426,31 @@ scene
       opacity: 0.18
       blur: 36
 
+widget layout.figure
+  panel: chartDeck
+  cols: 2
+  rows: 1
+  plate: false
+
 widget chart.bar
+  panel: a
   data: bars
   xField: cat
   yField: val
   group: grp
   xlim: 0 6
   ylim: 0 100
-  areaX: 508 688
-  areaY: 108 268
   title: "BAR · by group"
   barWidth: 0.52
 
 widget chart.line
+  panel: b
   data: lineSeries
   xField: t
   yField: v
   group: grp
   xlim: 0 6
   ylim: 0 40
-  areaX: 708 1148
-  areaY: 108 268
   title: "LINE · trend"
 
 event drag on pcaOrbit

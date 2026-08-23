@@ -1,6 +1,6 @@
 /** Park a lone chart in leftover scene space. Not a general packer. */
 
-import type { Artifact, Expr, SceneItem } from "../ast.js";
+import { literal, type Artifact, type Expr, type SceneItem } from "../ast.js";
 import { evaluate, type Scope } from "../eval.js";
 import { estimateTextWidthPx } from "./chrome-collide.js";
 
@@ -219,4 +219,36 @@ export function chartHostBox(
     minW,
     minH,
   });
+}
+
+/**
+ * Author `role: panel` nodes become frames. Charts and layout.figure
+ * bind with the existing `panel:` prop. Not a new keyword.
+ */
+export function promotePanelFrames(artifact: Artifact): void {
+  const scopes = authorScopes(artifact);
+  for (const layer of artifact.scene?.layers ?? []) {
+    if (layer.name.startsWith("__")) continue;
+    const nodes: Extract<SceneItem, { kind: "node" }>[] = [];
+    walkAuthorNodes(layer.items, nodes);
+    for (const node of nodes) {
+      if (roleOf(node) !== "panel") continue;
+      if (node.props.frame) continue;
+      if (artifact.frames.some((frame) => frame.name === node.name)) continue;
+      const x = numOf(node.props.x, scopes);
+      const y = numOf(node.props.y, scopes);
+      const w = numOf(node.props.w ?? node.props.width, scopes);
+      const h = numOf(node.props.h ?? node.props.height, scopes);
+      if (x === null || y === null || w === null || h === null) continue;
+      if (!(w > 0) || !(h > 0)) continue;
+      artifact.frames.push({
+        name: node.name,
+        span: node.span,
+        props: {
+          x: literal([x, x + w]),
+          y: literal([y, y + h]),
+        },
+      });
+    }
+  }
 }

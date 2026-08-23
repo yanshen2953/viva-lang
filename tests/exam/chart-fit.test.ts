@@ -58,6 +58,73 @@ describe("chart host leftover", () => {
     expect(plotY[0]).toBeGreaterThan(cellY[0] - 1);
   });
 
+  it("promotes a role: panel node so a figure can bind without areaX", () => {
+    const src = `artifact Deck
+data rows = [{ x: 1, y: 2 }, { x: 2, y: 4 }]
+scene
+  size: 400 240
+  layer ui
+    node chartDeck
+      role: panel
+      x: 40
+      y: 20
+      w: 320
+      h: 200
+widget layout.figure
+  panel: chartDeck
+  cols: 1
+  rows: 1
+  plate: false
+widget chart.line
+  panel: a
+  data: rows
+  xField: x
+  yField: y
+  xlim: 0 3
+  ylim: 0 5
+  interactive: false
+`;
+    const result = compileSource(src, "deck.viva");
+    expect(result.error).toBeNull();
+    const scopes = [result.ir!.state, result.ir!.data];
+    const deck = result.ir!.frames.find((f) => f.name === "chartDeck");
+    expect(deck).toBeTruthy();
+    const cell = evaluate(result.ir!.frames.find((f) => f.name === "a")!.props.cellX!, scopes) as [
+      number,
+      number,
+    ];
+    expect(cell[0]).toBeGreaterThanOrEqual(40);
+    expect(cell[1]).toBeLessThanOrEqual(360);
+  });
+
+  it("drops science-studio area boxes onto the chartDeck panel", () => {
+    const src = readFileSync("examples/science-studio.viva", "utf8");
+    expect(src).not.toMatch(/areaX|areaY/);
+    const result = compileSource(src, "science-studio.viva");
+    expect(result.error).toBeNull();
+    const scopes = [result.ir!.state, result.ir!.data];
+    const deck = evaluate(result.ir!.frames.find((f) => f.name === "chartDeck")!.props.x, scopes) as [
+      number,
+      number,
+    ];
+    expect(deck[0]).toBeCloseTo(488);
+    expect(deck[1]).toBeCloseTo(1160);
+    for (const name of ["a", "b"] as const) {
+      const cellX = evaluate(result.ir!.frames.find((f) => f.name === name)!.props.cellX!, scopes) as [
+        number,
+        number,
+      ];
+      const cellY = evaluate(result.ir!.frames.find((f) => f.name === name)!.props.cellY!, scopes) as [
+        number,
+        number,
+      ];
+      expect(cellX[0]).toBeGreaterThanOrEqual(488);
+      expect(cellX[1]).toBeLessThanOrEqual(1160);
+      expect(cellY[0]).toBeGreaterThanOrEqual(64);
+      expect(cellY[1]).toBeLessThanOrEqual(312);
+    }
+  });
+
   it("ignores a full-bleed atmosphere wash when parking a chart", () => {
     const result = compileSource(
       `artifact Wash
