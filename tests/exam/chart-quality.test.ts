@@ -168,6 +168,13 @@ describe("chart quality: axis titles, error bars, hover, heatmap", () => {
     expect(titleX).toBeGreaterThan(barX + barW);
     expect(topY).toBeGreaterThan(plotTop - 1);
     expect(titleY).toBeLessThan(plotTop);
+    const title = axes.items.find((i) => i.kind === "node" && i.name === "b_cbarTitle");
+    expect(title?.kind).toBe("node");
+    if (title?.kind === "node") {
+      expect(title.props.role).toMatchObject({ kind: "string", value: "annotation" });
+      expect(title.props.font).toMatchObject({ kind: "number", value: 9 });
+      expect(title.props.letterSpacing).toMatchObject({ kind: "number", value: 0.2 });
+    }
   });
 
   it("reads unary-minus xlim/ylim so ticks stay in the data domain", () => {

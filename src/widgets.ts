@@ -3812,7 +3812,7 @@ function expandColorbar(
     for (const [i, line] of chrome.cbarTitleLines.entries()) {
       items.push(
         node(`${frameName}_cbarTitle${i ? `_${i}` : ""}`, {
-          role: literal("label"),
+          role: literal("annotation"),
           x: literal(chrome.cbarTitleX),
           y: literal(chrome.cbarTitleY + i * titleStep),
           text: literal(line),
