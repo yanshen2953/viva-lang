@@ -1,6 +1,6 @@
 # 部署与 Agent 接入
 
-Viva 作为 **npm 安装包** 发布：CLI、Node SDK、浏览器 embed、HTTP REST 四套接口，任意 Agent 任选一种接入。
+Viva 作为 **npm 安装包** 发布：CLI、MCP、HTTP REST、Node SDK、浏览器 embed，任意 Agent 任选一种接入。
 
 ## 一键部署（三选一）
 
@@ -40,7 +40,32 @@ npm run pack:release
 
 ---
 
-## 四套 Agent 接入面
+## MCP（Cursor / Claude Desktop）
+
+IDE 内 Agent 推荐 MCP，无需自己起 HTTP：
+
+```bash
+viva mcp
+```
+
+Cursor 配置示例（`mcp-config.example.json`）：
+
+```json
+{
+  "mcpServers": {
+    "viva": {
+      "command": "viva",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+
+工具：`viva_compile`、`viva_check`、`viva_export`、`viva_prompt`、`viva_models`。
+
+详见 [`hosts/mcp.md`](hosts/mcp.md)。
+
+---
 
 | 方式 | 适合 | 文档 |
 | --- | --- | --- |

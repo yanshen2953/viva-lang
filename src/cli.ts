@@ -74,6 +74,12 @@ async function main(): Promise<void> {
     return;
   }
 
+  if (command === "mcp") {
+    const { runVivaMcpServer } = await import("./mcp/server.js");
+    await runVivaMcpServer();
+    return;
+  }
+
   if (command === "models") {
     const configPath = flagValue(argv, "--config");
     const slots = resolveModelsConfig(configPath);
@@ -245,6 +251,7 @@ function printHelp(): void {
 Commands:
   compile <file> [--handbook id]   Compile to Visual IR JSON
   check <file> [--visual] [--vision]  Structural + raster + optional multimodal
+  mcp                             MCP stdio server (Cursor / Claude Desktop)
   models [--config path]           Show resolved base/vision model slots
   html <file> [-o out.html]        Standalone HTML shell
   svg <file> [-o out.svg]          Export static SVG

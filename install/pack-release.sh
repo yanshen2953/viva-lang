@@ -16,6 +16,7 @@ npm pack --pack-destination release
 
 cp -f install/install.sh install/install.ps1 install/one-click.sh release/
 cp -f Dockerfile docker-compose.yml release/
+cp -f docs/hosts/mcp-config.example.json release/
 cp -f viva.models.json.example viva.models.schema.json release/
 cp -f docs/DEPLOY.md release/DEPLOY.md
 
@@ -50,6 +51,7 @@ curl http://localhost:8765/api/health
 | Surface | Entry |
 | --- | --- |
 | CLI | `viva compile\|check\|export\|serve` |
+| MCP stdio | `viva mcp` (Cursor / Claude) |
 | HTTP REST | `POST /api/compile`, `/api/check`, `/api/export` |
 | Browser SDK | `import from "viva-lang/embed"` |
 | Node SDK | `import from "viva-lang/agent"` |

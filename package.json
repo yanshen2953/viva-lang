@@ -4,7 +4,8 @@
   "description": "LLM-native interactive artifact language — small DSL, large runtime",
   "type": "module",
   "bin": {
-    "viva": "./dist/cli.js"
+    "viva": "./dist/cli.js",
+    "viva-mcp": "./dist/mcp-cli.js"
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -32,6 +33,10 @@
     "./check": {
       "types": "./dist/check/index.d.ts",
       "import": "./dist/check/index.js"
+    },
+    "./mcp": {
+      "types": "./dist/mcp/index.d.ts",
+      "import": "./dist/mcp/index.js"
     },
     "./package.json": "./package.json"
   },
@@ -75,6 +80,7 @@
     "node": ">=18"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "@resvg/resvg-js": "^2.6.2",
     "pdf-lib": "^1.17.1",
     "sharp": "^0.34.5"
