@@ -2,16 +2,8 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { compileSource } from "../../src/pipeline.js";
 import { evaluate } from "../../src/eval.js";
+import { propsToBBox } from "../../src/layout/node-bbox.js";
 import type { VisualIR } from "../../src/ir.js";
-
-function textWidth(text: string, font = 8, tracking = 0.08): number {
-  let w = 0;
-  for (const ch of text) {
-    w += ch.charCodeAt(0) >= 0x3000 ? font : font * 0.58;
-    w += tracking;
-  }
-  return Math.max(font * 0.4, w);
-}
 
 function expectChromeInsideCells(ir: VisualIR): void {
   const env = [ir.state, ir.data];
@@ -43,12 +35,15 @@ function expectChromeInsideCells(ir: VisualIR): void {
           : node.props.align?.kind === "ident"
             ? node.props.align.path.join(".")
             : "left";
-      const left = align === "right" ? x - textWidth(label) : align === "center" ? x - textWidth(label) / 2 : x;
-      const right = align === "right" ? x : align === "center" ? x + textWidth(label) / 2 : x + textWidth(label);
-      expect(left).toBeGreaterThanOrEqual(cellX[0]! - 1);
-      expect(right).toBeLessThanOrEqual(cellX[1]! + 1);
-      expect(y).toBeGreaterThanOrEqual(cellY[0]! - 1);
-      expect(y).toBeLessThanOrEqual(cellY[1]! + 1);
+      const rotate = node.props.rotate?.kind === "number" ? node.props.rotate.value : 0;
+      const font = node.props.font?.kind === "number" ? node.props.font.value : 8;
+      const tracking =
+        node.props.letterSpacing?.kind === "number" ? node.props.letterSpacing.value : 0.08;
+      const box = propsToBBox({ x, y, text: label, align, rotate, font, letterSpacing: tracking });
+      expect(box.x).toBeGreaterThanOrEqual(cellX[0]! - 1);
+      expect(box.x + box.w).toBeLessThanOrEqual(cellX[1]! + 1);
+      expect(box.y).toBeGreaterThanOrEqual(cellY[0]! - 1);
+      expect(box.y + box.h).toBeLessThanOrEqual(cellY[1]! + 1);
     }
   }
 }
