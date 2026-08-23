@@ -1,0 +1,26 @@
+artifact "Box"
+
+data pts = [
+  { arm: "placebo", y: 12 } { arm: "placebo", y: 14 } { arm: "placebo", y: 13 }
+  { arm: "placebo", y: 11 } { arm: "placebo", y: 15 } { arm: "placebo", y: 18 }
+  { arm: "drug-A", y: 20 } { arm: "drug-A", y: 22 } { arm: "drug-A", y: 19 }
+  { arm: "drug-A", y: 24 } { arm: "drug-A", y: 21 } { arm: "drug-A", y: 28 }
+  { arm: "drug-B", y: 16 } { arm: "drug-B", y: 17 } { arm: "drug-B", y: 15 }
+  { arm: "drug-B", y: 18 } { arm: "drug-B", y: 14 } { arm: "drug-B", y: 16 }
+]
+
+scene
+  size: 560 340
+  background: #ffffff
+
+widget chart.box
+  data: pts
+  xField: arm
+  yField: y
+  ylim: 8 32
+  xLabel: Arm
+  yLabel: Score
+  title: "Box · compiler quartiles"
+  areaX: 56 500
+  areaY: 40 280
+  interactive: false

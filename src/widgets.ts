@@ -17,7 +17,7 @@ import {
   resetWidgetPlugins,
   setWidgetBuiltinSeed,
 } from "./plugins/registry.js";
-import { scaleKind, type ScaleKind } from "./space.js";
+import { parseTimeValue, scaleKind, type ScaleKind } from "./space.js";
 
 export type { WidgetExpandContext, WidgetPlugin } from "./plugins/types.js";
 export { getWidget, listWidgets, registerWidget, resetWidgetPlugins };
@@ -34,6 +34,7 @@ setWidgetBuiltinSeed(() => {
     "chart.heatmap",
     "chart.vector",
     "chart.funnel",
+    "chart.box",
   ] as const) {
     registerWidget({
       name,
@@ -197,14 +198,20 @@ function expandChart(
   const horizontal = kind === "chart.funnel" || orientIsHorizontal(props);
   const xCatsProp = catsFromExpr(props.xCats ?? props.categories);
   const yCatsProp = catsFromExpr(props.yCats ?? (horizontal ? props.categories : undefined));
+  const xLooksTime =
+    scaleKindFromExpr(props.xScale) === "time" ||
+    fieldLooksTemporal(artifact, dataName, resolvedXField);
+  const yLooksTime =
+    scaleKindFromExpr(props.yScale) === "time" ||
+    fieldLooksTemporal(artifact, dataName, resolvedYField);
   const xLooksBand =
     scaleKindFromExpr(props.xScale) === "band" ||
     xCatsProp.length > 0 ||
-    (!horizontal && fieldLooksCategorical(artifact, dataName, resolvedXField));
+    (!horizontal && !xLooksTime && fieldLooksCategorical(artifact, dataName, resolvedXField));
   const yLooksBand =
     scaleKindFromExpr(props.yScale) === "band" ||
     yCatsProp.length > 0 ||
-    (horizontal && fieldLooksCategorical(artifact, dataName, resolvedYField));
+    (horizontal && !yLooksTime && fieldLooksCategorical(artifact, dataName, resolvedYField));
   const xCats = xLooksBand
     ? xCatsProp.length
       ? xCatsProp
@@ -217,14 +224,30 @@ function expandChart(
     : [];
   if (xCats.length) encodeBandField(artifact, dataName, resolvedXField, "__bandX", xCats);
   if (yCats.length) encodeBandField(artifact, dataName, resolvedYField, "__bandY", yCats);
-  const markXField = xCats.length ? "__bandX" : resolvedXField;
-  const markYField = yCats.length ? "__bandY" : resolvedYField;
+  const timeX = xLooksTime && !xCats.length
+    ? encodeTimeField(artifact, dataName, resolvedXField, "__timeX")
+    : null;
+  const timeY = yLooksTime && !yCats.length
+    ? encodeTimeField(artifact, dataName, resolvedYField, "__timeY")
+    : null;
+  const markXField = xCats.length ? "__bandX" : timeX ? "__timeX" : resolvedXField;
+  const markYField = yCats.length ? "__bandY" : timeY ? "__timeY" : resolvedYField;
   const xScaleExpr =
-    props.xScale ?? (xCats.length ? literal("band") : undefined);
+    asScaleLiteral(props.xScale) ??
+    (xCats.length ? literal("band") : timeX ? literal("time") : undefined);
   const yScaleExpr =
-    props.yScale ?? (yCats.length ? literal("band") : undefined);
-  const autoXlim = xCats.length ? literal([-0.5, xCats.length - 0.5]) : undefined;
-  const autoYlim = yCats.length ? literal([-0.5, yCats.length - 0.5]) : undefined;
+    asScaleLiteral(props.yScale) ??
+    (yCats.length ? literal("band") : timeY ? literal("time") : undefined);
+  const autoXlim = xCats.length
+    ? literal([-0.5, xCats.length - 0.5])
+    : timeX
+      ? literal(padTimeDomain(timeX))
+      : undefined;
+  const autoYlim = yCats.length
+    ? literal([-0.5, yCats.length - 0.5])
+    : timeY
+      ? literal(padTimeDomain(timeY))
+      : undefined;
   const xlimExpr = props.xlim ?? autoXlim;
   const ylimExpr = props.ylim ?? autoYlim;
   const legendAt = legendPlacement(props, seriesField);
@@ -358,7 +381,14 @@ function expandChart(
   const marks: SceneItem[] = [];
   const explicitFill = props.color ?? props.fill;
   const explicitStroke = props.stroke;
-  const interactOpacity = markInteractOpacity(seriesField, markXField, markYField, span);
+  const interactOpacity = markInteractOpacity(
+    seriesField,
+    markXField,
+    markYField,
+    frameName,
+    resolvedXField,
+    span,
+  );
   if (kind === "chart.scatter") {
     marks.push({
       kind: "for",
@@ -512,6 +542,18 @@ function expandChart(
         }),
       ],
     });
+  } else if (kind === "chart.box") {
+    marks.push(
+      ...expandBoxMarks(
+        artifact,
+        dataName,
+        frameName,
+        markXField,
+        resolvedYField,
+        seriesField,
+        span,
+      ),
+    );
   }
 
   const markLayer: LayerDecl = {
@@ -891,6 +933,21 @@ function expandLayoutBoard(
     }
   }
 
+  const beats = Math.max(0, Math.floor(numProp(props, "beats", 0) || numProp(props, "shots", 0)));
+  if (beats >= 2) {
+    const gutter = numProp(props, "beatGutter", 16);
+    const bodyW = safeX1 - safeX0;
+    const cellW = (bodyW - gutter * (beats - 1)) / beats;
+    for (let i = 0; i < beats; i++) {
+      const x0 = safeX0 + i * (cellW + gutter);
+      slots.push({
+        name: nameOf(`beat${i}`),
+        x: [x0, x0 + cellW],
+        y: [titleY1, lowerY0],
+      });
+    }
+  }
+
   for (const slot of slots) {
     const existing = artifact.frames.find((f) => f.name === slot.name);
     const frameProps = {
@@ -904,35 +961,53 @@ function expandLayoutBoard(
   }
 
   if (boolProp(props, "guides", true)) {
+    const guideItems: SceneItem[] = [
+      node(`${id}_safe`, {
+        role: literal("chrome"),
+        x: literal(safeX0),
+        y: literal(safeY0),
+        w: literal(safeX1 - safeX0),
+        h: literal(safeY1 - safeY0),
+        stroke: literal("#94a3b8"),
+        dash: literal("6 6"),
+      }),
+      node(`${id}_title`, {
+        role: literal("label"),
+        x: literal(safeX0 + 8),
+        y: literal(safeY0 + 22),
+        text: literal("title"),
+        font: literal(11),
+      }),
+      node(`${id}_lower`, {
+        role: literal("label"),
+        x: literal(safeX0 + 8),
+        y: literal(lowerY0 + 22),
+        text: literal("lower"),
+        font: literal(11),
+      }),
+    ];
+    if (beats >= 2) {
+      const gutter = numProp(props, "beatGutter", 16);
+      const bodyW = safeX1 - safeX0;
+      const cellW = (bodyW - gutter * (beats - 1)) / beats;
+      for (let i = 0; i < beats; i++) {
+        const x0 = safeX0 + i * (cellW + gutter);
+        guideItems.push(
+          node(`${id}_beat_${i}`, {
+            role: literal("label"),
+            x: literal(x0 + 8),
+            y: literal(titleY1 + 18),
+            text: literal(String(i + 1)),
+            font: literal(11),
+          }),
+        );
+      }
+    }
     artifact.scene?.layers.push({
       name: `__${id}_guides`,
       span,
       props: {},
-      items: [
-        node(`${id}_safe`, {
-          role: literal("chrome"),
-          x: literal(safeX0),
-          y: literal(safeY0),
-          w: literal(safeX1 - safeX0),
-          h: literal(safeY1 - safeY0),
-          stroke: literal("#94a3b8"),
-          dash: literal("6 6"),
-        }),
-        node(`${id}_title`, {
-          role: literal("label"),
-          x: literal(safeX0 + 8),
-          y: literal(safeY0 + 22),
-          text: literal("title"),
-          font: literal(11),
-        }),
-        node(`${id}_lower`, {
-          role: literal("label"),
-          x: literal(safeX0 + 8),
-          y: literal(lowerY0 + 22),
-          text: literal("lower"),
-          font: literal(11),
-        }),
-      ],
+      items: guideItems,
     });
   }
 }
@@ -994,6 +1069,13 @@ function catsFromExpr(expr: Expr | undefined): string[] {
     return expr.value.split(/[,|]/).map((part) => part.trim()).filter(Boolean);
   }
   return [];
+}
+
+function asScaleLiteral(expr: Expr | undefined): Expr | undefined {
+  if (!expr) return undefined;
+  if (expr.kind === "string") return expr;
+  if (expr.kind === "ident") return literal(expr.path.join("."));
+  return expr;
 }
 
 function scaleKindFromExpr(expr: Expr | undefined): ScaleKind | null {
@@ -1058,6 +1140,102 @@ function encodeBandField(
   }
 }
 
+function fieldLooksTemporal(artifact: Artifact, dataName: string, field: string): boolean {
+  const decl = artifact.data.find((d) => d.name === dataName);
+  if (!decl || decl.value.kind !== "array") return false;
+  let dates = 0;
+  let rows = 0;
+  for (const row of decl.value.items) {
+    if (row.kind !== "object") continue;
+    const value = objectField(row, field);
+    if (!value) continue;
+    rows += 1;
+    if (value.kind === "string" && parseTimeValue(value.value) !== null) dates += 1;
+  }
+  return rows > 0 && dates === rows;
+}
+
+function encodeTimeField(
+  artifact: Artifact,
+  dataName: string,
+  field: string,
+  dest: string,
+): [number, number] | null {
+  const decl = artifact.data.find((d) => d.name === dataName);
+  if (!decl || decl.value.kind !== "array") return null;
+  const nums: number[] = [];
+  for (const row of decl.value.items) {
+    if (row.kind !== "object") continue;
+    const value = objectField(row, field);
+    const parsed =
+      value?.kind === "number"
+        ? value.value
+        : value?.kind === "string"
+          ? parseTimeValue(value.value)
+          : null;
+    if (parsed === null) continue;
+    setObjectField(row, dest, literal(parsed));
+    nums.push(parsed);
+  }
+  if (!nums.length) return null;
+  return [Math.min(...nums), Math.max(...nums)];
+}
+
+function padTimeDomain(range: [number, number]): [number, number] {
+  const span = range[1] - range[0];
+  const pad = span === 0 ? (range[0] > 3000 ? 86_400_000 : 1) : span * 0.06;
+  return [range[0] - pad, range[1] + pad];
+}
+
+function timeTicks(min: number, max: number): { value: number; label: string }[] {
+  if (!Number.isFinite(min) || !Number.isFinite(max)) return [];
+  if (max <= 4000 && min >= 1000) {
+    return niceTicks(min, max).map((v) => ({ value: v, label: String(Math.round(v)) }));
+  }
+  const span = Math.max(1, max - min);
+  const day = 86_400_000;
+  const ticks: { value: number; label: string }[] = [];
+  if (span > day * 800) {
+    const y0 = new Date(min).getUTCFullYear();
+    const y1 = new Date(max).getUTCFullYear();
+    for (let y = y0; y <= y1; y++) {
+      const v = Date.UTC(y, 0, 1);
+      if (v >= min - day && v <= max + day) ticks.push({ value: v, label: String(y) });
+      if (ticks.length > 10) break;
+    }
+    return ticks;
+  }
+  if (span > day * 45) {
+    const start = new Date(min);
+    let y = start.getUTCFullYear();
+    let m = start.getUTCMonth();
+    for (let i = 0; i < 14; i++) {
+      const v = Date.UTC(y, m, 1);
+      if (v >= min - day && v <= max + day) {
+        ticks.push({ value: v, label: `${y}-${String(m + 1).padStart(2, "0")}` });
+      }
+      m += 1;
+      if (m > 11) {
+        m = 0;
+        y += 1;
+      }
+    }
+    return ticks;
+  }
+  const d0 = Math.floor(min / day);
+  const d1 = Math.ceil(max / day);
+  const step = Math.max(1, Math.ceil((d1 - d0) / 6));
+  for (let d = d0; d <= d1; d += step) {
+    const v = d * day;
+    const dt = new Date(v);
+    ticks.push({
+      value: v,
+      label: `${dt.getUTCMonth() + 1}/${dt.getUTCDate()}`,
+    });
+  }
+  return ticks;
+}
+
 function logTicks(min: number, max: number): number[] {
   const lo = Math.max(min, 1e-12);
   const hi = Math.max(max, lo);
@@ -1087,6 +1265,7 @@ function axisTicks(
   if (kind === "log") {
     return logTicks(lim[0], lim[1]).map((v) => ({ value: v, label: formatTickValue(v) }));
   }
+  if (kind === "time") return timeTicks(lim[0], lim[1]);
   return niceTicks(lim[0], lim[1]).map((v) => ({ value: v, label: formatTickValue(v) }));
 }
 
@@ -1766,6 +1945,111 @@ function expandColorbar(
   return items;
 }
 
+function quantile(sorted: number[], p: number): number {
+  if (!sorted.length) return 0;
+  const i = (sorted.length - 1) * p;
+  const lo = Math.floor(i);
+  const hi = Math.ceil(i);
+  return sorted[lo]! + ((sorted[hi] ?? sorted[lo]!) - sorted[lo]!) * (i - lo);
+}
+
+function expandBoxMarks(
+  artifact: Artifact,
+  dataName: string,
+  frameName: string,
+  xField: string,
+  yField: string,
+  seriesField: string | null,
+  span: { line: number; column: number },
+): SceneItem[] {
+  const decl = artifact.data.find((d) => d.name === dataName);
+  if (!decl || decl.value.kind !== "array") return [];
+  const groups = new Map<string, number[]>();
+  for (const row of decl.value.items) {
+    if (row.kind !== "object") continue;
+    const xf = objectField(row, xField);
+    const yv = objectField(row, yField);
+    if (yv?.kind !== "number") continue;
+    const key =
+      xf?.kind === "number" ? String(xf.value) : xf?.kind === "string" ? xf.value : "0";
+    const list = groups.get(key) ?? [];
+    list.push(yv.value);
+    groups.set(key, list);
+  }
+  const items: SceneItem[] = [];
+  let i = 0;
+  for (const [key, values] of groups) {
+    const sorted = [...values].sort((a, b) => a - b);
+    const q1 = quantile(sorted, 0.25);
+    const med = quantile(sorted, 0.5);
+    const q3 = quantile(sorted, 0.75);
+    const iqr = q3 - q1;
+    const loFence = q1 - 1.5 * iqr;
+    const hiFence = q3 + 1.5 * iqr;
+    const inside = sorted.filter((v) => v >= loFence && v <= hiFence);
+    const whiskLo = inside[0] ?? q1;
+    const whiskHi = inside[inside.length - 1] ?? q3;
+    const xNum = Number(key);
+    const x = Number.isFinite(xNum) ? xNum : i;
+    const fill = seriesField
+      ? {
+          kind: "call" as const,
+          callee: "palette",
+          args: [
+            { kind: "string" as const, value: key, span },
+            { kind: "string" as const, value: "categorical", span },
+          ],
+          span,
+        }
+      : undefined;
+    items.push(
+      node(`boxWhisker_${i}`, {
+        role: literal("mark-line"),
+        frame: literal(frameName),
+        x1: literal(x),
+        y1: literal(whiskLo),
+        x2: literal(x),
+        y2: literal(whiskHi),
+        strokeWidth: literal(1.2),
+      }),
+      node(`box`, {
+        role: literal("mark"),
+        frame: literal(frameName),
+        x: literal(x),
+        y: literal(q3),
+        q1: literal(q1),
+        w: literal(0.45),
+        __chartBox: literal(true),
+        ...(fill ? { fill } : {}),
+        hoverFill: literal("#E69F00"),
+      }),
+      node(`boxMed_${i}`, {
+        role: literal("mark-line"),
+        frame: literal(frameName),
+        x1: literal(x - 0.22),
+        y1: literal(med),
+        x2: literal(x + 0.22),
+        y2: literal(med),
+        strokeWidth: literal(1.6),
+      }),
+    );
+    for (const v of sorted) {
+      if (v >= loFence && v <= hiFence) continue;
+      items.push(
+        node(`boxOut_${i}_${v}`, {
+          role: literal("mark"),
+          frame: literal(frameName),
+          x: literal(x),
+          y: literal(v),
+          r: literal(2.4),
+        }),
+      );
+    }
+    i += 1;
+  }
+  return items;
+}
+
 function noneExpr(span: { line: number; column: number }): Expr {
   return { kind: "none", span };
 }
@@ -1781,13 +2065,15 @@ function highlightOpacity(
   seriesField: string | null,
   span: { line: number; column: number },
 ): Record<string, Expr> {
-  return markInteractOpacity(seriesField, null, null, span);
+  return markInteractOpacity(seriesField, null, null, "", null, span);
 }
 
 function markInteractOpacity(
   seriesField: string | null,
   xField: string | null,
   yField: string | null,
+  frameName: string,
+  linkXField: string | null,
   span: { line: number; column: number },
 ): Record<string, Expr> {
   const parts: Expr[] = [];
@@ -1818,9 +2104,19 @@ function markInteractOpacity(
       binary(">", ident(`row.${yField}`), hiY, span),
       span,
     );
+    const local = binary("==", ident("__brush.frame"), literal(frameName), span);
     parts.push(
-      binary("and", ident("__brush.on"), binary("or", outX, outY, span), span),
+      binary("and", ident("__brush.on"), binary("and", local, binary("or", outX, outY, span), span), span),
     );
+    if (linkXField) {
+      const linked = binary(
+        "and",
+        binary("!=", ident("__brush.frame"), literal(frameName), span),
+        binary("==", ident("__brush.xField"), literal(linkXField), span),
+        span,
+      );
+      parts.push(binary("and", ident("__brush.on"), binary("and", linked, outX, span), span));
+    }
   }
   if (!parts.length) return {};
   const dim = parts.reduce((acc, part) => binary("or", acc, part, span));
@@ -1881,6 +2177,8 @@ function ensureChartInteract(
           { key: "dx1", value: literal(0) },
           { key: "dy1", value: literal(0) },
           { key: "on", value: literal(0) },
+          { key: "frame", value: literal("") },
+          { key: "xField", value: literal("") },
         ],
         span,
       ),
@@ -1930,6 +2228,8 @@ function ensureChartInteract(
   const target =
     kind === "chart.bar" || kind === "chart.funnel"
       ? "bar"
+      : kind === "chart.box"
+        ? "box"
       : kind === "chart.heatmap"
         ? "heatCell"
         : kind === "chart.line"
@@ -1987,6 +2287,8 @@ function ensureChartInteract(
         assign(["__brush", "dx1"], invertX),
         assign(["__brush", "dy1"], invertY),
         assign(["__brush", "on"], literal(1)),
+        assign(["__brush", "frame"], literal(frameName)),
+        assign(["__brush", "xField"], literal(xField)),
       ],
       span,
     });
@@ -1999,6 +2301,8 @@ function ensureChartInteract(
         assign(["__brush", "dx1"], invertSceneXExpr(ident("__event.x"), geom, span)),
         assign(["__brush", "dy1"], invertSceneYExpr(ident("__event.y"), geom, span)),
         assign(["__brush", "on"], literal(1)),
+        assign(["__brush", "frame"], literal(frameName)),
+        assign(["__brush", "xField"], literal(xField)),
       ],
       span,
     });

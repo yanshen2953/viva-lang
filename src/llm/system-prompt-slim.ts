@@ -8,10 +8,10 @@ Punctuation (critical):
 - Correct: \`state n = 0\` / \`data rows = [{ x: 1, y: 2 }]\` / \`frame plot\` then indented props.
 - Wrong: \`state:\` / \`data:\` / \`scene:\` / \`artifact {\` / nested YAML.
 - Top-level only: artifact, state, data, frame NAME, scene, widget chart.*, widget layout.figure, timeline, event, rule, bind, tick.
-- Charts: prefer xLabel/yLabel/xUnit/yUnit and errorField. chart.heatmap uses valueField + zlim. chart.vector uses uField/vField. chart.funnel (or chart.bar orient: h) is horizontal. Hover writes __tip unless interactive: false.
+- Charts: prefer xLabel/yLabel/xUnit/yUnit and errorField. chart.heatmap uses valueField + zlim. chart.vector uses uField/vField. chart.funnel (or chart.bar orient: h) is horizontal. chart.box computes quartiles. Hover writes __tip unless interactive: false.
 - Multi-panel: widget layout.figure (cols/rows) then widget chart.* with panel: a (not areaX magic numbers).
-- Video/image board: widget layout.board (safe/title/body/lower; splits: 2 → left/right). Scene unit: mm and column: single (89) or double (183). Frame xScale/yScale: log|band. String columns auto-band. Legend defaults outside (legend: right|bottom|inside|false).
-- Charts emit __hover / __brush (dx* data-domain) / __highlightGrp by default. interactive: false disables them.
+- Video/image board: widget layout.board (safe/title/body/lower; splits: 2 → left/right; beats: 4 → beat0..). Scene unit: mm and column: single (89) or double (183). Frame xScale/yScale: log|band|time. ISO dates auto-time. String columns auto-band. Legend defaults outside (legend: right|bottom|inside|false).
+- Charts emit __hover / __brush (dx* data-domain, frame + xField for linked panels) / __highlightGrp by default. interactive: false disables them.
 - Never nest \`frame NAME\` or \`widget …\` under scene/layer. Never write \`widget: chart.x\`.
 - Nodes may use property \`frame: NAME\`. Events: \`event click on target\` then indented assigns.
 - timeline body: \`from:\` \`to:\` \`bind:\` (not range/value).
