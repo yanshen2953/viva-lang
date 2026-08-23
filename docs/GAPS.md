@@ -22,7 +22,7 @@
 ## 粗糙的根因（不是缺再一个 HTTP 路由）
 
 1. **图核语义仍缺出版层** — 有轴标题/单位/band/log/time/box/violin/括号；`print-nature` 已接管字号/字距。编译器按字号估盒子，并对标题/刻度/图例/色条/`(a)` 做一轮重叠消解；图/轴标题按栏宽折行，重叠刻度抽稀，相邻格 chrome 再长一档 inset。仍不是通用排版求解。
-2. **默认交互还不是完整 linked view** — `__sel.keys` 已跨面板藏行（含 box / violin / 折线）；Runtime 用 opacity + highlight `scale` 缓 220ms，不是时间轴动画。本地 brush 默认矩形窗，路径够长时切套索。
+2. **默认交互还不是完整 linked view** — `__sel.keys` 已跨面板藏行（含 box / violin / 折线）；Runtime 用 CSS opacity + highlight `scale` 缓 220ms（含 play 拍遮罩），不是时间轴动画。本地 brush 默认矩形窗，路径够长时切套索。
 3. **导出 ≠ 预览** — SVG 已接近 Runtime；PNG/JPG 现在填场景底色（投稿白底不再透成黑卡）；PDF 随包 CJK 子集，缺字仍可能 `?`。
 4. **Agent 闭环没产品化** — session compile 附带 visual diagnostics，但不挡成功；生成成功率未测。
 5. **手册仍不执行图语法** — 会覆盖 widget 字号；深色场景上会把标题/刻度字色翻亮。仍不做避让或栏宽文法。
@@ -52,7 +52,7 @@
 1. PDF 随包 `assets/fonts/VivaSansFallback.ttf`（Droid 子集，examples + 论文用字）；缺字仍可能 `?`
 2. 有 time / box / violin（KDE 轮廓）/ 显著性括号；轴刻度在场景坐标。`print-nature` 刻度 8 / 轴标题 9。观感仍粗，不是投稿成品
 3. Atlas / figure-grid 已去掉 `inset*`、手摆 panel 卡、页面 title 和基因按钮；`layout.board` 出题注 + `controls`/`bind` HUD 芯片，不写 `safe`/`titleH`/`lowerH` 时按题注折行和芯片估条带。`layout.figure` 吃 `body`。chrome 有盒子碰撞消解；图/轴标题和图例键按栏宽折行，重叠刻度抽稀，相邻格互叠时再长 inset。仍不是跨页排版器
-4. `__sel` 默认跨面板藏行；本地 brush 松手后保持选择窗，路径够长切套索。高亮点会放大并和藏行一起缓 220ms。仍无时间轴动画
+4. `__sel` 默认跨面板藏行；本地 brush 松手后保持选择窗，路径够长切套索。高亮点会放大并和藏行一起缓 220ms；`play` 拍遮罩走同一条 CSS opacity。仍无时间轴动画
 5. session visual diagnostics 不挡编译成功
 6. MCP/HTTP/CLI prompt 默认 slim；生成成功率未测
 7. 小栏宽 mm 图默认不再画常驻 `__tip` HUD；不写 `areaX` 时编译器按场景估绘图区。仍不是投稿成品碰撞求解
@@ -63,7 +63,7 @@
 1. 更完整的排版求解（跨页、栏宽文法）；图/轴标题、图例键和色条标签会按栏宽折行，重叠刻度会抽稀，相邻格 chrome 会再让一档
 2. linked selection 已藏热图、折线、box/violin；高亮有 scale 缓动，仍缺时间轴动画
 3. 再扩 CJK 或允许宿主挂全库；`scripts/subset-cjk-font.py` 可从 Droid 重建
-4. `layout.board play` 遮罩现在画在图表之上（layout 先展开、chart 后展开）；`export --beats` / MCP `beats` 默认 PNG 序列，`gif|mp4` 只是 ffmpeg 幻灯，不是成片时间轴
+4. `layout.board play` 遮罩画在图表之上，Runtime 用 220ms CSS opacity 淡入淡出（不是时间轴）；`export --beats` / MCP `beats` 默认 PNG 序列，`gif|mp4` 只是 ffmpeg 幻灯，不是成片时间轴
 5. agent-exam 种子编译进 CI；生成成功率仍未测（要 LLM）
 
 对照真源：`docs/VISION.md`。
