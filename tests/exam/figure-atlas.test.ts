@@ -144,6 +144,9 @@ describe("figure-atlas example", () => {
     expect(zTicks).not.toContain("5");
     expect(zTicks).not.toContain("6");
     expect(dAxes.items.some((i) => i.kind === "node" && i.name.includes("_cbarMark_"))).toBe(true);
+    expect(dAxes.items.some((i) => i.kind === "node" && i.name.includes("_grid_"))).toBe(false);
+    const aGrid = aAxes.items.some((i) => i.kind === "node" && i.name.includes("_grid_"));
+    expect(aGrid).toBe(true);
     const heatCells = result.ir!.scene.layers
       .find((l) => l.name === "__d_marks")!
       .items.filter((i) => i.kind === "node" && i.name === "heatCell");

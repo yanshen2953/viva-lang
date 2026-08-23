@@ -635,7 +635,7 @@ function expandChart(
       ...(props.plotStrokeWidth ? { strokeWidth: props.plotStrokeWidth } : {}),
       ...(props.plotOpacity ? { opacity: props.plotOpacity } : {}),
     }),
-    ...expandGridLines(frameName, geom, span),
+    ...(kind === "chart.heatmap" ? [] : expandGridLines(frameName, geom, span)),
     ...expandAxisTicks(frameName, geom, span, artifact, chrome),
     ...expandAxisTitles(frameName, geom, span, artifact, chrome),
     node(`${frameName}_xAxis`, {

@@ -159,6 +159,7 @@ describe("chart quality: axis titles, error bars, hover, heatmap", () => {
     expect(zTicks).toContain("0");
     expect(zTicks).toContain("1");
     expect(names.some((n) => n.includes("_cbarMark_"))).toBe(true);
+    expect(names.some((n) => n.includes("_grid_"))).toBe(false);
     const svg = renderSvgFromIr(result.ir!);
     expect(svg).toContain("<linearGradient");
     expect(svg).toContain('stop-color="#');
