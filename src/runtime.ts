@@ -37,6 +37,9 @@ import {
   type GeomTween,
   type PathTween,
 } from "./runtime/mark-ease.js";
+import { nodeIgnoresPointer } from "./runtime/pointer.js";
+
+export { nodeIgnoresPointer };
 
 export type RuntimeOptions = {
   mount: HTMLElement;
@@ -468,7 +471,7 @@ export class Runtime {
         : num(p.scale, 1);
     const paint = markPaintState(visible, opacity, scale);
     applyMarkPaintCss(el, paint);
-    if (hudIgnoresPointer(node.name, p.role)) el.style.pointerEvents = "none";
+    if (nodeIgnoresPointer(node.name, p.role)) el.style.pointerEvents = "none";
     const prevHide = this.hideTimers.get(node.id);
     if (prevHide) window.clearTimeout(prevHide);
     if (paint.hideAfterMs !== null) {
@@ -1045,15 +1048,4 @@ function propsToBBox(p: Record<string, unknown>): { x: number; y: number; w: num
   return nodePropsToBBox(p);
 }
 
-/** HUD / brush overlays must not steal hover from marks (follow-cursor tip). */
-function hudIgnoresPointer(name: string, role: unknown): boolean {
-  const r = role === undefined || role === null ? "" : String(role);
-  return (
-    r === "hud" ||
-    name === "chartTip" ||
-    name === "brushRect" ||
-    name === "brushPath" ||
-    name.startsWith("__page_folio")
-  );
-}
 

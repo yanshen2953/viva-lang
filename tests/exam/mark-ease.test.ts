@@ -13,6 +13,7 @@ import {
   sampleGeomEase,
   samplePathEase,
 } from "../../src/runtime/mark-ease.js";
+import { nodeIgnoresPointer } from "../../src/runtime/pointer.js";
 import { gaussianKDE, violinPathD } from "../../src/layout/violin-density.js";
 import { exportArtifact } from "../../src/export/index.js";
 
@@ -88,6 +89,13 @@ describe("runtime mark ease and paper raster background", () => {
     expect(style.transition).toMatch(/opacity/);
     applyMarkPaintCss(el, hidden);
     expect(style.opacity).toBe("0");
+  });
+
+  it("lets dimmed play veils pass pointer through to the shot underneath", () => {
+    expect(nodeIgnoresPointer("board_veil_2", "hud")).toBe(true);
+    expect(nodeIgnoresPointer("board_veil_2", "chrome")).toBe(true);
+    expect(nodeIgnoresPointer("chartTip", "label")).toBe(true);
+    expect(nodeIgnoresPointer("mark", "mark")).toBe(false);
   });
 
   it("compiles a group highlight scale onto scatter marks", () => {

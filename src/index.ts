@@ -12,7 +12,7 @@ export {
 export type { WidgetPlugin, WidgetExpandContext } from "./widgets.js";
 export { compileSource } from "./pipeline.js";
 export type { CompileOptions as PipelineCompileOptions, PipelineCheckOptions } from "./pipeline.js";
-export { Runtime } from "./runtime.js";
+export { Runtime, nodeIgnoresPointer } from "./runtime.js";
 export { evaluate, execute } from "./eval.js";
 export { simulate, createSimWorld } from "./simulate.js";
 export { SYSTEM_PROMPT } from "./llm/system-prompt.js";

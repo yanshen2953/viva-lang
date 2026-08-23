@@ -15,6 +15,7 @@ import { handleMcpTool } from "../../src/mcp/tools.js";
 import { SYSTEM_PROMPT_SLIM } from "../../src/llm/system-prompt-slim.js";
 import { simulate } from "../../src/simulate.js";
 import { applySelSummary } from "../../src/layout/summary-stats.js";
+import { nodeIgnoresPointer } from "../../src/runtime/pointer.js";
 
 describe("vision pillars: board, mm, log, hover object, CJK pdf", () => {
   it("layout.board creates safe/title/body/lower frames", () => {
@@ -168,6 +169,7 @@ widget chart.scatter
       "paper-spread.viva",
       "paper-linked-pages.viva",
       "paper-board-linked.viva",
+      "paper-storyboard.viva",
     ]) {
       expect(readFileSync(`examples/${file}`, "utf8")).not.toMatch(/interactive:\s*false/);
     }
@@ -610,10 +612,68 @@ widget chart.scatter
     if (veil0?.kind === "node") {
       expect(evaluate(veil0.props.visible!, [{ __beat: 0 }])).toBe(false);
       expect(evaluate(veil0.props.visible!, [{ __beat: 1 }])).toBe(true);
+      expect(evaluate(veil0.props.role!, [{}])).toBe("hud");
+      expect(nodeIgnoresPointer(veil0.name, evaluate(veil0.props.role!, [{}]))).toBe(true);
     }
+    expect(play.items.every((i) => i.kind === "node" && nodeIgnoresPointer(i.name, "hud"))).toBe(
+      true,
+    );
     expect(src).not.toMatch(/interactive:\s*false/);
     expect(result.ir!.events.some((e) => e.type === "hover")).toBe(true);
     expect(result.ir!.events.some((e) => e.type === "drag")).toBe(true);
+  });
+
+  it("keeps a mm storyboard live under play veils with the same __sel stack", () => {
+    const src = readFileSync("examples/paper-storyboard.viva", "utf8");
+    expect(src).not.toMatch(/interactive:\s*false|areaX|areaY|safe:|titleH:|lowerH:/);
+    const result = compileSource(src, "paper-storyboard.viva", { handbookIds: ["print-nature"] });
+    expect(result.error).toBeNull();
+    expect(result.ir!.frames.map((f) => f.name)).toEqual(
+      expect.arrayContaining(["safe", "title", "body", "lower", "beat0", "beat1", "beat2", "beat3"]),
+    );
+    expect(Object.keys(result.ir!.state)).toEqual(
+      expect.arrayContaining(["__beat", "__tip", "__tipX", "__tipY", "__hover", "__brush"]),
+    );
+    expect(result.ir!.events.some((e) => e.type === "hover" && e.target === "mark")).toBe(true);
+    expect(result.ir!.events.some((e) => e.type === "hover" && e.target === "box")).toBe(true);
+    expect(result.ir!.events.some((e) => e.type === "drag")).toBe(true);
+    const play = result.ir!.scene.layers.find((l) => l.name === "__board_play")!;
+    expect(play.items.length).toBe(4);
+    for (const item of play.items) {
+      expect(item.kind).toBe("node");
+      if (item.kind !== "node") continue;
+      expect(evaluate(item.props.role!, [{}])).toBe("hud");
+      expect(nodeIgnoresPointer(item.name, "hud")).toBe(true);
+      expect(nodeIgnoresPointer(item.name, "chrome")).toBe(true);
+    }
+    const scopes = [result.ir!.state, result.ir!.data];
+    const width = evaluate(result.ir!.scene.props.width!, scopes) as number;
+    expect(width).toBeCloseTo(COLUMN_MM.double);
+    const height = evaluate(result.ir!.scene.props.height!, scopes) as number;
+    expect(height).toBeCloseTo(103);
+    const visit = applySelSummary(
+      {
+        __boxData: "rows",
+        __boxKey: "placebo",
+        __boxXField: "arm",
+        __boxYField: "score",
+        __boxCats: ["placebo", "drug-A", "drug-B"],
+        __boxPart: "body",
+        __chartBox: true,
+        frame: "beat2",
+        q1: 11,
+        y: 14,
+      },
+      {
+        data: result.ir!.data as Record<string, unknown>,
+        state: { __sel: { n: 1, keys: [1] }, __brush: { frame: "beat0" } },
+      },
+    );
+    expect(visit.visible).toBe(true);
+    expect(visit.q1).toBe(12);
+    expect(visit.y).toBe(12);
+    const svg = renderSvgFromIr(result.ir!);
+    expect(svg).not.toMatch(/placebo, 12/);
   });
 
   it("hides box and violin summaries that are outside __sel keys", () => {

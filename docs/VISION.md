@@ -67,7 +67,7 @@
 ### 3.1 游戏式交互
 
 有：节点可拖、碰撞、键盘、tick、图层；图表默认数据域 tooltip、brush 反演（按 frame 隔离，同名 xField 联动）、跨面板 group 高亮、点图例高亮。挂了 `frame:` 的 World 点（`role: mark` / `colorBy`）默认同一套 `__tip` / `__hover` / `__highlightGrp` / `__sel`；`x`/`y` 是数据字段且平面上没有作者拖轨道时再绑 brush；作者没画图例时编译器按 `colorBy` 补可点图例。`role: plot` 复用 `title` / `controls` / `bind`，编译器画题注带和芯片；数值 `bind` 的 `+`/`-` 增减而不是写成字符串。有效刷选松手后保持选择窗；拖路径明显长于对角时用套索，否则矩形。  
-没有：完整游戏级过渡曲线。内联卡有只读结构检查条，仍无 visual/raster、也没有自动修复。`__sel.keys` 默认让其它面板 **藏行**（含 box / violin / 折线；box 四分位、violin KDE 和折线线段按选中行重算/重连；`link: dim` 可改回变淡）。Runtime 用 CSS `opacity` + 命中组 `scale` 做 220ms 缓动（含 `layout.board play` 拍遮罩）；当前拍遮罩隐藏并让出指针，storyboard 图默认 tooltip/brush。box / 折线摘要几何和同骨架 violin 路径 `d` 也按同一时段插值；命令骨架不同则硬切。静态导出仍硬切。不是时间轴。
+没有：完整游戏级过渡曲线。内联卡有只读结构检查条，仍无 visual/raster、也没有自动修复。`__sel.keys` 默认让其它面板 **藏行**（含 box / violin / 折线；box 四分位、violin KDE 和折线线段按选中行重算/重连；`link: dim` 可改回变淡）。Runtime 用 CSS `opacity` + 命中组 `scale` 做 220ms 缓动（含 `layout.board play` 拍遮罩）；全部拍遮罩 `pointer-events: none`，暗着的拍也能 tooltip/brush。`paper-storyboard` 把 183×103 mm 分镜和同一套 `__sel` 放在一件里。box / 折线摘要几何和同骨架 violin 路径 `d` 也按同一时段插值；命令骨架不同则硬切。静态导出仍硬切。不是时间轴。
 
 ### 3.2 论文级图表
 
