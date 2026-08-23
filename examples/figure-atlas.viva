@@ -293,10 +293,6 @@ widget layout.figure
   rows: 1
   gutter: 24
   margin: 0
-  insetL: 24
-  insetR: 72
-  insetT: 36
-  insetB: 28
   labels: false
 
 widget layout.figure
@@ -309,10 +305,6 @@ widget layout.figure
   rows: 1
   gutter: 24
   margin: 0
-  insetL: 16
-  insetR: 80
-  insetT: 36
-  insetB: 16
   panels: [d, e, f]
   labels: false
 

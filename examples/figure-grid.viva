@@ -44,10 +44,6 @@ widget layout.figure
   rows: 2
   gutter: 32
   margin: 8
-  insetL: 52
-  insetR: 56
-  insetT: 30
-  insetB: 42
 
 widget chart.scatter
   panel: a

@@ -163,5 +163,12 @@ widget layout.figure
     expect(result.ir!.scene.layers.some((l) => l.name === "__b_marks")).toBe(true);
     expect(result.ir!.scene.layers.some((l) => l.name === "__c_marks")).toBe(true);
     expect(result.ir!.scene.layers.some((l) => l.name === "__d_marks")).toBe(true);
+    expect(src).not.toMatch(/insetL|insetR|insetT|insetB|areaX|areaY/);
+    const a = result.ir!.frames.find((f) => f.name === "a")!;
+    const cell = evaluate(a.props.cellX!, [result.ir!.state, result.ir!.data]) as number[];
+    const plot = evaluate(a.props.x, [result.ir!.state, result.ir!.data]) as number[];
+    expect(plot[0]).toBeGreaterThan(cell[0]!);
+    expect(plot[1]).toBeLessThan(cell[1]!);
+    expect(plot[0]! - cell[0]!).toBeGreaterThan(12);
   });
 });

@@ -860,10 +860,10 @@ function expandLayoutFigure(
   const rows = Math.max(1, Math.floor(numProp(props, "rows", 2)));
   const gutter = numProp(props, "gutter", 28);
   const margin = numProp(props, "margin", 16);
-  const insetL = numProp(props, "insetL", numProp(props, "plotPadL", 76));
-  const insetR = numProp(props, "insetR", numProp(props, "plotPadR", 32));
-  const insetT = numProp(props, "insetT", numProp(props, "plotPadT", 32));
-  const insetB = numProp(props, "insetB", numProp(props, "plotPadB", 52));
+  const explicitL = props.insetL !== undefined || props.plotPadL !== undefined;
+  const explicitR = props.insetR !== undefined || props.plotPadR !== undefined;
+  const explicitT = props.insetT !== undefined || props.plotPadT !== undefined;
+  const explicitB = props.insetB !== undefined || props.plotPadB !== undefined;
   const count = cols * rows;
   const names = panelNamesFromProps(props, count, index);
   const innerW = width - margin * 2;
@@ -879,6 +879,11 @@ function expandLayoutFigure(
     const row = Math.floor(i / cols);
     const cellX0 = originX + margin + col * (cellW + gutter);
     const cellY0 = originY + margin + row * (cellH + gutter);
+    const estimated = estimatePanelInsets(artifact, name, cellX0, cellY0, cellW, cellH);
+    const insetL = explicitL ? numProp(props, "insetL", numProp(props, "plotPadL", estimated.l)) : estimated.l;
+    const insetR = explicitR ? numProp(props, "insetR", numProp(props, "plotPadR", estimated.r)) : estimated.r;
+    const insetT = explicitT ? numProp(props, "insetT", numProp(props, "plotPadT", estimated.t)) : estimated.t;
+    const insetB = explicitB ? numProp(props, "insetB", numProp(props, "plotPadB", estimated.b)) : estimated.b;
     const plotX0 = cellX0 + insetL;
     const plotY0 = cellY0 + insetT;
     const plotX1 = cellX0 + cellW - insetR;
@@ -887,6 +892,8 @@ function expandLayoutFigure(
     const frameProps = {
       x: literal([plotX0, plotX1]),
       y: literal([plotY0, plotY1]),
+      cellX: literal([cellX0, cellX0 + cellW]),
+      cellY: literal([cellY0, cellY0 + cellH]),
       xlim: existing?.props.xlim ?? literal([0, 10]),
       ylim: existing?.props.ylim ?? literal([0, 100]),
     };
@@ -1800,6 +1807,97 @@ function paperChromeOf(
   void extras.title;
   void extras.legendKeys;
   return { yTickX, xTickY, yTitleX, xTitleY, titleY, legendX, legendY, cbarX, compact };
+}
+
+function estimatePanelInsets(
+  artifact: Artifact,
+  panelName: string,
+  cellX0: number,
+  cellY0: number,
+  cellW: number,
+  cellH: number,
+): { l: number; r: number; t: number; b: number } {
+  const fallback = { l: 76, r: 32, t: 32, b: 52 };
+  const chart = artifact.widgets.find((w) => {
+    if (!w.name.startsWith("chart.")) return false;
+    return stringProp(w.props, ["panel", "frame"]) === panelName;
+  });
+  if (!chart) return fallback;
+  const unit = sceneUnitOf(artifact);
+  const scale = sceneScaleOf({ unit });
+  const toScene = (px: number) => px / Math.max(scale, 1e-6);
+  const tickFont = 8;
+  const axisFont = 9;
+  const titleFont = 12;
+  const pad = toScene(3);
+  const yCap = axisCaption(chart.props, "y");
+  const xCap = axisCaption(chart.props, "x");
+  const title =
+    chart.props.title?.kind === "string"
+      ? chart.props.title.value
+      : chart.props.title?.kind === "ident"
+        ? chart.props.title.path.join(".")
+        : "";
+  const dataName =
+    chart.props.data?.kind === "ident"
+      ? chart.props.data.path.join(".")
+      : chart.props.source?.kind === "ident"
+        ? chart.props.source.path.join(".")
+        : "series";
+  const seriesField = seriesFieldName(chart.props);
+  const legendAt = legendPlacement(chart.props, seriesField);
+  const keys = seriesField ? uniqueSeriesKeys(artifact, dataName, seriesField) : [];
+  const keyW = Math.max(0, ...keys.map((k) => estimateTextWidthPx(k, tickFont, 0.1)));
+  const yTickW = Math.max(
+    tickFont,
+    ...axisTicks(chart.props, "y").map((t) => estimateTextWidthPx(t.label, tickFont, 0.08)),
+  );
+  const extras = {
+    colorbar: chart.name === "chart.heatmap",
+    legendAt: seriesField && legendAt !== "off" ? legendAt : undefined,
+    legendKeys: keys,
+    title,
+  };
+  let l = toScene(10);
+  let r = toScene(8);
+  let t = toScene(8);
+  let b = toScene(10);
+  const clamp = () => {
+    l = Math.min(Math.max(toScene(10), l), cellW * 0.38);
+    r = Math.min(Math.max(toScene(8), r), cellW * 0.38);
+    t = Math.min(Math.max(toScene(8), t), cellH * 0.28);
+    b = Math.min(Math.max(toScene(10), b), cellH * 0.32);
+  };
+  clamp();
+  for (let iter = 0; iter < 4; iter++) {
+    const geom: Record<string, Expr> = {
+      ...chart.props,
+      areaX: literal([cellX0 + l, Math.max(cellX0 + l + 8, cellX0 + cellW - r)]),
+      areaY: literal([cellY0 + t, Math.max(cellY0 + t + 8, cellY0 + cellH - b)]),
+    };
+    const chrome = paperChromeOf(geom, artifact, extras);
+    if (!chrome) break;
+    if (chrome.yTickX - yTickW < cellX0 + pad) l += cellX0 + pad - (chrome.yTickX - yTickW);
+    if (yCap && chrome.yTitleX < cellX0 + pad) l += cellX0 + pad - chrome.yTitleX;
+    if (title && chrome.titleY < cellY0 + pad + toScene(titleFont * 0.35)) {
+      t += cellY0 + pad + toScene(titleFont * 0.35) - chrome.titleY;
+    }
+    if (chrome.xTickY > cellY0 + cellH - pad) b += chrome.xTickY - (cellY0 + cellH - pad);
+    if (xCap && chrome.xTitleY > cellY0 + cellH - pad) b += chrome.xTitleY - (cellY0 + cellH - pad);
+    if (seriesField && legendAt === "right") {
+      const legendRight = chrome.legendX + toScene(14 + keyW);
+      if (legendRight > cellX0 + cellW - pad) r += legendRight - (cellX0 + cellW - pad);
+    }
+    if (seriesField && legendAt === "bottom" && chrome.legendY > cellY0 + cellH - pad) {
+      b += chrome.legendY - (cellY0 + cellH - pad);
+    }
+    if (extras.colorbar) {
+      const cbarRight = chrome.cbarX + toScene(10 + 4 + estimateTextWidthPx("0.00", tickFont, 0.08));
+      if (cbarRight > cellX0 + cellW - pad) r += cbarRight - (cellX0 + cellW - pad);
+    }
+    clamp();
+  }
+  return { l, r, t, b };
 }
 
 function plotBoxOf(props: Record<string, Expr>): {
