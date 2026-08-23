@@ -110,4 +110,44 @@ describe("figure page pack", () => {
     expect(b[0]).toBeGreaterThanOrEqual(PAGE_MM.a4.h);
     expect(b[1]).toBeLessThanOrEqual(PAGE_MM.a4.h * 2);
   });
+
+  it("mirrors folio to the outer edge of verso and recto slices", () => {
+    const src = readFileSync("examples/paper-pages.viva", "utf8");
+    const result = compileSource(src, "paper-pages.viva", { handbookIds: ["print-nature"] });
+    expect(result.error).toBeNull();
+    const scopes = [result.ir!.state, result.ir!.data];
+    const folio = result.ir!.scene.layers.find((l) => l.name === "__page_folio")!;
+    const nodeOf = (name: string) => folio.items.find((i) => i.kind === "node" && i.name === name);
+    const folio1 = nodeOf("__page_folio_1");
+    const folio2 = nodeOf("__page_folio_2");
+    expect(folio1?.kind).toBe("node");
+    expect(folio2?.kind).toBe("node");
+    if (folio1?.kind !== "node" || folio2?.kind !== "node") return;
+    expect(evaluate(folio1.props.align!, scopes)).toBe("right");
+    expect(evaluate(folio2.props.align!, scopes)).toBe("start");
+    expect(Number(evaluate(folio1.props.x!, scopes))).toBeGreaterThan(PAGE_MM.a4.w - 8);
+    expect(Number(evaluate(folio2.props.x!, scopes))).toBeLessThan(8);
+    const tall = compileSource(
+      `artifact Folio
+scene
+  unit: mm
+  page: a4
+  height: 800
+  background: #ffffff
+widget layout.figure
+  title: "Verso recto"
+`,
+      "folio.viva",
+    );
+    expect(tall.error).toBeNull();
+    const items = tall.ir!.scene.layers.find((l) => l.name === "__page_folio")!.items;
+    const title3 = items.find((i) => i.kind === "node" && i.name === "__page_folio_title_3");
+    const folio3 = items.find((i) => i.kind === "node" && i.name === "__page_folio_3");
+    expect(title3?.kind).toBe("node");
+    expect(folio3?.kind).toBe("node");
+    if (title3?.kind !== "node" || folio3?.kind !== "node") return;
+    expect(evaluate(folio3.props.align!, [{}])).toBe("right");
+    expect(evaluate(title3.props.align!, [{}])).toBe("right");
+    expect(Number(evaluate(folio3.props.x!, [{}]))).toBeGreaterThan(PAGE_MM.a4.w - 8);
+  });
 });

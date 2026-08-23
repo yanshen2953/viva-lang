@@ -153,8 +153,9 @@ export function expandWidgets(artifact: Artifact): Artifact {
 /**
  * Folio n/N plus a later-slice running head. Figure titles keep
  * `(continued)`; board titles repeat as-is. Same caption primitive.
- * One page, or no `page` prop, paints nothing. Not a section-mark
- * typesetter — no jump folio, no verso/recto pair.
+ * Odd slices (recto) put folio and the head on the right; even
+ * slices (verso) put them on the left. One page, or no `page` prop,
+ * paints nothing. Not a section-mark typesetter — no jump folio.
  */
 function paintPageFolio(artifact: Artifact): void {
   const scene = artifact.scene;
@@ -179,27 +180,31 @@ function paintPageFolio(artifact: Artifact): void {
   const wrapW = Math.max(40, (extent.w - pad * 2) * Math.max(scale, 1e-6));
   const items: SceneItem[] = [];
   for (let i = 0; i < pages; i++) {
+    const n = i + 1;
+    const verso = n % 2 === 0;
     const top = i * pageH;
     const bottom = Math.min((i + 1) * pageH, extent.h);
+    const outerX = verso ? pad : extent.w - pad;
+    const outerAlign = verso ? "start" : "right";
     items.push(
-      node(`__page_folio_${i + 1}`, {
+      node(`__page_folio_${n}`, {
         role: literal("caption"),
-        text: literal(`${i + 1} / ${pages}`),
-        x: literal(extent.w - pad),
+        text: literal(`${n} / ${pages}`),
+        x: literal(outerX),
         y: literal(bottom - pad * 0.85),
-        align: literal("right"),
+        align: literal(outerAlign),
       }),
     );
     if (i > 0 && title) {
       const raw = markContinued ? `${title} (continued)` : title;
       items.push(
-        node(`__page_folio_title_${i + 1}`, {
+        node(`__page_folio_title_${n}`, {
           role: literal("caption"),
           text: literal(ellipsizeToWidth(raw, wrapW, 8, 0.1)),
-          x: literal(pad),
+          x: literal(outerX),
           y: literal(top + pad * 1.2),
           w: literal(Math.max(8, extent.w - pad * 2)),
-          align: literal("start"),
+          align: literal(outerAlign),
         }),
       );
     }
