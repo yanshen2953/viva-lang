@@ -6,6 +6,8 @@ import {
 import {
   INLINE_DEFAULT_HANDBOOKS,
   createVivaInlineEmbed,
+  inlineCheckLines,
+  inlineEmbedCss,
 } from "../../src/embed/inline.js";
 
 describe("inline embed plugin", () => {
@@ -28,5 +30,20 @@ describe("inline embed plugin", () => {
   it("defaults inline embed to print-nature handbook", () => {
     expect(INLINE_DEFAULT_HANDBOOKS).toEqual(["print-nature"]);
     expect(typeof createVivaInlineEmbed).toBe("function");
+  });
+
+  it("lists compile errors and structural notes for the card strip", () => {
+    const lines = inlineCheckLines(
+      [
+        { code: "overlap", message: "title overlaps (a)" },
+        { message: "title overlaps (a)" },
+      ],
+      "1:1: missing artifact",
+    );
+    expect(lines[0]).toMatch(/missing artifact/);
+    expect(lines).toContain("overlap title overlaps (a)");
+    expect(lines).toHaveLength(2);
+    expect(inlineCheckLines([], null)).toEqual([]);
+    expect(inlineEmbedCss()).toMatch(/viva-inline-check/);
   });
 });

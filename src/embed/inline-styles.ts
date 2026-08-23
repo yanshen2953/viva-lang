@@ -44,6 +44,24 @@ export function inlineEmbedCss(maxHeight = 480): string {
   outline: 2px solid #93c5fd;
   outline-offset: -2px;
 }
+.viva-inline-check {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 8px 16px 10px;
+  border-top: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #334155;
+  font: 11px/1.45 ui-sans-serif, system-ui, sans-serif;
+}
+.viva-inline-check[hidden] {
+  display: none;
+}
+.viva-inline-check-line {
+  margin: 0 0 4px;
+}
+.viva-inline-check-line:last-child {
+  margin-bottom: 0;
+}
 `;
 }
 
@@ -63,6 +81,10 @@ export function applyInlineEmbedChrome(root: HTMLElement, maxHeight = 480): HTML
   root.classList.add("viva-inline-root");
   const stage = document.createElement("div");
   stage.className = "viva-inline-stage";
+  const strip = document.createElement("div");
+  strip.className = "viva-inline-check";
+  strip.hidden = true;
   root.appendChild(stage);
+  root.appendChild(strip);
   return stage;
 }

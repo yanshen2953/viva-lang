@@ -9,6 +9,11 @@ import {
   INLINE_DEFAULT_HANDBOOKS,
   VIVA_INLINE_PLUGIN_ID,
 } from "../../embed/inline-styles.js";
+import {
+  inlineCheckLines,
+  inlineCheckStripOf,
+  paintInlineCheckStrip,
+} from "../../embed/inline-check.js";
 
 export type DomainBridge = {
   pushToViva(path: string, value: unknown): void;
@@ -172,10 +177,14 @@ function createVivaInlineView(): DomainView {
       return {
         async load(resource) {
           const source = await loadVivaSourceFromUri(resource.uri);
-          inlineSession.compile(source, {
+          const compiled = inlineSession.compile(source, {
             reason: "generate",
             handbooks: [...INLINE_DEFAULT_HANDBOOKS],
           });
+          const strip = inlineCheckStripOf(el);
+          if (strip) {
+            paintInlineCheckStrip(strip, inlineCheckLines(compiled.diagnostics, compiled.error));
+          }
         },
         dispose() {
           unsub();

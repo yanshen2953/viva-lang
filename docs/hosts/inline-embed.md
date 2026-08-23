@@ -56,6 +56,7 @@ Accepted media: `application/vnd.viva`, `text/x-viva`, `viva/source`, `viva/*`.
 - Same **look** as export (handbook at compile time)
 - **Click / drag / tick** still work in the bubble
 - Checks (`structural` / `visual` / `vision`) run on the same IR path as Playground
+- The card paints a **read-only** strip for compile errors and structural notes. It does not run visual/raster in the browser, and it does not auto-repair.
 
 Style remains a **plugin** (`print-nature` today; swap handbook per host).
 

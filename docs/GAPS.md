@@ -10,7 +10,7 @@
 
 | 轴 | 之前说法 | 实际 |
 | --- | --- | --- |
-| 1 内联活世界 | 齐 | **接口齐 / 产品未齐**：Runtime 能拖点 tick；图表默认有数据域 brush/高亮；内联卡几乎没有错误/检查/修复壳 |
+| 1 内联活世界 | 齐 | **接口齐 / 产品未齐**：Runtime 能拖点 tick；图表默认有数据域 brush/高亮；内联卡有只读结构检查条，仍无 visual / 自动修复 |
 | 2 度量科学图 | 齐 | **骨架齐 / 出版未齐**：linear/log/band + chart.*（含 vector/funnel）能出图；图例外置刚补；时间/统计图种仍缺 |
 | 3 通用 Agent 接口 | 齐 | **接入齐 / 闭环未齐**：CLI/MCP/HTTP 能编能导；LLM 生成可靠性和自动 repair 未进 CI |
 | 4 流水线 | 部分 | 仍部分：Port + webhook 在，缺拖参回流演示 |
@@ -24,7 +24,7 @@
 1. **图核语义仍缺出版层** — 有轴标题/单位/band/log/time/box/violin/括号；`print-nature` 已接管字号/字距。编译器按字号估盒子，并对标题/刻度/图例/色条/`(a)` 做一轮重叠消解；图/轴标题按栏宽折行，封顶后尾行省略，重叠刻度抽稀，相邻格 chrome 再长一档 inset。仍不是通用排版求解。
 2. **默认交互还不是完整 linked view** — `__sel.keys` 已跨面板藏行（含 box / violin / 折线）；Runtime 用 CSS opacity + highlight `scale` 缓 220ms（含 play 拍遮罩），不是时间轴动画。本地 brush 默认矩形窗，路径够长时切套索。
 3. **导出 ≠ 预览** — SVG 已接近 Runtime；PNG/JPG 现在填场景底色（投稿白底不再透成黑卡）；PDF 随包 CJK 子集，缺字仍可能 `?`。
-4. **Agent 闭环没产品化** — session compile 附带 visual diagnostics，但不挡成功；生成成功率未测。
+4. **Agent 闭环没产品化** — session compile 附带 visual diagnostics，但不挡成功；内联卡只画结构检查条，不自动修；生成成功率未测。
 5. **手册仍不执行图语法** — 会覆盖 widget 字号；深色场景上会把标题/刻度字色翻亮。仍不做避让或栏宽文法。
 
 ## 本轮已补（相对「接口堆砌」）
