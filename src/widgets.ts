@@ -919,12 +919,23 @@ function expandLayoutBoard(
   const titleY1 = safeY0 + titleH;
   const lowerY0 = safeY1 - lowerH;
 
+  const bleed = Math.max(0, numProp(props, "bleed", 0));
+  const trimX0 = originX + bleed;
+  const trimY0 = originY + bleed;
+  const trimX1 = originX + width - bleed;
+  const trimY1 = originY + height - bleed;
   const slots: { name: string; x: [number, number]; y: [number, number] }[] = [
     { name: nameOf("safe"), x: [safeX0, safeX1], y: [safeY0, safeY1] },
     { name: nameOf("title"), x: [safeX0, safeX1], y: [safeY0, titleY1] },
     { name: nameOf("body"), x: [safeX0, safeX1], y: [titleY1, lowerY0] },
     { name: nameOf("lower"), x: [safeX0, safeX1], y: [lowerY0, safeY1] },
   ];
+  if (bleed > 0) {
+    slots.push(
+      { name: nameOf("bleed"), x: [originX, originX + width], y: [originY, originY + height] },
+      { name: nameOf("trim"), x: [trimX0, trimX1], y: [trimY0, trimY1] },
+    );
+  }
 
   const splits = Math.max(0, Math.floor(numProp(props, "splits", 0) || numProp(props, "bodyCols", 0)));
   if (splits >= 2) {
@@ -1015,6 +1026,49 @@ function expandLayoutBoard(
       span,
       props: {},
       items: guideItems,
+    });
+  }
+
+  const wantCrop = boolProp(props, "crop", bleed > 0);
+  if (wantCrop && bleed > 0) {
+    const mark = Math.min(18, Math.max(8, bleed * 0.85));
+    const gap = 2;
+    const corners: [number, number][] = [
+      [trimX0, trimY0],
+      [trimX1, trimY0],
+      [trimX0, trimY1],
+      [trimX1, trimY1],
+    ];
+    const cropItems: SceneItem[] = [];
+    corners.forEach(([cx, cy], i) => {
+      const sx = cx <= (trimX0 + trimX1) / 2 ? -1 : 1;
+      const sy = cy <= (trimY0 + trimY1) / 2 ? -1 : 1;
+      cropItems.push(
+        node(`${id}_cropH_${i}`, {
+          role: literal("chrome"),
+          x1: literal(cx + sx * gap),
+          y1: literal(cy),
+          x2: literal(cx + sx * (gap + mark)),
+          y2: literal(cy),
+          stroke: literal("#111111"),
+          strokeWidth: literal(1),
+        }),
+        node(`${id}_cropV_${i}`, {
+          role: literal("chrome"),
+          x1: literal(cx),
+          y1: literal(cy + sy * gap),
+          x2: literal(cx),
+          y2: literal(cy + sy * (gap + mark)),
+          stroke: literal("#111111"),
+          strokeWidth: literal(1),
+        }),
+      );
+    });
+    artifact.scene?.layers.push({
+      name: `__${id}_crop`,
+      span,
+      props: {},
+      items: cropItems,
     });
   }
 }

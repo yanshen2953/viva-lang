@@ -361,4 +361,30 @@ widget layout.board
       expect.arrayContaining(["safe", "title", "body", "lower", "left", "right"]),
     );
   });
+
+  it("layout.board bleed creates trim/bleed frames and crop marks", () => {
+    const result = compileSource(
+      `artifact Bleed
+scene
+  size: 1280 720
+widget layout.board
+  w: 1280
+  h: 720
+  bleed: 16
+  guides: false
+`,
+      "bleed.viva",
+    );
+    expect(result.error).toBeNull();
+    expect(result.ir!.frames.map((f) => f.name)).toEqual(
+      expect.arrayContaining(["safe", "title", "body", "lower", "bleed", "trim"]),
+    );
+    const trim = result.ir!.frames.find((f) => f.name === "trim")!;
+    const x = evaluate(trim.props.x, [result.ir!.state, result.ir!.data]) as number[];
+    expect(x[0]).toBeCloseTo(16);
+    expect(x[1]).toBeCloseTo(1264);
+    expect(result.ir!.scene.layers.some((l) => l.name === "__board_crop")).toBe(true);
+    const crop = result.ir!.scene.layers.find((l) => l.name === "__board_crop")!;
+    expect(crop.items.filter((i) => i.kind === "node").length).toBe(8);
+  });
 });
