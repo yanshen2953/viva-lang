@@ -1,6 +1,13 @@
 export { parse } from "./parser.js";
 export { tokenize } from "./lexer.js";
 export { compile, type CompileOptions } from "./compiler.js";
+export {
+  expandWidgets,
+  registerWidget,
+  listWidgets,
+  getWidget,
+} from "./widgets.js";
+export type { WidgetPlugin, WidgetExpandContext } from "./widgets.js";
 export { compileSource } from "./pipeline.js";
 export type { CompileOptions as PipelineCompileOptions, PipelineCheckOptions } from "./pipeline.js";
 export { Runtime } from "./runtime.js";

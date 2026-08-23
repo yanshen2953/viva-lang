@@ -24,6 +24,7 @@ import { startAgentHttpServer } from "./agent/http-server.js";
 import { createVivaAgentHost } from "./agent/host.js";
 import { attachBuiltinPipelines } from "./agent/remote-host.js";
 import { resolveCompileHandbooks } from "./style/compile-handbooks.js";
+import { emptyArtifact } from "./ast.js";
 
 async function main(): Promise<void> {
   const argv = process.argv.slice(2);
@@ -87,6 +88,13 @@ async function main(): Promise<void> {
     const configPath = flagValue(argv, "--config");
     const slots = resolveModelsConfig(configPath);
     console.log(JSON.stringify(describeModelSlots(slots), null, 2));
+    return;
+  }
+
+  if (command === "widgets") {
+    const { expandWidgets, listWidgets } = await import("./widgets.js");
+    expandWidgets(emptyArtifact("_", { line: 1, column: 1 }));
+    console.log(listWidgets().join("\n"));
     return;
   }
 
@@ -284,6 +292,7 @@ Commands:
   check <file> [--visual] [--vision]  Structural + raster + optional multimodal
   mcp                             MCP stdio server (Cursor / Claude Desktop)
   models [--config path]           Show resolved base/vision model slots
+  widgets                         List registered widget plugins
   html <file> [-o out.html]        Standalone HTML shell
   svg <file> [-o out.svg]          Export static SVG
   export <file> -f <fmt>           Export svg|png|jpg|pdf (repeat --handbook for style)

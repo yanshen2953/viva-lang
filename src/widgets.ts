@@ -8,26 +8,76 @@ import {
   type SceneItem,
   type Statement,
 } from "./ast.js";
+import { VivaError } from "./diagnostics.js";
+import {
+  ensureBuiltinPlugins,
+  getWidget,
+  listWidgets,
+  registerWidget,
+  resetWidgetPlugins,
+  setWidgetBuiltinSeed,
+} from "./plugins/registry.js";
+
+export type { WidgetExpandContext, WidgetPlugin } from "./plugins/types.js";
+export { getWidget, listWidgets, registerWidget, resetWidgetPlugins };
+
+setWidgetBuiltinSeed(() => {
+  registerWidget({
+    name: "timeline",
+    expand: (ctx) => expandTimeline(ctx.artifact, ctx.props),
+  });
+  for (const name of ["chart.scatter", "chart.line", "chart.bar", "chart.heatmap"] as const) {
+    registerWidget({
+      name,
+      expand: (ctx) => expandChart(ctx.artifact, name, ctx.props, ctx.index),
+    });
+  }
+  registerWidget({
+    name: "layout.figure",
+    expand: (ctx) => expandLayoutFigure(ctx.artifact, ctx.props, ctx.index),
+  });
+});
 
 export function expandWidgets(artifact: Artifact): Artifact {
+  ensureBuiltinPlugins();
   const next = structuredClone(artifact);
   if (!next.scene) {
     next.scene = { props: {}, layers: [], span: artifact.span };
   }
 
+  const widgets = [...next.widgets];
+  const layout = widgets.filter((w) => w.name.startsWith("layout."));
+  const rest = widgets.filter((w) => !w.name.startsWith("layout."));
+
   let chartIndex = 0;
-  for (const widget of next.widgets) {
-    if (widget.name === "timeline") {
-      expandTimeline(next, widget.props);
-    } else if (
-      widget.name === "chart.scatter" ||
-      widget.name === "chart.line" ||
-      widget.name === "chart.bar" ||
-      widget.name === "chart.heatmap"
-    ) {
-      chartIndex += 1;
-      expandChart(next, widget.name, widget.props, chartIndex);
+  let layoutIndex = 0;
+  for (const widget of [...layout, ...rest]) {
+    const plugin = getWidget(widget.name);
+    if (!plugin) {
+      throw new VivaError([
+        {
+          message: `unknown widget '${widget.name}'`,
+          span: widget.span,
+          source: undefined,
+          code: "unknown-widget",
+          hint: `Registered: ${listWidgets().join(", ") || "(none)"}. Hosts add more with registerWidget().`,
+        },
+      ]);
     }
+    let index = 0;
+    if (widget.name.startsWith("chart.")) {
+      chartIndex += 1;
+      index = chartIndex;
+    } else if (widget.name.startsWith("layout.")) {
+      layoutIndex += 1;
+      index = layoutIndex;
+    }
+    plugin.expand({
+      artifact: next,
+      name: widget.name,
+      props: widget.props,
+      index,
+    });
   }
   return next;
 }
@@ -106,25 +156,23 @@ function expandChart(
   index: number,
 ): void {
   const span = artifact.span;
-  const frameName =
-    props.frame?.kind === "ident"
-      ? props.frame.path.join(".")
-      : props.frame?.kind === "string"
-        ? props.frame.value
-        : `__chart_${index}`;
+  const frameName = panelOrFrameName(props, index);
 
-  const hasNamedFrame = artifact.frames.some((f) => f.name === frameName);
-  if (!hasNamedFrame) {
+  const existingFrame = artifact.frames.find((f) => f.name === frameName);
+  if (!existingFrame) {
     artifact.frames.push({
       name: frameName,
       span,
       props: {
-        x: props.areaX ?? props.x ?? literal([72, 720]),
-        y: props.areaY ?? props.y ?? literal([60, 400]),
+        x: props.areaX ?? (isPair(props.x) ? props.x : undefined) ?? literal([72, 720]),
+        y: props.areaY ?? (isPair(props.y) ? props.y : undefined) ?? literal([60, 400]),
         xlim: props.xlim ?? literal([0, 10]),
         ylim: props.ylim ?? literal([0, 100]),
       },
     });
+  } else {
+    if (props.xlim) existingFrame.props.xlim = props.xlim;
+    if (props.ylim) existingFrame.props.ylim = props.ylim;
   }
 
   const dataName =
@@ -151,19 +199,31 @@ function expandChart(
   const resolvedXField = useAreaPairs || props.x?.kind === "array" ? fieldName(props.xField, "x") : xField;
   const resolvedYField = useAreaPairs || props.y?.kind === "array" ? fieldName(props.yField, "y") : yField;
 
+  const fr = artifact.frames.find((f) => f.name === frameName)!;
+  const geom: Record<string, Expr> = {
+    ...props,
+    areaX: fr.props.x ?? props.areaX,
+    areaY: fr.props.y ?? props.areaY,
+    xlim: props.xlim ?? fr.props.xlim ?? literal([0, 10]),
+    ylim: props.ylim ?? fr.props.ylim ?? literal([0, 100]),
+  };
+
+  const boundPanel = Boolean(props.panel || props.frame);
   const title =
     props.title?.kind === "string"
       ? props.title.value
-      : sentenceTitle(kind.replace("chart.", ""));
+      : boundPanel
+        ? ""
+        : sentenceTitle(kind.replace("chart.", ""));
 
-  const titleX = pairAt(props.areaX ?? props.x, 0, 72);
+  const titleX = pairAt(geom.areaX ?? geom.x, 0, 72);
   const titleYExpr = (() => {
-    const top = pairAt(props.areaY ?? props.y, 0, 60);
+    const top = pairAt(geom.areaY ?? geom.y, 0, 60);
     if (top.kind === "number") return literal(Math.max(24, top.value - 24));
     return literal(36);
   })();
 
-  const area = areaRect(props, span);
+  const area = areaRect(geom, span);
   const seriesField = seriesFieldName(props);
   const markProps = markSeriesProps(props, seriesField);
 
@@ -180,35 +240,39 @@ function expandChart(
       ...(props.plotStrokeWidth ? { strokeWidth: props.plotStrokeWidth } : {}),
       ...(props.plotOpacity ? { opacity: props.plotOpacity } : {}),
     }),
-    ...expandGridLines(frameName, props, span),
-    ...expandAxisTicks(frameName, props, span),
-    ...expandAxisTitles(frameName, props, span),
+    ...expandGridLines(frameName, geom, span),
+    ...expandAxisTicks(frameName, geom, span),
+    ...expandAxisTitles(frameName, geom, span),
     node(`${frameName}_xAxis`, {
       role: literal("axis"),
       frame: literal(frameName),
-      x1: xlimLow(props),
-      y1: ylimLow(props),
-      x2: xlimHigh(props),
-      y2: ylimLow(props),
+      x1: xlimLow(geom),
+      y1: ylimLow(geom),
+      x2: xlimHigh(geom),
+      y2: ylimLow(geom),
       ...(props.axisColor ?? props.axisStroke ? { stroke: props.axisColor ?? props.axisStroke! } : {}),
     }),
     node(`${frameName}_yAxis`, {
       role: literal("axis"),
       frame: literal(frameName),
-      x1: xlimLow(props),
-      y1: ylimLow(props),
-      x2: xlimLow(props),
-      y2: ylimHigh(props),
+      x1: xlimLow(geom),
+      y1: ylimLow(geom),
+      x2: xlimLow(geom),
+      y2: ylimHigh(geom),
       ...(props.axisColor ?? props.axisStroke ? { stroke: props.axisColor ?? props.axisStroke! } : {}),
     }),
-    node(`${frameName}_title`, {
-      role: literal("title"),
-      x: titleX,
-      y: titleYExpr,
-      text: literal(title),
-    }),
+    ...(title
+      ? [
+          node(`${frameName}_title`, {
+            role: literal("title"),
+            x: titleX,
+            y: titleYExpr,
+            text: literal(title),
+          }),
+        ]
+      : []),
     ...(seriesField && !props.legend?.kind
-      ? expandSeriesLegend(frameName, artifact, dataName, seriesField, props, span)
+      ? expandSeriesLegend(frameName, artifact, dataName, seriesField, geom, span)
       : []),
   ];
 
@@ -322,7 +386,7 @@ function expandChart(
     });
   } else if (kind === "chart.heatmap") {
     marks.push(...expandHeatCells(props, dataName, frameName, resolvedXField, resolvedYField, span));
-    axisItems.push(...expandColorbar(frameName, props, span));
+    axisItems.push(...expandColorbar(frameName, geom, span));
   }
 
   const markLayer: LayerDecl = {
@@ -513,6 +577,137 @@ function fieldName(expr: Expr | undefined, fallback: string): string {
   if (expr.kind === "ident") return expr.path[expr.path.length - 1] ?? fallback;
   if (expr.kind === "string") return expr.value;
   return fallback;
+}
+
+function isPair(expr: Expr | undefined): expr is Expr {
+  return expr?.kind === "array" && expr.items.length >= 2;
+}
+
+function panelOrFrameName(props: Record<string, Expr>, index: number): string {
+  const raw = props.panel ?? props.frame;
+  if (raw?.kind === "ident") return raw.path.join(".");
+  if (raw?.kind === "string") return raw.value;
+  return `__chart_${index}`;
+}
+
+function numProp(props: Record<string, Expr>, name: string, fallback: number): number {
+  const expr = props[name];
+  if (expr?.kind === "number") return expr.value;
+  return fallback;
+}
+
+function boolProp(props: Record<string, Expr>, name: string, fallback: boolean): boolean {
+  const expr = props[name];
+  if (!expr) return fallback;
+  if (expr.kind === "boolean") return expr.value;
+  if (expr.kind === "string") return expr.value !== "false" && expr.value !== "off";
+  if (expr.kind === "number") return expr.value !== 0;
+  return fallback;
+}
+
+function panelLetter(index: number): string {
+  let n = index;
+  let out = "";
+  do {
+    out = String.fromCharCode(97 + (n % 26)) + out;
+    n = Math.floor(n / 26) - 1;
+  } while (n >= 0);
+  return out;
+}
+
+function panelNamesFromProps(props: Record<string, Expr>, count: number, index: number): string[] {
+  const prefix =
+    stringProp(props, ["prefix"]) ?? (index > 1 ? (stringProp(props, ["id"]) ?? `fig${index}`) : "");
+  if (props.panels?.kind === "array") {
+    return props.panels.items.slice(0, count).map((item, i) => {
+      const raw =
+        item.kind === "string"
+          ? item.value
+          : item.kind === "ident"
+            ? item.path.join(".")
+            : panelLetter(i);
+      return prefix ? `${prefix}_${raw}` : raw;
+    });
+  }
+  return Array.from({ length: count }, (_, i) => {
+    const letter = panelLetter(i);
+    return prefix ? `${prefix}_${letter}` : letter;
+  });
+}
+
+function expandLayoutFigure(
+  artifact: Artifact,
+  props: Record<string, Expr>,
+  index: number,
+): void {
+  const span = artifact.span;
+  const id = stringProp(props, ["id"]) ?? (index > 1 ? `fig${index}` : "fig");
+  const originX = numProp(props, "x", 40);
+  const originY = numProp(props, "y", 40);
+  const width = numProp(props, "w", 880);
+  const height = numProp(props, "h", 620);
+  const cols = Math.max(1, Math.floor(numProp(props, "cols", 2)));
+  const rows = Math.max(1, Math.floor(numProp(props, "rows", 2)));
+  const gutter = numProp(props, "gutter", 28);
+  const margin = numProp(props, "margin", 16);
+  const insetL = numProp(props, "insetL", numProp(props, "plotPadL", 52));
+  const insetR = numProp(props, "insetR", numProp(props, "plotPadR", 20));
+  const insetT = numProp(props, "insetT", numProp(props, "plotPadT", 28));
+  const insetB = numProp(props, "insetB", numProp(props, "plotPadB", 40));
+  const count = cols * rows;
+  const names = panelNamesFromProps(props, count, index);
+  const innerW = width - margin * 2;
+  const innerH = height - margin * 2;
+  const cellW = (innerW - gutter * Math.max(0, cols - 1)) / cols;
+  const cellH = (innerH - gutter * Math.max(0, rows - 1)) / rows;
+  const labels = boolProp(props, "labels", true);
+  const labelItems: SceneItem[] = [];
+
+  for (let i = 0; i < names.length; i++) {
+    const name = names[i]!;
+    const col = i % cols;
+    const row = Math.floor(i / cols);
+    const cellX0 = originX + margin + col * (cellW + gutter);
+    const cellY0 = originY + margin + row * (cellH + gutter);
+    const plotX0 = cellX0 + insetL;
+    const plotY0 = cellY0 + insetT;
+    const plotX1 = cellX0 + cellW - insetR;
+    const plotY1 = cellY0 + cellH - insetB;
+    const existing = artifact.frames.find((f) => f.name === name);
+    const frameProps = {
+      x: literal([plotX0, plotX1]),
+      y: literal([plotY0, plotY1]),
+      xlim: existing?.props.xlim ?? literal([0, 10]),
+      ylim: existing?.props.ylim ?? literal([0, 100]),
+    };
+    if (existing) {
+      existing.props = { ...existing.props, ...frameProps };
+    } else {
+      artifact.frames.push({ name, span, props: frameProps });
+    }
+    if (labels) {
+      const raw = name.includes("_") ? name.slice(name.lastIndexOf("_") + 1) : name;
+      labelItems.push(
+        node(`${id}_lab_${name}`, {
+          role: literal("label"),
+          x: literal(cellX0 + 6),
+          y: literal(cellY0 + 14),
+          text: literal(`(${raw})`),
+          font: literal(11),
+          fontWeight: literal(700),
+        }),
+      );
+    }
+  }
+
+  if (labelItems.length) {
+    artifact.scene?.layers.push({
+      name: `__${id}_labels`,
+      span,
+      props: {},
+      items: labelItems,
+    });
+  }
 }
 
 function xlimLow(props: Record<string, Expr>): Expr {
