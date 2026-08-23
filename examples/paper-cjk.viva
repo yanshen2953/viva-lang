@@ -22,9 +22,9 @@ widget chart.scatter
   ylim: 0 24
   areaX: 18 80
   areaY: 14 54
-  xLabel: 时间
-  xUnit: 周
-  yLabel: 心率
-  yUnit: 次每分
+  xLabel: "时间"
+  xUnit: "周"
+  yLabel: "心率"
+  yUnit: "次每分"
   title: "单栏投稿图"
   interactive: false
