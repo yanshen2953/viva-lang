@@ -158,6 +158,11 @@ export function isBeatAnimFormat(format: string): format is BeatAnimFormat {
   return format === "gif" || format === "mp4";
 }
 
+export async function ffmpegAvailable(): Promise<boolean> {
+  const probe = await spawnOnce("ffmpeg", ["-version"]);
+  return probe.ok;
+}
+
 function spawnOnce(cmd: string, args: string[], timeoutMs = 30_000): Promise<{ ok: boolean; stderr: string }> {
   return new Promise((resolve) => {
     const child = spawn(cmd, args, { stdio: ["ignore", "pipe", "pipe"] });
@@ -187,11 +192,10 @@ export async function exportBeatAnimation(
   opts: ExportOptions = {},
   filename = "<input>",
 ): Promise<ExportResult> {
-  const frames = await exportBeatSequence(source, opts, filename);
-  const probe = await spawnOnce("ffmpeg", ["-version"]);
-  if (!probe.ok) {
+  if (!(await ffmpegAvailable())) {
     throw new Error("ffmpeg not found — export --beats PNG frames, or install ffmpeg to stitch gif/mp4");
   }
+  const frames = await exportBeatSequence(source, opts, filename);
   const dir = await mkdtemp(join(tmpdir(), "viva-beats-"));
   try {
     for (const frame of frames) {

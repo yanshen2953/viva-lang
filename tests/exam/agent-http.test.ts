@@ -1,6 +1,7 @@
 import { afterAll, describe, expect, it } from "vitest";
 import { startAgentHttpServer } from "../../src/agent/http-server.js";
 import { compileSource } from "../../src/pipeline.js";
+import { ffmpegAvailable } from "../../src/export/index.js";
 
 const HELLO = `artifact "Hi"
 scene
@@ -87,6 +88,8 @@ widget chart.line
     expect(beatsJson.beats).toBe(2);
     expect(beatsJson.frames).toHaveLength(2);
     expect(beatsJson.frames[0]!.base64).not.toBe(beatsJson.frames[1]!.base64);
+
+    if (!(await ffmpegAvailable())) return;
 
     const gif = await fetch(`${base}/api/export`, {
       method: "POST",

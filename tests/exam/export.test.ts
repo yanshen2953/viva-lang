@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { compileSource } from "../../src/pipeline";
 import { renderSvgFromIr } from "../../src/export/static-svg";
-import { exportArtifact, exportBeatAnimation } from "../../src/export/index";
+import { exportArtifact, exportBeatAnimation, ffmpegAvailable } from "../../src/export/index";
 
 describe("static SVG + raster/pdf export", () => {
   it("renders hello.viva to SVG without a browser", () => {
@@ -65,7 +65,8 @@ describe("static SVG + raster/pdf export", () => {
     expect(beat0Left).toBeGreaterThan(beat1Left + 15);
   }, 30_000);
 
-  it("stitches __beat rasters into a gif/mp4 slideshow via ffmpeg", async () => {
+  it("stitches __beat rasters into a gif/mp4 slideshow via ffmpeg", async ({ skip }) => {
+    if (!(await ffmpegAvailable())) skip();
     const src = readFileSync(path.resolve("examples/storyboard.viva"), "utf8");
     const gif = await exportBeatAnimation(src, "gif", { width: 320, handbookIds: ["print-nature"] }, "storyboard.viva");
     expect(gif.mime).toBe("image/gif");
@@ -79,6 +80,10 @@ describe("static SVG + raster/pdf export", () => {
     expect(mp4.bytes.byteLength).toBeGreaterThan(400);
     expect(Buffer.from(gif.bytes).equals(Buffer.from(mp4.bytes))).toBe(false);
   }, 45_000);
+
+  it("reports whether ffmpeg is on PATH", async () => {
+    expect(typeof (await ffmpegAvailable())).toBe("boolean");
+  });
 
   it("refuses gif/mp4 without beats", async () => {
     const src = readFileSync(path.resolve("examples/hello.viva"), "utf8");
