@@ -20,6 +20,13 @@ describe("paper chrome collision", () => {
     expect(lines.join("").replace(/\s/g, "")).toMatch(/control/);
   });
 
+  it("breaks after CJK instead of splitting the next Latin word", () => {
+    const lines = wrapTextLines("作者不必写魔法数坐标。This is still not a newspaper", 80, 12, 0.12);
+    expect(lines.some((line) => /\bThis\b/.test(line))).toBe(true);
+    expect(lines.some((line) => /坐标/.test(line) && /This/.test(line))).toBe(false);
+    expect(lines.some((line) => /^T$/.test(line) || /坐标。T$/.test(line))).toBe(false);
+  });
+
   it("wraps a long title on spaces before mid-word breaks", () => {
     const lines = wrapTextLines("Survival and response by treatment cohort", 80, 12, 0.35);
     expect(lines.length).toBeGreaterThan(1);

@@ -109,6 +109,13 @@ export function thinYTicks<T extends { label: string; y: number }>(
   return kept;
 }
 
+function lastCjkIndex(text: string): number {
+  for (let i = text.length - 1; i >= 0; i--) {
+    if ((text.charCodeAt(i) ?? 0) >= 0x3000) return i;
+  }
+  return -1;
+}
+
 const ELLIPSIS = "...";
 
 export function ellipsizeToWidth(
@@ -177,12 +184,16 @@ export function wrapTextLines(
     if (line && estimateTextWidthPx(trial.trimEnd(), font, tracking) > maxWidth) {
       const space = line.lastIndexOf(" ");
       const hyphen = line.lastIndexOf("-");
-      if (space > 0 && space >= hyphen) {
+      const cjk = lastCjkIndex(line);
+      if (space > 0 && space >= hyphen && space >= cjk) {
         lines.push(line.slice(0, space).trim());
         line = `${line.slice(space + 1)}${ch}`;
-      } else if (hyphen > 0) {
+      } else if (hyphen > 0 && hyphen >= cjk) {
         lines.push(line.slice(0, hyphen + 1).trimEnd());
         line = `${line.slice(hyphen + 1)}${ch}`;
+      } else if (cjk >= 0) {
+        lines.push(line.slice(0, cjk + 1).trimEnd());
+        line = `${line.slice(cjk + 1)}${ch}`;
       } else {
         flush();
         if (ch !== " ") line = ch;
