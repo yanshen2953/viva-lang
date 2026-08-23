@@ -11,7 +11,7 @@ scene
 
 widget layout.board
   title: "16:9 storyboard · four beats"
-  caption: "layout.board beats: 4 · play: true · no new keywords"
+  caption: "beats play · current shot is live · no new keywords"
   beats: 4
   play: true
   playFps: 1
@@ -24,7 +24,6 @@ widget chart.line
   yField: y
   xlim: 0 2
   ylim: 0 20
-  interactive: false
 
 widget chart.line
   panel: beat1
@@ -33,7 +32,6 @@ widget chart.line
   yField: y
   xlim: 0 2
   ylim: 0 20
-  interactive: false
 
 widget chart.line
   panel: beat2
@@ -42,7 +40,6 @@ widget chart.line
   yField: y
   xlim: 0 2
   ylim: 0 20
-  interactive: false
 
 widget chart.line
   panel: beat3
@@ -51,4 +48,3 @@ widget chart.line
   yField: y
   xlim: 0 2
   ylim: 0 20
-  interactive: false

@@ -1926,12 +1926,8 @@ function expandLayoutBoard(
         w: literal(rect.x1 - rect.x0),
         h: literal(rect.y1 - rect.y0),
         fill: literal("#000000"),
-        opacity: binary(
-          "*",
-          binary("!=", ident("__beat"), literal(i), span),
-          literal(0.55),
-          span,
-        ),
+        opacity: literal(0.55),
+        visible: binary("!=", ident("__beat"), literal(i), span),
       }),
     );
     artifact.scene?.layers.push({

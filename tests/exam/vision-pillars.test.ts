@@ -409,6 +409,16 @@ widget chart.scatter
     expect(world.state.__beat).toBe(1);
     const after = simulate(result.ir!, { ticks: 4 });
     expect(after.state.__beat).toBe(0);
+    const play = result.ir!.scene.layers.find((l) => l.name === "__board_play")!;
+    const veil0 = play.items.find((i) => i.kind === "node" && i.name === "board_veil_0");
+    expect(veil0?.kind).toBe("node");
+    if (veil0?.kind === "node") {
+      expect(evaluate(veil0.props.visible!, [{ __beat: 0 }])).toBe(false);
+      expect(evaluate(veil0.props.visible!, [{ __beat: 1 }])).toBe(true);
+    }
+    expect(src).not.toMatch(/interactive:\s*false/);
+    expect(result.ir!.events.some((e) => e.type === "hover")).toBe(true);
+    expect(result.ir!.events.some((e) => e.type === "drag")).toBe(true);
   });
 
   it("hides box and violin summaries that are outside __sel keys", () => {

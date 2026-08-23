@@ -26,4 +26,3 @@ widget chart.line
   ylim: 0 30
   xLabel: Beat
   yLabel: Level
-  interactive: false
