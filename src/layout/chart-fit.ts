@@ -2,6 +2,7 @@
 
 import { literal, type Artifact, type Expr, type SceneItem } from "../ast.js";
 import { evaluate, type Scope } from "../eval.js";
+import { pageColumnMeasure, parsePage } from "../space/scene-box.js";
 import { estimateTextWidthPx } from "./chrome-collide.js";
 
 export type FitRect = { x: number; y: number; w: number; h: number };
@@ -199,6 +200,28 @@ export function collectAuthorObstacles(
   return out;
 }
 
+function columnMeasureFromScene(artifact: Artifact): { x: number; w: number } | null {
+  const props = artifact.scene?.props ?? {};
+  const pageExpr = props.page;
+  const colExpr = props.column;
+  const pageRaw =
+    pageExpr?.kind === "string"
+      ? pageExpr.value
+      : pageExpr?.kind === "ident"
+        ? pageExpr.path.join(".")
+        : "";
+  const colRaw =
+    colExpr?.kind === "string"
+      ? colExpr.value
+      : colExpr?.kind === "ident"
+        ? colExpr.path.join(".")
+        : "";
+  return pageColumnMeasure(
+    parsePage(pageRaw),
+    colRaw === "single" || colRaw === "double" ? colRaw : undefined,
+  );
+}
+
 export function chartHostBox(
   artifact: Artifact,
   scene: { w: number; h: number },
@@ -209,7 +232,10 @@ export function chartHostBox(
   const minW = compact ? 24 : 64;
   const minH = compact ? 20 : 64;
   const toScene = compact ? (px: number) => px / (96 / 25.4) : (px: number) => px;
-  const sceneBox = { x: 0, y: 0, w: scene.w, h: scene.h };
+  const measure = columnMeasureFromScene(artifact);
+  const sceneBox = measure
+    ? { x: measure.x, y: 0, w: measure.w, h: scene.h }
+    : { x: 0, y: 0, w: scene.w, h: scene.h };
   const area = Math.max(1, scene.w * scene.h);
   const obstacles = collectAuthorObstacles(artifact, { toScene }).filter(
     (rect) => rect.w * rect.h < area * 0.7,

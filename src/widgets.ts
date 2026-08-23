@@ -18,7 +18,7 @@ import {
   setWidgetBuiltinSeed,
 } from "./plugins/registry.js";
 import { domainMap, parseTimeValue, scaleKind, type ScaleKind } from "./space.js";
-import { COLUMN_MM, mmToPx, parsePage, sceneScaleOf } from "./space/scene-box.js";
+import { COLUMN_MM, mmToPx, pageColumnMeasure, parsePage, sceneScaleOf } from "./space/scene-box.js";
 import { estimateBoardBands, measureChipWidth } from "./layout/board-chrome.js";
 import { figureCopyDefaults, figureCopyPlace, figureGapDefaults } from "./layout/figure-gap.js";
 import { figurePageReserves, packFigureCellsToPages } from "./layout/figure-page.js";
@@ -2479,9 +2479,20 @@ function resolveLayoutBox(
     if (slot) return slot;
   }
   const extent = sceneExtentOf(artifact);
-  const x = props.x !== undefined && !isPair(props.x) ? numProp(props, "x", 0) : 0;
+  const measure = sceneColumnMeasure(artifact);
+  const x =
+    props.x !== undefined && !isPair(props.x)
+      ? numProp(props, "x", 0)
+      : measure
+        ? measure.x
+        : 0;
   const y = props.y !== undefined && !isPair(props.y) ? numProp(props, "y", 0) : 0;
-  const w = props.w !== undefined ? numProp(props, "w", extent.w) : Math.max(1, extent.w - x);
+  const w =
+    props.w !== undefined
+      ? numProp(props, "w", extent.w)
+      : measure
+        ? measure.w
+        : Math.max(1, extent.w - x);
   const h = props.h !== undefined ? numProp(props, "h", extent.h) : Math.max(1, extent.h - y);
   return { x, y, w, h };
 }
@@ -2511,19 +2522,28 @@ function sceneExtentOf(artifact: Artifact): { w: number; h: number } {
   if (props.width?.kind === "number") w = props.width.value;
   if (props.height?.kind === "number") h = props.height.value;
   const column = stringProp(props, ["column"]);
-  if (
+  const page = parsePage(stringProp(props, ["page"]));
+  if (page && stringProp(props, ["unit"]) === "mm") {
+    if (props.width === undefined && props.size === undefined) w = page.w;
+    if (props.height === undefined && props.size === undefined) h = page.h;
+  } else if (
     (column === "single" || column === "double") &&
     props.width === undefined &&
     props.size === undefined
   ) {
     w = COLUMN_MM[column];
   }
-  const page = parsePage(stringProp(props, ["page"]));
-  if (page && stringProp(props, ["unit"]) === "mm") {
-    if (props.width === undefined && props.size === undefined && !column) w = page.w;
-    if (props.height === undefined && props.size === undefined) h = page.h;
-  }
   return { w, h };
+}
+
+function sceneColumnMeasure(artifact: Artifact): { x: number; w: number } | null {
+  const props = artifact.scene?.props ?? {};
+  const column = stringProp(props, ["column"]);
+  const page = parsePage(stringProp(props, ["page"]));
+  return pageColumnMeasure(
+    page,
+    column === "single" || column === "double" ? column : undefined,
+  );
 }
 
 function panelColSpan(artifact: Artifact, panelName: string, cols: number): number {

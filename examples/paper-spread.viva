@@ -1,13 +1,13 @@
-artifact "Paper Pages"
+artifact "Paper Spread"
 
-data lead = [
+data left = [
   { x: 1, y: 12 }
   { x: 2, y: 18 }
   { x: 3, y: 16 }
   { x: 4, y: 24 }
 ]
 
-data arms = [
+data right = [
   { arm: "placebo", y: 12 }
   { arm: "placebo", y: 14 }
   { arm: "drug-A", y: 20 }
@@ -17,18 +17,18 @@ data arms = [
 scene
   unit: mm
   page: a4
-  column: single
-  height: 400
+  column: double
+  height: 120
   background: #ffffff
 
 widget layout.figure
-  title: "Single-column 89 mm on A4, two slices"
-  cols: 1
-  rows: 2
+  title: "Double-column 183 mm on A4"
+  cols: 2
+  rows: 1
 
 widget chart.line
   panel: a
-  data: lead
+  data: left
   xField: x
   yField: y
   xlim: 0 5
@@ -39,7 +39,7 @@ widget chart.line
 
 widget chart.box
   panel: b
-  data: arms
+  data: right
   xField: arm
   yField: y
   ylim: 8 28

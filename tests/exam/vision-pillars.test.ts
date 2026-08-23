@@ -53,7 +53,7 @@ describe("vision pillars: board, mm, log, hover object, CJK pdf", () => {
     expect(sheet.height).toBeCloseTo(mmToPx(PAGE_MM.a4.h));
     expect(scenePageCount(sheet)).toBe(1);
     const tall = resolveSceneBox({ unit: "mm", page: "a4", column: "single", height: 400 });
-    expect(tall.width).toBeCloseTo(mmToPx(COLUMN_MM.single));
+    expect(tall.width).toBeCloseTo(mmToPx(PAGE_MM.a4.w));
     expect(tall.height).toBeCloseTo(mmToPx(400));
     expect(scenePageCount(tall)).toBe(2);
     const src = readFileSync("examples/paper-pages.viva", "utf8");
@@ -64,7 +64,7 @@ describe("vision pillars: board, mm, log, hover object, CJK pdf", () => {
     expect(doc.getPageCount()).toBe(2);
     const size = doc.getPage(0)!.getSize();
     expect(size.height).toBeCloseTo(mmToPx(PAGE_MM.a4.h) * (72 / 96), 0);
-    expect(size.width).toBeCloseTo(mmToPx(COLUMN_MM.single) * (72 / 96), 0);
+    expect(size.width).toBeCloseTo(mmToPx(PAGE_MM.a4.w) * (72 / 96), 0);
     const compiled = compileSource(src, "paper-pages.viva", { handbookIds: ["print-nature"] });
     expect(compiled.error).toBeNull();
     const scopes = [compiled.ir!.state, compiled.ir!.data];
@@ -87,7 +87,7 @@ describe("vision pillars: board, mm, log, hover object, CJK pdf", () => {
     expect(folioTexts).toEqual([
       "1 / 2",
       "2 / 2",
-      "Single-column figure across two A4 slices (continued)",
+      "Single-column 89 mm on A4, two slices (continued)",
     ]);
     const sheetSrc = `artifact Sheet
 scene

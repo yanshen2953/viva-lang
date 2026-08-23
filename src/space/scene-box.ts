@@ -111,6 +111,19 @@ function toPx(value: number, unit: SceneUnit): number {
 /** Resolve scene size. `unit: mm` and `column: single|double` convert into CSS px. */
 const SCENE_META_KEYS = ["unit", "column", "page"] as const;
 
+/**
+ * On a paged sheet, `column` is the figure measure, not the page width.
+ * A4/letter side margins match a 183 mm double-column text block.
+ */
+export function pageColumnMeasure(
+  page: ScenePage | undefined,
+  column: "single" | "double" | undefined,
+): { x: number; w: number } | null {
+  if (!page || (column !== "single" && column !== "double")) return null;
+  const margin = Math.max(0, (page.w - COLUMN_MM.double) / 2);
+  return { x: margin, w: COLUMN_MM[column] };
+}
+
 export function parsePage(value: unknown): ScenePage | undefined {
   const raw = str(value, "").toLowerCase().replace(/\s+/g, "");
   if (raw === "a4") return { name: "a4", ...PAGE_MM.a4 };
@@ -155,12 +168,11 @@ export function resolveSceneBox(
     columnRaw === "single" || columnRaw === "double" ? columnRaw : undefined;
   const page = parsePage(sceneProps.page);
   const sizeExplicit = Array.isArray(sceneProps.size);
-  if (column && sceneProps.width === undefined && !sizeExplicit) {
-    width = COLUMN_MM[column];
-  }
   if (page && unit === "mm") {
-    if (sceneProps.width === undefined && !sizeExplicit && !column) width = page.w;
+    if (sceneProps.width === undefined && !sizeExplicit) width = page.w;
     if (sceneProps.height === undefined && !sizeExplicit) height = page.h;
+  } else if (column && sceneProps.width === undefined && !sizeExplicit) {
+    width = COLUMN_MM[column];
   }
 
   return {

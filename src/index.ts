@@ -1,7 +1,7 @@
 export { parse } from "./parser.js";
 export { tokenize } from "./lexer.js";
 export { compile, type CompileOptions } from "./compiler.js";
-export { resolveSceneBox, mmToPx, COLUMN_MM } from "./space/scene-box.js";
+export { resolveSceneBox, mmToPx, COLUMN_MM, pageColumnMeasure } from "./space/scene-box.js";
 export { domainMap } from "./space.js";
 export {
   expandWidgets,

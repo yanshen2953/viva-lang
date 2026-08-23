@@ -2,10 +2,18 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { compileSource } from "../../src/pipeline.js";
 import { evaluate } from "../../src/eval.js";
-import { PAGE_MM } from "../../src/space/scene-box.js";
+import { COLUMN_MM, PAGE_MM, pageColumnMeasure } from "../../src/space/scene-box.js";
 import { packFigureCellsToPages } from "../../src/layout/figure-page.js";
 
 describe("figure page pack", () => {
+  it("treats column as a measure on the page, not the page width", () => {
+    const single = pageColumnMeasure({ name: "a4", ...PAGE_MM.a4 }, "single");
+    const dbl = pageColumnMeasure({ name: "a4", ...PAGE_MM.a4 }, "double");
+    expect(single).toEqual({ x: (PAGE_MM.a4.w - COLUMN_MM.double) / 2, w: COLUMN_MM.single });
+    expect(dbl).toEqual({ x: (PAGE_MM.a4.w - COLUMN_MM.double) / 2, w: COLUMN_MM.double });
+    expect(pageColumnMeasure(undefined, "single")).toBeNull();
+  });
+
   it("pushes a row that would straddle the page knife onto the next page", () => {
     const packed = packFigureCellsToPages(
       [
@@ -55,5 +63,33 @@ describe("figure page pack", () => {
     const height = evaluate(result.ir!.scene.props.height!, scopes) as number;
     expect(height).toBeGreaterThan(pageH);
     expect(b[1]).toBeLessThanOrEqual(height + 1e-6);
+    const cellX = evaluate(result.ir!.frames.find((f) => f.name === "a")!.props.cellX!, scopes) as [
+      number,
+      number,
+    ];
+    expect(cellX[0]).toBeGreaterThan(10);
+    expect(cellX[1] - cellX[0]).toBeLessThan(95);
+    expect(cellX[1]).toBeLessThan(110);
+  });
+
+  it("parks a double-column figure in the 183 mm text block of an A4 page", () => {
+    const src = readFileSync("examples/paper-spread.viva", "utf8");
+    expect(src).not.toMatch(/areaX|areaY|insetL/);
+    const result = compileSource(src, "paper-spread.viva", { handbookIds: ["print-nature"] });
+    expect(result.error).toBeNull();
+    const scopes = [result.ir!.state, result.ir!.data];
+    const a = evaluate(result.ir!.frames.find((f) => f.name === "a")!.props.cellX!, scopes) as [
+      number,
+      number,
+    ];
+    const b = evaluate(result.ir!.frames.find((f) => f.name === "b")!.props.cellX!, scopes) as [
+      number,
+      number,
+    ];
+    expect(a[0]).toBeGreaterThan(10);
+    expect(b[1]).toBeLessThanOrEqual(13.5 + 183 + 1);
+    expect(b[0]).toBeGreaterThan(a[1]!);
+    expect(b[1] - a[0]).toBeGreaterThan(160);
+    expect(b[1] - a[0]).toBeLessThan(186);
   });
 });
