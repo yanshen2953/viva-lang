@@ -302,6 +302,28 @@ widget chart.scatter
     expect(names.some((n) => n.startsWith("boxMed_"))).toBe(true);
   });
 
+  it("toggles __sel from a legend swatch click", () => {
+    const result = compileSource(
+      readFileSync("examples/linked-filter.viva", "utf8"),
+      "linked-filter.viva",
+    );
+    expect(result.error).toBeNull();
+    const picked = simulate(result.ir!, {
+      events: [{ type: "click", target: "a_leg_0" }],
+    });
+    expect(picked.state.__highlightGrp).toBe("A");
+    expect((picked.state.__sel as { keys: string[]; n: number }).keys).toContain("A");
+    expect((picked.state.__sel as { n: number }).n).toBe(1);
+    const cleared = simulate(result.ir!, {
+      events: [
+        { type: "click", target: "a_leg_0" },
+        { type: "click", target: "a_leg_0" },
+      ],
+    });
+    expect(cleared.state.__highlightGrp).toBeNull();
+    expect((cleared.state.__sel as { n: number }).n).toBe(0);
+  });
+
   it("hides other-panel marks that are outside the shared __sel filter", () => {
     const result = compileSource(
       readFileSync("examples/linked-filter.viva", "utf8"),

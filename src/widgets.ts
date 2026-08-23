@@ -1921,10 +1921,40 @@ function expandSeriesLegend(
       }),
     );
     if (!artifact.events.some((e) => e.type === "click" && e.target === `${frameName}_leg_${i}`)) {
+      ensureInteractStates(artifact, span);
+      if (!artifact.states.some((s) => s.name === "__legPick")) {
+        artifact.states.push({ name: "__legPick", value: noneExpr(span), span });
+      }
+      const clearSel: Statement[] = [
+        assign(["__highlightGrp"], noneExpr(span)),
+        assign(["__sel", "keys"], { kind: "array", items: [], span }),
+        assign(["__sel", "n"], literal(0)),
+        assign(["__sel", "xField"], literal("")),
+      ];
+      const setSel: Statement[] = [
+        assign(["__highlightGrp"], literal(key)),
+        assign(["__sel", "keys"], { kind: "array", items: [literal(key)], span }),
+        assign(["__sel", "n"], literal(1)),
+        assign(["__sel", "xField"], literal(seriesField)),
+      ];
       artifact.events.push({
         type: "click",
         target: `${frameName}_leg_${i}`,
-        body: [assign(["__highlightGrp"], literal(key))],
+        body: [
+          assign(["__legPick"], ident("__highlightGrp")),
+          {
+            kind: "if",
+            cond: binary("==", ident("__legPick"), literal(key), span),
+            body: clearSel,
+            span,
+          },
+          {
+            kind: "if",
+            cond: binary("!=", ident("__legPick"), literal(key), span),
+            body: setSel,
+            span,
+          },
+        ],
         span,
       });
     }
@@ -2661,20 +2691,7 @@ function callExpr(callee: string, args: Expr[], span: { line: number; column: nu
   return { kind: "call", callee, args, span };
 }
 
-function ensureChartInteract(
-  artifact: Artifact,
-  kind: string,
-  frameName: string,
-  dataName: string,
-  xField: string,
-  yField: string,
-  markXField: string,
-  markYField: string,
-  vField: string,
-  seriesField: string | null,
-  geom: Record<string, Expr>,
-  span: { line: number; column: number },
-): void {
+function ensureInteractStates(artifact: Artifact, span: { line: number; column: number }): void {
   if (!artifact.states.some((s) => s.name === "__tip")) {
     artifact.states.push({ name: "__tip", value: literal(""), span });
   }
@@ -2710,6 +2727,23 @@ function ensureChartInteract(
       span,
     });
   }
+}
+
+function ensureChartInteract(
+  artifact: Artifact,
+  kind: string,
+  frameName: string,
+  dataName: string,
+  xField: string,
+  yField: string,
+  markXField: string,
+  markYField: string,
+  vField: string,
+  seriesField: string | null,
+  geom: Record<string, Expr>,
+  span: { line: number; column: number },
+): void {
+  ensureInteractStates(artifact, span);
   if (!artifact.states.some((s) => s.name === "__brush")) {
     artifact.states.push({
       name: "__brush",
