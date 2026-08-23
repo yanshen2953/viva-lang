@@ -686,25 +686,34 @@ widget chart.scatter
     const heatCells = result.ir!.scene.layers
       .find((l) => l.name === "__b_marks")!
       .items.filter((i) => i.kind === "node" && i.name === "heatCell");
-    expect(heatCells.length).toBe(3);
-    const data = result.ir!.data as Record<string, unknown>;
+    expect(heatCells.length).toBe(9);
     const heat = applySelSummary(
       {
         __heatData: "rows",
         __heatXField: "arm",
-        __heatYField: "lane",
+        __heatYField: "band",
         __heatVField: "score",
         __heatXVal: "placebo",
-        __heatYVal: 0,
+        __heatYVal: "score",
         __heatZ0: 6,
         __heatZ1: 28,
         frame: "b",
         v: 14,
       },
-      { data, state: { __sel: { n: 1, keys: [1] }, __brush: { frame: "a" } } },
+      {
+        data: {
+          rows: [
+            { t: 1, score: 8, arm: "placebo", band: "score" },
+            { t: 2, score: 14, arm: "placebo", band: "score" },
+            { t: 3, score: 20, arm: "placebo", band: "score" },
+          ],
+        },
+        state: { __sel: { n: 1, keys: [1] }, __brush: { frame: "a" } },
+      },
     );
     expect(heat.visible).toBe(true);
     expect(heat.v).toBe(8);
+    const data = result.ir!.data as Record<string, unknown>;
     const bar = applySelSummary(
       {
         __barData: "rows",

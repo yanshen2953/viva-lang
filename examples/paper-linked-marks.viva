@@ -1,15 +1,15 @@
 artifact "Paper Linked Marks"
 
 data rows = [
-  { t: 1, score: 8, arm: "placebo", lane: 0, ux: 0.2, uy: 0.8 }
-  { t: 2, score: 14, arm: "placebo", lane: 0, ux: 0.4, uy: 0.4 }
-  { t: 3, score: 20, arm: "placebo", lane: 0, ux: 0.6, uy: 0.1 }
-  { t: 1, score: 18, arm: "drug-A", lane: 0, ux: 0.3, uy: 0.7 }
-  { t: 2, score: 22, arm: "drug-A", lane: 0, ux: 0.5, uy: 0.5 }
-  { t: 3, score: 26, arm: "drug-A", lane: 0, ux: 0.8, uy: 0.2 }
-  { t: 1, score: 10, arm: "drug-B", lane: 0, ux: 0.1, uy: 0.6 }
-  { t: 2, score: 16, arm: "drug-B", lane: 0, ux: 0.2, uy: 0.3 }
-  { t: 3, score: 12, arm: "drug-B", lane: 0, ux: 0.4, uy: 0.2 }
+  { t: 1, score: 8, arm: "placebo", ux: 0.2, uy: 0.8 }
+  { t: 2, score: 14, arm: "placebo", ux: 0.4, uy: 0.4 }
+  { t: 3, score: 20, arm: "placebo", ux: 0.6, uy: 0.1 }
+  { t: 1, score: 18, arm: "drug-A", ux: 0.3, uy: 0.7 }
+  { t: 2, score: 22, arm: "drug-A", ux: 0.5, uy: 0.5 }
+  { t: 3, score: 26, arm: "drug-A", ux: 0.8, uy: 0.2 }
+  { t: 1, score: 10, arm: "drug-B", ux: 0.1, uy: 0.6 }
+  { t: 2, score: 16, arm: "drug-B", ux: 0.2, uy: 0.3 }
+  { t: 3, score: 12, arm: "drug-B", ux: 0.4, uy: 0.2 }
 ]
 
 scene
@@ -38,14 +38,15 @@ widget chart.scatter
 widget chart.heatmap
   panel: b
   data: rows
-  xField: arm
-  yField: lane
+  xField: t
+  yField: arm
   valueField: score
-  ylim: -1 1
+  yScale: band
+  xlim: 0 4
   zlim: 6 28
-  zLabel: Mean score
-  xLabel: Arm
-  yLabel: Lane
+  zLabel: Score
+  xLabel: Visit
+  yLabel: Arm
 
 widget chart.box
   panel: c
