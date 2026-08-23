@@ -1,7 +1,7 @@
 import { PDFDocument, rgb, type PDFFont, type PDFPage, type RGB } from "pdf-lib";
 import { DEFAULT_SCENE_BACKGROUND } from "../style/defaults.js";
 import { flattenNodesFromIr, type FlatNode } from "./static-svg.js";
-import { embedPdfFonts, pickPdfFont, type PdfTextFonts } from "./pdf-font.js";
+import { embedPdfFonts, pdfSafeText, pdfTextWidth, pickPdfFont, type PdfTextFonts } from "./pdf-font.js";
 import { evalSceneProps, pxToPdfPt, resolveSceneBox } from "../space/scene-box.js";
 import type { VisualIR } from "../ir.js";
 
@@ -111,6 +111,7 @@ function drawNode(
     if (!raw) return;
     const text = raw;
     const font = pickPdfFont(fonts, text);
+    const drawn = pdfSafeText(font, text);
     const size = num(p.font ?? p.fontSize, 14) * scale;
     const x = num(p.x) * scale;
     // SVG text y is baseline; PDF drawText y is baseline too after flip
@@ -119,11 +120,11 @@ function drawNode(
     const align = str(p.align, "start");
     let drawX = x;
     if (align === "center" || align === "middle") {
-      drawX = x - font.widthOfTextAtSize(text, size) / 2;
+      drawX = x - pdfTextWidth(font, drawn, size) / 2;
     } else if (align === "right" || align === "end") {
-      drawX = x - font.widthOfTextAtSize(text, size);
+      drawX = x - pdfTextWidth(font, drawn, size);
     }
-    page.drawText(text, {
+    page.drawText(drawn, {
       x: drawX,
       y: y - size * 0.15,
       size,

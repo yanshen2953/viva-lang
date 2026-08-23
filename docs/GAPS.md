@@ -49,7 +49,7 @@
 
 ## 仍然很粗（按用户可见排序）
 
-1. PDF 已嵌 CJK 字体（系统 Droid/Noto）；仍无随包子集
+1. PDF 随包 `assets/fonts/VivaSansFallback.ttf`（Droid 子集）；缺字仍可能回退 Helvetica
 2. 仍无时间轴、box/violin、显著性括号
 3. Atlas (a–f) 已走 `layout.figure` + chart 插件；(e)(f) 不再手摆像素
 4. `__brush` 是单图数据域 marquee，不是多图共享 filter
@@ -61,7 +61,7 @@
 
 1. 时间轴 + 统计图种（插件，不是关键字）
 2. linked selection：`__brush` / `__highlightGrp` 跨 panel 共享 filter
-3. 随包 CJK 子集
+3. 扩大随包 CJK 子集（现在只覆盖 examples + 一小撮论文用字）
 4. `layout.board` 时间分镜
 5. agent-exam 进 CI
 

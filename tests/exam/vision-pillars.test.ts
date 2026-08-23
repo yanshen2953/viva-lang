@@ -4,6 +4,7 @@ import { compileSource } from "../../src/pipeline.js";
 import { renderSvgFromIr } from "../../src/export/static-svg.js";
 import { exportArtifact } from "../../src/export/index.js";
 import { domainMap, domainUnmap, scalesFromFrameProps } from "../../src/space.js";
+import { resolveCjkFontPath } from "../../src/export/pdf-font.js";
 import { flattenNodesFromIr } from "../../src/export/static-svg.js";
 import { evaluate } from "../../src/eval.js";
 import { mmToPx, resolveSceneBox, COLUMN_MM } from "../../src/space/scene-box.js";
@@ -80,6 +81,7 @@ widget chart.scatter
   });
 
   it("embeds CJK in vector PDF instead of replacing with ?", async () => {
+    expect(resolveCjkFontPath()).toMatch(/VivaSansFallback\.ttf$/);
     const src = readFileSync("examples/hello.viva", "utf8");
     const pdf = await exportArtifact(src, "pdf", {}, "hello.viva");
     const text = Buffer.from(pdf.bytes).toString("latin1");
