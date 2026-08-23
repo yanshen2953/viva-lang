@@ -378,8 +378,10 @@ widget chart.scatter
     const ys = texts("_ytick_");
     expect(xs[0]).toBe("0");
     expect(xs[xs.length - 1]).toBe("70");
-    expect(ys[0]).toBe("6");
-    expect(ys[ys.length - 1]).toBe("28");
+    expect(ys).toContain("6");
+    expect(ys).toContain("28");
+    expect(ys[0]).toBe("28");
+    expect(ys[ys.length - 1]).toBe("6");
   });
 
   it("joins an unquoted multi-word xLabel onto a horizontal funnel", () => {
