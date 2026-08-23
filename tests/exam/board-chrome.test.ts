@@ -35,6 +35,21 @@ describe("layout.board chrome from copy", () => {
     expect(long.safe).toBeGreaterThanOrEqual(16);
   });
 
+  it("does not reserve title/lower bands when there is no copy", () => {
+    const empty = estimateBoardBands({
+      width: 1280,
+      height: 720,
+      hasTitle: false,
+      hasSubtitle: false,
+      hasCaption: false,
+      controlKeys: [],
+      hasBind: false,
+    });
+    expect(empty.titleH).toBe(0);
+    expect(empty.lowerH).toBe(0);
+    expect(empty.safe).toBe(estimateSafeMargin(1280, 720));
+  });
+
   it("sizes chips from key text instead of a fixed 52px tile", () => {
     const bands = estimateBoardBands({
       width: 800,

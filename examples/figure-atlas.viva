@@ -140,8 +140,6 @@ widget layout.figure
   panel: body
   cols: 3
   rows: 2
-  gutter: 24
-  margin: 4
 
 widget chart.bar
   panel: a

@@ -9,27 +9,9 @@ scene
   size: 1280 720
   background: #0b1220
 
-  layer copy
-    node headline
-      x: 80
-      y: 110
-      text: "16:9 storyboard · four beats"
-      font: 26
-      fill: #e2e8f0
-
-    node lowerThird
-      x: 80
-      y: 640
-      text: "layout.board beats: 4 · play: true · no new keywords"
-      font: 18
-      fill: #94a3b8
-
 widget layout.board
-  w: 1280
-  h: 720
-  safe: 64
-  titleH: 80
-  lowerH: 96
+  title: "16:9 storyboard · four beats"
+  caption: "layout.board beats: 4 · play: true · no new keywords"
   beats: 4
   play: true
   playFps: 1

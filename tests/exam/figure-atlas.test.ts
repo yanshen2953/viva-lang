@@ -69,7 +69,7 @@ describe("figure-atlas example", () => {
       l.items.some((i) => i.kind === "for" && i.body.some((b) => b.kind === "node" && b.name === "heatCell")),
     );
     expect(hasHeat).toBe(true);
-    expect(src).not.toMatch(/insetL|insetR|insetT|insetB|areaX|areaY|panelAdeck|panelLbl|figMain|docTitle|geneBtn/);
+    expect(src).not.toMatch(/insetL|insetR|insetT|insetB|areaX|areaY|gutter:|margin:|panelAdeck|panelLbl|figMain|docTitle|geneBtn/);
     expect(src).not.toMatch(/widget layout\.figure[\s\S]*?\n\s+(x|y|w|h):/);
     const boardChunk = src.slice(src.indexOf("widget layout.board"), src.indexOf("widget layout.figure"));
     expect(boardChunk).not.toMatch(/\n\s+(safe|titleH|lowerH|x|y|w|h):/);

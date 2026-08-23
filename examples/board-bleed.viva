@@ -4,26 +4,8 @@ scene
   size: 1280 720
   background: #ffffff
 
-  layer copy
-    node headline
-      x: 96
-      y: 118
-      text: "16:9 board · bleed / trim / crop"
-      font: 26
-      fill: #111111
-
-    node lowerThird
-      x: 96
-      y: 628
-      text: "layout.board bleed: 16 · crop marks · no new keywords"
-      font: 16
-      fill: #4b5563
-
 widget layout.board
-  w: 1280
-  h: 720
-  safe: 64
+  title: "16:9 board · bleed / trim / crop"
+  caption: "layout.board bleed: 16 · crop marks · no new keywords"
   bleed: 16
-  titleH: 80
-  lowerH: 96
   guides: true

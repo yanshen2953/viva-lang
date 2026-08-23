@@ -19,18 +19,8 @@ scene
   background: #ffffff
 
 widget layout.figure
-  x: 16
-  y: 16
-  w: 848
-  h: 328
   cols: 2
   rows: 1
-  gutter: 28
-  margin: 8
-  insetL: 56
-  insetR: 20
-  insetT: 28
-  insetB: 40
 
 widget chart.scatter
   panel: a

@@ -75,7 +75,7 @@ export function estimateBoardBands(opts: {
     } else if (opts.hasTitle) {
       titleH = opts.hasSubtitle ? 56 : 40;
     } else {
-      titleH = 72;
+      titleH = 0;
     }
   }
 
@@ -88,15 +88,15 @@ export function estimateBoardBands(opts: {
         : 0;
     const hudBlock = opts.controlKeys.length ? CHIP_H + PAD * 2 : 0;
     if (capBlock || hudBlock) lowerH = Math.max(36, capBlock, hudBlock);
-    else lowerH = 96;
+    else lowerH = 0;
   }
 
   const innerH = Math.max(48, opts.height - safe * 2);
   const maxChrome = innerH * 0.42;
   if (titleH + lowerH > maxChrome) {
     const scale = maxChrome / Math.max(1, titleH + lowerH);
-    titleH = Math.max(28, Math.round(titleH * scale));
-    lowerH = Math.max(32, Math.round(lowerH * scale));
+    titleH = titleH ? Math.max(28, Math.round(titleH * scale)) : 0;
+    lowerH = lowerH ? Math.max(32, Math.round(lowerH * scale)) : 0;
   }
 
   return {

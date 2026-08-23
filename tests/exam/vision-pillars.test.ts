@@ -19,6 +19,7 @@ import { applySelSummary } from "../../src/layout/summary-stats.js";
 describe("vision pillars: board, mm, log, hover object, CJK pdf", () => {
   it("layout.board creates safe/title/body/lower frames", () => {
     const src = readFileSync("examples/board.viva", "utf8");
+    expect(src).not.toMatch(/safe:|titleH:|lowerH:|node headline|node lowerThird/);
     const result = compileSource(src, "board.viva");
     expect(result.error).toBeNull();
     expect(result.ir!.frames.map((f) => f.name)).toEqual(
@@ -26,6 +27,7 @@ describe("vision pillars: board, mm, log, hover object, CJK pdf", () => {
     );
     expect(result.ir!.scene.layers.some((l) => l.name === "__board_guides")).toBe(true);
     expect(result.ir!.scene.layers.some((l) => l.name === "__body_marks")).toBe(true);
+    expect(result.ir!.scene.layers.some((l) => l.name === "__board_copy")).toBe(true);
   });
 
   it("resolves unit: mm and single-column 89 mm to CSS px", () => {
@@ -369,6 +371,7 @@ widget chart.scatter
 
   it("layout.board beats cut a storyboard strip", () => {
     const src = readFileSync("examples/storyboard.viva", "utf8");
+    expect(src).not.toMatch(/safe:|titleH:|lowerH:|node headline|node lowerThird/);
     const result = compileSource(src, "storyboard.viva");
     expect(result.error).toBeNull();
     expect(result.ir!.frames.map((f) => f.name)).toEqual(
@@ -643,6 +646,9 @@ widget chart.scatter
       "linked-filter.viva",
     );
     expect(result.error).toBeNull();
+    expect(readFileSync("examples/linked-filter.viva", "utf8")).not.toMatch(
+      /insetL|insetR|insetT|insetB|gutter:|margin:/,
+    );
     const picked = simulate(result.ir!, {
       events: [{ type: "click", target: "a_leg_0" }],
     });
@@ -830,8 +836,10 @@ widget layout.board
     expect(grid.items.filter((i) => i.kind === "node").length).toBeGreaterThan(20);
     const col0 = result.ir!.frames.find((f) => f.name === "type0")!;
     const x = evaluate(col0.props.x, [result.ir!.state, result.ir!.data]) as number[];
-    expect(x[0]).toBeCloseTo(64);
-    expect(x[1]).toBeCloseTo(64 + (1280 - 128) / 12);
+    const safe = result.ir!.frames.find((f) => f.name === "safe")!;
+    const safeX = evaluate(safe.props.x, [result.ir!.state, result.ir!.data]) as number[];
+    expect(x[0]).toBeCloseTo(safeX[0]!);
+    expect(x[1]).toBeCloseTo(safeX[0]! + (safeX[1]! - safeX[0]!) / 12);
   });
 
   it("layout.board bleed creates trim/bleed frames and crop marks", () => {
