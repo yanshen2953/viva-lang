@@ -1714,7 +1714,7 @@ function expandLayoutBoard(
       const lineH = snapType(toScene(18));
       const startPad = snapType(toScene(16));
       const lines = staticBody
-        ? wrapTextLines(staticBody, wrapW, 12, 0.12, pageH ? 0 : 24)
+        ? wrapTextLines(staticBody, wrapW, 12, 0.12, pageH || useTypeFlow ? 0 : 24)
         : [];
       if (staticBody && textCols) {
         const packed = packCopyLinesToColumns(
