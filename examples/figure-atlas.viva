@@ -106,14 +106,6 @@ data flowV = [
   { ox: 6.2, oy: 0.8, ux: 1.1, uy: 0.9, grp: "inflow" }
 ]
 
-data stages = [
-  { i: 0, label: "Screen", n: 248, grp: "all" }
-  { i: 1, label: "Enroll", n: 186, grp: "all" }
-  { i: 2, label: "Week-4", n: 162, grp: "all" }
-  { i: 3, label: "Week-12", n: 148, grp: "all" }
-  { i: 4, label: "Complete", n: 131, grp: "all" }
-]
-
 data stageSplit = [
   { i: 0, n: 124, grp: "arm-A", lane: 0 }
   { i: 0, n: 124, grp: "arm-B", lane: 1 }
@@ -126,26 +118,6 @@ data stageSplit = [
   { i: 4, n: 68, grp: "arm-A", lane: 0 }
   { i: 4, n: 63, grp: "arm-B", lane: 1 }
 ]
-
-data flowXTicks = [
-  { v: 0 }
-  { v: 2 }
-  { v: 4 }
-  { v: 6 }
-  { v: 8 }
-  { v: 10 }
-]
-
-data flowYTicks = [
-  { v: 0 }
-  { v: 2 }
-  { v: 4 }
-  { v: 6 }
-]
-
-frame e
-  xlim: 0 10
-  ylim: 0 6
 
 scene
   size: 1360 920
@@ -267,220 +239,6 @@ scene
       font: 11
       fontWeight: 600
 
-    node flowTitle
-      role: title
-      x: 484
-      y: 528
-      text: "MICROFLUIDIC FLOW"
-      font: 12
-      letterSpacing: 1
-
-    node flowPlotBg
-      role: plot
-      x: 484
-      y: 552
-      w: 376
-      h: 296
-      radius: 6
-
-    node flowGrid1
-      role: grid
-      frame: e
-      x1: 0
-      y1: 1
-      x2: 10
-      y2: 1
-
-    node flowGrid2
-      role: grid
-      frame: e
-      x1: 0
-      y1: 2
-      x2: 10
-      y2: 2
-
-    node flowGrid3
-      role: grid
-      frame: e
-      x1: 0
-      y1: 3
-      x2: 10
-      y2: 3
-
-    node flowGrid4
-      role: grid
-      frame: e
-      x1: 0
-      y1: 4
-      x2: 10
-      y2: 4
-
-    node flowGrid5
-      role: grid
-      frame: e
-      x1: 0
-      y1: 5
-      x2: 10
-      y2: 5
-
-    node flowGridV1
-      role: grid
-      frame: e
-      x1: 2
-      y1: 0
-      x2: 2
-      y2: 6
-
-    node flowGridV2
-      role: grid
-      frame: e
-      x1: 4
-      y1: 0
-      x2: 4
-      y2: 6
-
-    node flowGridV3
-      role: grid
-      frame: e
-      x1: 6
-      y1: 0
-      x2: 6
-      y2: 6
-
-    node flowGridV4
-      role: grid
-      frame: e
-      x1: 8
-      y1: 0
-      x2: 8
-      y2: 6
-
-    node flowAxisX
-      role: axis
-      frame: e
-      x1: 0
-      y1: 0
-      x2: 10
-      y2: 0
-
-    node flowAxisY
-      role: axis
-      frame: e
-      x1: 0
-      y1: 0
-      x2: 0
-      y2: 6
-
-    for t in flowXTicks
-      node flowXLbl as flowXLbls
-        role: label
-        frame: e
-        x: t.v
-        y: -0.35
-        text: t.v
-        font: 8
-        align: center
-
-    for t in flowYTicks
-      node flowYLbl as flowYLbls
-        role: label
-        frame: e
-        x: -0.4
-        y: t.v
-        text: t.v
-        font: 8
-        align: right
-
-    for v in flowV
-      node flowShaft as flowLines
-        role: mark-line
-        frame: e
-        x1: v.ox
-        y1: v.oy
-        x2: v.ox + v.ux
-        y2: v.oy + v.uy
-        colorBy: grp
-        palette: categorical
-        strokeWidth: 2.5
-        strokeLinecap: round
-
-      node flowHead as flowTips
-        role: mark
-        frame: e
-        x: v.ox + v.ux
-        y: v.oy + v.uy
-        r: 4
-        colorBy: grp
-        palette: categorical
-
-    node funnelTitle
-      role: title
-      x: 908
-      y: 528
-      text: "TRIAL FUNNEL"
-      font: 12
-      letterSpacing: 1
-
-    node funnelPlotBg
-      role: plot
-      x: 908
-      y: 552
-      w: 376
-      h: 296
-      radius: 6
-
-    for st in stages
-      node stageLbl as stageLbls
-        role: label
-        x: 916
-        y: 585 + st.i * 58
-        text: st.label
-        font: 8
-        align: right
-
-    for s in stageSplit
-      node funnelBar as funnelBars
-        role: mark-area
-        x: 920
-        y: 568 + s.i * 58 + s.lane * 24
-        w: s.n * 1.45
-        h: 18
-        radius: 4
-        colorBy: grp
-        palette: categorical
-
-    node funnelLegA
-      role: legend
-      x: 920
-      y: 828
-      w: 10
-      h: 10
-      radius: 2
-      fill: palette("arm-A", "categorical")
-      styleSkip: true
-
-    node funnelLegALbl
-      role: legend-label
-      x: 936
-      y: 838
-      text: "arm-A"
-
-    node funnelLegB
-      role: legend
-      x: 1000
-      y: 828
-      w: 10
-      h: 10
-      radius: 2
-      fill: palette("arm-B", "categorical")
-      styleSkip: true
-
-    node funnelLegBLbl
-      role: legend-label
-      x: 1016
-      y: 838
-      text: "arm-B"
-
   layer hud
     node geneBtnA
       role: chrome
@@ -536,7 +294,7 @@ widget layout.figure
   gutter: 24
   margin: 0
   insetL: 24
-  insetR: 20
+  insetR: 72
   insetT: 36
   insetB: 28
   labels: false
@@ -552,7 +310,7 @@ widget layout.figure
   gutter: 24
   margin: 0
   insetL: 16
-  insetR: 32
+  insetR: 80
   insetT: 36
   insetB: 16
   panels: [d, e, f]
@@ -600,3 +358,29 @@ widget chart.heatmap
   ylim: -0.5 5.5
   zlim: 0 4
   title: "GENE MODULE"
+
+widget chart.vector
+  panel: e
+  data: flowV
+  xField: ox
+  yField: oy
+  uField: ux
+  vField: uy
+  group: grp
+  xlim: 0 10
+  ylim: 0 6
+  title: "MICROFLUIDIC FLOW"
+  xLabel: x
+  yLabel: y
+
+widget chart.funnel
+  panel: f
+  data: stageSplit
+  xField: n
+  yField: i
+  group: grp
+  yCats: ["Screen", "Enroll", "Week-4", "Week-12", "Complete"]
+  xlim: 0 140
+  title: "TRIAL FUNNEL"
+  xLabel: n
+  legend: right

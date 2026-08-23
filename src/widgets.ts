@@ -17,6 +17,7 @@ import {
   resetWidgetPlugins,
   setWidgetBuiltinSeed,
 } from "./plugins/registry.js";
+import { scaleKind, type ScaleKind } from "./space.js";
 
 export type { WidgetExpandContext, WidgetPlugin } from "./plugins/types.js";
 export { getWidget, listWidgets, registerWidget, resetWidgetPlugins };
@@ -26,7 +27,14 @@ setWidgetBuiltinSeed(() => {
     name: "timeline",
     expand: (ctx) => expandTimeline(ctx.artifact, ctx.props),
   });
-  for (const name of ["chart.scatter", "chart.line", "chart.bar", "chart.heatmap"] as const) {
+  for (const name of [
+    "chart.scatter",
+    "chart.line",
+    "chart.bar",
+    "chart.heatmap",
+    "chart.vector",
+    "chart.funnel",
+  ] as const) {
     registerWidget({
       name,
       expand: (ctx) => expandChart(ctx.artifact, name, ctx.props, ctx.index),
@@ -162,27 +170,6 @@ function expandChart(
   const span = artifact.span;
   const frameName = panelOrFrameName(props, index);
 
-  const existingFrame = artifact.frames.find((f) => f.name === frameName);
-  if (!existingFrame) {
-    artifact.frames.push({
-      name: frameName,
-      span,
-      props: {
-        x: props.areaX ?? (isPair(props.x) ? props.x : undefined) ?? literal([72, 720]),
-        y: props.areaY ?? (isPair(props.y) ? props.y : undefined) ?? literal([60, 400]),
-        xlim: props.xlim ?? literal([0, 10]),
-        ylim: props.ylim ?? literal([0, 100]),
-        ...(props.xScale ? { xScale: props.xScale } : {}),
-        ...(props.yScale ? { yScale: props.yScale } : {}),
-      },
-    });
-  } else {
-    if (props.xlim) existingFrame.props.xlim = props.xlim;
-    if (props.ylim) existingFrame.props.ylim = props.ylim;
-    if (props.xScale) existingFrame.props.xScale = props.xScale;
-    if (props.yScale) existingFrame.props.yScale = props.yScale;
-  }
-
   const dataName =
     props.data?.kind === "ident"
       ? props.data.path.join(".")
@@ -194,26 +181,103 @@ function expandChart(
       ? props.xField.path[0]!
       : props.xField?.kind === "string"
         ? props.xField.value
-        : fieldName(props.xField ?? props.x, "x");
+        : fieldName(props.xField ?? props.x, kind === "chart.funnel" ? "n" : "x");
   const yField =
     props.yField?.kind === "ident"
       ? props.yField.path[0]!
       : props.yField?.kind === "string"
         ? props.yField.value
-        : fieldName(props.yField ?? props.y, "y");
+        : fieldName(props.yField ?? props.y, kind === "chart.funnel" ? "i" : "y");
 
   // If x/y were used as area pairs for frame, field defaults stay x/y.
   const useAreaPairs = props.areaX !== undefined || props.areaY !== undefined;
   const resolvedXField = useAreaPairs || props.x?.kind === "array" ? fieldName(props.xField, "x") : xField;
   const resolvedYField = useAreaPairs || props.y?.kind === "array" ? fieldName(props.yField, "y") : yField;
+  const seriesField = seriesFieldName(props);
+  const horizontal = kind === "chart.funnel" || orientIsHorizontal(props);
+  const xCatsProp = catsFromExpr(props.xCats ?? props.categories);
+  const yCatsProp = catsFromExpr(props.yCats ?? (horizontal ? props.categories : undefined));
+  const xLooksBand =
+    scaleKindFromExpr(props.xScale) === "band" ||
+    xCatsProp.length > 0 ||
+    (!horizontal && fieldLooksCategorical(artifact, dataName, resolvedXField));
+  const yLooksBand =
+    scaleKindFromExpr(props.yScale) === "band" ||
+    yCatsProp.length > 0 ||
+    (horizontal && fieldLooksCategorical(artifact, dataName, resolvedYField));
+  const xCats = xLooksBand
+    ? xCatsProp.length
+      ? xCatsProp
+      : collectCats(artifact, dataName, resolvedXField)
+    : [];
+  const yCats = yLooksBand
+    ? yCatsProp.length
+      ? yCatsProp
+      : collectCats(artifact, dataName, resolvedYField)
+    : [];
+  if (xCats.length) encodeBandField(artifact, dataName, resolvedXField, "__bandX", xCats);
+  if (yCats.length) encodeBandField(artifact, dataName, resolvedYField, "__bandY", yCats);
+  const markXField = xCats.length ? "__bandX" : resolvedXField;
+  const markYField = yCats.length ? "__bandY" : resolvedYField;
+  const xScaleExpr =
+    props.xScale ?? (xCats.length ? literal("band") : undefined);
+  const yScaleExpr =
+    props.yScale ?? (yCats.length ? literal("band") : undefined);
+  const autoXlim = xCats.length ? literal([-0.5, xCats.length - 0.5]) : undefined;
+  const autoYlim = yCats.length ? literal([-0.5, yCats.length - 0.5]) : undefined;
+  const xlimExpr = props.xlim ?? autoXlim;
+  const ylimExpr = props.ylim ?? autoYlim;
+  const legendAt = legendPlacement(props, seriesField);
+  const createdFrame = !artifact.frames.some((f) => f.name === frameName);
+  const areaXExpr = reserveLegendArea(
+    props.areaX ?? (isPair(props.x) ? props.x : undefined) ?? literal([72, 720]),
+    legendAt,
+    createdFrame && Boolean(seriesField) && !props.areaX && !isPair(props.x),
+    "x",
+  );
+  const areaYExpr = reserveLegendArea(
+    props.areaY ?? (isPair(props.y) ? props.y : undefined) ?? literal([60, 400]),
+    legendAt,
+    createdFrame && Boolean(seriesField) && !props.areaY && !isPair(props.y),
+    "y",
+  );
+
+  const existingFrame = artifact.frames.find((f) => f.name === frameName);
+  if (!existingFrame) {
+    artifact.frames.push({
+      name: frameName,
+      span,
+      props: {
+        x: areaXExpr,
+        y: areaYExpr,
+        xlim: xlimExpr ?? literal([0, 10]),
+        ylim: ylimExpr ?? literal([0, 100]),
+        ...(xScaleExpr ? { xScale: xScaleExpr } : {}),
+        ...(yScaleExpr ? { yScale: yScaleExpr } : {}),
+        ...(xCats.length ? { xCats: literal(xCats) } : {}),
+        ...(yCats.length ? { yCats: literal(yCats) } : {}),
+      },
+    });
+  } else {
+    if (xlimExpr) existingFrame.props.xlim = xlimExpr;
+    if (ylimExpr) existingFrame.props.ylim = ylimExpr;
+    if (xScaleExpr) existingFrame.props.xScale = xScaleExpr;
+    if (yScaleExpr) existingFrame.props.yScale = yScaleExpr;
+    if (xCats.length) existingFrame.props.xCats = literal(xCats);
+    if (yCats.length) existingFrame.props.yCats = literal(yCats);
+  }
 
   const fr = artifact.frames.find((f) => f.name === frameName)!;
   const geom: Record<string, Expr> = {
     ...props,
     areaX: fr.props.x ?? props.areaX,
     areaY: fr.props.y ?? props.areaY,
-    xlim: props.xlim ?? fr.props.xlim ?? literal([0, 10]),
-    ylim: props.ylim ?? fr.props.ylim ?? literal([0, 100]),
+    xlim: xlimExpr ?? fr.props.xlim ?? literal([0, 10]),
+    ylim: ylimExpr ?? fr.props.ylim ?? literal([0, 100]),
+    ...(xScaleExpr ? { xScale: xScaleExpr } : {}),
+    ...(yScaleExpr ? { yScale: yScaleExpr } : {}),
+    ...(xCats.length ? { xCats: literal(xCats) } : {}),
+    ...(yCats.length ? { yCats: literal(yCats) } : {}),
   };
 
   const boundPanel = Boolean(props.panel || props.frame);
@@ -232,7 +296,6 @@ function expandChart(
   })();
 
   const area = areaRect(geom, span);
-  const seriesField = seriesFieldName(props);
   const markProps = markSeriesProps(props, seriesField);
 
   const axisItems: SceneItem[] = [
@@ -280,8 +343,8 @@ function expandChart(
           }),
         ]
       : []),
-    ...(seriesField && !props.legend?.kind
-      ? expandSeriesLegend(frameName, artifact, dataName, seriesField, geom, span)
+    ...(seriesField && legendAt !== "off"
+      ? expandSeriesLegend(frameName, artifact, dataName, seriesField, geom, legendAt, span)
       : []),
   ];
 
@@ -295,6 +358,7 @@ function expandChart(
   const marks: SceneItem[] = [];
   const explicitFill = props.color ?? props.fill;
   const explicitStroke = props.stroke;
+  const interactOpacity = markInteractOpacity(seriesField, markXField, markYField, span);
   if (kind === "chart.scatter") {
     marks.push({
       kind: "for",
@@ -305,8 +369,8 @@ function expandChart(
         node("mark", {
           role: literal("mark"),
           frame: literal(frameName),
-          x: ident(`row.${resolvedXField}`),
-          y: ident(`row.${resolvedYField}`),
+          x: ident(`row.${markXField}`),
+          y: ident(`row.${markYField}`),
           r: props.r ?? literal(3.5),
           ...markProps,
           ...(explicitFill ? { fill: explicitFill } : {}),
@@ -317,9 +381,9 @@ function expandChart(
             ? { strokeWidth: props.markStrokeWidth ?? props.barStrokeWidth! }
             : {}),
           ...(props.hoverFill ? { hoverFill: props.hoverFill } : { hoverFill: literal("#E69F00") }),
-          ...highlightOpacity(seriesField, span),
+          ...interactOpacity,
         }),
-        ...expandErrorBars(props, frameName, resolvedXField, resolvedYField, span, seriesField),
+        ...expandErrorBars(props, frameName, markXField, markYField, span, seriesField),
       ],
     });
   } else if (kind === "chart.line") {
@@ -332,39 +396,41 @@ function expandChart(
         node("linePt", {
           role: literal("mark"),
           frame: literal(frameName),
-          x: ident(`row.${resolvedXField}`),
-          y: ident(`row.${resolvedYField}`),
+          x: ident(`row.${markXField}`),
+          y: ident(`row.${markYField}`),
           r: props.r ?? literal(4),
           ...markProps,
           ...(explicitFill ? { fill: explicitFill } : {}),
           ...(props.markStroke ? { stroke: props.markStroke } : {}),
           ...(props.markStrokeWidth ? { strokeWidth: props.markStrokeWidth } : {}),
           ...(props.hoverFill ? { hoverFill: props.hoverFill } : { hoverFill: literal("#E69F00") }),
-          ...highlightOpacity(seriesField, span),
+          ...interactOpacity,
         }),
-        ...expandErrorBars(props, frameName, resolvedXField, resolvedYField, span, seriesField),
+        ...expandErrorBars(props, frameName, markXField, markYField, span, seriesField),
       ],
     });
     marks.push(
       ...expandLineSegments(
         artifact,
         dataName,
-        resolvedXField,
-        resolvedYField,
+        markXField,
+        markYField,
         frameName,
         explicitStroke ?? explicitFill,
         span,
         seriesField,
       ),
     );
-  } else if (kind === "chart.bar") {
+  } else if (kind === "chart.bar" || kind === "chart.funnel") {
     const barW = barWidthData(props);
+    const catField = horizontal ? markYField : markXField;
     if (seriesField) {
-      applyGroupedBarDodge(artifact, dataName, resolvedXField, seriesField, barW);
+      applyGroupedBarDodge(artifact, dataName, catField, seriesField, barW);
     }
-    const xExpr = seriesField
-      ? binary("+", ident(`row.${resolvedXField}`), ident("row.__dodge"), span)
-      : ident(`row.${resolvedXField}`);
+    const catExpr = seriesField
+      ? binary("+", ident(`row.${catField}`), ident("row.__dodge"), span)
+      : ident(`row.${catField}`);
+    const valueField = horizontal ? markXField : markYField;
     marks.push({
       kind: "for",
       item: "row",
@@ -374,10 +440,18 @@ function expandChart(
         node("bar", {
           role: literal("mark"),
           frame: literal(frameName),
-          x: xExpr,
-          y: ident(`row.${resolvedYField}`),
-          w: seriesField ? ident("row.__barW") : props.barWidth ?? literal(barW),
-          h: ident(`row.${resolvedYField}`),
+          x: horizontal ? ident(`row.${markXField}`) : catExpr,
+          y: horizontal ? catExpr : ident(`row.${markYField}`),
+          w: horizontal
+            ? ident(`row.${markXField}`)
+            : seriesField
+              ? ident("row.__barW")
+              : props.barWidth ?? literal(barW),
+          h: horizontal
+            ? seriesField
+              ? ident("row.__barW")
+              : props.barWidth ?? literal(barW)
+            : ident(`row.${valueField}`),
           ...markProps,
           ...(explicitFill ? { fill: explicitFill } : markFill(props) ? { fill: markFill(props)! } : {}),
           ...(props.barStroke ?? props.markStroke
@@ -390,15 +464,54 @@ function expandChart(
             : {}),
           ...(props.barRadius ? { radius: props.barRadius } : { radius: literal(3) }),
           __chartBar: literal(true),
+          ...(horizontal ? { __chartBarOrient: literal("h") } : {}),
           ...(props.hoverFill ? { hoverFill: props.hoverFill } : { hoverFill: literal("#E69F00") }),
-          ...highlightOpacity(seriesField, span),
+          ...interactOpacity,
         }),
-        ...expandErrorBars(props, frameName, resolvedXField, resolvedYField, span, seriesField),
+        ...expandErrorBars(props, frameName, markXField, markYField, span, seriesField),
       ],
     });
   } else if (kind === "chart.heatmap") {
-    marks.push(...expandHeatCells(props, dataName, frameName, resolvedXField, resolvedYField, span));
+    marks.push(...expandHeatCells(props, dataName, frameName, markXField, markYField, span));
     axisItems.push(...expandColorbar(frameName, geom, span));
+  } else if (kind === "chart.vector") {
+    const uField = fieldName(props.uField ?? props.dx ?? props.ux, "ux");
+    const vField = fieldName(props.vField ?? props.dy ?? props.uy, "uy");
+    const vScale = props.vScale?.kind === "number" ? props.vScale.value : 1;
+    const dx = binary("*", ident(`row.${uField}`), literal(vScale), span);
+    const dy = binary("*", ident(`row.${vField}`), literal(vScale), span);
+    marks.push({
+      kind: "for",
+      item: "row",
+      source: ident(dataName),
+      span,
+      body: [
+        node("shaft", {
+          role: literal("mark-line"),
+          frame: literal(frameName),
+          x1: ident(`row.${markXField}`),
+          y1: ident(`row.${markYField}`),
+          x2: binary("+", ident(`row.${markXField}`), dx, span),
+          y2: binary("+", ident(`row.${markYField}`), dy, span),
+          ...markProps,
+          ...(explicitStroke ?? explicitFill ? { stroke: explicitStroke ?? explicitFill! } : {}),
+          strokeWidth: props.strokeWidth ?? literal(2.5),
+          strokeLinecap: literal("round"),
+          ...interactOpacity,
+        }),
+        node("head", {
+          role: literal("mark"),
+          frame: literal(frameName),
+          x: binary("+", ident(`row.${markXField}`), dx, span),
+          y: binary("+", ident(`row.${markYField}`), dy, span),
+          r: props.r ?? literal(4),
+          ...markProps,
+          ...(explicitFill ? { fill: explicitFill } : {}),
+          ...(props.hoverFill ? { hoverFill: props.hoverFill } : { hoverFill: literal("#E69F00") }),
+          ...interactOpacity,
+        }),
+      ],
+    });
   }
 
   const markLayer: LayerDecl = {
@@ -416,8 +529,11 @@ function expandChart(
       frameName,
       resolvedXField,
       resolvedYField,
+      markXField,
+      markYField,
       valueFieldName(props),
       seriesField,
+      geom,
       span,
     );
   }
@@ -761,6 +877,20 @@ function expandLayoutBoard(
     { name: nameOf("lower"), x: [safeX0, safeX1], y: [lowerY0, safeY1] },
   ];
 
+  const splits = Math.max(0, Math.floor(numProp(props, "splits", 0) || numProp(props, "bodyCols", 0)));
+  if (splits >= 2) {
+    const gutter = numProp(props, "splitGutter", 24);
+    const bodyW = safeX1 - safeX0;
+    const cellW = (bodyW - gutter * (splits - 1)) / splits;
+    for (let i = 0; i < splits; i++) {
+      const x0 = safeX0 + i * (cellW + gutter);
+      const x1 = x0 + cellW;
+      const slotName =
+        splits === 2 ? nameOf(i === 0 ? "left" : "right") : nameOf(`split${i}`);
+      slots.push({ name: slotName, x: [x0, x1], y: [titleY1, lowerY0] });
+    }
+  }
+
   for (const slot of slots) {
     const existing = artifact.frames.find((f) => f.name === slot.name);
     const frameProps = {
@@ -805,6 +935,209 @@ function expandLayoutBoard(
       ],
     });
   }
+}
+
+type LegendPlace = "right" | "bottom" | "inside" | "off";
+
+function legendPlacement(props: Record<string, Expr>, seriesField: string | null): LegendPlace {
+  if (!seriesField) return "off";
+  const v = props.legend;
+  if (!v) return "right";
+  if (v.kind === "boolean") return v.value ? "right" : "off";
+  if (v.kind === "string" || v.kind === "ident") {
+    const raw = v.kind === "string" ? v.value : v.path.join(".");
+    const s = raw.toLowerCase();
+    if (s === "false" || s === "off" || s === "none") return "off";
+    if (s === "inside" || s === "in") return "inside";
+    if (s === "bottom" || s === "south") return "bottom";
+    return "right";
+  }
+  return "right";
+}
+
+function reserveLegendArea(
+  area: Expr,
+  place: LegendPlace,
+  created: boolean,
+  axis: "x" | "y",
+): Expr {
+  if (!created || area.kind !== "array" || area.items.length < 2) return area;
+  const a = numericLiteral(area.items[0]);
+  const b = numericLiteral(area.items[1]);
+  if (a === null || b === null) return area;
+  if (axis === "x" && place === "right") return literal([a, Math.max(a + 40, b - 80)]);
+  if (axis === "y" && place === "bottom") return literal([a, Math.max(a + 40, b - 36)]);
+  return area;
+}
+
+function orientIsHorizontal(props: Record<string, Expr>): boolean {
+  const raw = props.orient ?? props.orientation;
+  if (!raw) return false;
+  const s =
+    raw.kind === "string" ? raw.value : raw.kind === "ident" ? raw.path.join(".") : "";
+  return s === "h" || s === "horizontal";
+}
+
+function catsFromExpr(expr: Expr | undefined): string[] {
+  if (!expr) return [];
+  if (expr.kind === "array") {
+    return expr.items
+      .map((item) => {
+        if (item.kind === "string") return item.value;
+        if (item.kind === "ident") return item.path.join(".");
+        if (item.kind === "number") return String(item.value);
+        return "";
+      })
+      .filter(Boolean);
+  }
+  if (expr.kind === "string") {
+    return expr.value.split(/[,|]/).map((part) => part.trim()).filter(Boolean);
+  }
+  return [];
+}
+
+function scaleKindFromExpr(expr: Expr | undefined): ScaleKind | null {
+  if (!expr) return null;
+  if (expr.kind === "string") return scaleKind(expr.value);
+  if (expr.kind === "ident") return scaleKind(expr.path.join("."));
+  return null;
+}
+
+function fieldLooksCategorical(artifact: Artifact, dataName: string, field: string): boolean {
+  const decl = artifact.data.find((d) => d.name === dataName);
+  if (!decl || decl.value.kind !== "array") return false;
+  let sawString = false;
+  let sawNumber = false;
+  for (const row of decl.value.items) {
+    if (row.kind !== "object") continue;
+    const value = objectField(row, field);
+    if (value?.kind === "string") sawString = true;
+    if (value?.kind === "number") sawNumber = true;
+  }
+  return sawString && !sawNumber;
+}
+
+function collectCats(artifact: Artifact, dataName: string, field: string): string[] {
+  const decl = artifact.data.find((d) => d.name === dataName);
+  if (!decl || decl.value.kind !== "array") return [];
+  const keys: string[] = [];
+  const seen = new Set<string>();
+  for (const row of decl.value.items) {
+    if (row.kind !== "object") continue;
+    const value = objectField(row, field);
+    const key =
+      value?.kind === "number" ? String(value.value) : value?.kind === "string" ? value.value : "";
+    if (key && !seen.has(key)) {
+      seen.add(key);
+      keys.push(key);
+    }
+  }
+  return keys;
+}
+
+function encodeBandField(
+  artifact: Artifact,
+  dataName: string,
+  field: string,
+  dest: string,
+  cats: string[],
+): void {
+  const decl = artifact.data.find((d) => d.name === dataName);
+  if (!decl || decl.value.kind !== "array") return;
+  for (const row of decl.value.items) {
+    if (row.kind !== "object") continue;
+    const value = objectField(row, field);
+    let idx = 0;
+    if (value?.kind === "string") {
+      idx = Math.max(0, cats.indexOf(value.value));
+    } else if (value?.kind === "number") {
+      const labeled = cats.indexOf(String(value.value));
+      idx = labeled >= 0 ? labeled : value.value;
+    }
+    setObjectField(row, dest, literal(idx));
+  }
+}
+
+function logTicks(min: number, max: number): number[] {
+  const lo = Math.max(min, 1e-12);
+  const hi = Math.max(max, lo);
+  const e0 = Math.ceil(Math.log10(lo) - 1e-9);
+  const e1 = Math.floor(Math.log10(hi) + 1e-9);
+  const ticks: number[] = [];
+  for (let e = e0; e <= e1; e++) {
+    const v = 10 ** e;
+    if (v >= lo * 0.999 && v <= hi * 1.001) ticks.push(v);
+  }
+  if (!ticks.length) {
+    ticks.push(lo);
+    if (hi > lo * 1.01) ticks.push(hi);
+  }
+  return ticks;
+}
+
+function axisTicks(
+  props: Record<string, Expr>,
+  axis: "x" | "y",
+): { value: number; label: string }[] {
+  const cats = catsFromExpr(axis === "x" ? props.xCats : props.yCats);
+  if (cats.length) return cats.map((label, i) => ({ value: i, label }));
+  const lim = axis === "x" ? numericPair(props.xlim, [0, 10]) : numericPair(props.ylim, [0, 100]);
+  if (!lim) return [];
+  const kind = scaleKindFromExpr(axis === "x" ? props.xScale : props.yScale) ?? "linear";
+  if (kind === "log") {
+    return logTicks(lim[0], lim[1]).map((v) => ({ value: v, label: formatTickValue(v) }));
+  }
+  return niceTicks(lim[0], lim[1]).map((v) => ({ value: v, label: formatTickValue(v) }));
+}
+
+function axisTickValues(props: Record<string, Expr>, axis: "x" | "y"): number[] {
+  return axisTicks(props, axis).map((tick) => tick.value);
+}
+
+function invertSceneXExpr(
+  scene: Expr,
+  geom: Record<string, Expr>,
+  span: { line: number; column: number },
+): Expr {
+  const x0 = pairAt(geom.areaX ?? geom.x, 0, 72);
+  const x1 = pairAt(geom.areaX ?? geom.x, 1, 720);
+  const xmin = xlimLow(geom);
+  const xmax = xlimHigh(geom);
+  const t = binary("/", binary("-", scene, x0, span), binary("-", x1, x0, span), span);
+  if (scaleKindFromExpr(geom.xScale) === "log") {
+    const lim = numericPair(geom.xlim, [1, 10]) ?? [1, 10];
+    const d0 = Math.log(Math.max(lim[0], 1e-12));
+    const d1 = Math.log(Math.max(lim[1], 1e-12));
+    return callExpr(
+      "exp",
+      [binary("+", literal(d0), binary("*", t, literal(d1 - d0), span), span)],
+      span,
+    );
+  }
+  return binary("+", xmin, binary("*", t, binary("-", xmax, xmin, span), span), span);
+}
+
+function invertSceneYExpr(
+  scene: Expr,
+  geom: Record<string, Expr>,
+  span: { line: number; column: number },
+): Expr {
+  const y0 = pairAt(geom.areaY ?? geom.y, 0, 60);
+  const y1 = pairAt(geom.areaY ?? geom.y, 1, 400);
+  const ymin = ylimLow(geom);
+  const ymax = ylimHigh(geom);
+  const t = binary("/", binary("-", y1, scene, span), binary("-", y1, y0, span), span);
+  if (scaleKindFromExpr(geom.yScale) === "log") {
+    const lim = numericPair(geom.ylim, [1, 100]) ?? [1, 100];
+    const d0 = Math.log(Math.max(lim[0], 1e-12));
+    const d1 = Math.log(Math.max(lim[1], 1e-12));
+    return callExpr(
+      "exp",
+      [binary("+", literal(d0), binary("*", t, literal(d1 - d0), span), span)],
+      span,
+    );
+  }
+  return binary("+", ymin, binary("*", t, binary("-", ymax, ymin, span), span), span);
 }
 
 function xlimLow(props: Record<string, Expr>): Expr {
@@ -885,7 +1218,7 @@ function expandGridLines(
   span: { line: number; column: number },
 ): SceneItem[] {
   const items: SceneItem[] = [];
-  const yTicks = numericTicksFromProps(props, "y");
+  const yTicks = axisTickValues(props, "y");
   if (yTicks.length >= 2) {
     for (let i = 0; i < yTicks.length; i++) {
       const y = literal(yTicks[i]!);
@@ -927,7 +1260,7 @@ function expandGridLines(
       );
     }
   }
-  const xTicks = numericTicksFromProps(props, "x");
+  const xTicks = axisTickValues(props, "x");
   for (let i = 0; i < xTicks.length; i++) {
     const x = literal(xTicks[i]!);
     items.push(
@@ -1015,8 +1348,8 @@ function expandAxisTicks(
   const ylim = numericPair(props.ylim, [0, 100]);
   if (!xlim || !ylim) return [];
 
-  const xTicks = niceTicks(xlim[0], xlim[1]);
-  const yTicks = niceTicks(ylim[0], ylim[1]);
+  const xTicks = axisTicks(props, "x");
+  const yTicks = axisTicks(props, "y");
   const items: SceneItem[] = [];
 
   const xSpan = binary("-", xlimHigh(props), xlimLow(props), span);
@@ -1029,23 +1362,23 @@ function expandAxisTicks(
   const xForYLabel = binary("-", xlimLow(props), xPad, span);
 
   for (let i = 0; i < xTicks.length; i++) {
-    const v = xTicks[i]!;
+    const tick = xTicks[i]!;
     items.push(
       node(`${frameName}_xtick_${i}`, {
         role: literal("label"),
         frame: literal(frameName),
-        x: literal(v),
+        x: literal(tick.value),
         y: yForXLabel,
-        text: literal(formatTickValue(v)),
+        text: literal(tick.label),
         font: literal(8),
         align: literal("center"),
       }),
       node(`${frameName}_xtickMark_${i}`, {
         role: literal("axis"),
         frame: literal(frameName),
-        x1: literal(v),
+        x1: literal(tick.value),
         y1: ylimLow(props),
-        x2: literal(v),
+        x2: literal(tick.value),
         y2: binary("-", ylimLow(props), tickLen, span),
         strokeWidth: literal(1),
       }),
@@ -1053,14 +1386,14 @@ function expandAxisTicks(
   }
 
   for (let i = 0; i < yTicks.length; i++) {
-    const v = yTicks[i]!;
+    const tick = yTicks[i]!;
     items.push(
       node(`${frameName}_ytick_${i}`, {
         role: literal("label"),
         frame: literal(frameName),
         x: xForYLabel,
-        y: literal(v),
-        text: literal(formatTickValue(v)),
+        y: literal(tick.value),
+        text: literal(tick.label),
         font: literal(8),
         align: literal("right"),
       }),
@@ -1068,9 +1401,9 @@ function expandAxisTicks(
         role: literal("axis"),
         frame: literal(frameName),
         x1: xlimLow(props),
-        y1: literal(v),
+        y1: literal(tick.value),
         x2: binary("+", xlimLow(props), tickLen, span),
-        y2: literal(v),
+        y2: literal(tick.value),
         strokeWidth: literal(1),
       }),
     );
@@ -1111,25 +1444,41 @@ function expandSeriesLegend(
   dataName: string,
   seriesField: string,
   props: Record<string, Expr>,
+  place: LegendPlace,
   span: { line: number; column: number },
 ): SceneItem[] {
   const keys = uniqueSeriesKeys(artifact, dataName, seriesField);
-  if (!keys.length) return [];
+  if (!keys.length || place === "off") return [];
 
   const x0 = pairAt(props.areaX ?? props.x, 0, 72);
+  const x1 = pairAt(props.areaX ?? props.x, 1, 720);
+  const y0 = pairAt(props.areaY ?? props.y, 0, 60);
   const y1 = pairAt(props.areaY ?? props.y, 1, 400);
-  const baseX = x0.kind === "number" ? x0.value + 12 : 84;
-  const baseY = y1.kind === "number" ? y1.value - 14 : 386;
+  const plotX0 = x0.kind === "number" ? x0.value : 72;
+  const plotX1 = x1.kind === "number" ? x1.value : 720;
+  const plotY0 = y0.kind === "number" ? y0.value : 60;
+  const plotY1 = y1.kind === "number" ? y1.value : 400;
 
   const items: SceneItem[] = [];
   for (let i = 0; i < keys.length; i++) {
     const key = keys[i]!;
-    const y = baseY - i * 14;
+    let swatchX: number;
+    let swatchY: number;
+    if (place === "bottom") {
+      swatchX = plotX0 + 8 + i * 72;
+      swatchY = plotY1 + 32;
+    } else if (place === "inside") {
+      swatchX = plotX0 + 12;
+      swatchY = plotY1 - 14 - i * 14;
+    } else {
+      swatchX = plotX1 + 10;
+      swatchY = plotY0 + 12 + i * 14;
+    }
     items.push(
       node(`${frameName}_leg_${i}`, {
         role: literal("legend"),
-        x: literal(baseX),
-        y: literal(y - 5),
+        x: literal(swatchX),
+        y: literal(swatchY - 5),
         w: literal(8),
         h: literal(8),
         radius: literal(2),
@@ -1146,12 +1495,20 @@ function expandSeriesLegend(
       }),
       node(`${frameName}_legLbl_${i}`, {
         role: literal("legend-label"),
-        x: literal(baseX + 14),
-        y: literal(y),
+        x: literal(swatchX + 14),
+        y: literal(swatchY),
         text: literal(key),
         font: literal(8),
       }),
     );
+    if (!artifact.events.some((e) => e.type === "click" && e.target === `${frameName}_leg_${i}`)) {
+      artifact.events.push({
+        type: "click",
+        target: `${frameName}_leg_${i}`,
+        body: [assign(["__highlightGrp"], literal(key))],
+        span,
+      });
+    }
   }
   return items;
 }
@@ -1424,13 +1781,49 @@ function highlightOpacity(
   seriesField: string | null,
   span: { line: number; column: number },
 ): Record<string, Expr> {
-  if (!seriesField) return {};
-  const dim = binary(
-    "*",
-    binary("!=", ident("__highlightGrp"), noneExpr(span), span),
-    binary("!=", ident(`row.${seriesField}`), ident("__highlightGrp"), span),
-    span,
-  );
+  return markInteractOpacity(seriesField, null, null, span);
+}
+
+function markInteractOpacity(
+  seriesField: string | null,
+  xField: string | null,
+  yField: string | null,
+  span: { line: number; column: number },
+): Record<string, Expr> {
+  const parts: Expr[] = [];
+  if (seriesField) {
+    parts.push(
+      binary(
+        "and",
+        binary("!=", ident("__highlightGrp"), noneExpr(span), span),
+        binary("!=", ident(`row.${seriesField}`), ident("__highlightGrp"), span),
+        span,
+      ),
+    );
+  }
+  if (xField && yField) {
+    const loX = callExpr("min", [ident("__brush.dx0"), ident("__brush.dx1")], span);
+    const hiX = callExpr("max", [ident("__brush.dx0"), ident("__brush.dx1")], span);
+    const loY = callExpr("min", [ident("__brush.dy0"), ident("__brush.dy1")], span);
+    const hiY = callExpr("max", [ident("__brush.dy0"), ident("__brush.dy1")], span);
+    const outX = binary(
+      "or",
+      binary("<", ident(`row.${xField}`), loX, span),
+      binary(">", ident(`row.${xField}`), hiX, span),
+      span,
+    );
+    const outY = binary(
+      "or",
+      binary("<", ident(`row.${yField}`), loY, span),
+      binary(">", ident(`row.${yField}`), hiY, span),
+      span,
+    );
+    parts.push(
+      binary("and", ident("__brush.on"), binary("or", outX, outY, span), span),
+    );
+  }
+  if (!parts.length) return {};
+  const dim = parts.reduce((acc, part) => binary("or", acc, part, span));
   return {
     opacity: binary("-", literal(1), binary("*", literal(0.72), dim, span), span),
   };
@@ -1446,8 +1839,11 @@ function ensureChartInteract(
   frameName: string,
   xField: string,
   yField: string,
+  markXField: string,
+  markYField: string,
   vField: string,
   seriesField: string | null,
+  geom: Record<string, Expr>,
   span: { line: number; column: number },
 ): void {
   if (!artifact.states.some((s) => s.name === "__tip")) {
@@ -1480,6 +1876,10 @@ function ensureChartInteract(
           { key: "y0", value: literal(0) },
           { key: "x1", value: literal(0) },
           { key: "y1", value: literal(0) },
+          { key: "dx0", value: literal(0) },
+          { key: "dy0", value: literal(0) },
+          { key: "dx1", value: literal(0) },
+          { key: "dy1", value: literal(0) },
           { key: "on", value: literal(0) },
         ],
         span,
@@ -1528,7 +1928,17 @@ function ensureChartInteract(
   }
 
   const target =
-    kind === "chart.bar" ? "bar" : kind === "chart.heatmap" ? "heatCell" : kind === "chart.line" ? "linePt" : "mark";
+    kind === "chart.bar" || kind === "chart.funnel"
+      ? "bar"
+      : kind === "chart.heatmap"
+        ? "heatCell"
+        : kind === "chart.line"
+          ? "linePt"
+          : kind === "chart.vector"
+            ? "head"
+            : "mark";
+  void markXField;
+  void markYField;
   if (!artifact.events.some((e) => e.type === "hover" && e.target === target)) {
     const tipExpr =
       kind === "chart.heatmap"
@@ -1562,6 +1972,8 @@ function ensureChartInteract(
 
   const plotName = `${frameName}_plotBg`;
   if (!artifact.events.some((e) => e.type === "dragstart" && e.target === plotName)) {
+    const invertX = invertSceneXExpr(ident("__event.x"), geom, span);
+    const invertY = invertSceneYExpr(ident("__event.y"), geom, span);
     artifact.events.push({
       type: "dragstart",
       target: plotName,
@@ -1570,6 +1982,10 @@ function ensureChartInteract(
         assign(["__brush", "y0"], ident("__event.y")),
         assign(["__brush", "x1"], ident("__event.x")),
         assign(["__brush", "y1"], ident("__event.y")),
+        assign(["__brush", "dx0"], invertX),
+        assign(["__brush", "dy0"], invertY),
+        assign(["__brush", "dx1"], invertX),
+        assign(["__brush", "dy1"], invertY),
         assign(["__brush", "on"], literal(1)),
       ],
       span,
@@ -1580,6 +1996,8 @@ function ensureChartInteract(
       body: [
         assign(["__brush", "x1"], ident("__event.x")),
         assign(["__brush", "y1"], ident("__event.y")),
+        assign(["__brush", "dx1"], invertSceneXExpr(ident("__event.x"), geom, span)),
+        assign(["__brush", "dy1"], invertSceneYExpr(ident("__event.y"), geom, span)),
         assign(["__brush", "on"], literal(1)),
       ],
       span,
