@@ -1989,6 +1989,28 @@ function expandLayoutBoard(
       props: {},
       items: veilItems,
     });
+    const beatStamp = node(`${id}_beatStamp`, {
+      role: literal("caption"),
+      x: literal(safeX1),
+      y: literal(lowerY0 + Math.min(toScene(16), Math.max(toScene(8), lowerH * 0.45))),
+      align: literal("right"),
+      text: binary(
+        "+",
+        binary("+", binary("+", ident("__beat"), literal(1), span), literal(" / "), span),
+        literal(beatRects.length),
+        span,
+      ),
+    });
+    const copyLayer = artifact.scene?.layers.find((l) => l.name === `__${id}_copy`);
+    if (copyLayer) copyLayer.items.push(beatStamp);
+    else {
+      artifact.scene?.layers.push({
+        name: `__${id}_copy`,
+        span,
+        props: {},
+        items: [beatStamp],
+      });
+    }
   }
 
   if (typeGrid) {

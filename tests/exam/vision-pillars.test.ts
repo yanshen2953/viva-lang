@@ -619,6 +619,14 @@ widget chart.scatter
     expect(play.items.every((i) => i.kind === "node" && nodeIgnoresPointer(i.name, "chrome"))).toBe(
       true,
     );
+    const stamp = result.ir!.scene.layers
+      .find((l) => l.name === "__board_copy")
+      ?.items.find((i) => i.kind === "node" && i.name === "board_beatStamp");
+    expect(stamp?.kind).toBe("node");
+    if (stamp?.kind === "node") {
+      expect(evaluate(stamp.props.text!, [{ __beat: 0 }])).toBe("1 / 4");
+      expect(evaluate(stamp.props.text!, [{ __beat: 2 }])).toBe("3 / 4");
+    }
     expect(src).not.toMatch(/interactive:\s*false/);
     expect(result.ir!.events.some((e) => e.type === "hover")).toBe(true);
     expect(result.ir!.events.some((e) => e.type === "drag")).toBe(true);
@@ -640,6 +648,14 @@ widget chart.scatter
     expect(result.ir!.events.some((e) => e.type === "drag")).toBe(true);
     const play = result.ir!.scene.layers.find((l) => l.name === "__board_play")!;
     expect(play.items.length).toBe(4);
+    const stamp = result.ir!.scene.layers
+      .find((l) => l.name === "__board_copy")
+      ?.items.find((i) => i.kind === "node" && i.name === "board_beatStamp");
+    expect(stamp?.kind).toBe("node");
+    if (stamp?.kind === "node") {
+      expect(evaluate(stamp.props.text!, [{ __beat: 0 }])).toBe("1 / 4");
+      expect(evaluate(stamp.props.text!, [simulate(result.ir!, { ticks: 1 }).state])).toBe("2 / 4");
+    }
     for (const item of play.items) {
       expect(item.kind).toBe("node");
       if (item.kind !== "node") continue;
