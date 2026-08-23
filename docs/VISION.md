@@ -99,7 +99,7 @@
 
 1. 跨页 / 栏宽文法（`page: a4` 已切 PDF 页并盖 `n / N`；`column` 在有 `page` 时是图的 89/183 mm 栏宽，不再把纸页收成 89 mm；figure 格子会避开页缝并拉高场景，仍不重排正文；`layout.figure` 省略 gutter/margin/titleH 时按 mm/像素估缝和题注带；图/轴标题、图例键和色条标签已按栏宽折行，封顶后尾行省略，重叠刻度会抽稀，相邻格会再让 inset；软顶装不下时 inset 可再长到约半格，还不是通用排版器）
 2. `__sel` 已是共享 key 集并藏行；box / violin / 折线按选中行重算或重连；高亮、play 遮罩、box/折线几何和同骨架 violin `d` 走 220ms 缓动，仍缺时间轴
-3. 再扩随包 CJK 子集；宿主已能挂全库。未覆盖的字仍可能 `?`
+3. 随包 CJK 子集已按当前 examples + 论文词表重建；仍不是全库。宿主已能挂全库。未覆盖的字仍可能 `?`
 4. `layout.board play` / `typeGrid` 已在；省略 `safe`/`titleH`/`lowerH` 时按题注估条带；`--beats` 默认 PNG 序列，`-f gif|mp4` 只是 ffmpeg 幻灯，不是成片时间轴
 5. 例子与 exam 种子编译已进 CI；MCP/HTTP compile 已附 raster visual QA，仍不挡 IR 成功。LLM 生成成功率仍未测。不要把 visual 误报成「已经闭环」
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { copyFileSync, readFileSync, unlinkSync } from "node:fs";
+import { copyFileSync, readdirSync, readFileSync, unlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { compileSource } from "../../src/pipeline.js";
@@ -188,10 +188,20 @@ widget chart.scatter
       "单栏投稿图",
       "多面板综合图",
       "虚拟临床队列",
+      "图文排版 · 科学图板",
+      "栏宽是度量，纸页是刀口",
     ];
     for (const phrase of phrases) {
       expect(pdfSafeText(pickPdfFont(fonts, phrase), phrase)).toBe(phrase);
     }
+    const exampleHan = new Set<string>();
+    for (const file of readdirSync("examples").filter((name) => name.endsWith(".viva"))) {
+      for (const ch of readFileSync(join("examples", file), "utf8")) {
+        if (ch >= "\u4e00" && ch <= "\u9fff") exampleHan.add(ch);
+      }
+    }
+    expect(exampleHan.size).toBeGreaterThan(80);
+    expect([...exampleHan].filter((ch) => pdfSafeText(fonts.rich, ch) !== ch)).toEqual([]);
     const src = readFileSync("examples/paper-cjk.viva", "utf8");
     const pdf = await exportArtifact(src, "pdf", {}, "paper-cjk.viva");
     const text = Buffer.from(pdf.bytes).toString("latin1");
