@@ -22,6 +22,8 @@ export type PaperChrome = {
   titleX: number;
   titleY: number;
   titleLines: string[];
+  xTitleLines: string[];
+  yTitleLines: string[];
   legendX: number;
   legendY: number;
   legendStep: number;
@@ -198,6 +200,9 @@ export function placePaperChrome(
   let titleX = box.px0;
   let titleY = Math.max(toScene(compact ? 8 : 14), box.py0 - toScene(TITLE_FONT + gap));
   let titleLines = title ? [title] : [];
+  let xTitleLines = xCap ? [xCap] : [];
+  let yTitleLines = yCap ? [yCap] : [];
+  const axisLine = AXIS_FONT + 2;
   let cbarX = box.px1 + toScene(compact ? 4 : 8);
   const cbarLabelW = Math.max(
     ...cbarLabels.map((s) => estimateTextWidthPx(s, TICK_FONT, 0.08)),
@@ -267,24 +272,30 @@ export function placePaperChrome(
         h: TICK_FONT,
       });
     }
-    if (yCap) {
-      const tw = estimateTextWidthPx(yCap, AXIS_FONT, 0.2);
+    if (yTitleLines.length) {
+      const tw = Math.max(
+        ...yTitleLines.map((line) => estimateTextWidthPx(line, AXIS_FONT, 0.2)),
+      );
+      const n = yTitleLines.length;
       rects.push({
         id: "yTitle",
-        x: yTitleX - AXIS_FONT * 0.5,
+        x: yTitleX - AXIS_FONT * 0.5 - (n - 1) * axisLine,
         y: (box.py0 + box.py1) / 2 - tw / 2,
-        w: AXIS_FONT,
+        w: AXIS_FONT + (n - 1) * axisLine,
         h: tw,
       });
     }
-    if (xCap) {
-      const tw = estimateTextWidthPx(xCap, AXIS_FONT, 0.2);
+    if (xTitleLines.length) {
+      const tw = Math.max(
+        ...xTitleLines.map((line) => estimateTextWidthPx(line, AXIS_FONT, 0.2)),
+      );
+      const n = xTitleLines.length;
       rects.push({
         id: "xTitle",
         x: (box.px0 + box.px1) / 2 - tw / 2,
         y: xTitleY - AXIS_FONT * 0.75,
         w: tw,
-        h: AXIS_FONT,
+        h: AXIS_FONT + (n - 1) * axisLine,
       });
     }
     if (extras.colorbar) {
@@ -333,6 +344,18 @@ export function placePaperChrome(
     }
     rects = build();
   }
+  if (xCap) {
+    const maxW = Math.max(AXIS_FONT * 4, box.px1 - box.px0);
+    xTitleLines = wrapTextLines(xCap, maxW, AXIS_FONT, 0.2).slice(0, 3);
+    if (!xTitleLines.length) xTitleLines = [xCap];
+    rects = build();
+  }
+  if (yCap) {
+    const maxW = Math.max(AXIS_FONT * 4, box.py1 - box.py0);
+    yTitleLines = wrapTextLines(yCap, maxW, AXIS_FONT, 0.2).slice(0, 3);
+    if (!yTitleLines.length) yTitleLines = [yCap];
+    rects = build();
+  }
   if (yCap && yTicks.length && collide("yTitle", "ytick-")) {
     const tickLeft = Math.min(...rects.filter((r) => r.id.startsWith("ytick-")).map((r) => r.x));
     yTitleX = tickLeft - gap - AXIS_FONT * 0.5;
@@ -351,7 +374,7 @@ export function placePaperChrome(
     }
   }
   if (extras.legendAt === "bottom" && xCap && collide("legend-", "xTitle")) {
-    legendY = xTitleY + toScene(AXIS_FONT + gap);
+    legendY = xTitleY + toScene(AXIS_FONT + gap) + (xTitleLines.length - 1) * axisLine;
     rects = build();
   }
 
@@ -364,6 +387,8 @@ export function placePaperChrome(
       titleX,
       titleY,
       titleLines,
+      xTitleLines,
+      yTitleLines,
       legendX,
       legendY,
       legendStep,
@@ -403,6 +428,50 @@ export function growInsetsForChrome(
       if (rightish) out.r = Math.max(out.r, overlapW * 0.5);
       if (topish) out.t = Math.max(out.t, overlapH * 0.5);
       if (botish) out.b = Math.max(out.b, overlapH * 0.5);
+    }
+  }
+  return out;
+}
+
+export type NeighborChrome = {
+  cell: CellBox;
+  rects: ChromeRect[];
+};
+
+export function growInsetsForNeighbors(
+  rects: ChromeRect[],
+  cell: CellBox,
+  neighbors: NeighborChrome[],
+  pad: number,
+): { l: number; r: number; t: number; b: number } {
+  const out = { l: 0, r: 0, t: 0, b: 0 };
+  const selfCx = (cell.x0 + cell.x1) / 2;
+  const selfCy = (cell.y0 + cell.y1) / 2;
+  for (const nb of neighbors) {
+    const nbRect: ChromeRect = {
+      id: "neighbor-cell",
+      x: nb.cell.x0,
+      y: nb.cell.y0,
+      w: Math.max(1, nb.cell.x1 - nb.cell.x0),
+      h: Math.max(1, nb.cell.y1 - nb.cell.y0),
+    };
+    const dx = (nb.cell.x0 + nb.cell.x1) / 2 - selfCx;
+    const dy = (nb.cell.y0 + nb.cell.y1) / 2 - selfCy;
+    const horizontal = Math.abs(dx) >= Math.abs(dy);
+    for (const rect of rects) {
+      const hits: ChromeRect[] = [nbRect, ...nb.rects];
+      for (const other of hits) {
+        if (!rectsOverlap(rect, other, pad)) continue;
+        const overlapW = Math.min(rect.x + rect.w, other.x + other.w) - Math.max(rect.x, other.x) + pad;
+        const overlapH = Math.min(rect.y + rect.h, other.y + other.h) - Math.max(rect.y, other.y) + pad;
+        if (horizontal) {
+          if (dx > 0) out.r = Math.max(out.r, overlapW * 0.5);
+          else out.l = Math.max(out.l, overlapW * 0.5);
+        } else {
+          if (dy > 0) out.b = Math.max(out.b, overlapH * 0.5);
+          else out.t = Math.max(out.t, overlapH * 0.5);
+        }
+      }
     }
   }
   return out;

@@ -3,6 +3,7 @@ import { compileSource } from "../../src/pipeline.js";
 import { evaluate } from "../../src/eval.js";
 import {
   estimateTextWidthPx,
+  growInsetsForNeighbors,
   placePaperChrome,
   rectsOverlap,
   thinXTicks,
@@ -204,6 +205,59 @@ widget chart.bar
     expect(labels.length).toBeLessThan(4);
   });
 
+  it("wraps a long x-axis caption to the plot width", () => {
+    const { chrome, rects } = placePaperChrome(
+      { px0: 40, px1: 160, py0: 20, py1: 140 },
+      (px) => px,
+      false,
+      {
+        xCaption: "Follow-up time since randomization",
+        yCaption: "Score",
+        yTicks: [{ label: "0", y: 130 }],
+        xTicks: [{ label: "0", x: 40 }, { label: "12", x: 160 }],
+      },
+    );
+    expect(chrome.xTitleLines.length).toBeGreaterThan(1);
+    expect(chrome.xTitleLines.join(" ")).toMatch(/Follow-up/);
+    expect(chrome.xTitleLines.join(" ")).toMatch(/randomization/);
+    const box = rects.find((r) => r.id === "xTitle")!;
+    expect(box.h).toBeGreaterThan(9);
+  });
+
+  it("wraps a long y-axis caption to the plot height", () => {
+    const { chrome, rects } = placePaperChrome(
+      { px0: 80, px1: 280, py0: 20, py1: 140 },
+      (px) => px,
+      false,
+      {
+        yCaption: "Serum concentration of inflammatory cytokine",
+        xCaption: "Week",
+        yTicks: [{ label: "0", y: 130 }],
+        xTicks: [{ label: "1", x: 80 }],
+      },
+    );
+    expect(chrome.yTitleLines.length).toBeGreaterThan(1);
+    expect(chrome.yTitleLines.join(" ")).toMatch(/Serum/);
+    expect(chrome.yTitleLines.join(" ")).toMatch(/cytokine/);
+    const box = rects.find((r) => r.id === "yTitle")!;
+    expect(box.w).toBeGreaterThan(9);
+  });
+
+  it("grows the right inset when chrome overlaps the neighbor cell", () => {
+    const grow = growInsetsForNeighbors(
+      [{ id: "legend-0", x: 168, y: 20, w: 40, h: 12 }],
+      { x0: 0, y0: 0, x1: 180, y1: 120 },
+      [
+        {
+          cell: { x0: 188, y0: 0, x1: 360, y1: 120 },
+          rects: [{ id: "yTitle", x: 186, y: 30, w: 10, h: 60 }],
+        },
+      ],
+      2,
+    );
+    expect(grow.r).toBeGreaterThan(0.5);
+  });
+
   it("emits wrapped chart title lines on a narrow scene", () => {
     const result = compileSource(
       `artifact Wrap
@@ -232,5 +286,110 @@ widget chart.line
     );
     expect(texts.join(" ")).toMatch(/Survival/);
     expect(texts.join(" ")).toMatch(/cohort/);
+  });
+
+  it("emits wrapped axis title lines on a short plot", () => {
+    const result = compileSource(
+      `artifact AxisWrap
+data rows = [{ x: 1, y: 2 }, { x: 2, y: 4 }]
+scene
+  size: 200 140
+  background: #ffffff
+widget chart.line
+  data: rows
+  xField: x
+  yField: y
+  xlim: 0 3
+  ylim: 0 5
+  xLabel: "Follow-up time since randomization"
+  yLabel: "Serum concentration of inflammatory cytokine"
+  interactive: false
+`,
+      "axis-wrap.viva",
+      { handbookIds: ["print-nature"] },
+    );
+    expect(result.error).toBeNull();
+    const axes = result.ir!.scene.layers.find((l) => l.name.endsWith("_axes"))!;
+    const xTitles = axes.items.filter((i) => i.kind === "node" && /_xTitle(_\d+)?$/.test(i.name));
+    const yTitles = axes.items.filter((i) => i.kind === "node" && /_yTitle(_\d+)?$/.test(i.name));
+    expect(xTitles.length + yTitles.length).toBeGreaterThan(2);
+    const texts = [...xTitles, ...yTitles].map((i) =>
+      i.kind === "node" ? String(evaluate(i.props.text, [{}, {}])) : "",
+    );
+    expect(texts.join(" ")).toMatch(/Follow-up|randomization|Serum|cytokine/);
+  });
+
+  it("keeps adjacent-panel chrome boxes from overlapping", () => {
+    const result = compileSource(
+      `artifact Neighbors
+data left = [
+  { x: 1, y: 20, grp: "placebo-control" }
+  { x: 2, y: 40, grp: "active-drug" }
+  { x: 1, y: 18, grp: "placebo-control" }
+  { x: 2, y: 36, grp: "active-drug" }
+]
+data right = [{ x: 1, y: 12 }, { x: 2, y: 18 }]
+scene
+  size: 360 180
+  background: #ffffff
+widget layout.figure
+  cols: 2
+  rows: 1
+  gutter: 8
+  margin: 6
+widget chart.line
+  panel: a
+  data: left
+  xField: x
+  yField: y
+  group: grp
+  xlim: 0 3
+  ylim: 0 50
+  title: "LEFT"
+  interactive: false
+widget chart.line
+  panel: b
+  data: right
+  xField: x
+  yField: y
+  xlim: 0 3
+  ylim: 0 24
+  yLabel: "Serum concentration of inflammatory cytokine"
+  title: "RIGHT"
+  interactive: false
+`,
+      "neighbors.viva",
+      { handbookIds: ["print-nature"] },
+    );
+    expect(result.error).toBeNull();
+    const ir = result.ir!;
+    const env = [ir.state, ir.data];
+    const nodes = ir.scene.layers.flatMap((l) => l.items.filter((i) => i.kind === "node"));
+    const aLegs = nodes.filter((n) => n.kind === "node" && /^a_legLbl_/.test(n.name));
+    const bTitles = nodes.filter((n) => n.kind === "node" && /b_yTitle/.test(n.name));
+    expect(aLegs.length).toBeGreaterThan(0);
+    expect(bTitles.length).toBeGreaterThan(0);
+    for (const leg of aLegs) {
+      if (leg.kind !== "node") continue;
+      const lx = evaluate(leg.props.x, env) as number;
+      const ly = evaluate(leg.props.y, env) as number;
+      const text = String(evaluate(leg.props.text, env));
+      const boxA = {
+        id: "a",
+        x: lx,
+        y: ly - 6,
+        w: estimateTextWidthPx(text, 8, 0.1),
+        h: 12,
+      };
+      for (const title of bTitles) {
+        if (title.kind !== "node") continue;
+        const tx = evaluate(title.props.x, env) as number;
+        const ty = evaluate(title.props.y, env) as number;
+        const ttext = String(evaluate(title.props.text, env));
+        const tw = estimateTextWidthPx(ttext, 9, 0.2);
+        const boxB = { id: "b", x: tx - 5, y: ty - tw / 2, w: 11, h: tw };
+        expect(rectsOverlap(boxA, boxB, 1)).toBe(false);
+      }
+    }
   });
 });

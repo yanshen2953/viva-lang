@@ -21,10 +21,12 @@ import { domainMap, parseTimeValue, scaleKind, type ScaleKind } from "./space.js
 import { COLUMN_MM, sceneScaleOf } from "./space/scene-box.js";
 import {
   growInsetsForChrome,
+  growInsetsForNeighbors,
   placePaperChrome,
   thinXTicks,
   thinYTicks,
   type ChromeRect,
+  type NeighborChrome,
   type PaperChrome,
 } from "./layout/chrome-collide.js";
 
@@ -997,18 +999,86 @@ function expandLayoutFigure(
   const decks = boolProp(props, "decks", true);
   const labelItems: SceneItem[] = [];
   const deckItems: SceneItem[] = [];
+  const unit = sceneUnitOf(artifact);
+  const scale = sceneScaleOf({ unit });
+  const toScene = (px: number) => px / Math.max(scale, 1e-6);
+  const pad = toScene(3);
+  const clampInset = (
+    l: number,
+    r: number,
+    t: number,
+    b: number,
+  ): { l: number; r: number; t: number; b: number } => ({
+    l: Math.min(Math.max(toScene(10), l), cellW * 0.38),
+    r: Math.min(Math.max(toScene(8), r), cellW * 0.38),
+    t: Math.min(Math.max(toScene(8), t), cellH * 0.28),
+    b: Math.min(Math.max(toScene(10), b), cellH * 0.32),
+  });
 
-  for (let i = 0; i < names.length; i++) {
-    const name = names[i]!;
+  type CellPlan = {
+    name: string;
+    cellX0: number;
+    cellY0: number;
+    l: number;
+    r: number;
+    t: number;
+    b: number;
+  };
+  const plans: CellPlan[] = names.map((name, i) => {
     const col = i % cols;
     const row = Math.floor(i / cols);
     const cellX0 = gridX + margin + col * (cellW + gutter);
     const cellY0 = gridY + margin + row * (cellH + gutter);
     const estimated = estimatePanelInsets(artifact, name, cellX0, cellY0, cellW, cellH);
-    const insetL = explicitL ? numProp(props, "insetL", numProp(props, "plotPadL", estimated.l)) : estimated.l;
-    const insetR = explicitR ? numProp(props, "insetR", numProp(props, "plotPadR", estimated.r)) : estimated.r;
-    const insetT = explicitT ? numProp(props, "insetT", numProp(props, "plotPadT", estimated.t)) : estimated.t;
-    const insetB = explicitB ? numProp(props, "insetB", numProp(props, "plotPadB", estimated.b)) : estimated.b;
+    const raw = {
+      l: explicitL ? numProp(props, "insetL", numProp(props, "plotPadL", estimated.l)) : estimated.l,
+      r: explicitR ? numProp(props, "insetR", numProp(props, "plotPadR", estimated.r)) : estimated.r,
+      t: explicitT ? numProp(props, "insetT", numProp(props, "plotPadT", estimated.t)) : estimated.t,
+      b: explicitB ? numProp(props, "insetB", numProp(props, "plotPadB", estimated.b)) : estimated.b,
+    };
+    return { name, cellX0, cellY0, ...raw };
+  });
+
+  const explicitAny = explicitL || explicitR || explicitT || explicitB;
+  if (!explicitAny) {
+    for (let iter = 0; iter < 4; iter++) {
+      const layouts = plans.map((plan) => ({
+        cell: {
+          x0: plan.cellX0,
+          y0: plan.cellY0,
+          x1: plan.cellX0 + cellW,
+          y1: plan.cellY0 + cellH,
+        },
+        rects: chromeRectsForPanel(artifact, plan.name, plan.cellX0, plan.cellY0, cellW, cellH, plan),
+      }));
+      let grew = false;
+      for (let i = 0; i < plans.length; i++) {
+        const plan = plans[i]!;
+        const neighbors: NeighborChrome[] = layouts
+          .filter((_, j) => j !== i)
+          .map((layout) => ({ cell: layout.cell, rects: layout.rects }));
+        const grow = growInsetsForNeighbors(layouts[i]!.rects, layouts[i]!.cell, neighbors, pad);
+        if (grow.l <= 0.5 && grow.r <= 0.5 && grow.t <= 0.5 && grow.b <= 0.5) continue;
+        const next = clampInset(plan.l + grow.l, plan.r + grow.r, plan.t + grow.t, plan.b + grow.b);
+        if (
+          next.l - plan.l > 0.4 ||
+          next.r - plan.r > 0.4 ||
+          next.t - plan.t > 0.4 ||
+          next.b - plan.b > 0.4
+        ) {
+          plan.l = next.l;
+          plan.r = next.r;
+          plan.t = next.t;
+          plan.b = next.b;
+          grew = true;
+        }
+      }
+      if (!grew) break;
+    }
+  }
+
+  for (const plan of plans) {
+    const { name, cellX0, cellY0, l: insetL, r: insetR, t: insetT, b: insetB } = plan;
     const plotX0 = cellX0 + insetL;
     const plotY0 = cellY0 + insetT;
     const plotX1 = cellX0 + cellW - insetR;
@@ -2223,6 +2293,16 @@ function sceneExtentOf(artifact: Artifact): { w: number; h: number } {
   return { w, h };
 }
 
+function chartForPanel(
+  artifact: Artifact,
+  panelName: string,
+): { name: string; props: Record<string, Expr> } | undefined {
+  return artifact.widgets.find((w) => {
+    if (!w.name.startsWith("chart.")) return false;
+    return stringProp(w.props, ["panel", "frame"]) === panelName;
+  });
+}
+
 function estimatePanelInsets(
   artifact: Artifact,
   panelName: string,
@@ -2232,26 +2312,20 @@ function estimatePanelInsets(
   cellH: number,
 ): { l: number; r: number; t: number; b: number } {
   const fallback = { l: 76, r: 32, t: 32, b: 52 };
-  const chart = artifact.widgets.find((w) => {
-    if (!w.name.startsWith("chart.")) return false;
-    return stringProp(w.props, ["panel", "frame"]) === panelName;
-  });
+  const chart = chartForPanel(artifact, panelName);
   if (!chart) return fallback;
   return fitChartInsets(artifact, chart, cellX0, cellY0, cellW, cellH);
 }
 
-function fitChartInsets(
+function chartChromeExtras(
   artifact: Artifact,
   chart: { name: string; props: Record<string, Expr> },
-  cellX0: number,
-  cellY0: number,
-  cellW: number,
-  cellH: number,
-): { l: number; r: number; t: number; b: number } {
-  const unit = sceneUnitOf(artifact);
-  const scale = sceneScaleOf({ unit });
-  const toScene = (px: number) => px / Math.max(scale, 1e-6);
-  const pad = toScene(3);
+): {
+  colorbar?: boolean;
+  legendAt?: Exclude<LegendPlace, "off">;
+  legendKeys?: string[];
+  title?: string;
+} {
   const title =
     chart.props.title?.kind === "string"
       ? chart.props.title.value
@@ -2267,12 +2341,48 @@ function fitChartInsets(
   const seriesField = seriesFieldName(chart.props);
   const legendAt = legendPlacement(chart.props, seriesField);
   const keys = seriesField ? uniqueSeriesKeys(artifact, dataName, seriesField) : [];
-  const extras = {
+  return {
     colorbar: chart.name === "chart.heatmap",
     legendAt: seriesField && legendAt !== "off" ? legendAt : undefined,
     legendKeys: keys,
     title,
   };
+}
+
+function chromeRectsForPanel(
+  artifact: Artifact,
+  panelName: string,
+  cellX0: number,
+  cellY0: number,
+  cellW: number,
+  cellH: number,
+  insets: { l: number; r: number; t: number; b: number },
+): ChromeRect[] {
+  const chart = chartForPanel(artifact, panelName);
+  if (!chart) return [];
+  const geom: Record<string, Expr> = {
+    ...chart.props,
+    areaX: literal([cellX0 + insets.l, Math.max(cellX0 + insets.l + 8, cellX0 + cellW - insets.r)]),
+    areaY: literal([cellY0 + insets.t, Math.max(cellY0 + insets.t + 8, cellY0 + cellH - insets.b)]),
+    cellX: literal([cellX0, cellX0 + cellW]),
+    cellY: literal([cellY0, cellY0 + cellH]),
+  };
+  return chromeLayoutOf(geom, artifact, chartChromeExtras(artifact, chart))?.rects ?? [];
+}
+
+function fitChartInsets(
+  artifact: Artifact,
+  chart: { name: string; props: Record<string, Expr> },
+  cellX0: number,
+  cellY0: number,
+  cellW: number,
+  cellH: number,
+): { l: number; r: number; t: number; b: number } {
+  const unit = sceneUnitOf(artifact);
+  const scale = sceneScaleOf({ unit });
+  const toScene = (px: number) => px / Math.max(scale, 1e-6);
+  const pad = toScene(3);
+  const extras = chartChromeExtras(artifact, chart);
   let l = toScene(10);
   let r = toScene(8);
   let t = toScene(8);
@@ -2710,31 +2820,38 @@ function expandAxisTitles(
   const compact = chrome?.compact ?? (box ? isCompactPlot(box, sceneUnitOf(artifact)) : isCompactScene(artifact));
   const xCap = axisCaption(props, "x");
   const yCap = axisCaption(props, "y");
-  if (xCap) {
+  const xLines = chrome?.xTitleLines?.length ? chrome.xTitleLines : xCap ? [xCap] : [];
+  const yLines = chrome?.yTitleLines?.length ? chrome.yTitleLines : yCap ? [yCap] : [];
+  const axisLine = 11;
+  for (const [i, line] of xLines.entries()) {
     items.push(
-      node(`${frameName}_xTitle`, {
+      node(`${frameName}_xTitle${i ? `_${i}` : ""}`, {
         role: literal("annotation"),
         x: midX,
-        y: chrome ? literal(chrome.xTitleY) : binary("+", y1, literal(compact ? 22 : 32), span),
-        text: literal(xCap),
+        y: chrome
+          ? literal(chrome.xTitleY + i * axisLine)
+          : binary("+", y1, literal((compact ? 22 : 32) + i * axisLine), span),
+        text: literal(line),
         align: literal("center"),
       }),
     );
   }
-  if (yCap) {
+  if (yLines.length) {
     const left =
       chrome?.yTitleX ??
       (x0.kind === "number" ? Math.max(compact ? 8 : 14, x0.value - (compact ? 20 : 40)) : 16);
-    items.push(
-      node(`${frameName}_yTitle`, {
-        role: literal("annotation"),
-        x: literal(left),
-        y: midY,
-        text: literal(yCap),
-        align: literal("center"),
-        rotate: literal(-90),
-      }),
-    );
+    for (const [i, line] of yLines.entries()) {
+      items.push(
+        node(`${frameName}_yTitle${i ? `_${i}` : ""}`, {
+          role: literal("annotation"),
+          x: literal(left - i * axisLine),
+          y: midY,
+          text: literal(line),
+          align: literal("center"),
+          rotate: literal(-90),
+        }),
+      );
+    }
   }
   return items;
 }
