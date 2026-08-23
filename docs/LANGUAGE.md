@@ -122,7 +122,7 @@ widget chart.scatter
   ylim: 0 50
 ```
 
-`layout.figure` 会创建 frame `a` `b` `c`…，画格子甲板（`decks: false` 可关）和 `(a)(b)` 标签（`labels: false` 可关）。可选 `prefix: fig` → `fig_a`。不写 `x`/`y`/`w`/`h` 时铺满场景；也可 `panel: body` 吃 `layout.board` 槽位。`title` / `subtitle` / `caption` 是属性（可绑 state），编译器画题注并给格子让出带宽；`plate: false` 可关掉外框。不写 `inset*` 时，编译器按该格绑定的 chart 估盒子（刻度/轴标题/图例/色条/`(a)`）并消一档重叠；刻度标签互叠时抽稀，仍保留两端。长图标题和轴标题按栏宽折行（最多三行）。相邻格 chrome 互叠时再长一档 inset。仍不是跨页排版器。单图不写 `areaX`/`areaY` 时，编译器按场景（含 `unit: mm` + 栏宽）同样估绘图区。同一场景里两张及以上未绑 `panel`/`area*` 的 chart，编译器会自动切成 `layout.figure` 网格。这是插件名，不是新关键字。宿主可用 `registerWidget()` 再挂 `chart.*` / `layout.*`；`viva widgets` 列出当前注册表。未知 widget 编译失败。
+`layout.figure` 会创建 frame `a` `b` `c`…，画格子甲板（`decks: false` 可关）和 `(a)(b)` 标签（`labels: false` 可关）。可选 `prefix: fig` → `fig_a`。不写 `x`/`y`/`w`/`h` 时铺满场景；也可 `panel: body` 吃 `layout.board` 槽位。`title` / `subtitle` / `caption` 是属性（可绑 state），编译器画题注并给格子让出带宽；`plate: false` 可关掉外框。不写 `inset*` 时，编译器按该格绑定的 chart 估盒子（刻度/轴标题/图例/色条/`(a)`）并消一档重叠；刻度标签互叠时抽稀，仍保留两端。长图标题和轴标题按栏宽折行（最多三行）。右侧/底部图例的长键按剩余栏宽折行（最多两行，连字符可断）。相邻格 chrome 互叠时再长一档 inset。仍不是跨页排版器。单图不写 `areaX`/`areaY` 时，编译器按场景（含 `unit: mm` + 栏宽）同样估绘图区。同一场景里两张及以上未绑 `panel`/`area*` 的 chart，编译器会自动切成 `layout.figure` 网格。这是插件名，不是新关键字。宿主可用 `registerWidget()` 再挂 `chart.*` / `layout.*`；`viva widgets` 列出当前注册表。未知 widget 编译失败。
 
 影像板（同样不是新关键字）：
 
