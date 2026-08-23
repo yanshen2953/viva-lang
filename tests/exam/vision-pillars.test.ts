@@ -67,6 +67,18 @@ describe("vision pillars: board, mm, log, hover object, CJK pdf", () => {
     expect(size.width).toBeCloseTo(mmToPx(COLUMN_MM.single) * (72 / 96), 0);
     const compiled = compileSource(src, "paper-pages.viva", { handbookIds: ["print-nature"] });
     expect(compiled.error).toBeNull();
+    const scopes = [compiled.ir!.state, compiled.ir!.data];
+    const cellA = evaluate(compiled.ir!.frames.find((f) => f.name === "a")!.props.cellY!, scopes) as [
+      number,
+      number,
+    ];
+    const cellB = evaluate(compiled.ir!.frames.find((f) => f.name === "b")!.props.cellY!, scopes) as [
+      number,
+      number,
+    ];
+    expect(cellA[1]).toBeLessThanOrEqual(PAGE_MM.a4.h - 4);
+    expect(cellB[0]).toBeGreaterThanOrEqual(PAGE_MM.a4.h);
+    expect(cellB[1]).toBeLessThanOrEqual(PAGE_MM.a4.h * 2);
     const folio = compiled.ir!.scene.layers.find((l) => l.name === "__page_folio");
     expect(folio).toBeTruthy();
     const folioTexts = folio!.items

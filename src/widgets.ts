@@ -21,6 +21,7 @@ import { domainMap, parseTimeValue, scaleKind, type ScaleKind } from "./space.js
 import { COLUMN_MM, mmToPx, parsePage, sceneScaleOf } from "./space/scene-box.js";
 import { estimateBoardBands } from "./layout/board-chrome.js";
 import { figureCopyDefaults, figureCopyPlace, figureGapDefaults } from "./layout/figure-gap.js";
+import { figurePageReserves, packFigureCellsToPages } from "./layout/figure-page.js";
 import { boxStats, quantile } from "./layout/summary-stats.js";
 import { gaussianKDE, violinPathD } from "./layout/violin-density.js";
 import {
@@ -152,7 +153,7 @@ function paintPageFolio(artifact: Artifact): void {
 
   const figure = artifact.widgets.find((w) => w.name === "layout.figure");
   const title = figure ? stringProp(figure.props, ["title"]) : null;
-  const pad = unit === "mm" || unit === "pt" ? 3 : 14;
+  const { pad } = figurePageReserves(unit);
   const items: SceneItem[] = [];
   for (let i = 0; i < pages; i++) {
     const top = i * pageH;
@@ -1051,7 +1052,7 @@ function expandLayoutFigure(
   const originX = box.x;
   const originY = box.y;
   const width = box.w;
-  const height = box.h;
+  let height = box.h;
   const titleExpr = copyExpr(props, ["title"]);
   const subtitleExpr = copyExpr(props, ["subtitle"]);
   const captionExpr = copyExpr(props, ["caption"]);
@@ -1132,7 +1133,7 @@ function expandLayoutFigure(
     t: number;
     b: number;
   };
-  const plans: CellPlan[] = placeFigureCells(
+  const placed = placeFigureCells(
     names,
     cols,
     rows,
@@ -1143,7 +1144,27 @@ function expandLayoutFigure(
     cellH,
     gutter,
     (name) => panelColSpan(artifact, name, cols),
-  ).map((cell) => {
+  );
+  const pageSpec = parsePage(stringProp(artifact.scene?.props ?? {}, ["page"]));
+  const pageH = pageSpec
+    ? unit === "mm" || unit === "pt"
+      ? pageSpec.h
+      : mmToPx(pageSpec.h)
+    : 0;
+  let cells = placed;
+  if (pageH > 0 && !boundSlot) {
+    const reserves = figurePageReserves(unit);
+    const packed = packFigureCellsToPages(placed, {
+      pageH,
+      topReserve: reserves.top,
+      bottomReserve: reserves.bottom,
+    });
+    cells = packed.cells;
+    const needed = packed.bottom + capH + footGap - originY;
+    if (needed > height) height = needed;
+    growSceneHeight(artifact, originY + height);
+  }
+  const plans: CellPlan[] = cells.map((cell) => {
     const estimated = estimatePanelInsets(
       artifact,
       cell.name,
@@ -2437,6 +2458,18 @@ function resolveLayoutBox(
   const w = props.w !== undefined ? numProp(props, "w", extent.w) : Math.max(1, extent.w - x);
   const h = props.h !== undefined ? numProp(props, "h", extent.h) : Math.max(1, extent.h - y);
   return { x, y, w, h };
+}
+
+function growSceneHeight(artifact: Artifact, nextH: number): void {
+  const props = artifact.scene?.props;
+  if (!props || !(nextH > 0)) return;
+  const current = sceneExtentOf(artifact).h;
+  if (nextH <= current + 1e-6) return;
+  const width = sceneExtentOf(artifact).w;
+  props.height = literal(nextH);
+  if (props.size?.kind === "array" && props.size.items.length >= 2) {
+    props.size = literal([width, nextH]);
+  }
 }
 
 function sceneExtentOf(artifact: Artifact): { w: number; h: number } {

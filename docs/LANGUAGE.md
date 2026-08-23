@@ -121,7 +121,7 @@ widget chart.scatter
   ylim: 0 50
 ```
 
-`layout.figure` 会创建 frame `a` `b` `c`…，画格子甲板（`decks: false` 可关）和 `(a)(b)` 标签（`labels: false` 可关）。可选 `prefix: fig` → `fig_a`。图表上写 `span: 2`（或 `colspan`）由编译器占两栏，不是新关键字。不写 `x`/`y`/`w`/`h` 时铺满场景；也可 `panel: body` 吃 `layout.board` 槽位。省略 `gutter` / `margin` / `titleH` / `captionH` 时按场景单位估（`unit: mm` 缝约 2.4 / 1.6 mm，题注条约 4.5 mm，像素图按栏宽百分比封顶），仍可手写覆盖。`title` / `subtitle` / `caption` 是属性（可绑 state），编译器画题注并给格子让出带宽；`plate: false` 可关掉外框。不写 `inset*` 时，编译器按该格绑定的 chart 估盒子（刻度/轴标题/图例/色条/`(a)`）并消一档重叠；刻度标签互叠时抽稀，仍保留两端。长图标题和轴标题按栏宽折行（最多三行；封顶后尾行加 `...`，不再把剩余词硬拼出栏宽）。右侧/底部图例的长键按剩余栏宽折行（最多两行，连字符可断）。色条和右图例先吃场景/格子剩余宽度，并在 inset 还能让时先让，仍装不下才省略。相邻格 chrome 互叠时再长一档 inset。仍不是跨页排版器。单图不写 `areaX`/`areaY` 时，编译器按场景（含 `unit: mm` + 栏宽）同样估绘图区。同一场景里两张及以上未绑 `panel`/`area*` 的 chart，编译器会自动切成 `layout.figure` 网格。这是插件名，不是新关键字。宿主可用 `registerWidget()` 再挂 `chart.*` / `layout.*`；`viva widgets` 列出当前注册表。未知 widget 编译失败。
+`layout.figure` 会创建 frame `a` `b` `c`…，画格子甲板（`decks: false` 可关）和 `(a)(b)` 标签（`labels: false` 可关）。可选 `prefix: fig` → `fig_a`。图表上写 `span: 2`（或 `colspan`）由编译器占两栏，不是新关键字。不写 `x`/`y`/`w`/`h` 时铺满场景；也可 `panel: body` 吃 `layout.board` 槽位。省略 `gutter` / `margin` / `titleH` / `captionH` 时按场景单位估（`unit: mm` 缝约 2.4 / 1.6 mm，题注条约 4.5 mm，像素图按栏宽百分比封顶），仍可手写覆盖。`title` / `subtitle` / `caption` 是属性（可绑 state），编译器画题注并给格子让出带宽；`plate: false` 可关掉外框。不写 `inset*` 时，编译器按该格绑定的 chart 估盒子（刻度/轴标题/图例/色条/`(a)`）并消一档重叠；刻度标签互叠时抽稀，仍保留两端。长图标题和轴标题按栏宽折行（最多三行；封顶后尾行加 `...`，不再把剩余词硬拼出栏宽）。右侧/底部图例的长键按剩余栏宽折行（最多两行，连字符可断）。色条和右图例先吃场景/格子剩余宽度，并在 inset 还能让时先让，仍装不下才省略。相邻格 chrome 互叠时再长一档 inset。`page: a4` 时，会被页刀切开的格子整行推到下一页，场景跟着拉高；这是页装箱，不是栏宽重排。单图不写 `areaX`/`areaY` 时，编译器按场景（含 `unit: mm` + 栏宽）同样估绘图区。同一场景里两张及以上未绑 `panel`/`area*` 的 chart，编译器会自动切成 `layout.figure` 网格。这是插件名，不是新关键字。宿主可用 `registerWidget()` 再挂 `chart.*` / `layout.*`；`viva widgets` 列出当前注册表。未知 widget 编译失败。
 
 影像板（同样不是新关键字）：
 
@@ -134,7 +134,7 @@ widget layout.board
 
 不写 `w`/`h` 时铺满场景。得到 frame `safe` `title` `body` `lower`，并画出 title/subtitle/caption。`controls: [CD8A, IL6]` + `bind: selGene` 在 lower 右侧画 HUD 芯片（选中不透明、未选 0.4，不再旁路写当前值；再出 `hud` 槽）。图表或 `layout.figure` 可 `panel: body`。`bleed: 16` 再出 `bleed` / `trim`，并默认画裁切十字（`crop: false` 可关）。
 
-投稿尺寸：`scene` 上写 `unit: mm` 与 `column: single`（89 mm）或 `double`（183 mm）。`page: a4`（或 `letter`）在省略宽高时落到该纸页；场景高度超过页高时，**PDF** 按页高切片，并在每页盖 `n / N` 页码（续页可带 figure 题注 `(continued)`）。SVG/PNG 仍是一张长画布。这是 scene 属性，不是新关键字，也不是会重排图或跑页眉的排版器。PDF 中文默认用随包子集；宿主可用环境变量 `VIVA_PDF_CJK_FONT`、CLI `--cjk-font` 或导出选项 `cjkFontPath` 挂自己的 TTF/OTF（仍不是语言关键字）。未覆盖的字仍可能变成 `?`。
+投稿尺寸：`scene` 上写 `unit: mm` 与 `column: single`（89 mm）或 `double`（183 mm）。`page: a4`（或 `letter`）在省略宽高时落到该纸页；场景高度超过页高时，**PDF** 按页高切片，并在每页盖 `n / N` 页码（续页可带 figure 题注 `(continued)`）。`layout.figure` 的格子若会骑在页缝上，编译器把整行推到下一页并拉高场景，避免从面板中间切开。SVG/PNG 仍是一张长画布。这是 scene 属性，不是新关键字，也不是会重排正文或跑页眉的排版器。PDF 中文默认用随包子集；宿主可用环境变量 `VIVA_PDF_CJK_FONT`、CLI `--cjk-font` 或导出选项 `cjkFontPath` 挂自己的 TTF/OTF（仍不是语言关键字）。未覆盖的字仍可能变成 `?`。
 
 轴尺度（frame 或 chart 属性，不是新关键字）：
 

@@ -23,7 +23,7 @@
 
 1. **图核语义仍缺出版层** — 有轴标题/单位/band/log/time/box/violin/括号；`print-nature` 已接管字号/字距。编译器按字号估盒子，并对标题/刻度/图例/色条/`(a)` 做一轮重叠消解；图/轴标题按栏宽折行，封顶后尾行省略，重叠刻度抽稀，相邻格 chrome 再长一档 inset。仍不是通用排版求解。
 2. **默认交互还不是完整 linked view** — `__sel.keys` 已跨面板藏行（含 box / violin / 折线）；box 四分位、violin KDE 和折线线段会按选中行重算/重连。Runtime 用 CSS opacity + highlight `scale` 缓 220ms（含 play 拍遮罩）；box/折线摘要几何和同骨架 violin 路径 `d` 也走同一段 220ms 插值（骨架不同仍硬切）。不是时间轴动画。本地 brush 默认矩形窗，路径够长时切套索。
-3. **导出 ≠ 预览** — SVG/PDF 已接近 Runtime，并硬切藏 `visible: false` 的 linked 摘要（不是 220ms 缓动）；PNG/JPG 填场景底色；`page: a4` 的 PDF 按页高切片并盖 `n / N` 页戳（续页可带 figure `(continued)`），SVG 仍是长画布；不是跑页眉排版器。PDF 默认随包 CJK 子集；宿主可用 `VIVA_PDF_CJK_FONT` / `--cjk-font` / `cjkFontPath` 挂全库。未覆盖的字仍可能 `?`。
+3. **导出 ≠ 预览** — SVG/PDF 已接近 Runtime，并硬切藏 `visible: false` 的 linked 摘要（不是 220ms 缓动）；PNG/JPG 填场景底色；`page: a4` 的 PDF 按页高切片并盖 `n / N` 页戳（续页可带 figure `(continued)`）；figure 格子会避开页缝并拉高场景，SVG 仍是长画布；不是跑页眉或栏宽重排的排版器。PDF 默认随包 CJK 子集；宿主可用 `VIVA_PDF_CJK_FONT` / `--cjk-font` / `cjkFontPath` 挂全库。未覆盖的字仍可能 `?`。
 4. **Agent 闭环没产品化** — MCP/HTTP compile 与 session compile/patch 会附 raster visual QA，但不挡 IR 成功；内联卡仍只画结构检查条；不自动修；生成成功率未测。
 5. **手册仍不执行图语法** — 会覆盖 widget 字号；深色场景上会把标题/刻度字色翻亮。仍不做避让或栏宽文法。
 
@@ -51,7 +51,7 @@
 
 1. PDF 默认随包 `assets/fonts/VivaSansFallback.ttf`（Droid 子集，examples + 论文用字）。宿主可用 `VIVA_PDF_CJK_FONT`、`--cjk-font` 或导出 `cjkFontPath` 覆盖；未覆盖的字仍可能 `?`
 2. 有 time / box / violin（KDE 轮廓）/ 显著性括号；轴刻度在场景坐标。`print-nature` 刻度 8 / 轴标题 9。观感仍粗，不是投稿成品
-3. Atlas / figure-grid / board / storyboard / linked-filter 已去掉 `inset*`、手摆 headline / lowerThird、`safe`/`titleH`/`gutter` 魔法数；`layout.board` 出题注 + `controls`/`bind` HUD 芯片，空题注不再默认占 72/96。`layout.figure` 吃 `body`，图表 `span: 2` 可跨栏。`page: a4` 只切 PDF 页并盖 `n / N` 页戳，不重排。chrome 有盒子碰撞消解；图/轴标题和图例键按栏宽折行（Y 轴折行后自上而下阅读；行数封顶后尾行 `...`），重叠刻度抽稀，相邻格互叠时再长 inset。仍不是跨页排版器
+3. Atlas / figure-grid / board / storyboard / linked-filter 已去掉 `inset*`、手摆 headline / lowerThird、`safe`/`titleH`/`gutter` 魔法数；`layout.board` 出题注 + `controls`/`bind` HUD 芯片，空题注不再默认占 72/96。`layout.figure` 吃 `body`，图表 `span: 2` 可跨栏。`page: a4` 切 PDF 页并盖 `n / N`；会被页刀切开的 figure 行整行进下一页并拉高场景，不重排正文。chrome 有盒子碰撞消解；图/轴标题和图例键按栏宽折行（Y 轴折行后自上而下阅读；行数封顶后尾行 `...`），重叠刻度抽稀，相邻格互叠时再长 inset。仍不是栏宽排版器
 4. `__sel` 默认跨面板藏行；box 四分位、violin 密度和折线线段按选中行重算/重连。本地 brush 松手后保持选择窗，路径够长切套索。高亮、藏行、`play` 遮罩、box/折线几何和同骨架 violin `d` 缓 220ms。仍无时间轴动画
 5. MCP/HTTP compile 已附 visual QA，仍不挡 IR 成功；空栏检查优先用 figure `cellX`/`cellY`，不是瞎切 2×2。内联卡无 raster；无自动修复
 6. MCP/HTTP/CLI prompt 默认 slim；生成成功率未测
@@ -60,7 +60,7 @@
 
 ## 下一刀（质量，不再铺接口）
 
-1. 更完整的排版求解；`page: a4` 只做 PDF 页高切片并盖 `n / N` 页戳，不会把图重排到下一页，也不是跑页眉。`layout.figure` 已能 `span` 跨栏，省略 gutter/margin/titleH 时按 mm/像素估缝和题注带；图/轴标题、图例键和色条标签会按栏宽折行；色条/右图例先按场景剩余宽度和 inset 让路，仍装不下才省略，重叠刻度会抽稀，相邻格 chrome 会再让一档
+1. 更完整的排版求解；`page: a4` 做 PDF 页高切片并盖 `n / N`，figure 格子会避开页缝并拉高场景，仍不会重排正文或跑页眉。`layout.figure` 已能 `span` 跨栏，省略 gutter/margin/titleH 时按 mm/像素估缝和题注带；图/轴标题、图例键和色条标签会按栏宽折行；色条/右图例先按场景剩余宽度和 inset 让路，仍装不下才省略，重叠刻度会抽稀，相邻格 chrome 会再让一档
 2. linked selection 已藏热图、折线、box/violin；box 四分位、violin KDE 和折线线段会按 `__sel` 行重算/重连。Runtime 对 box/折线几何和同骨架 violin `d` 做 220ms 插值。仍缺时间轴动画
 3. 再扩随包 CJK 子集；宿主已能用 `VIVA_PDF_CJK_FONT` / `--cjk-font` / `cjkFontPath` 挂全库。`scripts/subset-cjk-font.py` 可从 Droid 重建子集
 4. `layout.board play` 遮罩画在图表之上，Runtime 用 220ms CSS opacity 淡入淡出（不是时间轴）；`export --beats` / MCP `beats` 默认 PNG 序列，`gif|mp4` 只是 ffmpeg 幻灯，不是成片时间轴
