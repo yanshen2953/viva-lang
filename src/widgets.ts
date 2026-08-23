@@ -22,6 +22,7 @@ import { COLUMN_MM, mmToPx, parsePage, sceneScaleOf } from "./space/scene-box.js
 import { estimateBoardBands } from "./layout/board-chrome.js";
 import { figureCopyDefaults, figureCopyPlace, figureGapDefaults } from "./layout/figure-gap.js";
 import { figurePageReserves, packFigureCellsToPages } from "./layout/figure-page.js";
+import { chartHostBox } from "./layout/chart-fit.js";
 import { boxStats, quantile } from "./layout/summary-stats.js";
 import { gaussianKDE, violinPathD } from "./layout/violin-density.js";
 import {
@@ -398,11 +399,25 @@ function expandChart(
   const hasAreaX = Boolean(props.areaX || isPair(props.x));
   const hasAreaY = Boolean(props.areaY || isPair(props.y));
   const boundPanel = Boolean(props.panel || props.frame);
+  const extent = sceneExtentOf(artifact);
+  const host =
+    !boundPanel && createdFrame && !hasAreaX && !hasAreaY
+      ? chartHostBox(artifact, extent, sceneUnitOf(artifact))
+      : { x: 0, y: 0, w: extent.w, h: extent.h };
   const areaXExpr = (() => {
     if (!boundPanel && createdFrame && !hasAreaX) {
-      const extent = sceneExtentOf(artifact);
-      const inset = fitChartInsets(artifact, { name: kind, props }, 0, 0, extent.w, extent.h);
-      return literal([inset.l, Math.max(inset.l + 8, extent.w - inset.r)]);
+      const inset = fitChartInsets(
+        artifact,
+        { name: kind, props },
+        host.x,
+        host.y,
+        host.w,
+        host.h,
+      );
+      return literal([
+        host.x + inset.l,
+        Math.max(host.x + inset.l + 8, host.x + host.w - inset.r),
+      ]);
     }
     return reserveLegendArea(
       props.areaX ?? (isPair(props.x) ? props.x : undefined) ?? literal([80, 720]),
@@ -413,9 +428,18 @@ function expandChart(
   })();
   const areaYExpr = (() => {
     if (!boundPanel && createdFrame && !hasAreaY) {
-      const extent = sceneExtentOf(artifact);
-      const inset = fitChartInsets(artifact, { name: kind, props }, 0, 0, extent.w, extent.h);
-      return literal([inset.t, Math.max(inset.t + 8, extent.h - inset.b)]);
+      const inset = fitChartInsets(
+        artifact,
+        { name: kind, props },
+        host.x,
+        host.y,
+        host.w,
+        host.h,
+      );
+      return literal([
+        host.y + inset.t,
+        Math.max(host.y + inset.t + 8, host.y + host.h - inset.b),
+      ]);
     }
     return reserveLegendArea(
       props.areaY ?? (isPair(props.y) ? props.y : undefined) ?? literal([60, 400]),
@@ -435,8 +459,8 @@ function expandChart(
         y: areaYExpr,
         ...(!boundPanel && createdFrame
           ? {
-              cellX: literal([0, sceneExtentOf(artifact).w]),
-              cellY: literal([0, sceneExtentOf(artifact).h]),
+              cellX: literal([host.x, host.x + host.w]),
+              cellY: literal([host.y, host.y + host.h]),
             }
           : {}),
         xlim: xlimExpr ?? literal([0, 10]),

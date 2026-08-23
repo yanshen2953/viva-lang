@@ -52,7 +52,5 @@ widget chart.line
   yField: v
   xlim: 0 120
   ylim: -1.5 1.5
-  areaX: 40 680
-  areaY: 100 360
   title: "PARAM"
   color: #34d399

@@ -16,8 +16,6 @@ widget chart.bar
   yField: y
   xlim: 0 4
   ylim: 0 80
-  areaX: 40 440
-  areaY: 40 240
   title: "BAR"
   color: #38bdf8
   barWidth: 0.5

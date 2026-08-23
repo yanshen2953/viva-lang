@@ -17,7 +17,5 @@ widget chart.line
   yField: y
   xlim: 0 3
   ylim: 0 30
-  areaX: 40 440
-  areaY: 40 240
   title: "LINE"
   color: #34d399

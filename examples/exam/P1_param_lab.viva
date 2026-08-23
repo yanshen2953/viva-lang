@@ -34,5 +34,3 @@ widget chart.line
   yField: v
   xlim: 0 40
   ylim: -1 1
-  areaX: 40 440
-  areaY: 60 240
