@@ -165,7 +165,7 @@ widget chart.scatter
   ylim: 0 100
 ```
 
-- `xLabel` / `yLabel` + `xUnit` / `yUnit` → 轴标题（如 `Time (week)`）
+- `xLabel` / `yLabel` + `xUnit` / `yUnit` → 轴标题（如 `Time (week)`）。未加引号的多词（`xLabel: Sum score`）会拼成一句，不必写成 `"Sum score"`
 - `errorField` / `yerr` → 竖直误差棒
 - `chart.heatmap`：`valueField` + `zlim`，右侧连续色条
 - 默认 `hover` 把读数写入 `__tip`，指针写入 `__tipX` / `__tipY`（跟手 tip；`interactive: false` 可关）

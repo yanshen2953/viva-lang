@@ -566,11 +566,7 @@ function expandChart(
   };
 
   const title =
-    props.title?.kind === "string"
-      ? props.title.value
-      : boundPanel
-        ? ""
-        : sentenceTitle(kind.replace("chart.", ""));
+    captionFromExpr(props.title) ?? (boundPanel ? "" : sentenceTitle(kind.replace("chart.", "")));
 
   const legendKeys = seriesField ? uniqueSeriesKeys(artifact, dataName, seriesField) : [];
   const chrome = paperChromeOf(geom, artifact, {
@@ -2719,7 +2715,7 @@ function copyExpr(props: Record<string, Expr>, keys: string[]): Expr | undefined
 }
 
 function staticCopyText(expr: Expr | undefined): string | null {
-  return expr?.kind === "string" ? expr.value : null;
+  return captionFromExpr(expr);
 }
 
 function frameBoxOf(
@@ -2947,12 +2943,7 @@ function chartChromeExtras(
   legendKeys?: string[];
   title?: string;
 } {
-  const title =
-    chart.props.title?.kind === "string"
-      ? chart.props.title.value
-      : chart.props.title?.kind === "ident"
-        ? chart.props.title.path.join(".")
-        : "";
+  const title = captionFromExpr(chart.props.title) ?? "";
   const dataName =
     chart.props.data?.kind === "ident"
       ? chart.props.data.path.join(".")
@@ -3385,11 +3376,28 @@ function sentenceTitle(kind: string): string {
   return kind.charAt(0).toUpperCase() + kind.slice(1);
 }
 
+/** Bare `xLabel: Sum score` parses as two idents; captions join them. */
+function captionFromExpr(expr: Expr | undefined): string | null {
+  if (!expr) return null;
+  if (expr.kind === "string" && expr.value) return expr.value;
+  if (expr.kind === "ident" && expr.path.length) return expr.path.join(".");
+  if (expr.kind === "number" && Number.isFinite(expr.value)) return String(expr.value);
+  if (expr.kind === "array") {
+    const parts: string[] = [];
+    for (const item of expr.items) {
+      const part = captionFromExpr(item);
+      if (!part) return null;
+      parts.push(part);
+    }
+    return parts.length ? parts.join(" ") : null;
+  }
+  return null;
+}
+
 function stringProp(props: Record<string, Expr>, keys: string[]): string | null {
   for (const key of keys) {
-    const expr = props[key];
-    if (expr?.kind === "string" && expr.value) return expr.value;
-    if (expr?.kind === "ident" && expr.path.length) return expr.path.join(".");
+    const text = captionFromExpr(props[key]);
+    if (text) return text;
   }
   return null;
 }

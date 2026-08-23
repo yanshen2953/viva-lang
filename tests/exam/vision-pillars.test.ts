@@ -713,6 +713,26 @@ widget chart.scatter
       .find((l) => l.name === "__e_marks")!
       .items.filter((i) => i.kind === "node" && i.name === "bar");
     expect(funnelBars.length).toBe(3);
+    expect(src).toMatch(/xLabel:\s*Sum score/);
+    expect(src).not.toMatch(/xLabel:\s*"Sum score"/);
+    const scopes = [result.ir!.state, result.ir!.data];
+    const eAxes = result.ir!.scene.layers.find((l) => l.name === "__e_axes")!;
+    const xTitle = eAxes.items.find((i) => i.kind === "node" && i.name === "e_xTitle");
+    expect(xTitle?.kind).toBe("node");
+    if (xTitle?.kind === "node") {
+      expect(xTitle.props.text).toMatchObject({ kind: "string", value: "Sum score" });
+      const titleY = evaluate(xTitle.props.y!, scopes) as number;
+      const tick = eAxes.items.find((i) => i.kind === "node" && i.name === "e_xtick_0");
+      expect(tick?.kind).toBe("node");
+      const tickY =
+        tick?.kind === "node" && tick.props.y ? (evaluate(tick.props.y, scopes) as number) : 0;
+      const cellY = evaluate(result.ir!.frames.find((f) => f.name === "e")!.props.cellY!, scopes) as [
+        number,
+        number,
+      ];
+      expect(titleY).toBeGreaterThan(tickY);
+      expect(titleY).toBeLessThan(cellY[1] + 0.8);
+    }
     expect(result.ir!.scene.layers.find((l) => l.name === "__e_marks")!.items.some((i) => i.kind === "for")).toBe(
       false,
     );

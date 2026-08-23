@@ -350,4 +350,31 @@ widget chart.scatter
     expect(yTitleText).toBe("心率 (次每分)");
     expect(xTitleText).not.toMatch(/^\)$/);
   });
+
+  it("joins an unquoted multi-word xLabel onto a horizontal funnel", () => {
+    const src = `artifact "Funnel words"
+data rows = [
+  { arm: "placebo", score: 8 }
+  { arm: "drug-A", score: 18 }
+]
+scene
+  size: 400 240
+widget chart.funnel
+  data: rows
+  xField: score
+  yField: arm
+  xlim: 0 24
+  xLabel: Sum score
+  yLabel: Arm
+  interactive: false
+`;
+    const result = compileSource(src, "funnel-words.viva", { handbookIds: ["print-nature"] });
+    expect(result.error).toBeNull();
+    const axes = result.ir!.scene.layers.find((l) => l.name.endsWith("_axes"))!;
+    const xTitle = axes.items.find((i) => i.kind === "node" && i.name.endsWith("_xTitle"));
+    expect(xTitle?.kind).toBe("node");
+    if (xTitle?.kind === "node") {
+      expect(xTitle.props.text).toMatchObject({ kind: "string", value: "Sum score" });
+    }
+  });
 });

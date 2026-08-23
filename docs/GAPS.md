@@ -31,7 +31,7 @@
 
 | 项 | 行为 |
 | --- | --- |
-| 轴标题 / 单位 | `xLabel` `yLabel` `xUnit` `yUnit` → `Time (week)` |
+| 轴标题 / 单位 | `xLabel` `yLabel` `xUnit` `yUnit` → `Time (week)`；未加引号的多词（`xLabel: Sum score`）拼成一句，不再静默丢掉 |
 | 误差棒 | `errorField` / `yerr` → stem + caps |
 | `chart.heatmap` | 数据格 + 右侧色条刻度 |
 | `chart.vector` / `chart.funnel` | 数据域位移箭头；横向漏斗（`orient: h` 也对 bar 生效） |
@@ -52,6 +52,7 @@
 | 续页跑页眉 | 多页 `page:` 续页顶栏重复 figure `(continued)` 或 board 题注；recto 靠右、verso 靠左。仍不是章节标或跳页码 |
 | play 遮罩不抢指针 | 全部拍遮罩按名字 `_veil_` 设 `pointer-events: none`（不只是当前拍 `visible: false`）；暗着的拍也能刷选。字幕条右侧画 `__beat` 的 `n / N`。`paper-storyboard` 是 183×103 mm 分镜 + play + 同一套 `__sel`。storyboard/board 图不再写 `interactive: false` |
 | mm 跟手 tip | 紧凑/投稿图不再靠常驻角 HUD；`chartTip` 跟 `__event` 走，空字不画；HUD/brush/folio 不抢指针。paper-cjk / paper-column / paper-pages / paper-spread / paper-linked-pages / paper-board-linked / paper-storyboard / figure-grid / figure-span / box / violin / time-axis / brackets 默认可交互。绑了 board 槽的 figure 也会避页刀；场景拉高后 lower-third 跟到最后一页。`paper-board-linked` 是 board 安全框 + A4 页刀 + 跨页 `__sel`。`paper-storyboard` 是 16:9 mm 分镜 + play + 跨拍 `__sel` |
+| 未加引号多词轴题 | `xLabel: Sum score` 不再被收成 ident 数组后静默丢掉；`paper-linked-marks` 漏斗 X 轴画出 `Sum score`。仍不是投稿成品轴语义 |
 
 ## 仍然很粗（按用户可见排序）
 
