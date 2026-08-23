@@ -21,8 +21,8 @@
 
 ## 粗糙的根因（不是缺再一个 HTTP 路由）
 
-1. **图核语义仍缺出版层** — 有轴标题/单位/band/log/time/box/violin/括号；`print-nature` 已接管字号/字距，缺的是栏宽级避让，不是再一个图种。
-2. **默认交互还不是完整 linked view** — `__sel.keys` 已跨面板藏行；本地 brush 仍是 marquee，无过渡。
+1. **图核语义仍缺出版层** — 有轴标题/单位/band/log/time/box/violin/括号；`print-nature` 已接管字号/字距；编译器按字号和 mm 比例堆叠刻度/标题。仍不是真正的碰撞求解。
+2. **默认交互还不是完整 linked view** — `__sel.keys` 已跨面板藏行（含 box / violin / 折线）；本地 brush 仍是 marquee，无过渡。
 3. **导出 ≠ 预览** — SVG 已接近 Runtime；PDF 随包 CJK 子集（examples + 论文用字），缺字仍可能 `?` / Helvetica。
 4. **Agent 闭环没产品化** — session compile 附带 visual diagnostics，但不挡成功；生成成功率未测。
 5. **手册仍不执行图语法** — 现在会覆盖 widget 字号，但不做避让、对齐或栏宽文法。
@@ -60,8 +60,8 @@
 
 ## 下一刀（质量，不再铺接口）
 
-1. 栏宽级避让 / 标题-刻度-图例互不打架（仍走编译器，不加关键字）
-2. linked selection 已藏热图格子，空点 dragend 会清 `__sel`；仍缺过渡动画
+1. 真正的碰撞求解（标题/刻度/图例仍只是字号感知间距）
+2. linked selection 已藏热图、折线、box/violin；仍缺过渡动画
 3. 再扩 CJK 或允许宿主挂全库；`scripts/subset-cjk-font.py` 可从 Droid 重建
 4. `layout.board play` / `typeGrid` 只是遮罩和基线，不是导出视频
 5. agent-exam 种子编译进 CI；生成成功率仍未测（要 LLM）
