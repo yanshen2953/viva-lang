@@ -108,10 +108,7 @@ widget chart.scatter
 
 ```viva
 widget layout.figure
-  x: 24
-  y: 28
-  w: 912
-  h: 620
+  title: "Figure 2. Survival and response by cohort"
   cols: 2
   rows: 2
   gutter: 32
@@ -125,18 +122,19 @@ widget chart.scatter
   ylim: 0 50
 ```
 
-`layout.figure` 会创建 frame `a` `b` `c`…，画格子甲板（`decks: false` 可关）和 `(a)(b)` 标签（`labels: false` 可关）。可选 `prefix: fig` → `fig_a`。不写 `inset*` 时，编译器按该格绑定的 chart（刻度宽度、轴标题、图例、色条）估算留白。单图不写 `areaX`/`areaY` 时，编译器按场景（含 `unit: mm` + 栏宽）同样估绘图区。同一场景里两张及以上未绑 `panel`/`area*` 的 chart，编译器会自动切成 `layout.figure` 网格。这是插件名，不是新关键字。宿主可用 `registerWidget()` 再挂 `chart.*` / `layout.*`；`viva widgets` 列出当前注册表。未知 widget 编译失败。
+`layout.figure` 会创建 frame `a` `b` `c`…，画格子甲板（`decks: false` 可关）和 `(a)(b)` 标签（`labels: false` 可关）。可选 `prefix: fig` → `fig_a`。不写 `x`/`y`/`w`/`h` 时铺满场景；也可 `panel: body` 吃 `layout.board` 槽位。`title` / `subtitle` / `caption` 是属性（可绑 state），编译器画题注并给格子让出带宽；`plate: false` 可关掉外框。不写 `inset*` 时，编译器按该格绑定的 chart（刻度宽度、轴标题、图例、色条）估算留白。单图不写 `areaX`/`areaY` 时，编译器按场景（含 `unit: mm` + 栏宽）同样估绘图区。同一场景里两张及以上未绑 `panel`/`area*` 的 chart，编译器会自动切成 `layout.figure` 网格。这是插件名，不是新关键字。宿主可用 `registerWidget()` 再挂 `chart.*` / `layout.*`；`viva widgets` 列出当前注册表。未知 widget 编译失败。
 
 影像板（同样不是新关键字）：
 
 ```viva
 widget layout.board
-  w: 1280
-  h: 720
+  title: "16:9 board"
+  subtitle: "safe / title / body / lower"
+  caption: "lower-third"
   safe: 64
 ```
 
-得到 frame `safe` `title` `body` `lower`。图表可 `panel: body`。`bleed: 16` 再出 `bleed` / `trim`，并默认画裁切十字（`crop: false` 可关）。
+不写 `w`/`h` 时铺满场景。得到 frame `safe` `title` `body` `lower`，并画出 title/subtitle/caption。图表或 `layout.figure` 可 `panel: body`。`bleed: 16` 再出 `bleed` / `trim`，并默认画裁切十字（`crop: false` 可关）。
 
 投稿尺寸：`scene` 上写 `unit: mm` 与 `column: single`（89 mm）或 `double`（183 mm）。
 

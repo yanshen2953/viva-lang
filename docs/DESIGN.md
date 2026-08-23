@@ -184,7 +184,7 @@ layer marks
 | `chart.line` / `bar` / `scatter` | 展开 frame+axis+marks | ✅ MVP |
 | `chart.heat` / `chart.heatmap` | 热力 + 色条 | ✅ MVP |
 | `chart.vector` / `chart.funnel` / `chart.box` / `chart.violin` | 箭头 / 漏斗 / 箱线 / 密度 | ✅ 插件 |
-| `layout.figure` 多面板 | 网格 + `(a)(b)`；不写 `inset*` 时按 chrome 估留白 | ✅ 插件（不是关键字） |
+| `layout.figure` 多面板 | 网格 + `(a)(b)` + 题注/甲板；不写 `inset*` 时按 chrome 估留白；可铺满场景或 `panel: body` | ✅ 插件（不是关键字） |
 | `layout.board` | 安全框 / 字幕条 / splits / beats / bleed / typeGrid；`--beats` PNG 序列 | ✅ 插件 |
 
 规则：**结构展开 = widget；审美纪律 = handbook。**
@@ -239,8 +239,8 @@ compile({ handbookIds })   # 同一 id 加载 preset hook（见 handbooks/HOOK.m
 | frame / scale (linear) | ✅ | `space.ts` |
 | chart.* widgets | ✅ | `widgets.ts` + `plugins/registry.ts` |
 | widget 动态注册 | ✅ | `registerWidget()`；未知名编译失败 |
-| layout.figure | ✅ | 网格 frame + `(a)(b)`；图表 `panel:` |
-| 图像/视频构图层 | ❌ | 下一步应是 `layout.board` 插件，不是新关键字 |
+| layout.figure | ✅ | 网格 frame + `(a)(b)` + 题注；图表 `panel:`；可铺满场景或 board 槽 |
+| layout.board | ✅ | safe/title/body/lower + 题注属性；`--beats` 是 PNG 序列不是成片 |
 | safe math + array concat | ✅ | `eval.ts` |
 | headless simulate | ✅ | `simulate.ts` / `session.simulate` |
 | export package (source+svg+prov) | ✅ | `session.exportPackage` |
