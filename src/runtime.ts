@@ -19,7 +19,7 @@ import {
 import { evalSceneProps, resolveSceneBox, scaleSceneGeom, sceneScaleOf } from "./space/scene-box.js";
 import { DEFAULT_SCENE_BACKGROUND, resetPaletteSeries, setStyleContext } from "./style/index.js";
 import { STYLE_META_PROPS } from "./style/types.js";
-import { MARK_EASE_MS, markPaintState } from "./runtime/mark-ease.js";
+import { markPaintState } from "./runtime/mark-ease.js";
 
 export type RuntimeOptions = {
   mount: HTMLElement;
@@ -433,8 +433,16 @@ export class Runtime {
     const opacity = p.opacity === undefined ? 1 : num(p.opacity, 1);
     const visible = p.visible === undefined ? true : Boolean(p.visible);
     const hovered = this.hoverId === node.id;
-    const paint = markPaintState(visible, opacity);
-    el.style.transition = `opacity ${MARK_EASE_MS}ms ease`;
+    const scale = Array.isArray(p.scale)
+      ? num(p.scale[0], 1)
+      : p.scale === undefined
+        ? 1
+        : num(p.scale, 1);
+    const paint = markPaintState(visible, opacity, scale);
+    el.style.transition = paint.transition;
+    el.style.transformBox = "fill-box";
+    el.style.transformOrigin = "center";
+    el.style.transform = paint.transform;
     el.style.pointerEvents = paint.pointerEvents || "auto";
     el.style.display = paint.display;
     el.setAttribute("opacity", String(paint.opacity));
@@ -535,7 +543,7 @@ export class Runtime {
       anchorY = y;
     }
 
-    applyTransform(el, p, { x: anchorX, y: anchorY });
+    applyTransform(el, { ...p, scale: undefined }, { x: anchorX, y: anchorY });
   }
 
   private bindPointer(): void {

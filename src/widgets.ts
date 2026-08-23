@@ -529,6 +529,7 @@ function expandChart(
           ...(props.hoverFill ? { hoverFill: props.hoverFill } : { hoverFill: literal("#E69F00") }),
           ...interactOpacity,
           ...interactVisible,
+          ...markHighlightMotion(props, seriesField, span),
         }),
         ...expandErrorBars(props, frameName, markXField, markYField, span, seriesField),
       ],
@@ -553,6 +554,7 @@ function expandChart(
           ...(props.hoverFill ? { hoverFill: props.hoverFill } : { hoverFill: literal("#E69F00") }),
           ...interactOpacity,
           ...interactVisible,
+          ...markHighlightMotion(props, seriesField, span),
         }),
         ...expandErrorBars(props, frameName, markXField, markYField, span, seriesField),
       ],
@@ -616,6 +618,7 @@ function expandChart(
           ...(props.hoverFill ? { hoverFill: props.hoverFill } : { hoverFill: literal("#E69F00") }),
           ...interactOpacity,
           ...interactVisible,
+          ...markHighlightMotion(props, seriesField, span),
         }),
         ...expandErrorBars(props, frameName, markXField, markYField, span, seriesField),
       ],
@@ -665,6 +668,7 @@ function expandChart(
           ...(props.hoverFill ? { hoverFill: props.hoverFill } : { hoverFill: literal("#E69F00") }),
           ...interactOpacity,
           ...interactVisible,
+          ...markHighlightMotion(props, seriesField, span),
         }),
       ],
     });
@@ -3547,6 +3551,23 @@ function markInteractOpacity(
   const dim = parts.reduce((acc, part) => binary("or", acc, part, span));
   return {
     opacity: binary("-", literal(1), binary("*", literal(0.72), dim, span), span),
+  };
+}
+
+function markHighlightMotion(
+  props: Record<string, Expr>,
+  seriesField: string | null,
+  span: { line: number; column: number },
+): Record<string, Expr> {
+  if (!seriesField || props.scale) return {};
+  const hit = binary(
+    "and",
+    binary("!=", ident("__highlightGrp"), noneExpr(span), span),
+    binary("==", ident(`row.${seriesField}`), ident("__highlightGrp"), span),
+    span,
+  );
+  return {
+    scale: binary("+", literal(1), binary("*", literal(0.18), hit, span), span),
   };
 }
 

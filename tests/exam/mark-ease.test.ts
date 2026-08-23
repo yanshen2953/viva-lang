@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import sharp from "sharp";
 import { readFileSync } from "node:fs";
+import { compileSource } from "../../src/pipeline.js";
+import { evaluate } from "../../src/eval.js";
 import { MARK_EASE_MS, markPaintState } from "../../src/runtime/mark-ease.js";
 import { exportArtifact } from "../../src/export/index.js";
 
@@ -14,6 +16,47 @@ describe("runtime mark ease and paper raster background", () => {
     expect(hidden.opacity).toBe(0);
     expect(hidden.hideAfterMs).toBe(MARK_EASE_MS);
     expect(hidden.pointerEvents).toBe("none");
+    expect(hidden.transform).toBe("none");
+    const lit = markPaintState(true, 1, 1.18);
+    expect(lit.transform).toBe("scale(1.18)");
+    expect(lit.transition).toMatch(/transform/);
+  });
+
+  it("compiles a group highlight scale onto scatter marks", () => {
+    const result = compileSource(
+      `artifact Ease
+data rows = [
+  { x: 1, y: 2, grp: "a" }
+  { x: 2, y: 4, grp: "b" }
+]
+scene
+  size: 240 160
+  background: #ffffff
+widget chart.scatter
+  data: rows
+  xField: x
+  yField: y
+  group: grp
+  xlim: 0 3
+  ylim: 0 5
+  interactive: true
+`,
+      "ease.viva",
+      { handbookIds: ["print-nature"] },
+    );
+    expect(result.error).toBeNull();
+    const marks = result.ir!.scene.layers
+      .flatMap((l) => l.items)
+      .filter((i) => i.kind === "for")
+      .flatMap((i) => (i.kind === "for" ? i.body : []))
+      .find((n) => n.kind === "node" && n.name === "mark");
+    expect(marks?.kind).toBe("node");
+    if (marks?.kind !== "node") return;
+    expect(marks.props.scale).toBeTruthy();
+    const lit = evaluate(marks.props.scale!, [{ __highlightGrp: "a", row: { grp: "a" } }, {}, {}]);
+    const dim = evaluate(marks.props.scale!, [{ __highlightGrp: "a", row: { grp: "b" } }, {}, {}]);
+    expect(lit).toBeCloseTo(1.18);
+    expect(dim).toBe(1);
   });
 
   it("fills print-nature PNG corners with the scene background, not a hole", async () => {
