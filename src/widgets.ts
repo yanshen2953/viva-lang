@@ -539,6 +539,7 @@ function expandChart(
         ...(yScaleExpr ? { yScale: yScaleExpr } : {}),
         ...(xCats.length ? { xCats: literal(xCats) } : {}),
         ...(yCats.length ? { yCats: literal(yCats) } : {}),
+        ...(kind === "chart.heatmap" ? { yInvert: literal(false) } : {}),
       },
     });
   } else {
@@ -548,6 +549,7 @@ function expandChart(
     if (yScaleExpr) existingFrame.props.yScale = yScaleExpr;
     if (xCats.length) existingFrame.props.xCats = literal(xCats);
     if (yCats.length) existingFrame.props.yCats = literal(yCats);
+    if (kind === "chart.heatmap") existingFrame.props.yInvert = literal(false);
   }
 
   const fr = artifact.frames.find((f) => f.name === frameName)!;
@@ -563,6 +565,7 @@ function expandChart(
     ...(yScaleExpr ? { yScale: yScaleExpr } : {}),
     ...(xCats.length ? { xCats: literal(xCats) } : {}),
     ...(yCats.length ? { yCats: literal(yCats) } : {}),
+    ...(kind === "chart.heatmap" ? { yInvert: literal(false) } : {}),
   };
   if (kind === "chart.heatmap") {
     if (!xCats.length) {
@@ -2489,6 +2492,19 @@ function invertSceneXExpr(
   return binary("+", xmin, binary("*", t, binary("-", xmax, xmin, span), span), span);
 }
 
+function yInvertOf(props: Record<string, Expr>): boolean {
+  const raw = props.yInvert ?? props.invertY;
+  if (!raw) return true;
+  if (raw.kind === "boolean") return raw.value;
+  if (raw.kind === "number") return raw.value !== 0;
+  if (raw.kind === "string") return raw.value !== "false" && raw.value !== "0";
+  if (raw.kind === "ident") {
+    const s = raw.path.join(".");
+    return s !== "false" && s !== "0";
+  }
+  return true;
+}
+
 function invertSceneYExpr(
   scene: Expr,
   geom: Record<string, Expr>,
@@ -2498,7 +2514,9 @@ function invertSceneYExpr(
   const y1 = pairAt(geom.areaY ?? geom.y, 1, 400);
   const ymin = ylimLow(geom);
   const ymax = ylimHigh(geom);
-  const t = binary("/", binary("-", y1, scene, span), binary("-", y1, y0, span), span);
+  const t = yInvertOf(geom)
+    ? binary("/", binary("-", y1, scene, span), binary("-", y1, y0, span), span)
+    : binary("/", binary("-", scene, y0, span), binary("-", y1, y0, span), span);
   if (scaleKindFromExpr(geom.yScale) === "log") {
     const lim = numericPair(geom.ylim, [1, 100]) ?? [1, 100];
     const d0 = Math.log(Math.max(lim[0], 1e-12));
@@ -2764,7 +2782,7 @@ function chromeLayoutOf(
   const yTicks = thinYTicks(
     axisTicks(props, "y").map((t) => ({
       label: t.label,
-      y: domainMap(t.value, [box.ymin, box.ymax], [box.py0, box.py1], true, box.yScale),
+      y: domainMap(t.value, [box.ymin, box.ymax], [box.py0, box.py1], box.invertY, box.yScale),
     })),
     8,
     3,
@@ -3172,6 +3190,7 @@ function plotBoxOf(props: Record<string, Expr>): {
   ymax: number;
   xScale: ScaleKind;
   yScale: ScaleKind;
+  invertY: boolean;
 } | null {
   const ax = numericPair(props.areaX ?? props.x, [80, 720]);
   const ay = numericPair(props.areaY ?? props.y, [60, 400]);
@@ -3189,6 +3208,7 @@ function plotBoxOf(props: Record<string, Expr>): {
     ymax: yl[1],
     xScale: scaleKindFromExpr(props.xScale) ?? "linear",
     yScale: scaleKindFromExpr(props.yScale) ?? "linear",
+    invertY: yInvertOf(props),
   };
 }
 
@@ -3243,7 +3263,7 @@ function expandAxisTicks(
     yTicks = thinYTicks(
       yTicks.map((t) => ({
         ...t,
-        y: domainMap(t.value, [box.ymin, box.ymax], [box.py0, box.py1], true, box.yScale),
+        y: domainMap(t.value, [box.ymin, box.ymax], [box.py0, box.py1], box.invertY, box.yScale),
       })),
       8,
       3,
@@ -3312,7 +3332,7 @@ function expandAxisTicks(
   for (let i = 0; i < yTicks.length; i++) {
     const tick = yTicks[i]!;
     if (box) {
-      const sy = domainMap(tick.value, [box.ymin, box.ymax], [box.py0, box.py1], true, box.yScale);
+      const sy = domainMap(tick.value, [box.ymin, box.ymax], [box.py0, box.py1], box.invertY, box.yScale);
       const sx = chrome?.yTickX ?? Math.max(compact ? 6 : 10, box.px0 - (compact ? 5 : 8));
       items.push(
         node(`${frameName}_ytick_${i}`, {

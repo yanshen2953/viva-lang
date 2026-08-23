@@ -71,7 +71,7 @@
 
 ### 3.2 论文级图表
 
-有：线性 / log / band / time 轴、scatter/line/bar/heatmap/vector/funnel/box、轴标题/单位（未加引号的多词 `xLabel: Sum score` 会拼成一句）、线性轴键上 `xlim`/`ylim` 端点、柱/箱/小提琴整数类目刻在取值上（不画 `xlim` 空位）、折线/散点/矢量整数 x 铺满域时刻在取样点、矢量头是场景三角（不是圆点）、误差棒、热图色条、热图格子按相邻坐标步长铺满且刻度落在格心（缝宽按格子比例，不是 1 场景单位）、图例外置、投稿 mm、SVG 更接近 Runtime、PDF 默认随包 CJK 子集（examples + 论文用字；`VIVA_PDF_CJK_FONT` / `--cjk-font` / `cjkFontPath` 可挂宿主全库）。`print-nature` 会覆盖 widget 硬编码字号，刻度 8 / 轴标题 9 带字距。编译器按字号和 `unit: mm` 比例放置轴标题/刻度/图例；单图不写 `areaX`/`areaY` 时按场景估绘图区，并避开作者节点/手写 frame 占的空位，避免小栏宽把标题推出画布。  
+有：线性 / log / band / time 轴、scatter/line/bar/heatmap/vector/funnel/box、轴标题/单位（未加引号的多词 `xLabel: Sum score` 会拼成一句）、线性轴键上 `xlim`/`ylim` 端点、柱/箱/小提琴整数类目刻在取值上（不画 `xlim` 空位）、折线/散点/矢量整数 x 铺满域时刻在取样点、矢量头是场景三角（不是圆点）、误差棒、热图色条、热图格子按相邻坐标步长铺满且刻度落在格心（缝宽按格子比例，不是 1 场景单位；第一行在顶上）、图例外置、投稿 mm、SVG 更接近 Runtime、PDF 默认随包 CJK 子集（examples + 论文用字；`VIVA_PDF_CJK_FONT` / `--cjk-font` / `cjkFontPath` 可挂宿主全库）。`print-nature` 会覆盖 widget 硬编码字号，刻度 8 / 轴标题 9 带字距。编译器按字号和 `unit: mm` 比例放置轴标题/刻度/图例；单图不写 `areaX`/`areaY` 时按场景估绘图区，并避开作者节点/手写 frame 占的空位，避免小栏宽把标题推出画布。  
 没有：完整 CJK 字库、通用排版求解（跨页、栏宽文法）。有 time / box / violin（KDE 轮廓）/ 显著性括号；轴刻度已离开数据域。chrome 盒子会互推一档（标题避开 `(a)`，y 轴标题避开刻度，图例避开色条）；图/轴标题按栏宽折行（最多三行；封顶后尾行 `...`；Y 轴 −90° 后从上往下读），折行宽度按像素字宽量、落位按场景单位（mm 栏不再把 60 mm 当成 60 px），图例键和色条标签按剩余栏宽折行（含连字符，最多两行；无连字符的拉丁图例键先按整词让 inset，避免 `treatmen` / `t`；色条/右图例先让 inset，仍装不下才省略），热图可用 `zLabel`/`zUnit`（mm 色条按 px→场景比例画，标题在色标右侧 −90° 竖排），重叠刻度抽稀，相邻格 chrome 互叠时再长 inset（互叠缝跟场景 `pad` 走）；inset 封顶后标题/轴题/图例尽量收回格内，不推进刻度。审查 / Runtime / 结构检查共用旋转感知盒子（CJK 字宽，mm 场景先 `scaleSceneGeom`）。仍不是 InDesign。小栏宽 mm 图默认跟手 `__tip`（空字不画），不再靠常驻角 HUD。
 
 ### 3.3 图像 / 视频级排版

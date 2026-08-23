@@ -135,8 +135,8 @@ describe("figure-atlas example", () => {
     expect(xs[xs.length - 1]).toBe("7");
     expect(ys).not.toContain("-0.5");
     expect(ys).not.toContain("5.5");
-    expect(ys).toContain("0");
-    expect(ys).toContain("5");
+    expect(ys[0]).toBe("0");
+    expect(ys[ys.length - 1]).toBe("5");
     const heatCells = result.ir!.scene.layers
       .find((l) => l.name === "__d_marks")!
       .items.filter((i) => i.kind === "node" && i.name === "heatCell");

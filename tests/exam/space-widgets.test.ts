@@ -63,6 +63,7 @@ describe("space: linear scales (S1) — no magic numbers", () => {
       yScale: "linear",
       xCats: [],
       yCats: [],
+      invertY: true,
     });
   });
 
@@ -94,6 +95,7 @@ describe("space: linear scales (S1) — no magic numbers", () => {
       yScale: "linear",
       xCats: [],
       yCats: [],
+      invertY: true,
     };
     const mapped = applyFrameToProps(
       { frame: "plot", x1: 0, y1: 0, x2: 10, y2: 100 },
@@ -276,6 +278,7 @@ widget chart.bar
       yScale: "linear",
       xCats: [],
       yCats: [],
+      invertY: false,
     };
     const a = layoutChartHeat(
       { __chartHeat: true, frame: "plot", x: 40, y: 30, w: 1, h: 1 },
@@ -317,5 +320,18 @@ widget chart.bar
     expect(shaft.x2).toBeLessThan(40);
     expect(shaft.x2).toBeGreaterThan(10);
     expect(shaft.y2).toBe(10);
+  });
+
+  it("maps heatmap y=0 to the top of the plot", () => {
+    const scales = scalesFromFrameProps("d", {
+      x: [0, 80],
+      y: [0, 60],
+      xlim: [-0.5, 7.5],
+      ylim: [-0.5, 5.5],
+      yInvert: false,
+    });
+    const top = applyFrameToProps({ frame: "d", x: 0, y: 0 }, [scales]);
+    const bot = applyFrameToProps({ frame: "d", x: 0, y: 5 }, [scales]);
+    expect(top.y).toBeLessThan(bot.y as number);
   });
 });

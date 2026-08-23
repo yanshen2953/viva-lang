@@ -44,6 +44,7 @@ export type FrameScales = {
   yScale: ScaleKind;
   xCats: string[];
   yCats: string[];
+  invertY: boolean;
 };
 
 export function scaleKind(value: unknown): ScaleKind {
@@ -155,7 +156,14 @@ export function scalesFromFrameProps(
     yScale: scaleKind(props.yScale ?? props.yscale),
     xCats: catsFrom(props.xCats ?? props.xcats ?? props.categories),
     yCats: catsFrom(props.yCats ?? props.ycats),
+    invertY: yInvertFrom(props),
   };
+}
+
+function yInvertFrom(props: Record<string, unknown>): boolean {
+  const raw = props.yInvert ?? props.invertY;
+  if (raw === false || raw === 0 || raw === "false") return false;
+  return true;
 }
 
 function mapFrameX(frame: FrameScales, value: unknown): number | null {
@@ -167,7 +175,7 @@ function mapFrameX(frame: FrameScales, value: unknown): number | null {
 function mapFrameY(frame: FrameScales, value: unknown): number | null {
   const v = domainValue(value, frame.yCats);
   if (v === null) return null;
-  return domainMap(v, [frame.ymin, frame.ymax], [frame.y0, frame.y1], true, frame.yScale);
+  return domainMap(v, [frame.ymin, frame.ymax], [frame.y0, frame.y1], frame.invertY, frame.yScale);
 }
 
 /** Map data-domain props into scene space when `frame` is set. */
