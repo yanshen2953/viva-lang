@@ -1,6 +1,6 @@
 # 目标差距（诚实版）
 
-北极星：在 IDE / 对话**内联**上，超过常见编码代理的静态图/HTML——出版级科学图 × 可交互活世界 × 自动 QA × 多 Agent 接入。
+北极星：一门极简内联汇报语言，同时覆盖游戏交互 × 论文图表 × 影像排版；复杂度进编译器；动态插件。对照 `docs/VISION.md`。
 
 前序清单把 PLAN §1 的 1–3 标成「齐」，**过满**。接口在，产品观感仍粗。本文以用户可见质量为准。
 
@@ -42,14 +42,27 @@
 
 1. PDF 仍 Helvetica + CJK 变 `?`；无 mm/栏宽投稿尺寸
 2. 无 log / 时间 / 分类轴；无 box/violin；无显著性括号
-3. 图例仍在图内；多面板仍手写魔法数（Atlas (d)(e)(f) 未改用 heatmap widget）
+3. 图例仍在图内；Atlas (d)(e)(f) 仍手写魔法数（`layout.figure` + `panel:` 已存在，Atlas 未迁）
 4. 悬停是 `__tip` 字符串，不是数据域 tooltip / brush / 跨面板高亮
 5. session 仍只跑 structural；visual/vision 不在热路径
 6. LLM 默认 full prompt 仍带玩具模板；生成成功率未测
 
+## 本轮已补的语言脊柱（相对「硬编码 switch」）
+
+| 项 | 行为 |
+| --- | --- |
+| 动态 widget 插件 | `registerWidget()` / `listWidgets()`；内置 `timeline` `chart.*` `layout.figure` |
+| `layout.figure` | `cols/rows/gutter/margin/inset*` → frame `a` `b`… + `(a)` 标签 |
+| 图表对位 | `panel: a`（或 `frame: a`）吃已有 frame，不再强制 `areaX/areaY` |
+| 未知 widget | 编译失败，并列出已注册名 |
+| 愿景对照 | `docs/VISION.md` — 三柱同时成立才算那门语言；现在仍是三套骨架 |
+
 ## 下一刀（质量，不再铺接口）
 
 1. PDF 字体嵌入或 CJK 回退策略；scene `unit: mm` + 单栏 89 mm
-2. 把 Atlas 热图面板迁到 `chart.heatmap`，消灭一截魔法数
-3. session.compile 默认带 visual 检查，embed 回传 diagnostics
-4. slim prompt 作为 MCP/HTTP 默认；确定性 repair 种子进 `npm test`
+2. Atlas 迁到 `layout.figure` + `chart.heatmap`，消灭 (d)(e)(f) 魔法数
+3. `layout.board` 插件（16:9 安全框），仍无新关键字
+4. session.compile 默认带 visual 检查，embed 回传 diagnostics
+5. slim prompt 作为 MCP/HTTP 默认；确定性 repair 种子进 `npm test`
+
+对照真源：`docs/VISION.md`。

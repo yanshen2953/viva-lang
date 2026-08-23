@@ -9,15 +9,15 @@
 
 ## 1. 用户目标（北极星）
 
-在 **IDE / 对话内联** 上超过常见编码代理的静态图/HTML，交付：
+一门**语法极简、复杂度进编译器、动态插件**的 agent **内联汇报语言**，同一套原语同时做到：
 
-1. **可编译活世界** — `.viva` → Runtime（拖/碰撞/tick/键盘）
-2. **出版级科学图** — `frame` + `scale` + `chart.*` + **style handbook**（如 `print-nature`）
-3. **自动 QA** — 编译成功 ≠ 图对；结构层 + 栅格视觉层 + 可选多模态 vision
-4. **多 Agent 接入** — CLI、**MCP**（Cursor 推荐）、HTTP REST、Node SDK、浏览器 embed
-5. **默认内联体验** — `print-nature` 风格 + **可交互** Runtime（非静态 PNG）
+1. **游戏式丰富交互**
+2. **论文级精美图表**
+3. **图像 / 视频级排版**
 
-真源：`docs/DESIGN.md`、`docs/PLAN.md`（§1 胜利条件 1–6）。
+默认内联：`print-nature` + **可交互** Runtime（非静态 PNG）。
+
+对照：`docs/VISION.md`（愿景 vs 现状）。设计真源：`docs/DESIGN.md`、`docs/PLAN.md`。**不要**宣称 Nature 级或已超过 Claude Science。
 
 ---
 
@@ -118,7 +118,7 @@ Vision 检查需 `viva.models.json`（见 `viva.models.json.example`）或 env `
 3. **Playground** — 状态栏已有结构检查；浏览器内 vision/MCP 不现实
 4. **Agent exam** — `npm run test:agent-exam` 需 `DEEPSEEK_API_KEY`（Pi+DeepSeek SUT）
 5. **发布包实跑** — `npm run pack:release`，在干净环境验证 `release/` 与 Docker
-6. **图核质量** — 轴标题/误差棒/热图/导出保真已起步；见 `docs/GAPS.md` 诚实版。下一刀：PDF/CJK、mm 栏宽、Atlas 迁 heatmap、session visual 检查
+6. **图核 + 排版插件** — 轴标题/误差/热图/hover 已起步；`layout.figure` + `registerWidget()` 已落地。下一刀：PDF/CJK、mm 栏宽、Atlas 迁 figure 网格、`layout.board`、session visual。对照 `docs/VISION.md`
 
 ### 已知约束 / 坑
 
@@ -154,9 +154,9 @@ Vision 检查需 `viva.models.json`（见 `viva.models.json.example`）或 env `
 分支：cursor/style-handbook-hook-a8c1
 PR：https://github.com/yanshen2953/viva-lang/pull/9
 
-目标：出版级科学图 + 活世界 Runtime + 三层自动检查 + MCP/HTTP/CLI 多 Agent 接入；默认内联 print-nature 可交互卡片。
+目标：一门极简内联汇报语言，同时覆盖游戏交互 × 论文图表 × 影像排版；复杂度进编译器；动态插件；服务 coding agent。对照 docs/VISION.md。默认内联 print-nature 可交互卡片。
 
-请先：checkout 分支 → npm install → npm run build:lib → npm test（应 108 passed）。
+请先：checkout 分支 → npm install → npm run build:lib → npm test。
 
 然后按 HANDOFF.md §5 建议后续工作继续；以 #9 分支为真源。中文回复。GPU 任务用 cuda:0。
 

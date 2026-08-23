@@ -46,7 +46,7 @@ Dependency refresh on pod start is `npm install` (see environment update script)
 - **Layout QA:** structural in Playground + `viva check --visual`; multimodal `--vision` via `viva.models.json` / HTTP entry (`docs/CHECK.md`)
 - **Playground** must go through `VivaAgentHost` (not raw `new Runtime`)
 - **Space:** `frame` + node `frame:` maps data-domain x/y via linear scales (`src/space.ts`)
-- **Charts:** `widget chart.scatter|line|bar`
+- **Charts / layout:** `widget chart.scatter|line|bar|heatmap`；`widget layout.figure` + `panel: a`。动态插件：`registerWidget()` / `viva widgets`。愿景对照：`docs/VISION.md`
 - Design/plan: `docs/DESIGN.md`, `docs/PLAN.md`, host docs `docs/hosts/README.md`
 
 ### No secrets / services

@@ -46,7 +46,7 @@ Viva 是面向 LLM 的**小表面交互视觉语言**：模型只写「世界意
    | **Paint** | 图层、几何外观、滤镜、导出 | 属性级（已有基础）；**风格审美 → 插件** |
 
 3. **Widget 是宏，不是语法**  
-   `timeline`、未来 `chart.*` 都是编译期展开到 node/event，不增加关键词爆炸。
+   `timeline`、`chart.*`、`layout.figure` 都是编译期展开到 node/frame/event。新能力用 `registerWidget()`，不增加关键词。
 
 4. **手册按次注入**  
    `core prompt + optional handbook(s) + user turn`。手册不发明语法，只约束默认审美与构图纪律。
@@ -235,7 +235,10 @@ compile({ handbookIds })   # 同一 id 加载 preset hook（见 handbooks/HOOK.m
 | timeline widget | ✅ | `widgets.ts` |
 | playground examples | ✅ | `examples/*` `atelier` `arena` `param-lab` |
 | frame / scale (linear) | ✅ | `space.ts` |
-| chart.* widgets | ✅ | `widgets.ts` |
+| chart.* widgets | ✅ | `widgets.ts` + `plugins/registry.ts` |
+| widget 动态注册 | ✅ | `registerWidget()`；未知名编译失败 |
+| layout.figure | ✅ | 网格 frame + `(a)(b)`；图表 `panel:` |
+| 图像/视频构图层 | ❌ | 下一步应是 `layout.board` 插件，不是新关键字 |
 | safe math + array concat | ✅ | `eval.ts` |
 | headless simulate | ✅ | `simulate.ts` / `session.simulate` |
 | export package (source+svg+prov) | ✅ | `session.exportPackage` |

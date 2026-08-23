@@ -104,6 +104,29 @@ widget chart.scatter
 
 `chart.line` / `chart.bar` / `chart.heatmap` 同理。结构展开为 frame + 轴 + marks；审美仍走 handbook。
 
+多面板不要手写 `areaX` / `areaY`。先用排版插件出格子，图表用 `panel:` 对位（`layout.*` 总会先于 `chart.*` 展开）：
+
+```viva
+widget layout.figure
+  x: 24
+  y: 28
+  w: 912
+  h: 620
+  cols: 2
+  rows: 2
+  gutter: 32
+
+widget chart.scatter
+  panel: a
+  data: series
+  xField: x
+  yField: y
+  xlim: 0 10
+  ylim: 0 50
+```
+
+`layout.figure` 会创建 frame `a` `b` `c`…，并画 `(a)(b)` 标签（`labels: false` 可关）。可选 `prefix: fig` → `fig_a`。这是插件名，不是新关键字。宿主可用 `registerWidget()` 再挂 `chart.*` / `layout.*`；`viva widgets` 列出当前注册表。未知 widget 编译失败。
+
 出版级常用 props（均为 widget 属性，不是新关键字）：
 
 ```viva
