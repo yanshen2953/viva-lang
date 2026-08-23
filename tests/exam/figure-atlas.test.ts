@@ -76,6 +76,21 @@ describe("figure-atlas example", () => {
     expect(result.ir!.scene.layers.some((l) => l.name === "__board_controls")).toBe(true);
     expect(result.ir!.frames.map((f) => f.name)).toEqual(expect.arrayContaining(["hud"]));
     expect(result.ir!.events.some((e) => e.type === "click" && e.target === "board_ctl_0")).toBe(true);
+    const ctl = result.ir!.scene.layers.find((l) => l.name === "__board_controls")!;
+    const chipTexts = ctl.items
+      .filter((i) => i.kind === "node" && /^board_ctlLbl_/.test(i.name))
+      .map((i) => (i.kind === "node" && i.props.text?.kind === "string" ? i.props.text.value : ""));
+    expect(chipTexts).toEqual(expect.arrayContaining(["CD8A", "IL6"]));
+    const chipLbl = ctl.items.find((i) => i.kind === "node" && i.name === "board_ctlLbl_0");
+    expect(chipLbl?.kind).toBe("node");
+    if (chipLbl?.kind === "node") {
+      expect(chipLbl.props.role).toMatchObject({ kind: "string", value: "hud" });
+      expect(chipLbl.props.font).toMatchObject({ kind: "number", value: 10 });
+    }
+    const chip0 = ctl.items.find((i) => i.kind === "node" && i.name === "board_ctl_0");
+    if (chip0?.kind === "node" && chip0.props.w?.kind === "number") {
+      expect(chip0.props.w.value).toBeGreaterThanOrEqual(50);
+    }
     expect(result.ir!.scene.layers.some((l) => l.name === "__fig_decks")).toBe(true);
     expect(result.ir!.scene.layers.some((l) => l.name === "__fig_labels")).toBe(true);
     expect(result.ir!.scene.layers.some((l) => l.name === "__fig_plate")).toBe(true);

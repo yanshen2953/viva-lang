@@ -5,11 +5,14 @@ import { estimateTextWidthPx, wrapTextLines } from "./chrome-collide.js";
 const TITLE_FONT = 12;
 const SUB_FONT = 10;
 const CAP_FONT = 8;
-const CHIP_FONT = 8;
+const CHIP_FONT = 10;
 const TITLE_LINE = TITLE_FONT + 4;
 const SUB_LINE = SUB_FONT + 4;
 const CAP_LINE = CAP_FONT + 4;
-const CHIP_H = 22;
+const CHIP_H = 24;
+const CHIP_MIN = 56;
+const CHIP_PAD = 20;
+const CHIP_SHRINK_MIN = 48;
 const PAD = 10;
 
 export type BoardBands = {
@@ -29,7 +32,7 @@ export function estimateSafeMargin(width: number, height: number): number {
 }
 
 export function measureChipWidth(key: string): number {
-  return Math.max(44, Math.round(estimateTextWidthPx(key, CHIP_FONT, 0.1) + 16));
+  return Math.max(CHIP_MIN, Math.round(estimateTextWidthPx(key, CHIP_FONT, 0.12) + CHIP_PAD));
 }
 
 export function estimateBoardBands(opts: {
@@ -59,9 +62,9 @@ export function estimateBoardBands(opts: {
   let hudW = opts.controlKeys.length ? chipWs.reduce((a, b) => a + b, 0) + gaps : 0;
   const hudCap = copyW * 0.5;
   if (hudW > hudCap && chipWs.length) {
-    const room = Math.max(36 * chipWs.length, hudCap - gaps);
+    const room = Math.max(CHIP_SHRINK_MIN * chipWs.length, hudCap - gaps);
     const scale = room / chipWs.reduce((a, b) => a + b, 0);
-    chipWs = chipWs.map((w) => Math.max(36, Math.round(w * scale)));
+    chipWs = chipWs.map((w) => Math.max(CHIP_SHRINK_MIN, Math.round(w * scale)));
     hudW = chipWs.reduce((a, b) => a + b, 0) + gaps;
   }
 

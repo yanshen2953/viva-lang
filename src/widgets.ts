@@ -1920,9 +1920,9 @@ function expandLayoutBoard(
           ...paint,
         }),
         node(lblName, {
-          role: literal("label"),
+          role: literal("hud"),
           x: literal(cursorX + chipW / 2),
-          y: literal(chipY + chipH * 0.7),
+          y: literal(chipY + chipH * 0.68),
           text: literal(key),
           align: literal("center"),
           ...paint,
@@ -5059,7 +5059,7 @@ function paintPlotFrameChrome(artifact: Artifact): void {
         const gap = 8;
         for (let i = keys.length - 1; i >= 0; i--) {
           const key = keys[i]!;
-          const chipW = Math.min(36, measureChipWidth(key));
+          const chipW = Math.max(36, measureChipWidth(key));
           cursorX -= chipW;
           const chipName = `${plot.name}_ctl_${i}`;
           const lblName = `${plot.name}_ctlLbl_${i}`;

@@ -60,6 +60,7 @@
 | 矢量箭头 | `chart.vector` 的头在场景坐标画成三角，杆停在箭颈。仍不是带比例尺的 quiver |
 | 色条刻度 | 热图色条按 `zlim` 刻度（Atlas `0 4` 不再被读成 0–6；`6 28` 不再只标 6/17/28）。色带是一条顺序色 `linearGradient`。仍不是 Nature 连续色标 |
 | 投稿方角框 | `print-nature` 的 plot / figure deck / plate 圆角为 0（手册接管，不再写死 6/8）。`dashboard` 仍是圆角卡片。仍不是栏宽排版器 |
+| HUD 芯片 | 按 10pt 字宽估宽（`CD8A` 不再用 8pt/44 下限）；标签走 `hud` 角色。挤时仍可收到 48。仍可能被视觉 OCR 读错 |
 
 ## 仍然很粗（按用户可见排序）
 

@@ -65,7 +65,7 @@ export const printNaturePreset: StylePreset = {
     annotation: { fill: "#111827", font: 9, letterSpacing: 0.2 },
     label: { fill: "#374151", font: 8, letterSpacing: 0.08 },
     chrome: { fill: "#f3f4f6", stroke: "#9ca3af", strokeWidth: 1 },
-    hud: { fill: "#111827", font: 10 },
+    hud: { fill: "#111827", font: 10, letterSpacing: 0.12 },
     atmosphere: { opacity: 0 },
   },
   layers: [

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { compileSource } from "../../src/pipeline.js";
 import { evaluate } from "../../src/eval.js";
-import { estimateBoardBands, estimateSafeMargin } from "../../src/layout/board-chrome.js";
+import { estimateBoardBands, estimateSafeMargin, measureChipWidth } from "../../src/layout/board-chrome.js";
 
 describe("layout.board chrome from copy", () => {
   it("estimates safe from the short scene side", () => {
@@ -64,6 +64,8 @@ describe("layout.board chrome from copy", () => {
     expect(bands.chipWs[1]!).toBeGreaterThan(bands.chipWs[0]!);
     expect(bands.hudW).toBeGreaterThan(bands.chipWs[0]! + bands.chipWs[1]!);
     expect(bands.lowerH).toBeGreaterThanOrEqual(36);
+    expect(measureChipWidth("CD8A")).toBeGreaterThanOrEqual(56);
+    expect(measureChipWidth("IL6")).toBeGreaterThanOrEqual(56);
   });
 
   it("compiles a board with no safe/titleH/lowerH and wraps the title", () => {
