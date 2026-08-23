@@ -143,6 +143,7 @@ widget chart.scatter
 
   it("places grouped legends outside the plot and encodes string categories", () => {
     const src = readFileSync("examples/category-legend.viva", "utf8");
+    expect(src).not.toMatch(/areaX|areaY/);
     const result = compileSource(src, "category-legend.viva", {
       handbookIds: ["print-nature"],
     });
@@ -280,6 +281,7 @@ widget chart.scatter
 
   it("parses ISO dates as a time axis and formats month ticks", () => {
     const src = readFileSync("examples/time-axis.viva", "utf8");
+    expect(src).not.toMatch(/areaX|areaY/);
     const result = compileSource(src, "time-axis.viva");
     expect(result.error).toBeNull();
     const frame = result.ir!.frames[0]!;

@@ -180,11 +180,9 @@ widget chart.heatmap
   });
 
   it("places y-tick labels in scene space so they sit left of the plot, not in the data pad", () => {
-    const result = compileSource(
-      readFileSync("examples/box.viva", "utf8"),
-      "box.viva",
-      { handbookIds: ["print-nature"] },
-    );
+    const src = readFileSync("examples/box.viva", "utf8");
+    expect(src).not.toMatch(/areaX|areaY/);
+    const result = compileSource(src, "box.viva", { handbookIds: ["print-nature"] });
     expect(result.error).toBeNull();
     const axes = result.ir!.scene.layers.find((l) => l.name.endsWith("_axes"))!;
     const ytick = axes.items.find((i) => i.kind === "node" && i.name.includes("_ytick_"));

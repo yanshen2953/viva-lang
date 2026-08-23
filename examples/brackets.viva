@@ -18,8 +18,6 @@ widget chart.bar
   xLabel: Arm
   yLabel: Response
   title: "Significance brackets"
-  areaX: 56 500
-  areaY: 48 280
   brackets: [
     { a: "placebo", b: "drug-A", label: "**" }
     { a: "drug-A", b: "drug-B", label: "ns" }

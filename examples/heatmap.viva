@@ -24,8 +24,6 @@ widget chart.heatmap
   xlim: 0 4
   ylim: 0 4
   zlim: 0 1
-  areaX: 56 360
-  areaY: 48 300
   title: "Expression"
   xLabel: Condition
   yLabel: Gene

@@ -3,7 +3,7 @@
   "title": "Agent uses widget chart.scatter",
   "kind": "generate",
   "handbooks": [],
-  "prompt": "Write a Viva artifact using a TOP-LEVEL `widget chart.scatter`.\n\nCRITICAL SYNTAX:\n- `widget chart.scatter` is TOP-LEVEL (sibling of scene), NOT `widget: chart.scatter` inside a layer.\n- Include data points, xField/yField, xlim/ylim, areaX/areaY as number pairs.\n\nOutput ONLY valid Viva source starting with artifact.",
+  "prompt": "Write a Viva artifact using a TOP-LEVEL `widget chart.scatter`.\n\nCRITICAL SYNTAX:\n- `widget chart.scatter` is TOP-LEVEL (sibling of scene), NOT `widget: chart.scatter` inside a layer.\n- Include data points, xField/yField, xlim/ylim. Omit areaX/areaY — the compiler fills the scene.\n\nOutput ONLY valid Viva source starting with artifact.",
   "assertions": {
     "compiles": true,
     "mustMatch": ["(?m)^widget\\s+chart\\.scatter"],

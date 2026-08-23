@@ -24,6 +24,4 @@ widget chart.violin
   xLabel: Arm
   yLabel: Score
   title: "Violin · compiler density"
-  areaX: 72 520
-  areaY: 48 288
   interactive: false

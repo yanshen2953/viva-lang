@@ -23,6 +23,4 @@ widget chart.bar
   yLabel: Response
   yUnit: "%"
   title: "Categorical x · legend outside"
-  areaX: 56 520
-  areaY: 40 300
   legend: right

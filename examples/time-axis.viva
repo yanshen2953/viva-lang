@@ -22,7 +22,5 @@ widget chart.line
   yLabel: CRP
   yUnit: mg/L
   ylim: 0 32
-  areaX: 56 600
-  areaY: 36 270
   title: "ISO dates · xScale time"
   interactive: false
