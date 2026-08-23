@@ -114,6 +114,8 @@ scene
       w: 328
       h: 188
       radius: 8
+      xlim: -2.5 2.5
+      ylim: -2.5 2.5
 
     node pcaTitle
       role: title
@@ -133,25 +135,26 @@ scene
 
     node pcaAxis
       role: axis
-      x: 980
-      y: 462
-      w: 140
-      h: 1.5
-      opacity: 0.75
+      frame: pcaPlotBg
+      x1: -2.2
+      y1: 0
+      x2: 2.2
+      y2: 0
 
     node pcaAxisY
       role: axis
-      x: 980
-      y: 382
-      w: 1.5
-      h: 160
-      opacity: 0.75
+      frame: pcaPlotBg
+      x1: 0
+      y1: -2.2
+      x2: 0
+      y2: 2.2
 
     for p in pca
       node pcaPt as pcaPts
         role: mark
-        x: 980 + (p.x * cos(yaw) - p.z * sin(yaw)) * zoom * 78
-        y: 462 - (p.y * cos(pitch) - (p.x * sin(yaw) + p.z * cos(yaw)) * sin(pitch)) * zoom * 78
+        frame: pcaPlotBg
+        x: (p.x * cos(yaw) - p.z * sin(yaw)) * zoom
+        y: (p.y * cos(pitch) - (p.x * sin(yaw) + p.z * cos(yaw)) * sin(pitch)) * zoom
         r: 8
         colorBy: grp
         palette: categorical
@@ -160,8 +163,9 @@ scene
       if pcaMark == p.id
         node pcaRing as pcaPts
           role: annotation
-          x: 980 + (p.x * cos(yaw) - p.z * sin(yaw)) * zoom * 78
-          y: 462 - (p.y * cos(pitch) - (p.x * sin(yaw) + p.z * cos(yaw)) * sin(pitch)) * zoom * 78
+          frame: pcaPlotBg
+          x: (p.x * cos(yaw) - p.z * sin(yaw)) * zoom
+          y: (p.y * cos(pitch) - (p.x * sin(yaw) + p.z * cos(yaw)) * sin(pitch)) * zoom
           r: 14
           opacity: 0.12
           strokeWidth: 2
@@ -266,7 +270,7 @@ scene
       x: 48
       y: 148
       w: 420
-      text: "数据只写 grp；色板/框线/网格由 dashboard 预设注入。图表吃 role: panel 甲板；PCA 轨道仍是可拖的 World 点。"
+      text: "数据只写 grp；色板/框线/网格由 dashboard 预设注入。图表吃 role: panel 甲板；PCA 投影走 plot frame，拖轨道仍是 World。"
       lineHeight: 1.55
 
     node caption

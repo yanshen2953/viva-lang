@@ -248,6 +248,10 @@ export function promotePanelFrames(artifact: Artifact): void {
         props: {
           x: literal([x, x + w]),
           y: literal([y, y + h]),
+          ...(node.props.xlim ? { xlim: node.props.xlim } : {}),
+          ...(node.props.ylim ? { ylim: node.props.ylim } : {}),
+          ...(node.props.xScale ? { xScale: node.props.xScale } : {}),
+          ...(node.props.yScale ? { yScale: node.props.yScale } : {}),
         },
       });
     }

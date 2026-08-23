@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { compileSource } from "../../src/pipeline.js";
 import { evaluate } from "../../src/eval.js";
 import { largestEmptyRect } from "../../src/layout/chart-fit.js";
+import { flattenNodesFromIr } from "../../src/export/static-svg.js";
 
 describe("chart host leftover", () => {
   it("picks the slab below a top knob", () => {
@@ -135,6 +136,27 @@ widget chart.line
       .flatMap((l) => l.items)
       .some((item) => item.kind === "for" && item.body.some((n) => n.kind === "node" && n.name === "shaft"));
     expect(shaft).toBe(true);
+  });
+
+  it("maps science-studio PCA marks through the promoted plot frame", () => {
+    const src = readFileSync("examples/science-studio.viva", "utf8");
+    expect(src).not.toMatch(/980 \+| \* 78/);
+    expect(src).toMatch(/frame: pcaPlotBg/);
+    const result = compileSource(src, "science-studio.viva");
+    expect(result.error).toBeNull();
+    const scopes = [result.ir!.state, result.ir!.data];
+    const plot = result.ir!.frames.find((f) => f.name === "pcaPlotBg")!;
+    const xlim = evaluate(plot.props.xlim!, scopes) as [number, number];
+    expect(xlim[0]).toBeCloseTo(-2.5);
+    expect(xlim[1]).toBeCloseTo(2.5);
+    const pts = flattenNodesFromIr(result.ir!).nodes.filter((n) => n.name === "pcaPt");
+    expect(pts.length).toBeGreaterThan(0);
+    for (const pt of pts) {
+      expect(Number(pt.props.x)).toBeGreaterThanOrEqual(816);
+      expect(Number(pt.props.x)).toBeLessThanOrEqual(1144);
+      expect(Number(pt.props.y)).toBeGreaterThanOrEqual(368);
+      expect(Number(pt.props.y)).toBeLessThanOrEqual(556);
+    }
   });
 
   it("promotes a role: plot node into a bindable frame", () => {

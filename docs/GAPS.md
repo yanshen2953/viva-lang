@@ -51,7 +51,7 @@
 
 1. PDF 默认随包 `assets/fonts/VivaSansFallback.ttf`（Droid 子集，examples + 论文用字）。宿主可用 `VIVA_PDF_CJK_FONT`、`--cjk-font` 或导出 `cjkFontPath` 覆盖；未覆盖的字仍可能 `?`
 2. 有 time / box / violin（KDE 轮廓）/ 显著性括号；轴刻度在场景坐标。`print-nature` 刻度 8 / 轴标题 9。观感仍粗，不是投稿成品
-3. Atlas / figure-grid / board / storyboard / linked-filter / science-studio 图表已去掉 `inset*`、手摆 headline / lowerThird、`safe`/`titleH`/`gutter`/`areaX` 魔法数；作者 `role: panel` / `role: plot` 升成 frame；`science-studio` 矢量场已改 `chart.vector`。`layout.board` 出题注 + `controls`/`bind` HUD 芯片，空题注不再默认占 72/96。`layout.figure` 吃 `body`，图表 `span: 2` 可跨栏。`page: a4` 切 PDF 页并盖 `n / N`；会被页刀切开的 figure 行整行进下一页并拉高场景，不重排正文。chrome 有盒子碰撞消解；图/轴标题和图例键按栏宽折行（Y 轴折行后自上而下阅读；行数封顶后尾行 `...`），重叠刻度抽稀，相邻格互叠时再长 inset。仍不是栏宽排版器
+3. Atlas / figure-grid / board / storyboard / linked-filter / science-studio 图表已去掉 `inset*`、手摆 headline / lowerThird、`safe`/`titleH`/`gutter`/`areaX` 魔法数；作者 `role: panel` / `role: plot` 升成 frame；`science-studio` 矢量场已改 `chart.vector`；PCA 投影走 `pcaPlotBg` frame，不再写 980/78。`layout.board` 出题注 + `controls`/`bind` HUD 芯片，空题注不再默认占 72/96。`layout.figure` 吃 `body`，图表 `span: 2` 可跨栏。`page: a4` 切 PDF 页并盖 `n / N`；会被页刀切开的 figure 行整行进下一页并拉高场景，不重排正文。chrome 有盒子碰撞消解；图/轴标题和图例键按栏宽折行（Y 轴折行后自上而下阅读；行数封顶后尾行 `...`），重叠刻度抽稀，相邻格互叠时再长 inset。仍不是栏宽排版器
 4. `__sel` 默认跨面板藏行；box 四分位、violin 密度和折线线段按选中行重算/重连。本地 brush 松手后保持选择窗，路径够长切套索。高亮、藏行、`play` 遮罩、box/折线几何和同骨架 violin `d` 缓 220ms。仍无时间轴动画
 5. MCP/HTTP compile 已附 visual QA，仍不挡 IR 成功；空栏检查优先用 figure `cellX`/`cellY`，不是瞎切 2×2。内联卡无 raster；无自动修复
 6. MCP/HTTP/CLI prompt 默认 slim；生成成功率未测
