@@ -2220,7 +2220,10 @@ function chromeLayoutOf(
       yTicks,
       xTicks,
       panelLabel: panelLabelOf(props),
-      cbarLabels: extras.colorbar ? [formatTickValue(z0), formatTickValue(z1)] : [],
+      cbarLabels: extras.colorbar
+        ? [formatTickValue(z0), formatTickValue((z0 + z1) / 2), formatTickValue(z1)]
+        : [],
+      zCaption: extras.colorbar ? axisCaption(props, "z") : null,
     },
     cellBoxOf(props),
   );
@@ -2819,15 +2822,19 @@ function valueFieldName(props: Record<string, Expr>): string {
   return fieldName(props.valueField ?? props.zField ?? props.vField ?? props.value, "v");
 }
 
-function axisCaption(props: Record<string, Expr>, axis: "x" | "y"): string | null {
+function axisCaption(props: Record<string, Expr>, axis: "x" | "y" | "z"): string | null {
   const label =
     axis === "x"
       ? stringProp(props, ["xLabel", "xlabel", "xTitle"])
-      : stringProp(props, ["yLabel", "ylabel", "yTitle"]);
+      : axis === "y"
+        ? stringProp(props, ["yLabel", "ylabel", "yTitle"])
+        : stringProp(props, ["zLabel", "zlabel", "zTitle", "colorLabel"]);
   const unit =
     axis === "x"
       ? stringProp(props, ["xUnit", "xunit"])
-      : stringProp(props, ["yUnit", "yunit"]);
+      : axis === "y"
+        ? stringProp(props, ["yUnit", "yunit"])
+        : stringProp(props, ["zUnit", "zunit", "colorUnit"]);
   if (!label && !unit) return null;
   if (label && unit) return `${label} (${unit})`;
   return label ?? unit;
@@ -3040,12 +3047,30 @@ function expandColorbar(
     );
     if (i === 0 || i === steps - 1 || i === Math.floor(steps / 2)) {
       const value = z0 + t * (z1 - z0);
+      const slot = i === 0 ? 0 : i === steps - 1 ? 2 : 1;
+      const lines = chrome?.cbarLines?.[slot]?.length
+        ? chrome.cbarLines[slot]!
+        : [formatTickValue(value)];
+      for (const [li, line] of lines.entries()) {
+        items.push(
+          node(`${frameName}_cbarLbl_${i}${li ? `_${li}` : ""}`, {
+            role: literal("label"),
+            x: literal(barX + 14),
+            y: literal(bot - t * h + 3 + li * 10),
+            text: literal(line),
+          }),
+        );
+      }
+    }
+  }
+  if (chrome?.cbarTitleLines?.length) {
+    for (const [i, line] of chrome.cbarTitleLines.entries()) {
       items.push(
-        node(`${frameName}_cbarLbl_${i}`, {
+        node(`${frameName}_cbarTitle${i ? `_${i}` : ""}`, {
           role: literal("label"),
-          x: literal(barX + 14),
-          y: literal(bot - t * h + 3),
-          text: literal(formatTickValue(value)),
+          x: literal(chrome.cbarTitleX),
+          y: literal(chrome.cbarTitleY + i * 11),
+          text: literal(line),
         }),
       );
     }

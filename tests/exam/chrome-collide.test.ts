@@ -105,6 +105,28 @@ describe("paper chrome collision", () => {
     expect(chrome.titleX).toBeGreaterThan(label.x + label.w);
   });
 
+  it("wraps long colorbar labels and z titles to leftover width", () => {
+    const { chrome, rects } = placePaperChrome(
+      { px0: 40, px1: 140, py0: 30, py1: 160 },
+      (px) => px,
+      true,
+      {
+        colorbar: true,
+        cbarLabels: ["1.2e-4", "very-long-tick"],
+        zCaption: "normalized-expression score",
+        yTicks: [{ label: "0", y: 150 }],
+        xTicks: [{ label: "1", x: 80 }],
+      },
+      { x0: 0, y0: 0, x1: 200, y1: 180 },
+    );
+    expect(chrome.cbarLines.some((lines) => lines.length > 1)).toBe(true);
+    expect(chrome.cbarTitleLines.length).toBeGreaterThan(1);
+    expect(chrome.cbarTitleLines.join("").replace(/\s/g, "")).toMatch(/expression/);
+    const cbar = rects.find((r) => r.id === "cbar")!;
+    expect(cbar).toBeTruthy();
+    expect(rects.some((r) => r.id === "cbar-title")).toBe(true);
+  });
+
   it("keeps a right legend clear of the colorbar", () => {
     const { rects } = placePaperChrome(
       { px0: 40, px1: 220, py0: 30, py1: 200 },

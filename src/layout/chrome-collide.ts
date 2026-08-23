@@ -29,6 +29,10 @@ export type PaperChrome = {
   legendY: number;
   legendStep: number;
   cbarX: number;
+  cbarLines: string[][];
+  cbarTitleLines: string[];
+  cbarTitleX: number;
+  cbarTitleY: number;
   compact: boolean;
 };
 
@@ -51,6 +55,7 @@ export type ChromeExtras = {
   xTicks?: { label: string; x: number }[];
   panelLabel?: string | null;
   cbarLabels?: string[];
+  zCaption?: string | null;
 };
 
 const TICK_FONT = 8;
@@ -199,6 +204,7 @@ export function placePaperChrome(
   const xCap = extras.xCaption ?? null;
   const title = extras.title ?? "";
   const cbarLabels = extras.cbarLabels ?? ["0.00"];
+  const zCap = extras.zCaption ?? null;
 
   let yTickX = box.px0 - gap;
   let yTitleX = Math.max(
@@ -216,13 +222,21 @@ export function placePaperChrome(
   const axisLine = AXIS_FONT + 2;
   const legendLine = TICK_FONT + 2;
   let cbarX = box.px1 + toScene(compact ? 4 : 8);
-  const cbarLabelW = Math.max(
-    ...cbarLabels.map((s) => estimateTextWidthPx(s, TICK_FONT, 0.08)),
-  );
-  const cbarRight = extras.colorbar ? cbarX + toScene(10 + 4 + cbarLabelW) : box.px1;
+  let cbarLines = cbarLabels.map((s) => [s]);
+  let cbarTitleLines: string[] = [];
+  let cbarTitleX = cbarX + toScene(14);
+  let cbarTitleY = box.py0 - toScene(AXIS_FONT + 2);
+  const cbarLabelW = () =>
+    Math.max(
+      TICK_FONT,
+      ...cbarLines.flatMap((lines) => lines.map((s) => estimateTextWidthPx(s, TICK_FONT, 0.08))),
+      ...cbarTitleLines.map((s) => estimateTextWidthPx(s, AXIS_FONT, 0.2)),
+    );
+  const cbarRight = () =>
+    extras.colorbar ? cbarX + toScene(10 + 4 + cbarLabelW()) : box.px1;
   let legendX =
     extras.legendAt === "right"
-      ? (extras.colorbar ? cbarRight : box.px1) + toScene(compact ? 6 : 10)
+      ? (extras.colorbar ? cbarRight() : box.px1) + toScene(compact ? 6 : 10)
       : extras.legendAt === "inside"
         ? box.px0 + toScene(12)
         : box.px0 + toScene(8);
@@ -311,13 +325,26 @@ export function placePaperChrome(
       });
     }
     if (extras.colorbar) {
+      const extraH = cbarTitleLines.length ? cbarTitleLines.length * axisLine + 4 : 0;
       rects.push({
         id: "cbar",
         x: cbarX,
-        y: box.py0,
-        w: toScene(10 + 4 + cbarLabelW),
-        h: Math.max(8, box.py1 - box.py0),
+        y: box.py0 - extraH,
+        w: toScene(10 + 4 + cbarLabelW()),
+        h: Math.max(8, box.py1 - box.py0) + extraH,
       });
+      if (cbarTitleLines.length) {
+        const tw = Math.max(
+          ...cbarTitleLines.map((line) => estimateTextWidthPx(line, AXIS_FONT, 0.2)),
+        );
+        rects.push({
+          id: "cbar-title",
+          x: cbarTitleX,
+          y: cbarTitleY - AXIS_FONT * 0.75,
+          w: tw,
+          h: AXIS_FONT + (cbarTitleLines.length - 1) * axisLine,
+        });
+      }
     }
     if (extras.legendAt && extras.legendAt !== "inside") {
       for (const [i, key] of keys.entries()) {
@@ -411,6 +438,25 @@ export function placePaperChrome(
     }
     rects = build();
   }
+  if (extras.colorbar) {
+    const leftover = cell
+      ? Math.max(TICK_FONT * 4, cell.x1 - (cbarX + toScene(14)) - 4)
+      : toScene(compact ? 36 : 56);
+    cbarLines = cbarLabels.map((label) => {
+      const lines = wrapTextLines(label, leftover, TICK_FONT, 0.08, 2);
+      return lines.length ? lines : [label];
+    });
+    if (zCap) {
+      cbarTitleLines = wrapTextLines(zCap, leftover, AXIS_FONT, 0.2, 2);
+      if (!cbarTitleLines.length) cbarTitleLines = [zCap];
+      cbarTitleX = cbarX + toScene(14);
+      cbarTitleY = box.py0 - toScene(AXIS_FONT + 2) - Math.max(0, cbarTitleLines.length - 1) * axisLine;
+    }
+    if (extras.legendAt === "right") {
+      legendX = cbarRight() + toScene(compact ? 6 : 10);
+    }
+    rects = build();
+  }
 
   return {
     chrome: {
@@ -428,6 +474,10 @@ export function placePaperChrome(
       legendY,
       legendStep,
       cbarX,
+      cbarLines,
+      cbarTitleLines,
+      cbarTitleX,
+      cbarTitleY,
       compact,
     },
     rects,
@@ -454,7 +504,7 @@ export function growInsetsForChrome(
       if (!rectsOverlap(a, b, 2)) continue;
       const pair = `${a.id} ${b.id}`;
       const leftish = /yTitle|ytick|panel-label/.test(pair);
-      const rightish = /cbar|legend-/.test(pair);
+      const rightish = /cbar|cbar-title|legend-/.test(pair);
       const topish = /title|panel-label/.test(pair);
       const botish = /xTitle|xtick|legend-/.test(pair);
       const overlapW = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x) + 2;

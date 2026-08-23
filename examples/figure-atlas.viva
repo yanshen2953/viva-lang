@@ -184,6 +184,7 @@ widget chart.heatmap
   xlim: -0.5 7.5
   ylim: -0.5 5.5
   zlim: 0 4
+  zLabel: "normalized module score"
   title: "GENE MODULE"
 
 widget chart.vector

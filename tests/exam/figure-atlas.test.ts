@@ -28,7 +28,7 @@ function expectChromeInsideCells(ir: VisualIR): void {
     expect(plotY[1]).toBeLessThan(cellY[1]!);
     for (const node of nodes) {
       if (node.kind !== "node" || !node.name.startsWith(`${frame.name}_`)) continue;
-      if (!/_(title(_\d+)?|xTitle(_\d+)?|yTitle(_\d+)?|ytick_\d+|xtick_\d+|legLbl_\d+(_\d+)?|cbarLbl_\d+)$/.test(node.name)) {
+      if (!/_(title(_\d+)?|xTitle(_\d+)?|yTitle(_\d+)?|ytick_\d+|xtick_\d+|legLbl_\d+(_\d+)?|cbarLbl_\d+(_\d+)?|cbarTitle(_\d+)?)$/.test(node.name)) {
         continue;
       }
       const x = evaluate(node.props.x ?? node.props.x1, env);

@@ -66,6 +66,8 @@ widget chart.heatmap
   xlim: 0 3
   ylim: 0 3
   zlim: 0 1
+  zLabel: "normalized expression"
+  zUnit: "log2"
   areaX: 40 260
   areaY: 36 240
   title: "Expression"
@@ -139,6 +141,14 @@ describe("chart quality: axis titles, error bars, hover, heatmap", () => {
     const names = axes.items.filter((i) => i.kind === "node").map((i) => (i.kind === "node" ? i.name : ""));
     expect(names.some((n) => n.includes("_cbar_"))).toBe(true);
     expect(names.some((n) => n.includes("_cbarLbl_"))).toBe(true);
+    expect(names.some((n) => n.includes("_cbarTitle"))).toBe(true);
+    const titleText = axes.items
+      .filter((i) => i.kind === "node" && i.name.includes("_cbarTitle"))
+      .map((i) =>
+        i.kind === "node" && i.props.text && "value" in i.props.text ? String(i.props.text.value) : "",
+      )
+      .join("");
+    expect(titleText.replace(/\s/g, "")).toMatch(/normalizedexpression/);
   });
 
   it("reads unary-minus xlim/ylim so ticks stay in the data domain", () => {
