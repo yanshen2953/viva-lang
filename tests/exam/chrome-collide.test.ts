@@ -5,9 +5,29 @@ import {
   estimateTextWidthPx,
   placePaperChrome,
   rectsOverlap,
+  thinXTicks,
 } from "../../src/layout/chrome-collide.js";
 
 describe("paper chrome collision", () => {
+  it("drops overlapping x-tick labels but keeps the ends", () => {
+    const kept = thinXTicks([
+      { label: "January", x: 10 },
+      { label: "February", x: 28 },
+      { label: "March", x: 46 },
+      { label: "April", x: 64 },
+    ]);
+    expect(kept[0]?.label).toBe("January");
+    expect(kept[kept.length - 1]?.label).toBe("April");
+    expect(kept.length).toBeLessThan(4);
+    for (let i = 1; i < kept.length; i++) {
+      const a = kept[i - 1]!;
+      const b = kept[i]!;
+      const aw = estimateTextWidthPx(a.label, 8, 0.08);
+      const bw = estimateTextWidthPx(b.label, 8, 0.08);
+      expect(a.x + aw / 2 + 3).toBeLessThanOrEqual(b.x - bw / 2 + 0.01);
+    }
+  });
+
   it("nudges a rotated y-title left of measured y-tick boxes", () => {
     const { chrome, rects } = placePaperChrome(
       { px0: 80, px1: 360, py0: 40, py1: 220 },
@@ -137,5 +157,39 @@ widget chart.line
       };
       expect(rectsOverlap(titleBox, labelBox, 1)).toBe(false);
     }
+  });
+
+  it("paints fewer x ticks when long category labels would collide", () => {
+    const result = compileSource(
+      `artifact Tight
+data rows = [
+  { x: 0, y: 4 }
+  { x: 1, y: 6 }
+  { x: 2, y: 3 }
+  { x: 3, y: 8 }
+]
+scene
+  size: 140 120
+  background: #ffffff
+widget chart.bar
+  data: rows
+  xField: x
+  yField: y
+  xlim: -0.5 3.5
+  ylim: 0 10
+  xCats: ["January", "February", "March", "April"]
+  interactive: false
+`,
+      "tight.viva",
+      { handbookIds: ["print-nature"] },
+    );
+    expect(result.error).toBeNull();
+    const axes = result.ir!.scene.layers.find((l) => l.name.endsWith("_axes"))!;
+    const labels = axes.items
+      .filter((i) => i.kind === "node" && /_xtick_\d+$/.test(i.name))
+      .map((i) => (i.kind === "node" ? evaluate(i.props.text, [{}, {}]) : ""));
+    expect(labels[0]).toBe("January");
+    expect(labels[labels.length - 1]).toBe("April");
+    expect(labels.length).toBeLessThan(4);
   });
 });

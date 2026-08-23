@@ -54,6 +54,52 @@ const AXIS_FONT = 9;
 const TITLE_FONT = 12;
 const PANEL_FONT = 11;
 
+export function thinXTicks<T extends { label: string; x: number }>(
+  ticks: T[],
+  font = TICK_FONT,
+  gap = 4,
+): T[] {
+  if (ticks.length <= 2) return ticks;
+  const sorted = [...ticks].sort((a, b) => a.x - b.x);
+  const box = (t: T) => {
+    const w = estimateTextWidthPx(t.label, font, 0.08);
+    return { x: t.x - w / 2, w };
+  };
+  const fits = (a: T, b: T) => {
+    const left = box(a);
+    const right = box(b);
+    return left.x + left.w + gap <= right.x;
+  };
+  const kept: T[] = [sorted[0]!];
+  const last = sorted[sorted.length - 1]!;
+  for (let i = 1; i < sorted.length - 1; i++) {
+    const cur = sorted[i]!;
+    if (fits(kept[kept.length - 1]!, cur) && fits(cur, last)) kept.push(cur);
+  }
+  while (kept.length > 1 && !fits(kept[kept.length - 1]!, last)) kept.pop();
+  kept.push(last);
+  return kept;
+}
+
+export function thinYTicks<T extends { label: string; y: number }>(
+  ticks: T[],
+  font = TICK_FONT,
+  gap = 3,
+): T[] {
+  if (ticks.length <= 2) return ticks;
+  const sorted = [...ticks].sort((a, b) => a.y - b.y);
+  const kept: T[] = [sorted[0]!];
+  const last = sorted[sorted.length - 1]!;
+  const fits = (a: T, b: T) => Math.abs(a.y - b.y) >= font + gap;
+  for (let i = 1; i < sorted.length - 1; i++) {
+    const cur = sorted[i]!;
+    if (fits(kept[kept.length - 1]!, cur) && fits(cur, last)) kept.push(cur);
+  }
+  while (kept.length > 1 && !fits(kept[kept.length - 1]!, last)) kept.pop();
+  kept.push(last);
+  return kept;
+}
+
 export function estimateTextWidthPx(text: string, font: number, tracking = 0): number {
   let w = 0;
   for (const ch of text) {

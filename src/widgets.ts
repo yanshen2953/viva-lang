@@ -22,6 +22,8 @@ import { COLUMN_MM, sceneScaleOf } from "./space/scene-box.js";
 import {
   growInsetsForChrome,
   placePaperChrome,
+  thinXTicks,
+  thinYTicks,
   type ChromeRect,
   type PaperChrome,
 } from "./layout/chrome-collide.js";
@@ -2099,14 +2101,18 @@ function chromeLayoutOf(
   const scale = sceneScaleOf({ unit });
   const compact = isCompactPlot(box, unit);
   const toScene = (px: number) => px / Math.max(scale, 1e-6);
-  const yTicks = axisTicks(props, "y").map((t) => ({
-    label: t.label,
-    y: domainMap(t.value, [box.ymin, box.ymax], [box.py0, box.py1], true, box.yScale),
-  }));
-  const xTicks = axisTicks(props, "x").map((t) => ({
-    label: t.label,
-    x: domainMap(t.value, [box.xmin, box.xmax], [box.px0, box.px1], false, box.xScale),
-  }));
+  const yTicks = thinYTicks(
+    axisTicks(props, "y").map((t) => ({
+      label: t.label,
+      y: domainMap(t.value, [box.ymin, box.ymax], [box.py0, box.py1], true, box.yScale),
+    })),
+  );
+  const xTicks = thinXTicks(
+    axisTicks(props, "x").map((t) => ({
+      label: t.label,
+      x: domainMap(t.value, [box.xmin, box.xmax], [box.px0, box.px1], false, box.xScale),
+    })),
+  );
   const [z0, z1] = zlimPair(props);
   return placePaperChrome(
     box,
@@ -2381,10 +2387,24 @@ function expandAxisTicks(
   const ylim = numericPair(props.ylim, [0, 100]);
   if (!xlim || !ylim) return [];
 
-  const xTicks = axisTicks(props, "x");
-  const yTicks = axisTicks(props, "y");
   const items: SceneItem[] = [];
   const box = plotBoxOf(props);
+  let xTicks = axisTicks(props, "x");
+  let yTicks = axisTicks(props, "y");
+  if (box) {
+    xTicks = thinXTicks(
+      xTicks.map((t) => ({
+        ...t,
+        x: domainMap(t.value, [box.xmin, box.xmax], [box.px0, box.px1], false, box.xScale),
+      })),
+    );
+    yTicks = thinYTicks(
+      yTicks.map((t) => ({
+        ...t,
+        y: domainMap(t.value, [box.ymin, box.ymax], [box.py0, box.py1], true, box.yScale),
+      })),
+    );
+  }
   const unit = sceneUnitOf(artifact);
   const compact = box ? isCompactPlot(box, unit) : isCompactScene(artifact);
   const ySpan = binary("-", ylimHigh(props), ylimLow(props), span);
