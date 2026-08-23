@@ -21,7 +21,7 @@
 
 ## 粗糙的根因（不是缺再一个 HTTP 路由）
 
-1. **图核语义仍缺出版层** — 有轴标题/单位/band/log/time/box/violin/括号；`print-nature` 已接管字号/字距。编译器按字号估盒子，并对标题/刻度/图例/色条/`(a)` 做一轮重叠消解。仍不是通用排版求解（不换行、不减刻度）。
+1. **图核语义仍缺出版层** — 有轴标题/单位/band/log/time/box/violin/括号；`print-nature` 已接管字号/字距。编译器按字号估盒子，并对标题/刻度/图例/色条/`(a)` 做一轮重叠消解；图/轴标题按栏宽折行，重叠刻度抽稀，相邻格 chrome 再长一档 inset。仍不是通用排版求解。
 2. **默认交互还不是完整 linked view** — `__sel.keys` 已跨面板藏行（含 box / violin / 折线）；Runtime 用 opacity 淡 180ms，不是时间轴动画。本地 brush 默认矩形窗，路径够长时切套索。
 3. **导出 ≠ 预览** — SVG 已接近 Runtime；PNG/JPG 现在填场景底色（投稿白底不再透成黑卡）；PDF 随包 CJK 子集，缺字仍可能 `?`。
 4. **Agent 闭环没产品化** — session compile 附带 visual diagnostics，但不挡成功；生成成功率未测。
@@ -41,7 +41,7 @@
 | 折线按 x 排序 | 源数据乱序也能连对 |
 | SVG 导出 | `font-family` / `font-weight` / `letter-spacing` / `stroke-dasharray` / 旋转轴标题 |
 | 动态 widget 插件 | `registerWidget()` / `listWidgets()` |
-| `layout.figure` | `cols/rows/gutter/margin`；不写 `inset*` 时按绑定 chart 的 chrome 迭代估留白；不写 `x/y/w/h` 铺满场景或 `panel: body`；`title`/`subtitle`/`caption`/`plate` 由编译器画 |
+| `layout.figure` | `cols/rows/gutter/margin`；不写 `inset*` 时按绑定 chart 的 chrome 迭代估留白；相邻格 chrome 互叠时再长 inset；不写 `x/y/w/h` 铺满场景或 `panel: body`；`title`/`subtitle`/`caption`/`plate` 由编译器画 |
 | `layout.board` | `safe`/`title`/`body`/`lower`/`hud`；题注 + `controls`/`bind` 芯片；不写 `w/h` 铺满场景；`splits` / `beats` / `bleed` / `typeGrid`；`--beats` 出 PNG 序列 |
 | 图表对位 | `panel: a` 吃已有 frame |
 | 投稿尺寸 | `unit: mm` + `column: single\|double` |
@@ -51,7 +51,7 @@
 
 1. PDF 随包 `assets/fonts/VivaSansFallback.ttf`（Droid 子集，examples + 论文用字）；缺字仍可能 `?`
 2. 有 time / box / violin（KDE 轮廓）/ 显著性括号；轴刻度在场景坐标。`print-nature` 刻度 8 / 轴标题 9。观感仍粗，不是投稿成品
-3. Atlas / figure-grid 已去掉 `inset*`、手摆 panel 卡、页面 title 和基因按钮；`layout.board` 出题注 + `controls`/`bind` HUD 芯片，`layout.figure` 吃 `body`。chrome 有盒子碰撞消解。不换行、不减刻度
+3. Atlas / figure-grid 已去掉 `inset*`、手摆 panel 卡、页面 title 和基因按钮；`layout.board` 出题注 + `controls`/`bind` HUD 芯片，`layout.figure` 吃 `body`。chrome 有盒子碰撞消解；图/轴标题按栏宽折行，重叠刻度抽稀，相邻格互叠时再长 inset。仍不是跨页排版器
 4. `__sel` 默认跨面板藏行；本地 brush 松手后保持选择窗，路径够长切套索。仍无时间轴动画
 5. session visual diagnostics 不挡编译成功
 6. MCP/HTTP/CLI prompt 默认 slim；生成成功率未测
@@ -60,7 +60,7 @@
 
 ## 下一刀（质量，不再铺接口）
 
-1. 通用排版求解（轴标题换行、跨格）；图标题会按栏宽折行，重叠刻度会抽稀
+1. 更完整的排版求解（跨页、栏宽文法、图例/色条换行）；图/轴标题会按栏宽折行，重叠刻度会抽稀，相邻格 chrome 会再让一档
 2. linked selection 已藏热图、折线、box/violin；仍缺过渡动画
 3. 再扩 CJK 或允许宿主挂全库；`scripts/subset-cjk-font.py` 可从 Droid 重建
 4. `layout.board play` 遮罩现在画在图表之上（layout 先展开、chart 后展开）；`export --beats` / MCP `beats` 仍是 PNG 序列，不是成片视频

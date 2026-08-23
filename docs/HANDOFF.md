@@ -118,7 +118,7 @@ Vision 检查需 `viva.models.json`（见 `viva.models.json.example`）或 env `
 3. **Playground** — 状态栏已有结构检查；浏览器内 vision/MCP 不现实
 4. **Agent exam** — `npm run test:agent-exam` 需 `DEEPSEEK_API_KEY`（Pi+DeepSeek SUT）
 5. **发布包实跑** — `npm run pack:release`，在干净环境验证 `release/` 与 Docker
-6. **三柱推进中（未齐）** — `layout.figure` 可按 chrome 估 inset，并可铺满场景或 `panel: body`；`title`/`subtitle`/`caption` 由编译器画；`controls`/`bind` 出 HUD 芯片（Atlas 已无手摆基因按钮）。chrome 盒子会互推一档，重叠刻度会抽稀，长图标题按栏宽折行。有效 brush 松手后保持选择窗；路径够长切数据域套索。仍欠：轴标题换行、跨格排版、过渡动画、CJK 全库、成片视频、LLM 生成率。对照 `docs/VISION.md`。**不要**标愿景完成。
+6. **三柱推进中（未齐）** — `layout.figure` 可按 chrome 估 inset，并可铺满场景或 `panel: body`；`title`/`subtitle`/`caption` 由编译器画；`controls`/`bind` 出 HUD 芯片（Atlas 已无手摆基因按钮）。chrome 盒子会互推一档，重叠刻度会抽稀，长图/轴标题按栏宽折行，相邻格 chrome 互叠时再长 inset。有效 brush 松手后保持选择窗；路径够长切数据域套索。仍欠：跨页排版、过渡动画、CJK 全库、成片视频、LLM 生成率。对照 `docs/VISION.md`。**不要**标愿景完成。
 
 ### 已知约束 / 坑
 
