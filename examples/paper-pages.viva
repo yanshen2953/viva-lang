@@ -35,7 +35,6 @@ widget chart.line
   ylim: 0 30
   xLabel: Visit
   yLabel: Score
-  interactive: false
 
 widget chart.box
   panel: b
@@ -45,4 +44,3 @@ widget chart.box
   ylim: 8 28
   xLabel: Arm
   yLabel: Score
-  interactive: false

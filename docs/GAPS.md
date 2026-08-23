@@ -51,7 +51,7 @@
 | typeGrid 灌文 | 12 导轨仍画 `type0`…；`body:` 按可读 2–3 栏从上到下、从左到右灌槽，不是 InDesign |
 | 续页跑页眉 | 多页 `page:` 续页顶栏重复 figure `(continued)` 或 board 题注；仍不是对页/章节标 |
 | play 当前拍可点 | 当前拍遮罩 `visible: false`（220ms 淡出 + pointer-events none）；storyboard/board 图不再写 `interactive: false` |
-| mm 跟手 tip | 紧凑/投稿图不再靠常驻角 HUD；`chartTip` 跟 `__event` 走，空字不画；HUD/brush 不抢指针。paper-cjk / paper-column / figure-grid / figure-span / box / violin / time-axis / brackets 默认可交互。`__event.x/y` 是作者场景单位（mm 不再二次缩放刷选）。paper-pages / paper-spread 仍关交互（页切片演示） |
+| mm 跟手 tip | 紧凑/投稿图不再靠常驻角 HUD；`chartTip` 跟 `__event` 走，空字不画；HUD/brush/folio 不抢指针。paper-cjk / paper-column / paper-pages / paper-spread / figure-grid / figure-span / box / violin / time-axis / brackets 默认可交互。`__event.x/y` 是作者场景单位（mm 不再二次缩放刷选）。分页 tip 夹在当前页带，不掉进上一页 |
 
 ## 仍然很粗（按用户可见排序）
 

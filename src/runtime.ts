@@ -1048,6 +1048,12 @@ function propsToBBox(p: Record<string, unknown>): { x: number; y: number; w: num
 /** HUD / brush overlays must not steal hover from marks (follow-cursor tip). */
 function hudIgnoresPointer(name: string, role: unknown): boolean {
   const r = role === undefined || role === null ? "" : String(role);
-  return r === "hud" || name === "chartTip" || name === "brushRect" || name === "brushPath";
+  return (
+    r === "hud" ||
+    name === "chartTip" ||
+    name === "brushRect" ||
+    name === "brushPath" ||
+    name.startsWith("__page_folio")
+  );
 }
 

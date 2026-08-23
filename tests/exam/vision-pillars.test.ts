@@ -164,6 +164,8 @@ widget chart.scatter
       "violin.viva",
       "time-axis.viva",
       "brackets.viva",
+      "paper-pages.viva",
+      "paper-spread.viva",
     ]) {
       expect(readFileSync(`examples/${file}`, "utf8")).not.toMatch(/interactive:\s*false/);
     }
@@ -203,6 +205,42 @@ widget chart.scatter
     }
     const svg = renderSvgFromIr(result.ir!);
     expect(svg).not.toMatch(/>2, 18\.4</);
+  });
+
+  it("keeps a page-2 mm tip on the second A4 slice", () => {
+    const src = readFileSync("examples/paper-pages.viva", "utf8");
+    const result = compileSource(src, "paper-pages.viva", { handbookIds: ["print-nature"] });
+    expect(result.error).toBeNull();
+    expect(result.ir!.events.some((e) => e.type === "hover" && e.target === "box")).toBe(true);
+    const folio = result.ir!.scene.layers.find((l) => l.name === "__page_folio");
+    expect(folio).toBeTruthy();
+    expect(
+      folio!.items.some((i) => i.kind === "node" && i.name.startsWith("__page_folio")),
+    ).toBe(true);
+    const world = simulate(result.ir!, {
+      events: [
+        {
+          type: "hover",
+          target: "box",
+          event: { x: 40, y: 320 },
+          item: { arm: "placebo", y: 12 },
+        },
+      ],
+    });
+    expect(world.state.__tip).toBe("placebo, 12");
+    expect(world.state.__tipX).toBe(40);
+    expect(world.state.__tipY).toBe(320);
+    const tip = result.ir!.scene.layers
+      .find((l) => l.name === "__chart_hud")
+      ?.items.find((i) => i.kind === "node" && i.name === "chartTip");
+    expect(tip?.kind).toBe("node");
+    if (tip?.kind === "node") {
+      const y = evaluate(tip.props.y!, [world.state]) as number;
+      expect(y).toBeGreaterThanOrEqual(PAGE_MM.a4.h);
+      expect(y).toBeLessThan(400);
+      const slipped = evaluate(tip.props.y!, [{ __tipY: 300 }]) as number;
+      expect(slipped).toBeGreaterThanOrEqual(PAGE_MM.a4.h);
+    }
   });
 
   it("lets a host CJK font win over the bundled subset", () => {

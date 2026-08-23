@@ -4764,6 +4764,37 @@ function ensureBrushState(artifact: Artifact, span: { line: number; column: numb
   });
 }
 
+function chartTipYExpr(
+  span: { line: number; column: number },
+  oy: number,
+  loScene: number,
+  hiScene: number,
+  pageH: number,
+  topReserve: number,
+  bottomReserve: number,
+): Expr {
+  const raw = binary("-", ident("__tipY"), literal(oy), span);
+  if (!(pageH > 0)) {
+    return callExpr("clamp", [raw, literal(loScene), literal(hiScene)], span);
+  }
+  const pageIndex = callExpr("floor", [binary("/", ident("__tipY"), literal(pageH), span)], span);
+  const pageTop = binary("*", pageIndex, literal(pageH), span);
+  const lo = callExpr(
+    "max",
+    [literal(loScene), binary("+", pageTop, literal(topReserve), span)],
+    span,
+  );
+  const hi = callExpr(
+    "min",
+    [
+      literal(hiScene),
+      binary("-", binary("+", pageTop, literal(pageH), span), literal(bottomReserve), span),
+    ],
+    span,
+  );
+  return callExpr("clamp", [raw, lo, hi], span);
+}
+
 function ensureChartHud(artifact: Artifact, span: { line: number; column: number }): void {
   if (!artifact.scene) return;
   if (artifact.scene.layers.some((l) => l.name === "__chart_hud")) return;
@@ -4773,6 +4804,10 @@ function ensureChartHud(artifact: Artifact, span: { line: number; column: number
   const oy = compact ? 4 : 14;
   const font = compact ? 8 : 11;
   const pad = compact ? 2 : 8;
+  const unit = sceneUnitOf(artifact);
+  const page = parsePage(stringProp(artifact.scene.props, ["page"]));
+  const pageH = page ? (unit === "mm" || unit === "pt" ? page.h : mmToPx(page.h)) : 0;
+  const reserves = pageH > 0 ? figurePageReserves(unit) : { pad: 0, top: 0, bottom: 0 };
   const hudItems: SceneItem[] = [
     node("chartTip", {
       role: literal("hud"),
@@ -4785,14 +4820,14 @@ function ensureChartHud(artifact: Artifact, span: { line: number; column: number
         ],
         span,
       ),
-      y: callExpr(
-        "clamp",
-        [
-          binary("-", ident("__tipY"), literal(oy), span),
-          literal(pad + font),
-          literal(Math.max(pad + font, height - pad)),
-        ],
+      y: chartTipYExpr(
         span,
+        oy,
+        pad + font,
+        Math.max(pad + font, height - pad),
+        pageH,
+        Math.max(pad + font, reserves.top),
+        Math.max(pad, reserves.bottom),
       ),
       text: ident("__tip"),
       font: literal(font),
