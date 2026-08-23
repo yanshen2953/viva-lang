@@ -2715,7 +2715,10 @@ function copyExpr(props: Record<string, Expr>, keys: string[]): Expr | undefined
 }
 
 function staticCopyText(expr: Expr | undefined): string | null {
-  return captionFromExpr(expr);
+  if (!expr) return null;
+  if (expr.kind === "string" && expr.value) return expr.value;
+  if (expr.kind === "array") return captionFromExpr(expr);
+  return null;
 }
 
 function frameBoxOf(
