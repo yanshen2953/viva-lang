@@ -693,6 +693,14 @@ widget chart.scatter
       .find((l) => l.name === "__b_marks")!
       .items.filter((i) => i.kind === "node" && i.name === "heatCell");
     expect(heatCells.length).toBe(9);
+    const funnelBars = result.ir!.scene.layers
+      .find((l) => l.name === "__e_marks")!
+      .items.filter((i) => i.kind === "node" && i.name === "bar");
+    expect(funnelBars.length).toBe(3);
+    expect(result.ir!.scene.layers.find((l) => l.name === "__e_marks")!.items.some((i) => i.kind === "for")).toBe(
+      false,
+    );
+    expect(result.ir!.events.some((e) => e.type === "hover" && e.target === "bar")).toBe(true);
     const heat = applySelSummary(
       {
         __heatData: "rows",

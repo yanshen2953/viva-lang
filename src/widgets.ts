@@ -732,13 +732,32 @@ function expandChart(
   } else if (kind === "chart.bar" || kind === "chart.funnel") {
     const barW = barWidthData(props);
     const catField = horizontal ? markYField : markXField;
+    const sourceCat = horizontal ? resolvedYField : resolvedXField;
+    const valueField = horizontal ? markXField : markYField;
+    const sourceVal = horizontal ? resolvedXField : resolvedYField;
+    const aggregated = expandAggregatedBars(
+      artifact,
+      dataName,
+      frameName,
+      sourceCat,
+      sourceVal,
+      catField,
+      valueField,
+      seriesField,
+      horizontal,
+      barW,
+      props,
+      span,
+    );
+    if (aggregated) {
+      marks.push(...aggregated);
+    } else {
     if (seriesField) {
       applyGroupedBarDodge(artifact, dataName, catField, seriesField, barW);
     }
     const catExpr = seriesField
       ? binary("+", ident(`row.${catField}`), ident("row.__dodge"), span)
       : ident(`row.${catField}`);
-    const valueField = horizontal ? markXField : markYField;
     marks.push({
       kind: "for",
       item: "row",
@@ -789,6 +808,7 @@ function expandChart(
         ...expandErrorBars(props, frameName, markXField, markYField, span, seriesField),
       ],
     });
+    }
   } else if (kind === "chart.heatmap") {
     marks.push(
       ...expandHeatCells(artifact, props, dataName, frameName, markXField, markYField, span, {
@@ -3492,6 +3512,78 @@ function expandErrorBars(
 function zlimPair(props: Record<string, Expr>): [number, number] {
   const pair = numericPair(props.zlim ?? props.clim, [0, 1]);
   return pair ?? [0, 1];
+}
+
+function expandAggregatedBars(
+  artifact: Artifact,
+  dataName: string,
+  frameName: string,
+  sourceCat: string,
+  sourceVal: string,
+  catField: string,
+  _valueField: string,
+  seriesField: string | null,
+  horizontal: boolean,
+  barW: number,
+  props: Record<string, Expr>,
+  span: { line: number; column: number },
+): SceneItem[] | null {
+  const decl = artifact.data.find((d) => d.name === dataName);
+  if (!decl || decl.value.kind !== "array") return null;
+  const groups = new Map<
+    string,
+    { key: string; series: string; values: number[]; cat: number }
+  >();
+  let rows = 0;
+  for (const row of decl.value.items) {
+    if (row.kind !== "object") continue;
+    const vv = objectField(row, sourceVal);
+    if (vv?.kind !== "number") continue;
+    rows += 1;
+    const key = rowGroupKey(row, sourceCat);
+    const series = seriesField ? rowGroupKey(row, seriesField) : "";
+    const cat = rowGroupX(row, catField, groups.size);
+    const id = `${key}\t${series}`;
+    const g = groups.get(id) ?? { key, series, values: [], cat };
+    g.values.push(vv.value);
+    groups.set(id, g);
+  }
+  if (!groups.size || groups.size >= rows) return null;
+  return [...groups.values()].map((g) => {
+    const total = g.values.reduce((a, b) => a + b, 0);
+    const fill = seriesField
+      ? {
+          kind: "call" as const,
+          callee: "palette",
+          args: [
+            { kind: "string" as const, value: g.series || g.key, span },
+            { kind: "string" as const, value: "categorical", span },
+          ],
+          span,
+        }
+      : markFill(props);
+    return node("bar", {
+      role: literal("mark"),
+      frame: literal(frameName),
+      x: literal(horizontal ? total : g.cat),
+      y: literal(horizontal ? g.cat : total),
+      w: literal(horizontal ? total : barW),
+      h: literal(horizontal ? barW : total),
+      ...(fill ? { fill } : {}),
+      hoverFill: literal("#E69F00"),
+      radius: literal(3),
+      __chartBar: literal(true),
+      ...(horizontal ? { __chartBarOrient: literal("h"), __barOrient: literal("h") } : { __barOrient: literal("v") }),
+      __barData: literal(dataName),
+      __barCatField: literal(sourceCat),
+      __barValueField: literal(sourceVal),
+      __barKey: literal(g.key),
+      ...(seriesField
+        ? { __barSeriesField: literal(seriesField), __barSeriesKey: literal(g.series) }
+        : {}),
+      ...markSelKeysVisible([g.key, g.series].filter(Boolean), frameName, span),
+    });
+  });
 }
 
 function heatTierExpr(value: Expr, z0: number, z1: number, span: { line: number; column: number }): Expr {

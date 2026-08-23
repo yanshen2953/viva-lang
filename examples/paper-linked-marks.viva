@@ -15,14 +15,14 @@ data rows = [
 scene
   unit: mm
   column: double
-  height: 110
+  height: 155
   background: #ffffff
 
 widget layout.figure
   title: "Linked marks · brush a visit"
-  subtitle: "heat / box / vector follow the same __sel"
+  subtitle: "heat / box / funnel / vector follow the same __sel"
   cols: 2
-  rows: 2
+  rows: 3
 
 widget chart.scatter
   panel: a
@@ -63,6 +63,26 @@ widget chart.vector
   yField: score
   uField: ux
   vField: uy
+  group: arm
+  xlim: 0 4
+  ylim: 6 28
+  xLabel: Visit
+  yLabel: Score
+
+widget chart.funnel
+  panel: e
+  data: rows
+  xField: score
+  yField: arm
+  xlim: 0 70
+  xLabel: Sum score
+  yLabel: Arm
+
+widget chart.line
+  panel: f
+  data: rows
+  xField: t
+  yField: score
   group: arm
   xlim: 0 4
   ylim: 6 28
