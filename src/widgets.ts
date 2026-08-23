@@ -849,11 +849,21 @@ function expandGridLines(
   return items;
 }
 
+function numericLiteral(expr: Expr | undefined): number | null {
+  if (!expr) return null;
+  if (expr.kind === "number") return expr.value;
+  if (expr.kind === "unary" && expr.op === "-") {
+    const inner = numericLiteral(expr.expr);
+    return inner === null ? null : -inner;
+  }
+  return null;
+}
+
 function numericPair(expr: Expr | undefined, fallback: [number, number]): [number, number] | null {
   if (expr?.kind === "array" && expr.items.length >= 2) {
-    const a = expr.items[0];
-    const b = expr.items[1];
-    if (a?.kind === "number" && b?.kind === "number") return [a.value, b.value];
+    const a = numericLiteral(expr.items[0]);
+    const b = numericLiteral(expr.items[1]);
+    if (a !== null && b !== null) return [a, b];
   }
   return fallback ? fallback : null;
 }

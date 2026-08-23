@@ -137,6 +137,35 @@ describe("chart quality: axis titles, error bars, hover, heatmap", () => {
     expect(names.some((n) => n.includes("_cbarLbl_"))).toBe(true);
   });
 
+  it("reads unary-minus xlim/ylim so ticks stay in the data domain", () => {
+    const result = compileSource(
+      `artifact "Neg"
+data cells = [
+  { x: 0, y: 0, v: 0.2 }
+  { x: 1, y: 1, v: 0.8 }
+]
+scene
+  size: 400 280
+widget chart.heatmap
+  data: cells
+  xField: x
+  yField: y
+  valueField: v
+  xlim: -0.5 2.5
+  ylim: -0.5 2.5
+  zlim: 0 1
+  areaX: 40 260
+  areaY: 36 240
+  interactive: false
+`,
+      "neg.viva",
+    );
+    expect(result.error).toBeNull();
+    const svg = renderSvgFromIr(result.ir!);
+    expect(svg).not.toMatch(/y1="-[1-9]\d{3}/);
+    expect(svg).not.toMatch(/NaN|Infinity/);
+  });
+
   it("exports SVG with font-family and grid dash (runtime parity)", () => {
     const result = compileSource(SCATTER, "q.viva", { handbookIds: ["print-nature"] });
     const svg = renderSvgFromIr(result.ir!);
