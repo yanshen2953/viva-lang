@@ -48,6 +48,7 @@
 | Agent 热路径 | slim prompt 默认；MCP/HTTP compile 与 session compile/patch 附 raster visual QA（不挡成功） |
 | 旋转感知 chrome 盒 | 审查 / Runtime / 结构检查共用 CJK 字宽 + `rotate` AABB（mm 先 scale 到 CSS px）；`check.struct.chromeOverflow` 只警告 |
 | inset 封顶后回收 | `placePaperChrome` 把标题/轴题/图例往格内收，不推进刻度；互叠缝跟 `pad` 走 |
+| typeGrid 灌文 | 12 导轨仍画 `type0`…；`body:` 按可读 2–3 栏从上到下、从左到右灌槽，不是 InDesign |
 
 ## 仍然很粗（按用户可见排序）
 
@@ -58,14 +59,14 @@
 5. MCP/HTTP compile 已附 visual QA，仍不挡 IR 成功；空栏检查优先用 figure `cellX`/`cellY`，不是瞎切 2×2。结构层会警告标题/轴题/图例出格（旋转 Y 轴不再被量成横条假溢出）。内联卡无 raster；无自动修复
 6. MCP/HTTP/CLI prompt 默认 slim；生成成功率未测
 7. 小栏宽 mm 图默认不再画常驻 `__tip` HUD；不写 `areaX` 时编译器按场景估绘图区，并停在作者节点/手写 frame 腾出的最大空矩形；两张以上未绑 chart 自动成网格时同样避开题注，满幅氛围层不占空位。inset 先按 38% 软顶，装不下再让到约半格，仍可能溢出，不是投稿成品碰撞求解
-8. `typeGrid` 是基线叠加 + `type0`… 栏，不是跨页或视频时间轴
+8. `typeGrid` 仍画基线 + `type0`… 栏；`body:` 会按可读栏宽（12 导轨 → 3 栏）从上到下、从左到右灌进这些槽，仍不是跨页报纸或视频时间轴
 
 ## 下一刀（质量，不再铺接口）
 
 1. 更完整的排版求解；`page: a4` 做 PDF 页高切片并盖 `n / N`，figure 格子会避开页缝并拉高场景；board `body:` 会过页，仍不是跑页眉或报纸分栏。`layout.figure` 已能 `span` 跨栏，省略 gutter/margin/titleH 时按 mm/像素估缝和题注带；图/轴标题、图例键和色条标签会按栏宽折行（像素字宽、场景落位；无连字符的拉丁图例键按整词让 inset）；色条/右图例先按场景剩余宽度和 inset 让路，仍装不下才省略，重叠刻度会抽稀，相邻格 chrome 会再让一档；inset 互叠缝跟 `pad` 走（不再写死 2 场景单位）；封顶后 chrome 尽量收回格内
 2. linked selection 已藏热图、折线、box/violin；box 四分位、violin KDE 和折线线段会按 `__sel` 行重算/重连。Runtime 对 box/折线几何和同骨架 violin `d` 做 220ms 插值。仍缺时间轴动画
 3. 随包 CJK 子集已按当前 examples + 论文词表从 Droid 重建；仍不是全库。宿主已能用 `VIVA_PDF_CJK_FONT` / `--cjk-font` / `cjkFontPath` 挂全库
-4. `layout.board play` 遮罩画在图表之上，Runtime 用 220ms CSS opacity 淡入淡出（不是时间轴）；`export --beats` / MCP `beats` 默认 PNG 序列，`gif|mp4` 只是 ffmpeg 幻灯，不是成片时间轴
+4. `layout.board play` 遮罩画在图表之上，Runtime 用 220ms CSS opacity 淡入淡出（不是时间轴）；`typeGrid` 的 `body:` 已按可读栏宽分流，仍不是报纸分栏器。`export --beats` / MCP `beats` 默认 PNG 序列，`gif|mp4` 只是 ffmpeg 幻灯，不是成片时间轴
 5. agent-exam 种子编译进 CI；MCP/HTTP compile 已附 visual QA（空栏看 figure cell，不挡成功）。生成成功率仍未测（要 LLM）
 
 对照真源：`docs/VISION.md`。

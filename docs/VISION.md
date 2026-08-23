@@ -77,7 +77,7 @@
 ### 3.3 图像 / 视频级排版
 
 有：`layout.figure` 网格 + `(a)(b)` + 格子甲板；图表 `span: 2` 跨栏（插件属性，不是关键字）；不写 `inset*` 时编译器按该格 chart 的刻度/标题/图例/色条迭代估留白；不写 `x/y/w/h` 时铺满场景，或 `panel: body` 吃 board 槽；`title`/`subtitle`/`caption` 由编译器画；两张以上未绑 panel 的 chart 自动成网格并停在剩余空位；`layout.board` 的 `safe` / `title` / `body` / `lower` + 题注属性（`body:`/`prose` 折进 `left` 或 `body`；`caption:` ident 保持绑定）+ `splits` / `beats` / `bleed` / `typeGrid`；不写 `safe`/`titleH`/`lowerH` 时按题注折行和芯片宽度估条带，空题注不再占 72/96；board / storyboard 例子用 title/caption，不再手摆字幕条；`unit: mm` + 栏宽；`page: a4` 的 PDF 切片盖 `n / N`（续页可带 figure `(continued)`）；会被页刀切开的 figure 行整行进下一页，场景拉高；CLI/MCP/HTTP `--beats` 按 `__beat` 导出 PNG 序列，`-f gif|mp4` 用 ffmpeg 把这些栅格拼成幻灯（2 fps，不是时间轴 / 成片）。  
-没有：栏宽文法、剪辑时间轴、真正的碰撞求解。`page: a4` 让 PDF 按页高切片，并在每页盖 `n / N`；figure 格子避开页缝；`layout.board` 的 `body:` 在有 `page` 时按栏宽折行并避开页刀续到下一页（仍不是报纸分栏或跑页眉）。SVG/PNG 仍是一张长画布。这是页装箱 + 页戳，不是跑页眉的排版器。`typeGrid` 是安全框上的基线与 `type0`… 栏，不是 InDesign 级网格系统。这些必须继续是**插件**，不能变成语法。`play` 仍是拍遮罩。
+没有：栏宽文法、剪辑时间轴、真正的碰撞求解。`page: a4` 让 PDF 按页高切片，并在每页盖 `n / N`；figure 格子避开页缝；`layout.board` 的 `body:` 在有 `page` 时按栏宽折行并避开页刀续到下一页（仍不是报纸分栏或跑页眉）。SVG/PNG 仍是一张长画布。这是页装箱 + 页戳，不是跑页眉的排版器。`typeGrid` 仍画安全框上的基线与 `type0`… 栏；`body:` / `prose` 会按可读栏宽（12 导轨合成 2–3 栏）灌进这些槽，从上到下再从左到右，仍不是 InDesign。这些必须继续是**插件**，不能变成语法。`play` 仍是拍遮罩。
 
 ---
 
@@ -100,7 +100,7 @@
 1. 跨页 / 栏宽文法（`page: a4` 已切 PDF 页并盖 `n / N`；`column` 在有 `page` 时是图的 89/183 mm 栏宽，不再把纸页收成 89 mm；figure 格子会避开页缝并拉高场景，仍不重排正文；`layout.figure` 省略 gutter/margin/titleH 时按 mm/像素估缝和题注带；图/轴标题、图例键和色条标签已按栏宽折行，封顶后尾行省略，重叠刻度会抽稀，相邻格会再让 inset；软顶装不下时 inset 可再长到约半格，还不是通用排版器）
 2. `__sel` 已是共享 key 集并藏行；box / violin / 折线按选中行重算或重连；高亮、play 遮罩、box/折线几何和同骨架 violin `d` 走 220ms 缓动，仍缺时间轴
 3. 随包 CJK 子集已按当前 examples + 论文词表重建；仍不是全库。宿主已能挂全库。未覆盖的字仍可能 `?`
-4. `layout.board play` / `typeGrid` 已在；省略 `safe`/`titleH`/`lowerH` 时按题注估条带；`--beats` 默认 PNG 序列，`-f gif|mp4` 只是 ffmpeg 幻灯，不是成片时间轴
+4. `layout.board play` / `typeGrid` 已在；`typeGrid` 的 `body:` 按可读栏宽灌槽；省略 `safe`/`titleH`/`lowerH` 时按题注估条带；`--beats` 默认 PNG 序列，`-f gif|mp4` 只是 ffmpeg 幻灯，不是成片时间轴
 5. 例子与 exam 种子编译已进 CI；MCP/HTTP compile 已附 raster visual QA，仍不挡 IR 成功。LLM 生成成功率仍未测。不要把 visual 误报成「已经闭环」
 
 发现插件：`viva widgets` 或 `listWidgets()`。

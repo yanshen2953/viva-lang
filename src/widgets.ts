@@ -21,7 +21,7 @@ import { domainMap, parseTimeValue, scaleKind, type ScaleKind } from "./space.js
 import { COLUMN_MM, mmToPx, pageColumnMeasure, parsePage, sceneScaleOf } from "./space/scene-box.js";
 import { estimateBoardBands, measureChipWidth } from "./layout/board-chrome.js";
 import { figureCopyDefaults, figureCopyPlace, figureGapDefaults } from "./layout/figure-gap.js";
-import { packCopyLinesToPages } from "./layout/copy-flow.js";
+import { packCopyLinesToColumns, packCopyLinesToPages, readableTypeColCount } from "./layout/copy-flow.js";
 import { figurePageReserves, packFigureCellsToPages } from "./layout/figure-page.js";
 import {
   chartHostBox,
@@ -1690,10 +1690,18 @@ function expandLayoutBoard(
     }
   }
   if (bodyExpr) {
+    const typeHosts: typeof slots = [];
+    for (let i = 0; i < typeCols; i++) {
+      const slot = slots.find((s) => s.name === nameOf(`type${i}`));
+      if (slot) typeHosts.push(slot);
+    }
+    const useTypeFlow = typeGrid && typeHosts.length >= 2 && splits < 2;
     const host =
       slots.find((s) => s.name === nameOf("left")) ?? slots.find((s) => s.name === nameOf("body"));
-    if (host) {
-      const bodyW = Math.max(toScene(40), host.x[1] - host.x[0]);
+    if (useTypeFlow || host) {
+      const textCols = useTypeFlow ? mergeTypeTextColumns(typeHosts, readableTypeColCount(typeHosts.length)) : null;
+      const first = textCols?.[0];
+      const bodyW = Math.max(toScene(40), first ? first.x1 - first.x0 : host!.x[1] - host!.x[0]);
       const staticBody = staticCopyText(bodyExpr);
       const wrapW = Math.max(40, bodyW * scale);
       const pageSpec = parsePage(stringProp(artifact.scene?.props ?? {}, ["page"]));
@@ -1703,14 +1711,50 @@ function expandLayoutBoard(
           : mmToPx(pageSpec.h)
         : 0;
       const reserves = pageH ? figurePageReserves(unit) : { top: 0, bottom: 0, pad: 0 };
+      const lineH = snapType(toScene(18));
+      const startPad = snapType(toScene(16));
       const lines = staticBody
         ? wrapTextLines(staticBody, wrapW, 12, 0.12, pageH ? 0 : 24)
         : [];
-      if (staticBody) {
+      if (staticBody && textCols) {
+        const packed = packCopyLinesToColumns(
+          lines,
+          textCols.map((col) => ({
+            x: col.x0,
+            y0: col.y0 + startPad,
+            y1: col.y1 - toScene(4),
+            w: col.x1 - col.x0,
+          })),
+          {
+            lineH,
+            pageH: pageH || undefined,
+            topReserve: reserves.top,
+            bottomReserve: reserves.bottom,
+          },
+        );
+        if (pageH) growSceneHeight(artifact, packed.bottom + reserves.bottom);
+        const last = packed.places.length - 1;
+        for (const [i, place] of packed.places.entries()) {
+          const colW = textCols.find((col) => Math.abs(col.x0 - place.x) < 0.5);
+          const text =
+            packed.clipped && i === last
+              ? ellipsizeToWidth(place.text, wrapW, 12, 0.12)
+              : place.text;
+          copyItems.push(
+            node(`${id}_docBody${i ? `_${i}` : ""}`, {
+              role: literal("label"),
+              x: literal(place.x),
+              y: literal(place.y),
+              w: literal(colW ? colW.x1 - colW.x0 : bodyW),
+              text: literal(text),
+            }),
+          );
+        }
+      } else if (staticBody && host) {
         const packed = packCopyLinesToPages(lines, {
           x: host.x[0],
-          startY: host.y[0] + toScene(16),
-          lineH: toScene(18),
+          startY: host.y[0] + startPad,
+          lineH,
           pageH: pageH || undefined,
           hostBottom: pageH ? undefined : host.y[1] - toScene(4),
           topReserve: reserves.top,
@@ -1733,12 +1777,12 @@ function expandLayoutBoard(
             }),
           );
         }
-      } else {
+      } else if (host) {
         copyItems.push(
           node(`${id}_docBody`, {
             role: literal("label"),
             x: literal(host.x[0]),
-            y: literal(host.y[0] + toScene(16)),
+            y: literal(host.y[0] + startPad),
             w: literal(bodyW),
             text: bodyExpr,
           }),
@@ -1901,6 +1945,30 @@ function expandLayoutBoard(
       typeCols,
     );
   }
+}
+
+function mergeTypeTextColumns(
+  hosts: { name: string; x: [number, number]; y: [number, number] }[],
+  textCols: number,
+): { x0: number; x1: number; y0: number; y1: number }[] {
+  const n = Math.max(1, Math.min(textCols, hosts.length));
+  const each = Math.floor(hosts.length / n);
+  const rem = hosts.length % n;
+  const out: { x0: number; x1: number; y0: number; y1: number }[] = [];
+  let i = 0;
+  for (let c = 0; c < n; c++) {
+    const span = each + (c < rem ? 1 : 0);
+    const first = hosts[i]!;
+    const last = hosts[i + span - 1]!;
+    out.push({
+      x0: first.x[0],
+      x1: last.x[1],
+      y0: first.y[0],
+      y1: first.y[1],
+    });
+    i += span;
+  }
+  return out;
 }
 
 function expandBoardTypeGrid(

@@ -6,7 +6,8 @@ scene
 
 widget layout.board
   title: "16:9 board · type grid"
-  caption: "layout.board typeGrid: true · columns snap to the baseline"
+  caption: "12 guides · body fills 3 readable measures"
+  body: "The author turns on typeGrid and names how many guides to paint. The compiler keeps the 12-column skeleton for alignment, then pours this paragraph into three readable measures so a coding agent does not write a y for every line. 栏是度量，格子是参考：十二栏参考线仍在，正文按可读栏宽从 type0 流到下一栏，不靠作者手摆分栏坐标。This is still not InDesign — no running header, no jump folio, no optical kerning — but the same primitive that hops a page knife now fills type columns top to bottom, then left to right."
   typeGrid: true
   typeGridStep: 8
   typeGridCols: 12
