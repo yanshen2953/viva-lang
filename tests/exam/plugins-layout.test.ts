@@ -172,6 +172,102 @@ widget layout.figure
     expect(plot[0]! - cell[0]!).toBeGreaterThan(12);
   });
 
+  it("paints title/subtitle/caption and fills the scene without x/y/w/h", () => {
+    const result = compileSource(
+      `artifact Titled
+data series = [{ x: 1, y: 2 }, { x: 3, y: 4 }]
+scene
+  size: 800 600
+  background: #ffffff
+widget layout.figure
+  title: "Figure 1. Response"
+  subtitle: "n=12 · print-nature"
+  caption: "Source: virtual cohort"
+  cols: 2
+  rows: 1
+  gutter: 20
+  margin: 12
+widget chart.scatter
+  panel: a
+  data: series
+  xField: x
+  yField: y
+  xlim: 0 5
+  ylim: 0 10
+  interactive: false
+`,
+      "titled.viva",
+      { handbookIds: ["print-nature"] },
+    );
+    expect(result.error).toBeNull();
+    const ir = result.ir!;
+    const copy = ir.scene.layers.find((l) => l.name === "__fig_copy");
+    expect(copy).toBeTruthy();
+    const texts = copy!.items
+      .filter((i) => i.kind === "node")
+      .map((i) => (i.kind === "node" ? evaluate(i.props.text, [ir.state, ir.data]) : ""));
+    expect(texts).toEqual(["Figure 1. Response", "n=12 · print-nature", "Source: virtual cohort"]);
+    expect(ir.scene.layers.some((l) => l.name === "__fig_plate")).toBe(true);
+    const a = ir.frames.find((f) => f.name === "a")!;
+    const cellY = evaluate(a.props.cellY!, [ir.state, ir.data]) as number[];
+    expect(cellY[0]).toBeGreaterThan(24);
+    const cellX = evaluate(a.props.cellX!, [ir.state, ir.data]) as number[];
+    expect(cellX[0]).toBeGreaterThanOrEqual(0);
+    expect(cellX[1]).toBeLessThanOrEqual(800);
+  });
+
+  it("lets a figure inherit layout.board body without magic x/y/w/h", () => {
+    const result = compileSource(
+      `artifact Page
+data series = [{ x: 1, y: 2 }, { x: 3, y: 4 }]
+scene
+  size: 640 400
+  background: #ffffff
+widget layout.board
+  title: "Board title"
+  caption: "Board caption"
+  safe: 20
+  guides: false
+widget layout.figure
+  panel: body
+  cols: 2
+  rows: 1
+  gutter: 16
+  margin: 8
+widget chart.scatter
+  panel: a
+  data: series
+  xField: x
+  yField: y
+  xlim: 0 5
+  ylim: 0 10
+  interactive: false
+`,
+      "page.viva",
+      { handbookIds: ["print-nature"] },
+    );
+    expect(result.error).toBeNull();
+    const ir = result.ir!;
+    expect(ir.scene.layers.some((l) => l.name === "__board_copy")).toBe(true);
+    const body = ir.frames.find((f) => f.name === "body")!;
+    const a = ir.frames.find((f) => f.name === "a")!;
+    const bodyX = evaluate(body.props.x, [ir.state, ir.data]) as number[];
+    const bodyY = evaluate(body.props.y, [ir.state, ir.data]) as number[];
+    const cellX = evaluate(a.props.cellX!, [ir.state, ir.data]) as number[];
+    const cellY = evaluate(a.props.cellY!, [ir.state, ir.data]) as number[];
+    expect(cellX[0]).toBeGreaterThanOrEqual(bodyX[0]!);
+    expect(cellX[1]).toBeLessThanOrEqual(bodyX[1]!);
+    expect(cellY[0]).toBeGreaterThanOrEqual(bodyY[0]!);
+    expect(cellY[1]).toBeLessThanOrEqual(bodyY[1]!);
+    const cap = ir.scene.layers
+      .find((l) => l.name === "__board_copy")!
+      .items.find((i) => i.kind === "node" && i.name === "board_docCap");
+    expect(cap?.kind).toBe("node");
+    if (cap?.kind === "node") {
+      expect(evaluate(cap.props.text, [ir.state, ir.data])).toBe("Board caption");
+    }
+  });
+
   it("tiles two unbound charts into a figure grid without areaX", () => {
     const src = `artifact Pair
 data a = [{ x: 1, y: 2 }, { x: 2, y: 4 }]

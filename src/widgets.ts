@@ -62,10 +62,19 @@ export function expandWidgets(artifact: Artifact): Artifact {
 
   implicitFigureIfNeeded(next);
   const widgets = [...next.widgets];
-  const layout = widgets.filter((w) => w.name.startsWith("layout."));
+  const layoutRank = (name: string) => {
+    if (name === "layout.board") return 0;
+    if (name === "layout.figure") return 1;
+    return 2;
+  };
+  const layout = widgets
+    .filter((w) => w.name.startsWith("layout."))
+    .sort((a, b) => layoutRank(a.name) - layoutRank(b.name));
   const rest = widgets.filter((w) => !w.name.startsWith("layout."));
 
   let chartIndex = 0;
+  let figureIndex = 0;
+  let boardIndex = 0;
   let layoutIndex = 0;
   for (const widget of [...layout, ...rest]) {
     const plugin = getWidget(widget.name);
@@ -84,6 +93,12 @@ export function expandWidgets(artifact: Artifact): Artifact {
     if (widget.name.startsWith("chart.")) {
       chartIndex += 1;
       index = chartIndex;
+    } else if (widget.name === "layout.figure") {
+      figureIndex += 1;
+      index = figureIndex;
+    } else if (widget.name === "layout.board") {
+      boardIndex += 1;
+      index = boardIndex;
     } else if (widget.name.startsWith("layout.")) {
       layoutIndex += 1;
       index = layoutIndex;
@@ -920,10 +935,34 @@ function expandLayoutFigure(
 ): void {
   const span = artifact.span;
   const id = stringProp(props, ["id"]) ?? (index > 1 ? `fig${index}` : "fig");
-  const originX = numProp(props, "x", 40);
-  const originY = numProp(props, "y", 40);
-  const width = numProp(props, "w", 880);
-  const height = numProp(props, "h", 620);
+  const box = resolveLayoutBox(artifact, props);
+  const originX = box.x;
+  const originY = box.y;
+  const width = box.w;
+  const height = box.h;
+  const titleExpr = copyExpr(props, ["title"]);
+  const subtitleExpr = copyExpr(props, ["subtitle"]);
+  const captionExpr = copyExpr(props, ["caption"]);
+  const boundSlot = Boolean(stringProp(props, ["panel", "frame"]));
+  const plate = boolProp(
+    props,
+    "plate",
+    Boolean(titleExpr || subtitleExpr || captionExpr || boundSlot),
+  );
+  const titleH = titleExpr
+    ? props.titleH !== undefined
+      ? numProp(props, "titleH", 24)
+      : subtitleExpr
+        ? 40
+        : 24
+    : 0;
+  const capH = captionExpr ? (props.captionH !== undefined ? numProp(props, "captionH", 20) : 20) : 0;
+  const headGap = titleH ? 6 : 0;
+  const footGap = capH ? 4 : 0;
+  const gridX = originX;
+  const gridY = originY + titleH + headGap;
+  const gridW = width;
+  const gridH = Math.max(32, height - titleH - headGap - capH - footGap);
   const cols = Math.max(1, Math.floor(numProp(props, "cols", 2)));
   const rows = Math.max(1, Math.floor(numProp(props, "rows", 2)));
   const gutter = numProp(props, "gutter", 28);
@@ -934,8 +973,8 @@ function expandLayoutFigure(
   const explicitB = props.insetB !== undefined || props.plotPadB !== undefined;
   const count = cols * rows;
   const names = panelNamesFromProps(props, count, index);
-  const innerW = width - margin * 2;
-  const innerH = height - margin * 2;
+  const innerW = gridW - margin * 2;
+  const innerH = gridH - margin * 2;
   const cellW = (innerW - gutter * Math.max(0, cols - 1)) / cols;
   const cellH = (innerH - gutter * Math.max(0, rows - 1)) / rows;
   const labels = boolProp(props, "labels", true);
@@ -947,8 +986,8 @@ function expandLayoutFigure(
     const name = names[i]!;
     const col = i % cols;
     const row = Math.floor(i / cols);
-    const cellX0 = originX + margin + col * (cellW + gutter);
-    const cellY0 = originY + margin + row * (cellH + gutter);
+    const cellX0 = gridX + margin + col * (cellW + gutter);
+    const cellY0 = gridY + margin + row * (cellH + gutter);
     const estimated = estimatePanelInsets(artifact, name, cellX0, cellY0, cellW, cellH);
     const insetL = explicitL ? numProp(props, "insetL", numProp(props, "plotPadL", estimated.l)) : estimated.l;
     const insetR = explicitR ? numProp(props, "insetR", numProp(props, "plotPadR", estimated.r)) : estimated.r;
@@ -997,6 +1036,23 @@ function expandLayoutFigure(
     }
   }
 
+  if (plate) {
+    artifact.scene?.layers.push({
+      name: `__${id}_plate`,
+      span,
+      props: {},
+      items: [
+        node(`${id}_plate`, {
+          role: literal("panel"),
+          x: literal(originX),
+          y: literal(originY),
+          w: literal(width),
+          h: literal(height),
+          radius: literal(8),
+        }),
+      ],
+    });
+  }
   if (deckItems.length) {
     artifact.scene?.layers.push({
       name: `__${id}_decks`,
@@ -1013,6 +1069,48 @@ function expandLayoutFigure(
       items: labelItems,
     });
   }
+  const copyItems: SceneItem[] = [];
+  if (titleExpr) {
+    copyItems.push(
+      node(`${id}_title`, {
+        role: literal("title"),
+        x: literal(originX + 10),
+        y: literal(originY + (subtitleExpr ? 16 : Math.min(18, titleH * 0.7))),
+        w: literal(Math.max(40, width - 20)),
+        text: titleExpr,
+      }),
+    );
+  }
+  if (subtitleExpr) {
+    copyItems.push(
+      node(`${id}_subtitle`, {
+        role: literal("subtitle"),
+        x: literal(originX + 10),
+        y: literal(originY + Math.max(30, titleH - 8)),
+        w: literal(Math.max(40, width - 20)),
+        text: subtitleExpr,
+      }),
+    );
+  }
+  if (captionExpr) {
+    copyItems.push(
+      node(`${id}_caption`, {
+        role: literal("caption"),
+        x: literal(originX + 10),
+        y: literal(originY + height - Math.max(12, capH - 4)),
+        w: literal(Math.max(40, width - 20)),
+        text: captionExpr,
+      }),
+    );
+  }
+  if (copyItems.length) {
+    artifact.scene?.layers.push({
+      name: `__${id}_copy`,
+      span,
+      props: {},
+      items: copyItems,
+    });
+  }
 }
 
 function expandLayoutBoard(
@@ -1022,18 +1120,36 @@ function expandLayoutBoard(
 ): void {
   const span = artifact.span;
   const id = stringProp(props, ["id"]) ?? (index > 1 ? `board${index}` : "board");
-  const originX = numProp(props, "x", 0);
-  const originY = numProp(props, "y", 0);
-  const width = numProp(props, "w", 1280);
-  const height = numProp(props, "h", 720);
+  const box = resolveLayoutBox(artifact, props);
+  const originX = box.x;
+  const originY = box.y;
+  const width = box.w;
+  const height = box.h;
+  const titleExpr = copyExpr(props, ["title"]);
+  const subtitleExpr = copyExpr(props, ["subtitle"]);
+  const captionExpr = copyExpr(props, ["caption"]);
   const safe = numProp(props, "safe", 64);
   const typeGrid = boolProp(props, "typeGrid", false) || boolProp(props, "baseline", false);
   const typeStep = Math.max(4, numProp(props, "typeGridStep", numProp(props, "baselineStep", 8)));
   const typeCols = Math.max(0, Math.floor(numProp(props, "typeGridCols", 0) || numProp(props, "typeCols", 0)));
   const snapType = (n: number) =>
     typeGrid ? Math.max(typeStep, Math.round(n / typeStep) * typeStep) : n;
-  const titleH = snapType(numProp(props, "titleH", 72));
-  const lowerH = snapType(numProp(props, "lowerH", 96));
+  const titleH = snapType(
+    props.titleH !== undefined
+      ? numProp(props, "titleH", 72)
+      : titleExpr
+        ? subtitleExpr
+          ? 56
+          : 40
+        : 72,
+  );
+  const lowerH = snapType(
+    props.lowerH !== undefined
+      ? numProp(props, "lowerH", 96)
+      : captionExpr
+        ? 48
+        : 96,
+  );
   const prefix = stringProp(props, ["prefix"]) ?? "";
   const nameOf = (slot: string) => (prefix ? `${prefix}_${slot}` : slot);
 
@@ -1130,18 +1246,26 @@ function expandLayoutBoard(
         stroke: literal("#94a3b8"),
         dash: literal("6 6"),
       }),
-      node(`${id}_title`, {
-        role: literal("label"),
-        x: literal(safeX0 + 8),
-        y: literal(safeY0 + 22),
-        text: literal("title"),
-      }),
-      node(`${id}_lower`, {
-        role: literal("label"),
-        x: literal(safeX0 + 8),
-        y: literal(lowerY0 + 22),
-        text: literal("lower"),
-      }),
+      ...(titleExpr
+        ? []
+        : [
+            node(`${id}_title`, {
+              role: literal("label"),
+              x: literal(safeX0 + 8),
+              y: literal(safeY0 + 22),
+              text: literal("title"),
+            }),
+          ]),
+      ...(captionExpr
+        ? []
+        : [
+            node(`${id}_lower`, {
+              role: literal("label"),
+              x: literal(safeX0 + 8),
+              y: literal(lowerY0 + 22),
+              text: literal("lower"),
+            }),
+          ]),
     ];
     if (beats >= 2) {
       const gutter = numProp(props, "beatGutter", 16);
@@ -1164,6 +1288,49 @@ function expandLayoutBoard(
       span,
       props: {},
       items: guideItems,
+    });
+  }
+
+  const copyItems: SceneItem[] = [];
+  if (titleExpr) {
+    copyItems.push(
+      node(`${id}_docTitle`, {
+        role: literal("title"),
+        x: literal(safeX0),
+        y: literal(safeY0 + (subtitleExpr ? 24 : Math.min(32, titleH * 0.55))),
+        w: literal(Math.max(40, safeX1 - safeX0)),
+        text: titleExpr,
+      }),
+    );
+  }
+  if (subtitleExpr) {
+    copyItems.push(
+      node(`${id}_docSub`, {
+        role: literal("subtitle"),
+        x: literal(safeX0),
+        y: literal(safeY0 + Math.min(titleH - 12, 48)),
+        w: literal(Math.max(40, safeX1 - safeX0)),
+        text: subtitleExpr,
+      }),
+    );
+  }
+  if (captionExpr) {
+    copyItems.push(
+      node(`${id}_docCap`, {
+        role: literal("caption"),
+        x: literal(safeX0),
+        y: literal(lowerY0 + Math.min(22, lowerH * 0.45)),
+        w: literal(Math.max(40, safeX1 - safeX0 - 220)),
+        text: captionExpr,
+      }),
+    );
+  }
+  if (copyItems.length) {
+    artifact.scene?.layers.push({
+      name: `__${id}_copy`,
+      span,
+      props: {},
+      items: copyItems,
     });
   }
 
@@ -1897,6 +2064,49 @@ function paperChromeOf(
   void extras.title;
   void extras.legendKeys;
   return { yTickX, xTickY, yTitleX, xTitleY, titleY, legendX, legendY, cbarX, compact };
+}
+
+function copyExpr(props: Record<string, Expr>, keys: string[]): Expr | undefined {
+  for (const key of keys) {
+    const expr = props[key];
+    if (!expr) continue;
+    if (expr.kind === "string" && expr.value === "") continue;
+    return expr;
+  }
+  return undefined;
+}
+
+function frameBoxOf(
+  artifact: Artifact,
+  name: string,
+): { x: number; y: number; w: number; h: number } | null {
+  const fr = artifact.frames.find((f) => f.name === name);
+  if (!fr) return null;
+  const xs = numericPair(fr.props.x, [Number.NaN, Number.NaN]);
+  const ys = numericPair(fr.props.y, [Number.NaN, Number.NaN]);
+  if (!xs || !ys || !Number.isFinite(xs[0]) || !Number.isFinite(ys[0])) return null;
+  const w = xs[1] - xs[0];
+  const h = ys[1] - ys[0];
+  if (!(w > 0) || !(h > 0)) return null;
+  return { x: xs[0], y: ys[0], w, h };
+}
+
+/** Scene fill when x/y/w/h omitted; `panel`/`frame` inherit a board slot. */
+function resolveLayoutBox(
+  artifact: Artifact,
+  props: Record<string, Expr>,
+): { x: number; y: number; w: number; h: number } {
+  const bound = stringProp(props, ["panel", "frame"]);
+  if (bound) {
+    const slot = frameBoxOf(artifact, bound);
+    if (slot) return slot;
+  }
+  const extent = sceneExtentOf(artifact);
+  const x = props.x !== undefined && !isPair(props.x) ? numProp(props, "x", 0) : 0;
+  const y = props.y !== undefined && !isPair(props.y) ? numProp(props, "y", 0) : 0;
+  const w = props.w !== undefined ? numProp(props, "w", extent.w) : Math.max(1, extent.w - x);
+  const h = props.h !== undefined ? numProp(props, "h", extent.h) : Math.max(1, extent.h - y);
+  return { x, y, w, h };
 }
 
 function sceneExtentOf(artifact: Artifact): { w: number; h: number } {
