@@ -564,6 +564,16 @@ function expandChart(
     ...(xCats.length ? { xCats: literal(xCats) } : {}),
     ...(yCats.length ? { yCats: literal(yCats) } : {}),
   };
+  if (kind === "chart.heatmap") {
+    if (!xCats.length) {
+      const ticks = discreteHeatTicks(uniqueFieldNumbers(artifact, dataName, resolvedXField));
+      if (ticks) geom.xTickVals = literal(ticks);
+    }
+    if (!yCats.length) {
+      const ticks = discreteHeatTicks(uniqueFieldNumbers(artifact, dataName, resolvedYField));
+      if (ticks) geom.yTickVals = literal(ticks);
+    }
+  }
 
   const title =
     captionFromExpr(props.title) ?? (boundPanel ? "" : sentenceTitle(kind.replace("chart.", "")));
@@ -2189,6 +2199,56 @@ function fieldLooksCategorical(artifact: Artifact, dataName: string, field: stri
   return sawString && !sawNumber;
 }
 
+/** Unique numeric values in first-seen field order, then sorted. Mixed types → []. */
+function uniqueFieldNumbers(artifact: Artifact, dataName: string, field: string): number[] {
+  const decl = artifact.data.find((d) => d.name === dataName);
+  if (!decl || decl.value.kind !== "array") return [];
+  const seen = new Set<number>();
+  const out: number[] = [];
+  for (const row of decl.value.items) {
+    if (row.kind !== "object") continue;
+    const value = objectField(row, field);
+    if (!value) continue;
+    if (value.kind !== "number" || !Number.isFinite(value.value)) return [];
+    if (!seen.has(value.value)) {
+      seen.add(value.value);
+      out.push(value.value);
+    }
+  }
+  return out.sort((a, b) => a - b);
+}
+
+/** Median adjacent spacing so 0/2/4 tiles; a lone value stays 1. */
+function gridPitch(values: number[], fallback = 1): number {
+  if (values.length < 2) return fallback;
+  const diffs: number[] = [];
+  for (let i = 1; i < values.length; i++) {
+    const d = values[i]! - values[i - 1]!;
+    if (d > 1e-9) diffs.push(d);
+  }
+  if (!diffs.length) return fallback;
+  diffs.sort((a, b) => a - b);
+  return diffs[Math.floor(diffs.length / 2)]!;
+}
+
+/** Cell-center ticks for a discrete numeric heatmap axis. Too many → niceTicks. */
+function discreteHeatTicks(values: number[]): number[] | null {
+  if (values.length < 1 || values.length > 16) return null;
+  if (values.every((v) => Number.isInteger(v))) return values;
+  return values.length <= 8 ? values : null;
+}
+
+function numberListFromExpr(expr?: Expr): number[] {
+  if (!expr) return [];
+  if (expr.kind === "number") return Number.isFinite(expr.value) ? [expr.value] : [];
+  if (expr.kind !== "array") return [];
+  const out: number[] = [];
+  for (const item of expr.items) {
+    if (item.kind === "number" && Number.isFinite(item.value)) out.push(item.value);
+  }
+  return out;
+}
+
 function collectCats(artifact: Artifact, dataName: string, field: string): string[] {
   const decl = artifact.data.find((d) => d.name === dataName);
   if (!decl || decl.value.kind !== "array") return [];
@@ -2349,6 +2409,8 @@ function axisTicks(
 ): { value: number; label: string }[] {
   const cats = catsFromExpr(axis === "x" ? props.xCats : props.yCats);
   if (cats.length) return cats.map((label, i) => ({ value: i, label }));
+  const pinned = numberListFromExpr(axis === "x" ? props.xTickVals : props.yTickVals);
+  if (pinned.length) return pinned.map((v) => ({ value: v, label: formatTickValue(v) }));
   const lim = axis === "x" ? numericPair(props.xlim, [0, 10]) : numericPair(props.ylim, [0, 100]);
   if (!lim) return [];
   const kind = scaleKindFromExpr(axis === "x" ? props.xScale : props.yScale) ?? "linear";
@@ -3662,8 +3724,13 @@ function expandHeatCells(
 ): SceneItem[] {
   const vField = valueFieldName(props);
   const [z0, z1] = zlimPair(props);
-  const cellW = props.cellW?.kind === "number" ? props.cellW.value : 1;
-  const cellH = props.cellH?.kind === "number" ? props.cellH.value : 1;
+  const xNums = uniqueFieldNumbers(artifact, dataName, xField);
+  const yNums = uniqueFieldNumbers(artifact, dataName, yField);
+  const cellW = props.cellW?.kind === "number" ? props.cellW.value : gridPitch(xNums);
+  const cellH = props.cellH?.kind === "number" ? props.cellH.value : gridPitch(yNums);
+  const unit = sceneUnitOf(artifact);
+  const toScene = (px: number) => px / Math.max(sceneScaleOf({ unit }), 1e-6);
+  const strokeW = toScene(0.6);
   const heatFill = (value: Expr) => ({
     kind: "call" as const,
     callee: "palette",
@@ -3708,7 +3775,7 @@ function expandHeatCells(
         h: literal(cellH),
         fill: heatFill(literal(meanOf(g.values))),
         stroke: literal("#ffffff"),
-        strokeWidth: literal(0.6),
+        strokeWidth: literal(strokeW),
         ...heatMeta,
         __heatXVal: literal(g.x),
         __heatYVal: literal(g.y),
@@ -3732,7 +3799,7 @@ function expandHeatCells(
           h: literal(cellH),
           fill: heatFill(ident(`row.${vField}`)),
           stroke: literal("#ffffff"),
-          strokeWidth: literal(0.6),
+          strokeWidth: literal(strokeW),
           ...heatMeta,
           __heatXVal: ident(`row.${xField}`),
           __heatYVal: ident(`row.${yField}`),

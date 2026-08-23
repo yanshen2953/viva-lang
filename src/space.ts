@@ -328,6 +328,9 @@ export function layoutChartBar(
   };
 }
 
+/** White grout as a fraction of the shorter cell side. Not 1 scene unit. */
+export const HEAT_CELL_GUTTER = 0.05;
+
 /** Heat cell: x/y already scene-mapped (cell center); w/h still data units. */
 export function layoutChartHeat(
   props: Record<string, unknown>,
@@ -347,12 +350,13 @@ export function layoutChartHeat(
   const sceneH = Math.abs(
     linearMap(hData, [0, frame.ymax - frame.ymin], [0, frame.y1 - frame.y0], false),
   );
+  const gap = Math.min(sceneW, sceneH) * HEAT_CELL_GUTTER;
   return {
     ...props,
-    x: cx - sceneW / 2,
-    y: cy - sceneH / 2,
-    w: Math.max(1, sceneW - 1),
-    h: Math.max(1, sceneH - 1),
+    x: cx - sceneW / 2 + gap / 2,
+    y: cy - sceneH / 2 + gap / 2,
+    w: Math.max(sceneW * 0.5, sceneW - gap),
+    h: Math.max(sceneH * 0.5, sceneH - gap),
   };
 }
 

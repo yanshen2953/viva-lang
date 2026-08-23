@@ -145,6 +145,47 @@ describe("chart quality: axis titles, error bars, hover, heatmap", () => {
       )
       .join("");
     expect(titleText.replace(/\s/g, "")).toMatch(/normalizedexpression/);
+    const tickText = (suffix: string) =>
+      axes.items
+        .filter((i) => i.kind === "node" && i.name.includes(suffix))
+        .map((i) => (i.kind === "node" && i.props.text?.kind === "string" ? i.props.text.value : ""));
+    expect(tickText("_xtick_")).toEqual(["1", "2"]);
+    expect(tickText("_ytick_")).toEqual(expect.arrayContaining(["1", "2"]));
+    expect(tickText("_xtick_")).not.toContain("0");
+    expect(tickText("_xtick_")).not.toContain("3");
+  });
+
+  it("infers heat cell pitch from unique numeric spacing", () => {
+    const src = `artifact "Pitch"
+data cells = [
+  { col: 0, row: 0, v: 1 }
+  { col: 2, row: 0, v: 2 }
+  { col: 4, row: 0, v: 3 }
+  { col: 0, row: 2, v: 1 }
+  { col: 2, row: 2, v: 2 }
+  { col: 4, row: 2, v: 3 }
+]
+scene
+  size: 400 240
+widget chart.heatmap
+  data: cells
+  xField: col
+  yField: row
+  valueField: v
+  xlim: -1 5
+  ylim: -1 3
+  interactive: false
+`;
+    const result = compileSource(src, "pitch.viva", { handbookIds: ["print-nature"] });
+    expect(result.error).toBeNull();
+    const marks = result.ir!.scene.layers.find((l) => l.name.endsWith("_marks"))!;
+    const cells = marks.items.filter((i) => i.kind === "node" && i.name === "heatCell");
+    expect(cells.length).toBe(6);
+    for (const cell of cells) {
+      if (cell.kind !== "node") continue;
+      expect(cell.props.w).toMatchObject({ kind: "number", value: 2 });
+      expect(cell.props.h).toMatchObject({ kind: "number", value: 2 });
+    }
   });
 
   it("keeps an mm heatmap colorbar in plot height and parks zLabel beside it", () => {
@@ -172,6 +213,10 @@ describe("chart quality: axis titles, error bars, hover, heatmap", () => {
     expect(titleY).toBeLessThan(plotY1);
     const title = axes.items.find((i) => i.kind === "node" && i.name === "b_cbarTitle");
     expect(title?.kind).toBe("node");
+    const heatTicks = axes.items
+      .filter((i) => i.kind === "node" && /_xtick_\d+$/.test(i.name))
+      .map((i) => (i.kind === "node" && i.props.text?.kind === "string" ? i.props.text.value : ""));
+    expect(heatTicks).toEqual(["1", "2", "3"]);
     if (title?.kind === "node") {
       expect(title.props.role).toMatchObject({ kind: "string", value: "annotation" });
       expect(title.props.rotate).toMatchObject({ kind: "number", value: -90 });

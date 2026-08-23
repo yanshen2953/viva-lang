@@ -107,6 +107,30 @@ describe("figure-atlas example", () => {
       .map((i) => (i.kind === "node" ? String(evaluate(i.props.text, env)) : ""));
     expect(bLegs.join(" ")).toMatch(/treatment/);
     expect(bLegs.some((t) => t === "t" || t === "treatmen")).toBe(false);
+    const dAxes = result.ir!.scene.layers.find((l) => l.name === "__d_axes")!;
+    const heatTicks = (suffix: string) =>
+      dAxes.items
+        .filter((i) => i.kind === "node" && i.name.includes(suffix))
+        .map((i) => (i.kind === "node" && i.props.text?.kind === "string" ? i.props.text.value : ""));
+    const xs = heatTicks("_xtick_");
+    const ys = heatTicks("_ytick_");
+    expect(xs).not.toContain("-0.5");
+    expect(xs).not.toContain("7.5");
+    expect(xs[0]).toBe("0");
+    expect(xs[xs.length - 1]).toBe("7");
+    expect(ys).not.toContain("-0.5");
+    expect(ys).not.toContain("5.5");
+    expect(ys).toContain("0");
+    expect(ys).toContain("5");
+    const heatCells = result.ir!.scene.layers
+      .find((l) => l.name === "__d_marks")!
+      .items.filter((i) => i.kind === "node" && i.name === "heatCell");
+    expect(heatCells.length).toBe(48);
+    expect(
+      heatCells.every(
+        (i) => i.kind === "node" && i.props.w?.kind === "number" && i.props.w.value === 1,
+      ),
+    ).toBe(true);
     expectChromeInsideCells(result.ir!);
   });
 });

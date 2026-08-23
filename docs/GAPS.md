@@ -55,12 +55,13 @@
 | 未加引号多词轴题 | `xLabel: Sum score` 不再被收成 ident 数组后静默丢掉；`paper-linked-marks` 漏斗 X 轴画出 `Sum score`。仍不是投稿成品轴语义 |
 | 线性轴端点 | `niceTicks` 键上作者 `xlim`/`ylim` 两端；`0 70` 不再停在 60。挤时抽稀仍留两端。仍不是完整轴文法 |
 | mm 色条尺度 | 热图色带按 `sceneScale` 画；`zLabel` 在色标右侧 −90° 竖排（第三轴），按绘图区高度折行。仍不是投稿色条 |
+| 热图格子 | 未写 `cellW`/`cellH` 时按相邻唯一坐标的中位步长铺格（`0 2 4` 不再用宽 1 的瘦条）；离散数值轴刻度落在格心，不再把 `xlim: -0.5 7.5` 的半格端点画成刻度；白缝是短边的 5%，不再减 1 个场景单位（mm 下不再掏出 1 mm 洞）。仍不是 Nature 色矩阵 |
 
 ## 仍然很粗（按用户可见排序）
 
 1. PDF 默认随包 `assets/fonts/VivaSansFallback.ttf`（Droid 子集，覆盖当前 examples + 论文用字；`scripts/subset-cjk-font.py` 可重建）。宿主可用 `VIVA_PDF_CJK_FONT`、`--cjk-font` 或导出 `cjkFontPath` 覆盖；未覆盖的字仍可能 `?`。不是全库
 2. 有 time / box / violin（KDE 轮廓）/ 显著性括号；轴刻度在场景坐标。`print-nature` 刻度 8 / 轴标题 9。观感仍粗，不是投稿成品
-3. Atlas / figure-grid / board / storyboard / linked-filter / science-studio 图表已去掉 `inset*`、手摆 headline / lowerThird、`safe`/`titleH`/`gutter`/`areaX` 魔法数；作者 `role: panel` / `role: plot` 升成 frame；`science-studio` 左栏文案和四宫格吃 `layout.board` / `layout.figure` 槽（`body:` 折进 `left`，图吃 `right`，PCA `panel: d`），不再手摆 `chartDeck` / `x: 48`；矢量场已改 `chart.vector`；PCA 投影走 `pcaPlotBg` frame，不再写 980/78；PCA 点默认吃图表 `__tip` / 高亮，`colorBy` 图例、plot `title` 和 `+`/`-` 缩放芯片由编译器画。`layout.board` 出题注 + `controls`/`bind` HUD 芯片，空题注不再默认占 72/96。`layout.figure` 吃 `body`，图表 `span: 2` 可跨栏。`page: a4` 切 PDF 页并盖 `n / N`；有 `page` 时 `column` 是 89/183 mm 图栏（纸页仍是 210 mm），figure 行避开页缝并拉高场景；`layout.board` 的 `body:` 按栏宽折行，触到页刀进下一页（无 `page` 时停在槽底，不画进图）。仍不是报纸分栏。chrome 有盒子碰撞消解；图/轴标题和图例键按栏宽折行（像素量宽、场景落位；Y 轴折行后自上而下阅读；行数封顶后尾行 `...`），重叠刻度抽稀，相邻格互叠时再长 inset。仍不是栏宽排版器
+3. Atlas / figure-grid / board / storyboard / linked-filter / science-studio 图表已去掉 `inset*`、手摆 headline / lowerThird、`safe`/`titleH`/`gutter`/`areaX` 魔法数；作者 `role: panel` / `role: plot` 升成 frame；`science-studio` 左栏文案和四宫格吃 `layout.board` / `layout.figure` 槽（`body:` 折进 `left`，图吃 `right`，PCA `panel: d`），不再手摆 `chartDeck` / `x: 48`；矢量场已改 `chart.vector`；PCA 投影走 `pcaPlotBg` frame，不再写 980/78；PCA 点默认吃图表 `__tip` / 高亮，`colorBy` 图例、plot `title` 和 `+`/`-` 缩放芯片由编译器画。`layout.board` 出题注 + `controls`/`bind` HUD 芯片，空题注不再默认占 72/96。`layout.figure` 吃 `body`，图表 `span: 2` 可跨栏。`page: a4` 切 PDF 页并盖 `n / N`；有 `page` 时 `column` 是 89/183 mm 图栏（纸页仍是 210 mm），figure 行避开页缝并拉高场景；`layout.board` 的 `body:` 按栏宽折行，触到页刀进下一页（无 `page` 时停在槽底，不画进图）。仍不是报纸分栏。chrome 有盒子碰撞消解；图/轴标题和图例键按栏宽折行（像素量宽、场景落位；Y 轴折行后自上而下阅读；行数封顶后尾行 `...`），重叠刻度抽稀，相邻格互叠时再长 inset。热图格子按相邻坐标步长铺满、刻度落在格心。仍不是栏宽排版器
 4. `__sel` 默认跨面板藏行；box 四分位、violin 密度、折线线段、热图均值、漏斗/柱合计和矢量位移按选中行重算。挂了 `frame:` 的 World 点默认 tooltip/高亮/`__sel`（投影坐标不绑 brush）。本地 brush 松手后保持选择窗，路径够长切套索。高亮、藏行、`play` 遮罩、box/折线/柱/矢量几何和同骨架 violin `d` 缓 220ms。全部拍遮罩不抢指针，storyboard / paper-storyboard 暗拍也可刷选。投稿 mm 图跟手 `__tip`（`__event` 为场景毫米），paper-cjk 等旗舰图默认可交互。仍无时间轴动画
 5. MCP/HTTP compile 已附 visual QA，仍不挡 IR 成功；空栏检查优先用 figure `cellX`/`cellY`，不是瞎切 2×2。结构层会警告标题/轴题/图例出格（旋转 Y 轴不再被量成横条假溢出）。内联卡无 raster；无自动修复
 6. MCP/HTTP/CLI prompt 默认 slim；生成成功率未测

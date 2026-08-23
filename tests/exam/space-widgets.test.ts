@@ -7,6 +7,8 @@ import { compile } from "../../src/compiler";
 import { evaluate } from "../../src/eval";
 import {
   applyFrameToProps,
+  HEAT_CELL_GUTTER,
+  layoutChartHeat,
   linearMap,
   scalesFromFrameProps,
   type FrameScales,
@@ -256,5 +258,40 @@ widget chart.bar
         expect(bar.props.w?.kind).toBe("ident");
       }
     }
+  });
+
+  it("lays out heat cells with a proportional grout, not a 1-unit hole", () => {
+    const scales: FrameScales = {
+      name: "plot",
+      x0: 0,
+      x1: 80,
+      y0: 0,
+      y1: 60,
+      xmin: -0.5,
+      xmax: 7.5,
+      ymin: -0.5,
+      ymax: 5.5,
+      xScale: "linear",
+      yScale: "linear",
+      xCats: [],
+      yCats: [],
+    };
+    const a = layoutChartHeat(
+      { __chartHeat: true, frame: "plot", x: 40, y: 30, w: 1, h: 1 },
+      [scales],
+    );
+    const b = layoutChartHeat(
+      { __chartHeat: true, frame: "plot", x: 50, y: 30, w: 1, h: 1 },
+      [scales],
+    );
+    const cellW = 80 / 8;
+    const cellH = 60 / 6;
+    const gap = Math.min(cellW, cellH) * HEAT_CELL_GUTTER;
+    expect(a.w).toBeCloseTo(cellW - gap);
+    expect(a.h).toBeCloseTo(cellH - gap);
+    expect(b.w).toBeCloseTo(a.w as number);
+    expect(b.h).toBeCloseTo(a.h as number);
+    expect((b.x as number) - (a.x as number)).toBeCloseTo(cellW);
+    expect(a.w).toBeGreaterThan(cellW - 1);
   });
 });
