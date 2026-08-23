@@ -185,7 +185,7 @@ layer marks
 | `chart.heat` / `chart.heatmap` | 热力 + 色条 | ✅ MVP |
 | `chart.vector` / `chart.funnel` / `chart.box` / `chart.violin` | 箭头 / 漏斗 / 箱线 / 密度 | ✅ 插件 |
 | `layout.figure` 多面板 | 边距、对齐、(a)(b) 标签 | ✅ 插件（不是关键字） |
-| `layout.board` | 安全框 / 字幕条 / splits | ✅ 插件 |
+| `layout.board` | 安全框 / 字幕条 / splits / beats / bleed / typeGrid | ✅ 插件 |
 
 规则：**结构展开 = widget；审美纪律 = handbook。**
 

@@ -21,11 +21,11 @@
 
 ## 粗糙的根因（不是缺再一个 HTTP 路由）
 
-1. **图核语义仍缺出版层** — 有轴标题/单位/band/log/time/box/violin/括号；缺的是字距、出血和投稿级间距，不是再一个图种。
-2. **默认交互还不是 linked view** — `__brush` 已反演到数据域并变淡圈外点，但不是共享 selection 集合。
-3. **导出 ≠ 预览** — SVG 已接近 Runtime；PDF CJK 靠系统字体，缺字环境会回退 Helvetica。
+1. **图核语义仍缺出版层** — 有轴标题/单位/band/log/time/box/violin/括号；`print-nature` 已接管字号/字距，缺的是栏宽级避让，不是再一个图种。
+2. **默认交互还不是完整 linked view** — `__sel.keys` 已跨面板藏行；本地 brush 仍是 marquee，无过渡。
+3. **导出 ≠ 预览** — SVG 已接近 Runtime；PDF 随包 CJK 子集（examples + 论文用字），缺字仍可能 `?` / Helvetica。
 4. **Agent 闭环没产品化** — session compile 附带 visual diagnostics，但不挡成功；生成成功率未测。
-5. **手册只涂颜料** — print-nature 改色和线宽，不强制图语法。
+5. **手册仍不执行图语法** — 现在会覆盖 widget 字号，但不做避让、对齐或栏宽文法。
 
 ## 本轮已补（相对「接口堆砌」）
 
@@ -42,27 +42,28 @@
 | SVG 导出 | `font-family` / `font-weight` / `letter-spacing` / `stroke-dasharray` / 旋转轴标题 |
 | 动态 widget 插件 | `registerWidget()` / `listWidgets()` |
 | `layout.figure` | `cols/rows/gutter/margin/inset*` → frame + `(a)` 标签 |
-| `layout.board` | `safe`/`title`/`body`/`lower`；`splits: 2` → `left`/`right` |
+| `layout.board` | `safe`/`title`/`body`/`lower`；`splits` / `beats` / `bleed` / `typeGrid` |
 | 图表对位 | `panel: a` 吃已有 frame |
 | 投稿尺寸 | `unit: mm` + `column: single\|double` |
 | Agent 热路径 | slim prompt 默认；session compile 附 visual diagnostics |
 
 ## 仍然很粗（按用户可见排序）
 
-1. PDF 随包 `assets/fonts/VivaSansFallback.ttf`（Droid 子集）；缺字仍可能回退 Helvetica
-2. 有 time / box / violin（KDE 轮廓）/ 显著性括号；轴刻度在场景坐标。观感仍粗，不是投稿成品
+1. PDF 随包 `assets/fonts/VivaSansFallback.ttf`（Droid 子集，examples + 论文用字）；缺字仍可能 `?`
+2. 有 time / box / violin（KDE 轮廓）/ 显著性括号；轴刻度在场景坐标。`print-nature` 刻度 8 / 轴标题 9。观感仍粗，不是投稿成品
 3. Atlas (a–f) 已走 `layout.figure` + chart 插件；(e)(f) 不再手摆像素
 4. `__sel` 默认跨面板藏行；本地 brush 仍是单图 marquee，没有过渡动画
 5. session visual diagnostics 不挡编译成功
 6. MCP/HTTP/CLI prompt 默认 slim；生成成功率未测
 7. 小栏宽 mm 图默认不再画常驻 `__tip` HUD，只留 brush 框；留白仍不像投稿成品
+8. `typeGrid` 是基线叠加 + `type0`… 栏，不是跨页或视频时间轴
 
 ## 下一刀（质量，不再铺接口）
 
-1. 投稿级留白 / 字距 / 出血（仍走编译器，不加关键字）
+1. 栏宽级避让 / 标题-刻度-图例互不打架（仍走编译器，不加关键字）
 2. linked selection 已藏热图格子，空点 dragend 会清 `__sel`；仍缺过渡动画
-3. 扩大随包 CJK 子集（现在只覆盖 examples + 一小撮论文用字）
-4. `layout.board play` 只是拍遮罩，不是导出视频
+3. 再扩 CJK 或允许宿主挂全库；`scripts/subset-cjk-font.py` 可从 Droid 重建
+4. `layout.board play` / `typeGrid` 只是遮罩和基线，不是导出视频
 5. agent-exam 种子编译进 CI；生成成功率仍未测（要 LLM）
 
 对照真源：`docs/VISION.md`。

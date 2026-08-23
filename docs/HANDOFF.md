@@ -27,7 +27,7 @@
 | --- | --- |
 | 工作分支 | `cursor/style-handbook-hook-a8c1` |
 | 最新提交 | Session/Pipeline/Provenance 对外接入 + CI + GAPS（见 git log） |
-| 测试 | `npm test` — 150 passed（图例点选 __sel / examples 编译 / 场景坐标刻度） |
+| 测试 | `npm test` — 见当前 vitest；含 handbook 字号、typeGrid、CJK PDF 短语 |
 | `build:lib` | `npm run build:lib` 通过 |
 | CI | `.github/workflows/ci.yml`：`npm ci` / `build:lib` / `npm test` / Atlas `--visual` |
 | `npm run build` | 可能因 playground/runtime 严格 tsc 失败；日常用 `vite-node` + vitest |
@@ -118,7 +118,7 @@ Vision 检查需 `viva.models.json`（见 `viva.models.json.example`）或 env `
 3. **Playground** — 状态栏已有结构检查；浏览器内 vision/MCP 不现实
 4. **Agent exam** — `npm run test:agent-exam` 需 `DEEPSEEK_API_KEY`（Pi+DeepSeek SUT）
 5. **发布包实跑** — `npm run pack:release`，在干净环境验证 `release/` 与 Docker
-6. **三柱推进中（未齐）** — `layout.board`、`unit: mm`/`column`、log 轴、PDF CJK 嵌入、`__hover`/`__brush`/`__highlightGrp`、Atlas (a–d) 已迁网格、slim prompt 默认、session visual 附带。仍欠：分类轴、漏斗/向量场 widget、数据域 brush filter、随包字体。对照 `docs/VISION.md`。**不要**标愿景完成。
+6. **三柱推进中（未齐）** — `layout.board`（含 bleed / play / typeGrid）、`unit: mm`/`column`、log/band/time、PDF CJK 子集、`__hover`/`__brush`/`__highlightGrp`/`__sel`、Atlas (a–f)、slim prompt、session visual。仍欠：栏宽避让、过渡动画、CJK 全库、LLM 生成率。对照 `docs/VISION.md`。**不要**标愿景完成。
 
 ### 已知约束 / 坑
 
