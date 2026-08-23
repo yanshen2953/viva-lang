@@ -18,7 +18,7 @@ import {
   setWidgetBuiltinSeed,
 } from "./plugins/registry.js";
 import { domainMap, parseTimeValue, scaleKind, type ScaleKind } from "./space.js";
-import { COLUMN_MM, parsePage, sceneScaleOf } from "./space/scene-box.js";
+import { COLUMN_MM, mmToPx, parsePage, sceneScaleOf } from "./space/scene-box.js";
 import { estimateBoardBands } from "./layout/board-chrome.js";
 import { figureCopyDefaults, figureCopyPlace, figureGapDefaults } from "./layout/figure-gap.js";
 import { boxStats, quantile } from "./layout/summary-stats.js";
@@ -128,7 +128,63 @@ export function expandWidgets(artifact: Artifact): Artifact {
     });
   }
   liftPlayLayers(next);
+  paintPageFolio(next);
   return next;
+}
+
+/**
+ * Folio + continued title on a multi-page `scene` slice. Uses the same
+ * label primitive as figure chrome. Coordinates stay in scene units
+ * (mm when `unit: mm`). One page, or no `page` prop, paints nothing.
+ * This is a page stamp, not a running-header typesetter.
+ */
+function paintPageFolio(artifact: Artifact): void {
+  const scene = artifact.scene;
+  if (!scene) return;
+  const page = parsePage(stringProp(scene.props, ["page"]));
+  if (!page) return;
+  const unit = sceneUnitOf(artifact);
+  const extent = sceneExtentOf(artifact);
+  const pageH = unit === "mm" || unit === "pt" ? page.h : mmToPx(page.h);
+  if (!(pageH > 0)) return;
+  const pages = Math.max(1, Math.ceil(extent.h / pageH - 1e-6));
+  if (pages < 2) return;
+
+  const figure = artifact.widgets.find((w) => w.name === "layout.figure");
+  const title = figure ? stringProp(figure.props, ["title"]) : null;
+  const pad = unit === "mm" || unit === "pt" ? 3 : 14;
+  const items: SceneItem[] = [];
+  for (let i = 0; i < pages; i++) {
+    const top = i * pageH;
+    const bottom = Math.min((i + 1) * pageH, extent.h);
+    items.push(
+      node(`__page_folio_${i + 1}`, {
+        role: literal("caption"),
+        text: literal(`${i + 1} / ${pages}`),
+        x: literal(extent.w - pad),
+        y: literal(bottom - pad * 0.85),
+        align: literal("right"),
+      }),
+    );
+    if (i > 0 && title) {
+      items.push(
+        node(`__page_folio_title_${i + 1}`, {
+          role: literal("caption"),
+          text: literal(`${title} (continued)`),
+          x: literal(pad),
+          y: literal(top + pad * 1.2),
+          w: literal(Math.max(8, extent.w - pad * 2)),
+          align: literal("start"),
+        }),
+      );
+    }
+  }
+  scene.layers.push({
+    name: "__page_folio",
+    span: artifact.span,
+    props: {},
+    items,
+  });
 }
 
 function isUnboundChart(widget: Artifact["widgets"][number]): boolean {

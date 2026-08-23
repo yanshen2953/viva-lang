@@ -61,6 +61,27 @@ describe("vision pillars: board, mm, log, hover object, CJK pdf", () => {
     const size = doc.getPage(0)!.getSize();
     expect(size.height).toBeCloseTo(mmToPx(PAGE_MM.a4.h) * (72 / 96), 0);
     expect(size.width).toBeCloseTo(mmToPx(COLUMN_MM.single) * (72 / 96), 0);
+    const compiled = compileSource(src, "paper-pages.viva", { handbookIds: ["print-nature"] });
+    expect(compiled.error).toBeNull();
+    const folio = compiled.ir!.scene.layers.find((l) => l.name === "__page_folio");
+    expect(folio).toBeTruthy();
+    const folioTexts = folio!.items
+      .filter((i) => i.kind === "node")
+      .map((i) => (i.kind === "node" ? evaluate(i.props.text, [compiled.ir!.state, compiled.ir!.data]) : ""));
+    expect(folioTexts).toEqual([
+      "1 / 2",
+      "2 / 2",
+      "Single-column figure across two A4 slices (continued)",
+    ]);
+    const sheetSrc = `artifact Sheet
+scene
+  unit: mm
+  page: a4
+  background: #ffffff
+`;
+    const one = compileSource(sheetSrc, "sheet.viva");
+    expect(one.error).toBeNull();
+    expect(one.ir!.scene.layers.some((l) => l.name === "__page_folio")).toBe(false);
   });
 
   it("maps log scales through domainMap", () => {
