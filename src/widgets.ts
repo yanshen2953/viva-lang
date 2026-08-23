@@ -383,6 +383,7 @@ function expandChart(
   const marks: SceneItem[] = [];
   const explicitFill = props.color ?? props.fill;
   const explicitStroke = props.stroke;
+  const linkMode = selLinkMode(props);
   const interactOpacity = markInteractOpacity(
     seriesField,
     markXField,
@@ -390,7 +391,9 @@ function expandChart(
     frameName,
     resolvedXField,
     span,
+    linkMode === "dim",
   );
+  const interactVisible = linkMode === "filter" ? markSelVisible(seriesField, markXField, frameName, span) : {};
   if (kind === "chart.scatter") {
     marks.push({
       kind: "for",
@@ -414,6 +417,7 @@ function expandChart(
             : {}),
           ...(props.hoverFill ? { hoverFill: props.hoverFill } : { hoverFill: literal("#E69F00") }),
           ...interactOpacity,
+          ...interactVisible,
         }),
         ...expandErrorBars(props, frameName, markXField, markYField, span, seriesField),
       ],
@@ -437,6 +441,7 @@ function expandChart(
           ...(props.markStrokeWidth ? { strokeWidth: props.markStrokeWidth } : {}),
           ...(props.hoverFill ? { hoverFill: props.hoverFill } : { hoverFill: literal("#E69F00") }),
           ...interactOpacity,
+          ...interactVisible,
         }),
         ...expandErrorBars(props, frameName, markXField, markYField, span, seriesField),
       ],
@@ -499,6 +504,7 @@ function expandChart(
           ...(horizontal ? { __chartBarOrient: literal("h") } : {}),
           ...(props.hoverFill ? { hoverFill: props.hoverFill } : { hoverFill: literal("#E69F00") }),
           ...interactOpacity,
+          ...interactVisible,
         }),
         ...expandErrorBars(props, frameName, markXField, markYField, span, seriesField),
       ],
@@ -530,6 +536,7 @@ function expandChart(
           strokeWidth: props.strokeWidth ?? literal(2.5),
           strokeLinecap: literal("round"),
           ...interactOpacity,
+          ...interactVisible,
         }),
         node("head", {
           role: literal("mark"),
@@ -541,6 +548,7 @@ function expandChart(
           ...(explicitFill ? { fill: explicitFill } : {}),
           ...(props.hoverFill ? { hoverFill: props.hoverFill } : { hoverFill: literal("#E69F00") }),
           ...interactOpacity,
+          ...interactVisible,
         }),
       ],
     });
@@ -952,12 +960,14 @@ function expandLayoutBoard(
   }
 
   const beats = Math.max(0, Math.floor(numProp(props, "beats", 0) || numProp(props, "shots", 0)));
+  const beatRects: { x0: number; x1: number; y0: number; y1: number }[] = [];
   if (beats >= 2) {
     const gutter = numProp(props, "beatGutter", 16);
     const bodyW = safeX1 - safeX0;
     const cellW = (bodyW - gutter * (beats - 1)) / beats;
     for (let i = 0; i < beats; i++) {
       const x0 = safeX0 + i * (cellW + gutter);
+      beatRects.push({ x0, x1: x0 + cellW, y0: titleY1, y1: lowerY0 });
       slots.push({
         name: nameOf(`beat${i}`),
         x: [x0, x0 + cellW],
@@ -1069,6 +1079,46 @@ function expandLayoutBoard(
       span,
       props: {},
       items: cropItems,
+    });
+  }
+
+  const play = boolProp(props, "play", false) || boolProp(props, "playing", false);
+  if (play && beatRects.length >= 2) {
+    if (!artifact.states.some((s) => s.name === "__beat")) {
+      artifact.states.push({ name: "__beat", value: literal(0), span });
+    }
+    const fps = Math.max(0.25, numProp(props, "playFps", 1));
+    artifact.ticks.push({
+      fps,
+      body: [
+        assign(
+          ["__beat"],
+          binary("%", binary("+", ident("__beat"), literal(1), span), literal(beatRects.length), span),
+        ),
+      ],
+      span,
+    });
+    const veilItems: SceneItem[] = beatRects.map((rect, i) =>
+      node(`${id}_veil_${i}`, {
+        role: literal("chrome"),
+        x: literal(rect.x0),
+        y: literal(rect.y0),
+        w: literal(rect.x1 - rect.x0),
+        h: literal(rect.y1 - rect.y0),
+        fill: literal("#000000"),
+        opacity: binary(
+          "*",
+          binary("!=", ident("__beat"), literal(i), span),
+          literal(0.55),
+          span,
+        ),
+      }),
+    );
+    artifact.scene?.layers.push({
+      name: `__${id}_play`,
+      span,
+      props: {},
+      items: veilItems,
     });
   }
 }
@@ -2496,7 +2546,46 @@ function highlightOpacity(
   seriesField: string | null,
   span: { line: number; column: number },
 ): Record<string, Expr> {
-  return markInteractOpacity(seriesField, null, null, "", null, span);
+  return markInteractOpacity(seriesField, null, null, "", null, span, false);
+}
+
+function selLinkMode(props: Record<string, Expr>): "filter" | "dim" {
+  const raw = props.link ?? props.selLink ?? props.selection;
+  if (!raw) return "filter";
+  if (raw.kind === "boolean") return raw.value ? "filter" : "dim";
+  const s =
+    raw.kind === "string" ? raw.value : raw.kind === "ident" ? raw.path.join(".") : "";
+  const norm = s.toLowerCase();
+  if (norm === "dim" || norm === "fade" || norm === "opacity") return "dim";
+  return "filter";
+}
+
+function selHideExpr(
+  seriesField: string | null,
+  xField: string | null,
+  frameName: string,
+  span: { line: number; column: number },
+): Expr | null {
+  if (!xField) return null;
+  const inSelX = callExpr("has", [ident("__sel.keys"), ident(`row.${xField}`)], span);
+  const inSelG = seriesField
+    ? callExpr("has", [ident("__sel.keys"), ident(`row.${seriesField}`)], span)
+    : literal(0);
+  const inSel = binary("or", inSelX, inSelG, span);
+  const otherFrame = binary("!=", ident("__brush.frame"), literal(frameName), span);
+  const notInSel: Expr = { kind: "unary", op: "not", expr: inSel, span };
+  return binary("and", ident("__sel.n"), binary("and", otherFrame, notInSel, span), span);
+}
+
+function markSelVisible(
+  seriesField: string | null,
+  xField: string | null,
+  frameName: string,
+  span: { line: number; column: number },
+): Record<string, Expr> {
+  const hide = selHideExpr(seriesField, xField, frameName, span);
+  if (!hide) return {};
+  return { visible: { kind: "unary", op: "not", expr: hide, span } };
 }
 
 function markInteractOpacity(
@@ -2506,6 +2595,7 @@ function markInteractOpacity(
   frameName: string,
   linkXField: string | null,
   span: { line: number; column: number },
+  includeSelDim = false,
 ): Record<string, Expr> {
   const parts: Expr[] = [];
   if (seriesField) {
@@ -2548,16 +2638,10 @@ function markInteractOpacity(
       );
       parts.push(binary("and", ident("__brush.on"), binary("and", linked, outX, span), span));
     }
-    const inSelX = callExpr("has", [ident("__sel.keys"), ident(`row.${xField}`)], span);
-    const inSelG = seriesField
-      ? callExpr("has", [ident("__sel.keys"), ident(`row.${seriesField}`)], span)
-      : literal(0);
-    const inSel = binary("or", inSelX, inSelG, span);
-    const otherFrame = binary("!=", ident("__brush.frame"), literal(frameName), span);
-    const notInSel: Expr = { kind: "unary", op: "not", expr: inSel, span };
-    parts.push(
-      binary("and", ident("__sel.n"), binary("and", otherFrame, notInSel, span), span),
-    );
+    if (includeSelDim) {
+      const hide = selHideExpr(seriesField, xField, frameName, span);
+      if (hide) parts.push(hide);
+    }
   }
   if (!parts.length) return {};
   const dim = parts.reduce((acc, part) => binary("or", acc, part, span));

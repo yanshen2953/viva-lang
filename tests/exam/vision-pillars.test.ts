@@ -280,6 +280,13 @@ widget chart.scatter
       expect.arrayContaining(["safe", "title", "body", "lower", "beat0", "beat3"]),
     );
     expect(result.ir!.scene.layers.some((l) => l.name === "__beat0_marks")).toBe(true);
+    expect(result.ir!.scene.layers.some((l) => l.name === "__board_play")).toBe(true);
+    expect(Object.keys(result.ir!.state)).toContain("__beat");
+    expect(result.ir!.ticks.length).toBeGreaterThan(0);
+    const world = simulate(result.ir!, { ticks: 1 });
+    expect(world.state.__beat).toBe(1);
+    const after = simulate(result.ir!, { ticks: 4 });
+    expect(after.state.__beat).toBe(0);
   });
 
   it("chart.box expands compiler quartiles onto a band axis", () => {
@@ -293,6 +300,43 @@ widget chart.scatter
     expect(names.some((n) => n === "box")).toBe(true);
     expect(names.some((n) => n.startsWith("boxWhisker_"))).toBe(true);
     expect(names.some((n) => n.startsWith("boxMed_"))).toBe(true);
+  });
+
+  it("hides other-panel marks that are outside the shared __sel filter", () => {
+    const result = compileSource(
+      readFileSync("examples/linked-filter.viva", "utf8"),
+      "linked-filter.viva",
+    );
+    expect(result.error).toBeNull();
+    const marks = result.ir!.scene.layers.find((l) => l.name === "__b_marks")!;
+    const forItem = marks.items.find((i) => i.kind === "for");
+    expect(forItem?.kind).toBe("for");
+    if (forItem?.kind === "for") {
+      const mark = forItem.body[0];
+      expect(mark?.kind).toBe("node");
+      if (mark?.kind === "node") {
+        expect(mark.props.visible).toBeDefined();
+        const src = JSON.stringify(mark.props.visible);
+        expect(src).toContain("__sel");
+        expect(src).toContain("has");
+        const hideA = evaluate(mark.props.visible, [
+          {
+            __sel: { n: 2, keys: ["A"] },
+            __brush: { frame: "a" },
+            row: { x: 1, y: 8, grp: "A" },
+          },
+        ]);
+        const hideC = evaluate(mark.props.visible, [
+          {
+            __sel: { n: 2, keys: ["A"] },
+            __brush: { frame: "a" },
+            row: { x: 4, y: 2, grp: "C" },
+          },
+        ]);
+        expect(hideA).toBe(true);
+        expect(hideC).toBe(false);
+      }
+    }
   });
 
   it("collects a shared __sel key set while brushing", () => {

@@ -1,0 +1,57 @@
+artifact "Linked Filter"
+
+data left = [
+  { x: 1, y: 2, grp: "A" }
+  { x: 2, y: 5, grp: "B" }
+  { x: 3, y: 3, grp: "A" }
+  { x: 4, y: 7, grp: "C" }
+]
+
+data right = [
+  { x: 1, y: 8, grp: "A" }
+  { x: 2, y: 3, grp: "B" }
+  { x: 3, y: 6, grp: "A" }
+  { x: 4, y: 2, grp: "C" }
+]
+
+scene
+  size: 880 360
+  background: #ffffff
+
+widget layout.figure
+  x: 16
+  y: 16
+  w: 848
+  h: 328
+  cols: 2
+  rows: 1
+  gutter: 28
+  margin: 8
+  insetL: 56
+  insetR: 20
+  insetT: 28
+  insetB: 40
+
+widget chart.scatter
+  panel: a
+  data: left
+  xField: x
+  yField: y
+  group: grp
+  xlim: 0 5
+  ylim: 0 10
+  xLabel: Visit
+  yLabel: Score
+  title: "Brush here"
+
+widget chart.scatter
+  panel: b
+  data: right
+  xField: x
+  yField: y
+  group: grp
+  xlim: 0 5
+  ylim: 0 10
+  xLabel: Visit
+  yLabel: Score
+  title: "Filter follows __sel"

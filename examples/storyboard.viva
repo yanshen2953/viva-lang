@@ -20,7 +20,7 @@ scene
     node lowerThird
       x: 80
       y: 640
-      text: "layout.board beats: 4 · no new keywords"
+      text: "layout.board beats: 4 · play: true · no new keywords"
       font: 18
       fill: #94a3b8
 
@@ -31,6 +31,8 @@ widget layout.board
   titleH: 80
   lowerH: 96
   beats: 4
+  play: true
+  playFps: 1
   guides: true
 
 widget chart.line
