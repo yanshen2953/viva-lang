@@ -105,7 +105,7 @@ export function applySelSummary(
   const stats = boxStats(values);
   if (!stats) return { ...props, visible: false };
   const part = String(props.__boxPart ?? (props.__chartBox ? "body" : ""));
-  const next = { ...props, visible: true };
+  const next: Record<string, unknown> = { ...props, visible: true };
   if (part === "body" || props.__chartBox) {
     next.q1 = stats.q1;
     next.y = stats.q3;

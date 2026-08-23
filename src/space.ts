@@ -1,5 +1,5 @@
 import type { Expr } from "./ast.js";
-import { binary, ident } from "./ast.js";
+import { binary, ident, literal } from "./ast.js";
 import type { Span } from "./diagnostics.js";
 import { applySelSummary, type SummaryCtx } from "./layout/summary-stats.js";
 
