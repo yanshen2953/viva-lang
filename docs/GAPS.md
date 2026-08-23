@@ -60,7 +60,7 @@
 
 ## 下一刀（质量，不再铺接口）
 
-1. 通用排版求解（换行、跨格）；重叠刻度会抽稀，仍不换行
+1. 通用排版求解（轴标题换行、跨格）；图标题会按栏宽折行，重叠刻度会抽稀
 2. linked selection 已藏热图、折线、box/violin；仍缺过渡动画
 3. 再扩 CJK 或允许宿主挂全库；`scripts/subset-cjk-font.py` 可从 Droid 重建
 4. `layout.board play` 遮罩现在画在图表之上（layout 先展开、chart 后展开）；`export --beats` / MCP `beats` 仍是 PNG 序列，不是成片视频
