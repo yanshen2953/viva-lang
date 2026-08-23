@@ -25,7 +25,7 @@
 2. **默认交互还不是完整 linked view** — `__sel.keys` 已跨面板藏行（含 box / violin / 折线）；Runtime 用 opacity 淡 180ms，不是时间轴动画。本地 brush 仍是 marquee。
 3. **导出 ≠ 预览** — SVG 已接近 Runtime；PNG/JPG 现在填场景底色（投稿白底不再透成黑卡）；PDF 随包 CJK 子集，缺字仍可能 `?`。
 4. **Agent 闭环没产品化** — session compile 附带 visual diagnostics，但不挡成功；生成成功率未测。
-5. **手册仍不执行图语法** — 现在会覆盖 widget 字号，但不做避让、对齐或栏宽文法。
+5. **手册仍不执行图语法** — 会覆盖 widget 字号；深色场景上会把标题/刻度字色翻亮。仍不做避让或栏宽文法。
 
 ## 本轮已补（相对「接口堆砌」）
 
