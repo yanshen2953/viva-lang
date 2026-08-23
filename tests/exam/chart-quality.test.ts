@@ -292,11 +292,9 @@ widget chart.scatter
   });
 
   it("keeps mm paper chrome on the canvas and stacked title/tick/title", () => {
-    const result = compileSource(
-      readFileSync("examples/paper-cjk.viva", "utf8"),
-      "paper-cjk.viva",
-      { handbookIds: ["print-nature"] },
-    );
+    const src = readFileSync("examples/paper-cjk.viva", "utf8");
+    expect(src).not.toMatch(/areaX|areaY/);
+    const result = compileSource(src, "paper-cjk.viva", { handbookIds: ["print-nature"] });
     expect(result.error).toBeNull();
     const axes = result.ir!.scene.layers.find((l) => l.name.endsWith("_axes"))!;
     const nodeNamed = (suffix: string) =>

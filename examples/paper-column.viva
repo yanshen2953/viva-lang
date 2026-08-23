@@ -22,8 +22,6 @@ widget chart.scatter
   xScale: log
   xlim: 0.8 20
   ylim: 0 22
-  areaX: 16 82
-  areaY: 12 56
   xLabel: Dose
   yLabel: Response
   title: "Single-column 89 mm"

@@ -20,8 +20,6 @@ widget chart.scatter
   yField: y
   xlim: 0 5
   ylim: 0 24
-  areaX: 18 80
-  areaY: 14 54
   xLabel: "时间"
   xUnit: "周"
   yLabel: "心率"

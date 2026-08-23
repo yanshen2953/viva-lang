@@ -18,7 +18,7 @@ import {
   setWidgetBuiltinSeed,
 } from "./plugins/registry.js";
 import { domainMap, parseTimeValue, scaleKind, type ScaleKind } from "./space.js";
-import { sceneScaleOf } from "./space/scene-box.js";
+import { COLUMN_MM, sceneScaleOf } from "./space/scene-box.js";
 
 export type { WidgetExpandContext, WidgetPlugin } from "./plugins/types.js";
 export { getWidget, listWidgets, registerWidget, resetWidgetPlugins };
@@ -264,18 +264,35 @@ function expandChart(
   const ylimExpr = props.ylim ?? autoYlim;
   const legendAt = legendPlacement(props, seriesField);
   const createdFrame = !artifact.frames.some((f) => f.name === frameName);
-  const areaXExpr = reserveLegendArea(
-    props.areaX ?? (isPair(props.x) ? props.x : undefined) ?? literal([80, 720]),
-    legendAt,
-    createdFrame && Boolean(seriesField) && !props.areaX && !isPair(props.x),
-    "x",
-  );
-  const areaYExpr = reserveLegendArea(
-    props.areaY ?? (isPair(props.y) ? props.y : undefined) ?? literal([60, 400]),
-    legendAt,
-    createdFrame && Boolean(seriesField) && !props.areaY && !isPair(props.y),
-    "y",
-  );
+  const hasAreaX = Boolean(props.areaX || isPair(props.x));
+  const hasAreaY = Boolean(props.areaY || isPair(props.y));
+  const boundPanel = Boolean(props.panel || props.frame);
+  const areaXExpr = (() => {
+    if (!boundPanel && createdFrame && !hasAreaX) {
+      const extent = sceneExtentOf(artifact);
+      const inset = fitChartInsets(artifact, { name: kind, props }, 0, 0, extent.w, extent.h);
+      return literal([inset.l, Math.max(inset.l + 8, extent.w - inset.r)]);
+    }
+    return reserveLegendArea(
+      props.areaX ?? (isPair(props.x) ? props.x : undefined) ?? literal([80, 720]),
+      legendAt,
+      createdFrame && Boolean(seriesField) && !hasAreaX,
+      "x",
+    );
+  })();
+  const areaYExpr = (() => {
+    if (!boundPanel && createdFrame && !hasAreaY) {
+      const extent = sceneExtentOf(artifact);
+      const inset = fitChartInsets(artifact, { name: kind, props }, 0, 0, extent.w, extent.h);
+      return literal([inset.t, Math.max(inset.t + 8, extent.h - inset.b)]);
+    }
+    return reserveLegendArea(
+      props.areaY ?? (isPair(props.y) ? props.y : undefined) ?? literal([60, 400]),
+      legendAt,
+      createdFrame && Boolean(seriesField) && !hasAreaY,
+      "y",
+    );
+  })();
 
   const existingFrame = artifact.frames.find((f) => f.name === frameName);
   if (!existingFrame) {
@@ -315,7 +332,6 @@ function expandChart(
     ...(yCats.length ? { yCats: literal(yCats) } : {}),
   };
 
-  const boundPanel = Boolean(props.panel || props.frame);
   const title =
     props.title?.kind === "string"
       ? props.title.value
@@ -1819,6 +1835,29 @@ function paperChromeOf(
   return { yTickX, xTickY, yTitleX, xTitleY, titleY, legendX, legendY, cbarX, compact };
 }
 
+function sceneExtentOf(artifact: Artifact): { w: number; h: number } {
+  const props = artifact.scene?.props ?? {};
+  let w = 880;
+  let h = 480;
+  if (props.size?.kind === "array" && props.size.items.length >= 2) {
+    const a = numericLiteral(props.size.items[0]);
+    const b = numericLiteral(props.size.items[1]);
+    if (a !== null) w = a;
+    if (b !== null) h = b;
+  }
+  if (props.width?.kind === "number") w = props.width.value;
+  if (props.height?.kind === "number") h = props.height.value;
+  const column = stringProp(props, ["column"]);
+  if (
+    (column === "single" || column === "double") &&
+    props.width === undefined &&
+    props.size === undefined
+  ) {
+    w = COLUMN_MM[column];
+  }
+  return { w, h };
+}
+
 function estimatePanelInsets(
   artifact: Artifact,
   panelName: string,
@@ -1833,6 +1872,17 @@ function estimatePanelInsets(
     return stringProp(w.props, ["panel", "frame"]) === panelName;
   });
   if (!chart) return fallback;
+  return fitChartInsets(artifact, chart, cellX0, cellY0, cellW, cellH);
+}
+
+function fitChartInsets(
+  artifact: Artifact,
+  chart: { name: string; props: Record<string, Expr> },
+  cellX0: number,
+  cellY0: number,
+  cellW: number,
+  cellH: number,
+): { l: number; r: number; t: number; b: number } {
   const unit = sceneUnitOf(artifact);
   const scale = sceneScaleOf({ unit });
   const toScene = (px: number) => px / Math.max(scale, 1e-6);

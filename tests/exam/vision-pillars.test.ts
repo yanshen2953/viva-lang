@@ -29,7 +29,9 @@ describe("vision pillars: board, mm, log, hover object, CJK pdf", () => {
     expect(box.column).toBe("single");
     expect(box.width).toBeCloseTo(mmToPx(COLUMN_MM.single));
     expect(box.height).toBeCloseTo(mmToPx(68));
-    const paper = compileSource(readFileSync("examples/paper-column.viva", "utf8"), "paper.viva");
+    const paperSrc = readFileSync("examples/paper-column.viva", "utf8");
+    expect(paperSrc).not.toMatch(/areaX|areaY/);
+    const paper = compileSource(paperSrc, "paper.viva");
     expect(paper.error).toBeNull();
     expect(evaluate(paper.ir!.frames[0]!.props.xScale!, [paper.ir!.state, paper.ir!.data])).toBe(
       "log",
