@@ -20,7 +20,7 @@ import {
 import { domainMap, parseTimeValue, scaleKind, type ScaleKind } from "./space.js";
 import { COLUMN_MM, sceneScaleOf } from "./space/scene-box.js";
 import { estimateBoardBands } from "./layout/board-chrome.js";
-import { figureGapDefaults } from "./layout/figure-gap.js";
+import { figureCopyDefaults, figureCopyPlace, figureGapDefaults } from "./layout/figure-gap.js";
 import {
   clampChartInsets,
   growInsetsForChrome,
@@ -976,20 +976,28 @@ function expandLayoutFigure(
     "plate",
     Boolean(titleExpr || subtitleExpr || captionExpr || boundSlot),
   );
+  const copyBands = figureCopyDefaults({
+    unit: sceneUnitOf(artifact),
+    hasTitle: Boolean(titleExpr),
+    hasSubtitle: Boolean(subtitleExpr),
+    hasCaption: Boolean(captionExpr),
+  });
   const titleH = titleExpr
     ? props.titleH !== undefined
-      ? numProp(props, "titleH", 24)
-      : subtitleExpr
-        ? 40
-        : 24
+      ? numProp(props, "titleH", copyBands.titleH)
+      : copyBands.titleH
     : 0;
-  const capH = captionExpr ? (props.captionH !== undefined ? numProp(props, "captionH", 20) : 20) : 0;
-  const headGap = titleH ? 6 : 0;
-  const footGap = capH ? 4 : 0;
+  const capH = captionExpr
+    ? props.captionH !== undefined
+      ? numProp(props, "captionH", copyBands.capH)
+      : copyBands.capH
+    : 0;
+  const headGap = titleH ? copyBands.headGap : 0;
+  const footGap = capH ? copyBands.footGap : 0;
   const gridX = originX;
   const gridY = originY + titleH + headGap;
   const gridW = width;
-  const gridH = Math.max(32, height - titleH - headGap - capH - footGap);
+  const gridH = Math.max(copyBands.minGrid, height - titleH - headGap - capH - footGap);
   const cols = Math.max(1, Math.floor(numProp(props, "cols", 2)));
   const rows = Math.max(1, Math.floor(numProp(props, "rows", 2)));
   const gaps = figureGapDefaults({
@@ -1172,14 +1180,24 @@ function expandLayoutFigure(
       items: labelItems,
     });
   }
+  const copyPlace = figureCopyPlace({
+    unit: sceneUnitOf(artifact),
+    originX,
+    originY,
+    width,
+    height,
+    titleH,
+    capH,
+    hasSubtitle: Boolean(subtitleExpr),
+  });
   const copyItems: SceneItem[] = [];
   if (titleExpr) {
     copyItems.push(
       node(`${id}_title`, {
         role: literal("title"),
-        x: literal(originX + 10),
-        y: literal(originY + (subtitleExpr ? 16 : Math.min(18, titleH * 0.7))),
-        w: literal(Math.max(40, width - 20)),
+        x: literal(copyPlace.titleX),
+        y: literal(copyPlace.titleY),
+        w: literal(copyPlace.titleW),
         text: titleExpr,
       }),
     );
@@ -1188,9 +1206,9 @@ function expandLayoutFigure(
     copyItems.push(
       node(`${id}_subtitle`, {
         role: literal("subtitle"),
-        x: literal(originX + 10),
-        y: literal(originY + Math.max(30, titleH - 8)),
-        w: literal(Math.max(40, width - 20)),
+        x: literal(copyPlace.titleX),
+        y: literal(copyPlace.subY),
+        w: literal(copyPlace.titleW),
         text: subtitleExpr,
       }),
     );
@@ -1199,9 +1217,9 @@ function expandLayoutFigure(
     copyItems.push(
       node(`${id}_caption`, {
         role: literal("caption"),
-        x: literal(originX + 10),
-        y: literal(originY + height - Math.max(12, capH - 4)),
-        w: literal(Math.max(40, width - 20)),
+        x: literal(copyPlace.titleX),
+        y: literal(copyPlace.capY),
+        w: literal(copyPlace.titleW),
         text: captionExpr,
       }),
     );

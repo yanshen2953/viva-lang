@@ -3,7 +3,7 @@ import { literal } from "../../src/ast";
 import { compileSource } from "../../src/pipeline";
 import { evaluate } from "../../src/eval";
 import { listWidgets, registerWidget, resetWidgetPlugins } from "../../src/widgets";
-import { figureGapDefaults } from "../../src/layout/figure-gap.js";
+import { figureCopyDefaults, figureGapDefaults } from "../../src/layout/figure-gap.js";
 import { simulate } from "../../src/simulate";
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -393,5 +393,64 @@ widget chart.line
     const gap = bx[0]! - ax[1]!;
     expect(gap).toBeCloseTo(2.4, 5);
     expect(ax[1]! - ax[0]!).toBeGreaterThan(30);
+  });
+
+  it("keeps omitted figure title bands in millimetres on unit: mm", () => {
+    const bands = figureCopyDefaults({
+      unit: "mm",
+      hasTitle: true,
+      hasSubtitle: true,
+      hasCaption: true,
+    });
+    expect(bands.titleH).toBeLessThan(10);
+    expect(bands.capH).toBeLessThan(5);
+    const result = compileSource(
+      `artifact MmTitled
+data rows = [{ x: 1, y: 2 }, { x: 2, y: 4 }]
+scene
+  unit: mm
+  column: single
+  width: 89
+  height: 68
+  background: #ffffff
+widget layout.figure
+  title: "Single-column 89 mm"
+  caption: "virtual cohort"
+  cols: 2
+  rows: 1
+widget chart.line
+  panel: a
+  data: rows
+  xField: x
+  yField: y
+  xlim: 0 3
+  ylim: 0 5
+  interactive: false
+widget chart.line
+  panel: b
+  data: rows
+  xField: x
+  yField: y
+  xlim: 0 3
+  ylim: 0 5
+  interactive: false
+`,
+      "mm-titled.viva",
+      { handbookIds: ["print-nature"] },
+    );
+    expect(result.error).toBeNull();
+    const ir = result.ir!;
+    const env = [ir.state, ir.data];
+    const a = ir.frames.find((f) => f.name === "a")!;
+    const cellY = evaluate(a.props.cellY!, env) as number[];
+    expect(cellY[0]).toBeGreaterThan(4);
+    expect(cellY[0]).toBeLessThan(12);
+    const title = ir.scene.layers
+      .find((l) => l.name === "__fig_copy")!
+      .items.find((i) => i.kind === "node" && i.name === "fig_title");
+    expect(title?.kind).toBe("node");
+    if (title?.kind === "node") {
+      expect(evaluate(title.props.y, env)).toBeLessThan(5);
+    }
   });
 });
