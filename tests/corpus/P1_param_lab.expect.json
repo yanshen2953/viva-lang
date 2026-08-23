@@ -3,8 +3,11 @@
   "input": "examples/exam/P1_param_lab.viva",
   "expect": {
     "data": ["knob", "series"],
-    "state": ["param", "t"],
-    "events": [{ "type": "drag", "target": "knob" }],
+    "state": ["__tip", "param", "t"],
+    "events": [
+      { "type": "drag", "target": "knob" },
+      { "type": "hover", "target": "linePt" }
+    ],
     "ticks": 1,
     "minFrames": 1,
     "hasDragProp": true

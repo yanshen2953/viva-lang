@@ -101,6 +101,16 @@ export function fieldIdent(row: string, field: string, span: Span): Expr {
  * Chart bars: after frame maps x/y to scene, convert center/value into a
  * scene-space rect sitting on the frame baseline. Shared by runtime + static SVG.
  */
+/** Shared post-frame layout for chart macros (bars + heat cells). */
+export function layoutChartGeom(
+  props: Record<string, unknown>,
+  frames: FrameScales[],
+): Record<string, unknown> {
+  if (props.__chartBar) return layoutChartBar(props, frames);
+  if (props.__chartHeat) return layoutChartHeat(props, frames);
+  return props;
+}
+
 export function layoutChartBar(
   props: Record<string, unknown>,
   frames: FrameScales[],
@@ -125,6 +135,34 @@ export function layoutChartBar(
     y: top,
     w: sceneW,
     h: height,
+  };
+}
+
+/** Heat cell: x/y already scene-mapped (cell center); w/h still data units. */
+export function layoutChartHeat(
+  props: Record<string, unknown>,
+  frames: FrameScales[],
+): Record<string, unknown> {
+  if (!props.__chartHeat) return props;
+  const frameName = props.frame !== undefined ? String(props.frame) : "";
+  const frame = frames.find((f) => f.name === frameName);
+  if (!frame) return props;
+  const cx = typeof props.x === "number" ? props.x : 0;
+  const cy = typeof props.y === "number" ? props.y : 0;
+  const wData = typeof props.w === "number" ? props.w : 1;
+  const hData = typeof props.h === "number" ? props.h : 1;
+  const sceneW = Math.abs(
+    linearMap(wData, [0, frame.xmax - frame.xmin], [0, frame.x1 - frame.x0], false),
+  );
+  const sceneH = Math.abs(
+    linearMap(hData, [0, frame.ymax - frame.ymin], [0, frame.y1 - frame.y0], false),
+  );
+  return {
+    ...props,
+    x: cx - sceneW / 2,
+    y: cy - sceneH / 2,
+    w: Math.max(1, sceneW - 1),
+    h: Math.max(1, sceneH - 1),
   };
 }
 

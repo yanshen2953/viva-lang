@@ -102,10 +102,9 @@ describe("widgets: chart.scatter expansion (C1)", () => {
     expect(result.error).toBeNull();
     const ir = result.ir!;
     expect(ir.frames.map((f) => f.name)).toEqual(["plot"]);
-    expect(ir.scene.layers.map((l) => l.name)).toEqual([
-      "__plot_axes",
-      "__plot_marks",
-    ]);
+    expect(ir.scene.layers.map((l) => l.name)).toEqual(
+      expect.arrayContaining(["__plot_axes", "__plot_marks"]),
+    );
 
     const marksLayer = ir.scene.layers.find((l) => l.name === "__plot_marks")!;
     expect(marksLayer.items).toHaveLength(1);

@@ -12,7 +12,7 @@ import {
 } from "./paint.js";
 import {
   applyFrameToProps,
-  layoutChartBar,
+  layoutChartGeom,
   scalesFromFrameProps,
   type FrameScales,
 } from "./space.js";
@@ -302,7 +302,7 @@ export class Runtime {
       if (item.kind === "node") {
         const raw = evalProps(item.props, scopes);
         const framed = applyFrameToProps(raw, this.frameScales());
-        const props = layoutChartBar(framed, this.frameScales());
+        const props = layoutChartGeom(framed, this.frameScales());
         out.push({
           id: `${prefix}:${item.id}`,
           name: item.name,

@@ -2,7 +2,7 @@ import { withIrStyleContext } from "../check/style-context.js";
 import { evaluate, truthy, type Scope } from "../eval.js";
 import type { Expr } from "../ast.js";
 import type { SceneNodeIR, VisualIR } from "../ir.js";
-import { applyFrameToProps, layoutChartBar, scalesFromFrameProps } from "../space.js";
+import { applyFrameToProps, layoutChartGeom, scalesFromFrameProps } from "../space.js";
 import type { SelectedNode } from "./types.js";
 import type { BBox } from "./geometry.js";
 
@@ -38,7 +38,7 @@ function walk(
     if (item.kind === "node") {
       const raw = evalProps(item.props, scopes);
       const framed = applyFrameToProps(raw, scales);
-      const props = layoutChartBar(framed, scales);
+      const props = layoutChartGeom(framed, scales);
       const id = `${prefix}:${item.id}`;
       out.push({
         id,

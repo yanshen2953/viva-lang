@@ -18,11 +18,11 @@ data bars = [
 ]
 
 data dots = [
-  { x: 0.5, y: 20 }
-  { x: 1.5, y: 45 }
-  { x: 2.8, y: 38 }
-  { x: 4.2, y: 70 }
-  { x: 5.5, y: 55 }
+  { x: 0.5, y: 20, err: 3 }
+  { x: 1.5, y: 45, err: 4 }
+  { x: 2.8, y: 38, err: 3.5 }
+  { x: 4.2, y: 70, err: 5 }
+  { x: 5.5, y: 55, err: 4 }
 ]
 
 scene
@@ -45,7 +45,10 @@ widget chart.line
   ylim: 0 40
   areaX: 40 400
   areaY: 50 240
-  title: "LINE"
+  title: "Response over time"
+  xLabel: "Time"
+  xUnit: "week"
+  yLabel: "Score"
   color: #34d399
 
 widget chart.bar
@@ -56,7 +59,10 @@ widget chart.bar
   ylim: 0 100
   areaX: 460 840
   areaY: 50 240
-  title: "BAR"
+  title: "Cohort response"
+  xLabel: "Visit"
+  yLabel: "Response"
+  yUnit: "%"
   color: #38bdf8
   barWidth: 0.55
 
@@ -64,10 +70,14 @@ widget chart.scatter
   data: dots
   xField: x
   yField: y
+  errorField: err
   xlim: 0 6
   ylim: 0 80
   areaX: 40 840
   areaY: 280 460
-  title: "SCATTER"
+  title: "Paired measurements"
+  xLabel: "Time"
+  xUnit: "week"
+  yLabel: "Value"
   color: #f59e0b
   r: 4

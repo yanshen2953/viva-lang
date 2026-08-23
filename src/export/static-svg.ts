@@ -5,7 +5,7 @@ import { evaluate, truthy, type Scope } from "../eval.js";
 import type { SceneNodeIR, VisualIR } from "../ir.js";
 import {
   applyFrameToProps,
-  layoutChartBar,
+  layoutChartGeom,
   scalesFromFrameProps,
   type FrameScales,
 } from "../space.js";
@@ -109,7 +109,7 @@ function flattenItems(
     if (item.kind === "node") {
       const raw = evalProps(item.props, scopes);
       const framed = applyFrameToProps(raw, scales);
-      const props = layoutChartBar(framed, scales);
+      const props = layoutChartGeom(framed, scales);
       out.push({
         id: `${prefix}:${item.id}`,
         name: item.name,
@@ -156,25 +156,42 @@ function nodeToSvg(node: FlatNode): string {
     const text = esc(str(p.text ?? p.label ?? node.name, ""));
     const fill = esc(str(p.fill ?? p.color, "#e2e8f0"));
     const size = num(p.font ?? p.fontSize, 14);
+    const family = esc(str(p.fontFamily, "IBM Plex Sans, Helvetica, Arial, sans-serif"));
+    const weight = p.fontWeight !== undefined ? ` font-weight="${esc(String(p.fontWeight))}"` : "";
+    const tracking =
+      p.letterSpacing !== undefined ? ` letter-spacing="${esc(String(p.letterSpacing))}"` : "";
+    const rotate = num(p.rotate ?? p.rotation, 0);
+    const transform = rotate
+      ? ` transform="rotate(${rotate} ${num(p.x)} ${num(p.y)})"`
+      : "";
     const anchor =
       str(p.align, "start") === "center"
         ? "middle"
         : str(p.align, "start") === "right"
           ? "end"
           : "start";
-    return `<text ${common} x="${num(p.x)}" y="${num(p.y)}" fill="${fill}" font-size="${size}" text-anchor="${anchor}">${text}</text>`;
+    return `<text ${common} x="${num(p.x)}" y="${num(p.y)}" fill="${fill}" font-size="${size}" font-family="${family}"${weight}${tracking} text-anchor="${anchor}"${transform}>${text}</text>`;
   }
   if (tag === "line") {
-    return `<line ${common} x1="${num(p.x1, num(p.x))}" y1="${num(p.y1, num(p.y))}" x2="${num(p.x2, num(p.x) + 40)}" y2="${num(p.y2, num(p.y))}" stroke="${esc(str(p.stroke ?? p.fill, "#64748b"))}" stroke-width="${num(p.strokeWidth, 2)}" />`;
+    const cap = p.strokeLinecap ? ` stroke-linecap="${esc(String(p.strokeLinecap))}"` : "";
+    return `<line ${common} x1="${num(p.x1, num(p.x))}" y1="${num(p.y1, num(p.y))}" x2="${num(p.x2, num(p.x) + 40)}" y2="${num(p.y2, num(p.y))}" stroke="${esc(str(p.stroke ?? p.fill, "#64748b"))}" stroke-width="${num(p.strokeWidth, 2)}"${dashAttr(p)}${cap} />`;
   }
-  return `<path ${common} d="${esc(str(p.d ?? p.path, ""))}" fill="${esc(str(p.fill, "none"))}" stroke="${esc(str(p.stroke, "#94a3b8"))}" stroke-width="${num(p.strokeWidth, 1)}" />`;
+  return `<path ${common} d="${esc(str(p.d ?? p.path, ""))}" fill="${esc(str(p.fill, "none"))}" stroke="${esc(str(p.stroke, "#94a3b8"))}" stroke-width="${num(p.strokeWidth, 1)}"${dashAttr(p)} />`;
 }
 
 function strokeAttrs(p: Record<string, unknown>): string {
   let s = "";
   if (p.stroke) s += ` stroke="${esc(String(p.stroke))}"`;
   if (p.strokeWidth) s += ` stroke-width="${num(p.strokeWidth)}"`;
+  s += dashAttr(p);
   return s;
+}
+
+function dashAttr(p: Record<string, unknown>): string {
+  const dash = p.dash ?? p.strokeDash ?? p.strokeDasharray;
+  if (dash === undefined || dash === null || dash === false) return "";
+  const value = Array.isArray(dash) ? dash.map(String).join(" ") : String(dash);
+  return ` stroke-dasharray="${esc(value)}"`;
 }
 
 function inferTag(props: Record<string, unknown>): string {

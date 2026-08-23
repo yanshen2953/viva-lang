@@ -1,0 +1,31 @@
+artifact "Heatmap"
+
+data cells = [
+  { col: 1, row: 1, v: 0.12 }
+  { col: 2, row: 1, v: 0.44 }
+  { col: 3, row: 1, v: 0.71 }
+  { col: 1, row: 2, v: 0.33 }
+  { col: 2, row: 2, v: 0.86 }
+  { col: 3, row: 2, v: 0.55 }
+  { col: 1, row: 3, v: 0.08 }
+  { col: 2, row: 3, v: 0.29 }
+  { col: 3, row: 3, v: 0.94 }
+]
+
+scene
+  size: 520 360
+  background: #ffffff
+
+widget chart.heatmap
+  data: cells
+  xField: col
+  yField: row
+  valueField: v
+  xlim: 0 4
+  ylim: 0 4
+  zlim: 0 1
+  areaX: 56 360
+  areaY: 48 300
+  title: "Expression"
+  xLabel: Condition
+  yLabel: Gene

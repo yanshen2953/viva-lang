@@ -22,7 +22,8 @@ export function expandWidgets(artifact: Artifact): Artifact {
     } else if (
       widget.name === "chart.scatter" ||
       widget.name === "chart.line" ||
-      widget.name === "chart.bar"
+      widget.name === "chart.bar" ||
+      widget.name === "chart.heatmap"
     ) {
       chartIndex += 1;
       expandChart(next, widget.name, widget.props, chartIndex);
@@ -153,7 +154,7 @@ function expandChart(
   const title =
     props.title?.kind === "string"
       ? props.title.value
-      : kind.replace("chart.", "").toUpperCase();
+      : sentenceTitle(kind.replace("chart.", ""));
 
   const titleX = pairAt(props.areaX ?? props.x, 0, 72);
   const titleYExpr = (() => {
@@ -181,6 +182,7 @@ function expandChart(
     }),
     ...expandGridLines(frameName, props, span),
     ...expandAxisTicks(frameName, props, span),
+    ...expandAxisTitles(frameName, props, span),
     node(`${frameName}_xAxis`, {
       role: literal("axis"),
       frame: literal(frameName),
@@ -241,8 +243,9 @@ function expandChart(
           ...(props.markStrokeWidth ?? props.barStrokeWidth
             ? { strokeWidth: props.markStrokeWidth ?? props.barStrokeWidth! }
             : {}),
-          ...(props.hoverFill ? { hoverFill: props.hoverFill } : {}),
+          ...(props.hoverFill ? { hoverFill: props.hoverFill } : { hoverFill: literal("#E69F00") }),
         }),
+        ...expandErrorBars(props, frameName, resolvedXField, resolvedYField, span, seriesField),
       ],
     });
   } else if (kind === "chart.line") {
@@ -257,12 +260,14 @@ function expandChart(
           frame: literal(frameName),
           x: ident(`row.${resolvedXField}`),
           y: ident(`row.${resolvedYField}`),
-          r: props.r ?? literal(3),
+          r: props.r ?? literal(4),
           ...markProps,
           ...(explicitFill ? { fill: explicitFill } : {}),
           ...(props.markStroke ? { stroke: props.markStroke } : {}),
           ...(props.markStrokeWidth ? { strokeWidth: props.markStrokeWidth } : {}),
+          ...(props.hoverFill ? { hoverFill: props.hoverFill } : { hoverFill: literal("#E69F00") }),
         }),
+        ...expandErrorBars(props, frameName, resolvedXField, resolvedYField, span, seriesField),
       ],
     });
     marks.push(
@@ -310,9 +315,14 @@ function expandChart(
             : {}),
           ...(props.barRadius ? { radius: props.barRadius } : { radius: literal(3) }),
           __chartBar: literal(true),
+          ...(props.hoverFill ? { hoverFill: props.hoverFill } : { hoverFill: literal("#E69F00") }),
         }),
+        ...expandErrorBars(props, frameName, resolvedXField, resolvedYField, span, seriesField),
       ],
     });
+  } else if (kind === "chart.heatmap") {
+    marks.push(...expandHeatCells(props, dataName, frameName, resolvedXField, resolvedYField, span));
+    axisItems.push(...expandColorbar(frameName, props, span));
   }
 
   const markLayer: LayerDecl = {
@@ -323,6 +333,9 @@ function expandChart(
   };
 
   artifact.scene?.layers.push(axisLayer, markLayer);
+  if (chartInteractive(props)) {
+    ensureChartInteract(artifact, kind, resolvedXField, resolvedYField, valueFieldName(props), span);
+  }
 }
 
 function expandLineSegments(
@@ -357,6 +370,7 @@ function expandLineSegments(
     const items: SceneItem[] = [];
     let seg = 0;
     for (const [gkey, grows] of groups) {
+      grows.sort((a, b) => objectNumber(a, xField) - objectNumber(b, xField));
       for (let i = 0; i < grows.length - 1; i++) {
         const a = grows[i]!;
         const b = grows[i + 1]!;
@@ -396,9 +410,13 @@ function expandLineSegments(
   }
 
   const items: SceneItem[] = [];
-  for (let i = 0; i < rows.length - 1; i++) {
-    const a = rows[i]!;
-    const b = rows[i + 1]!;
+  const ordered = [...rows].sort((a, b) => {
+    if (a.kind !== "object" || b.kind !== "object") return 0;
+    return objectNumber(a, xField) - objectNumber(b, xField);
+  });
+  for (let i = 0; i < ordered.length - 1; i++) {
+    const a = ordered[i]!;
+    const b = ordered[i + 1]!;
     if (a.kind !== "object" || b.kind !== "object") continue;
     const ax = objectField(a, xField);
     const ay = objectField(a, yField);
@@ -667,6 +685,11 @@ function niceTicks(min: number, max: number, maxTicks = 6): number[] {
 }
 
 function formatTickValue(v: number): string {
+  if (!Number.isFinite(v)) return "";
+  const av = Math.abs(v);
+  if (av !== 0 && (av < 0.01 || av >= 10000)) {
+    return v.toExponential(1).replace("e+", "e");
+  }
   if (Number.isInteger(v)) return String(v);
   const r = Math.round(v * 100) / 100;
   return String(r);
@@ -829,6 +852,320 @@ function expandSeriesLegend(
     );
   }
   return items;
+}
+
+function sentenceTitle(kind: string): string {
+  if (!kind) return "Chart";
+  return kind.charAt(0).toUpperCase() + kind.slice(1);
+}
+
+function stringProp(props: Record<string, Expr>, keys: string[]): string | null {
+  for (const key of keys) {
+    const expr = props[key];
+    if (expr?.kind === "string" && expr.value) return expr.value;
+    if (expr?.kind === "ident" && expr.path.length) return expr.path.join(".");
+  }
+  return null;
+}
+
+function chartInteractive(props: Record<string, Expr>): boolean {
+  const v = props.interactive;
+  if (!v) return true;
+  if (v.kind === "boolean") return v.value;
+  if (v.kind === "string") return v.value !== "false" && v.value !== "off";
+  return true;
+}
+
+function errorFieldName(props: Record<string, Expr>): string | null {
+  const expr = props.errorField ?? props.yerr ?? props.yError ?? props.err;
+  if (!expr) return null;
+  return fieldName(expr, "err");
+}
+
+function valueFieldName(props: Record<string, Expr>): string {
+  return fieldName(props.valueField ?? props.zField ?? props.vField ?? props.value, "v");
+}
+
+function axisCaption(props: Record<string, Expr>, axis: "x" | "y"): string | null {
+  const label =
+    axis === "x"
+      ? stringProp(props, ["xLabel", "xlabel", "xTitle"])
+      : stringProp(props, ["yLabel", "ylabel", "yTitle"]);
+  const unit =
+    axis === "x"
+      ? stringProp(props, ["xUnit", "xunit"])
+      : stringProp(props, ["yUnit", "yunit"]);
+  if (!label && !unit) return null;
+  if (label && unit) return `${label} (${unit})`;
+  return label ?? unit;
+}
+
+function expandAxisTitles(
+  frameName: string,
+  props: Record<string, Expr>,
+  span: { line: number; column: number },
+): SceneItem[] {
+  const items: SceneItem[] = [];
+  const x0 = pairAt(props.areaX ?? props.x, 0, 72);
+  const x1 = pairAt(props.areaX ?? props.x, 1, 720);
+  const y0 = pairAt(props.areaY ?? props.y, 0, 60);
+  const y1 = pairAt(props.areaY ?? props.y, 1, 400);
+  const midX = binary("+", x0, binary("*", binary("-", x1, x0, span), literal(0.5), span), span);
+  const midY = binary("+", y0, binary("*", binary("-", y1, y0, span), literal(0.5), span), span);
+  const xCap = axisCaption(props, "x");
+  const yCap = axisCaption(props, "y");
+  if (xCap) {
+    items.push(
+      node(`${frameName}_xTitle`, {
+        role: literal("axis"),
+        x: midX,
+        y: binary("+", y1, literal(28), span),
+        text: literal(xCap),
+        font: literal(9),
+        align: literal("center"),
+      }),
+    );
+  }
+  if (yCap) {
+    const left = x0.kind === "number" ? Math.max(12, x0.value - 28) : 16;
+    items.push(
+      node(`${frameName}_yTitle`, {
+        role: literal("axis"),
+        x: literal(left),
+        y: midY,
+        text: literal(yCap),
+        font: literal(9),
+        align: literal("center"),
+        rotate: literal(-90),
+      }),
+    );
+  }
+  return items;
+}
+
+function expandErrorBars(
+  props: Record<string, Expr>,
+  frameName: string,
+  xField: string,
+  yField: string,
+  span: { line: number; column: number },
+  seriesField: string | null,
+): SceneItem[] {
+  const err = errorFieldName(props);
+  if (!err) return [];
+  const xExpr = seriesField
+    ? binary("+", ident(`row.${xField}`), ident("row.__dodge"), span)
+    : ident(`row.${xField}`);
+  const yLo = binary("-", ident(`row.${yField}`), ident(`row.${err}`), span);
+  const yHi = binary("+", ident(`row.${yField}`), ident(`row.${err}`), span);
+  const cap = literal(0.12);
+  return [
+    node("errStem", {
+      role: literal("mark-line"),
+      frame: literal(frameName),
+      x1: xExpr,
+      y1: yLo,
+      x2: xExpr,
+      y2: yHi,
+      strokeWidth: literal(1),
+    }),
+    node("errCapLo", {
+      role: literal("mark-line"),
+      frame: literal(frameName),
+      x1: binary("-", xExpr, cap, span),
+      y1: yLo,
+      x2: binary("+", xExpr, cap, span),
+      y2: yLo,
+      strokeWidth: literal(1),
+    }),
+    node("errCapHi", {
+      role: literal("mark-line"),
+      frame: literal(frameName),
+      x1: binary("-", xExpr, cap, span),
+      y1: yHi,
+      x2: binary("+", xExpr, cap, span),
+      y2: yHi,
+      strokeWidth: literal(1),
+    }),
+  ];
+}
+
+function zlimPair(props: Record<string, Expr>): [number, number] {
+  const pair = numericPair(props.zlim ?? props.clim, [0, 1]);
+  return pair ?? [0, 1];
+}
+
+function expandHeatCells(
+  props: Record<string, Expr>,
+  dataName: string,
+  frameName: string,
+  xField: string,
+  yField: string,
+  span: { line: number; column: number },
+): SceneItem[] {
+  const vField = valueFieldName(props);
+  const [z0, z1] = zlimPair(props);
+  const cellW = props.cellW?.kind === "number" ? props.cellW.value : 1;
+  const cellH = props.cellH?.kind === "number" ? props.cellH.value : 1;
+  const range = binary("-", literal(z1), literal(z0), span);
+  const norm = binary(
+    "/",
+    binary("-", ident(`row.${vField}`), literal(z0), span),
+    range,
+    span,
+  );
+  const tier = {
+    kind: "call" as const,
+    callee: "clamp",
+    args: [
+      {
+        kind: "call" as const,
+        callee: "round",
+        args: [binary("*", norm, literal(6), span)],
+        span,
+      },
+      literal(0),
+      literal(6),
+    ],
+    span,
+  };
+  return [
+    {
+      kind: "for",
+      item: "row",
+      source: ident(dataName),
+      span,
+      body: [
+        node("heatCell", {
+          role: literal("mark-area"),
+          frame: literal(frameName),
+          x: ident(`row.${xField}`),
+          y: ident(`row.${yField}`),
+          w: literal(cellW),
+          h: literal(cellH),
+          fill: {
+            kind: "call",
+            callee: "palette",
+            args: [tier, { kind: "string", value: "sequential", span }],
+            span,
+          },
+          stroke: literal("#ffffff"),
+          strokeWidth: literal(0.6),
+          __chartHeat: literal(true),
+        }),
+      ],
+    },
+  ];
+}
+
+function expandColorbar(
+  frameName: string,
+  props: Record<string, Expr>,
+  span: { line: number; column: number },
+): SceneItem[] {
+  const [z0, z1] = zlimPair(props);
+  const x1 = pairAt(props.areaX ?? props.x, 1, 720);
+  const y0 = pairAt(props.areaY ?? props.y, 0, 60);
+  const y1 = pairAt(props.areaY ?? props.y, 1, 400);
+  const barX = x1.kind === "number" ? x1.value + 10 : 730;
+  const top = y0.kind === "number" ? y0.value : 60;
+  const bot = y1.kind === "number" ? y1.value : 400;
+  const h = Math.max(40, bot - top);
+  const steps = 7;
+  const items: SceneItem[] = [];
+  for (let i = 0; i < steps; i++) {
+    const t = i / (steps - 1);
+    items.push(
+      node(`${frameName}_cbar_${i}`, {
+        role: literal("colorbar"),
+        x: literal(barX),
+        y: literal(bot - ((i + 1) / steps) * h),
+        w: literal(10),
+        h: literal(h / steps),
+        fill: {
+          kind: "call",
+          callee: "palette",
+          args: [literal(i), { kind: "string", value: "sequential", span }],
+          span,
+        },
+        styleSkip: literal(true),
+      }),
+    );
+    if (i === 0 || i === steps - 1 || i === Math.floor(steps / 2)) {
+      const value = z0 + t * (z1 - z0);
+      items.push(
+        node(`${frameName}_cbarLbl_${i}`, {
+          role: literal("tick"),
+          x: literal(barX + 14),
+          y: literal(bot - t * h + 3),
+          text: literal(formatTickValue(value)),
+          font: literal(7),
+        }),
+      );
+    }
+  }
+  return items;
+}
+
+function ensureChartInteract(
+  artifact: Artifact,
+  kind: string,
+  xField: string,
+  yField: string,
+  vField: string,
+  span: { line: number; column: number },
+): void {
+  if (!artifact.states.some((s) => s.name === "__tip")) {
+    artifact.states.push({ name: "__tip", value: literal(""), span });
+  }
+  if (!artifact.scene) return;
+  const hasHud = artifact.scene.layers.some((l) => l.name === "__chart_hud");
+  if (!hasHud) {
+    const size = artifact.scene.props.size;
+    const width = size?.kind === "array" && size.items[0]?.kind === "number" ? size.items[0].value : 880;
+    const height = size?.kind === "array" && size.items[1]?.kind === "number" ? size.items[1].value : 480;
+    artifact.scene.layers.push({
+      name: "__chart_hud",
+      span,
+      props: {},
+      items: [
+        node("chartTip", {
+          role: literal("caption"),
+          x: literal(Math.max(16, width - 220)),
+          y: literal(Math.max(16, height - 16)),
+          text: ident("__tip"),
+          font: literal(11),
+          align: literal("right"),
+        }),
+      ],
+    });
+  }
+
+  const target =
+    kind === "chart.bar" ? "bar" : kind === "chart.heatmap" ? "heatCell" : kind === "chart.line" ? "linePt" : "mark";
+  if (artifact.events.some((e) => e.type === "hover" && e.target === target)) return;
+
+  const tipExpr =
+    kind === "chart.heatmap"
+      ? binary(
+          "+",
+          binary("+", ident(xField), literal(", "), span),
+          binary("+", ident(yField), binary("+", literal(" · "), ident(vField), span), span),
+          span,
+        )
+      : binary("+", binary("+", ident(xField), literal(", "), span), ident(yField), span);
+
+  artifact.events.push({
+    type: "hover",
+    target,
+    body: [assign(["__tip"], tipExpr)],
+    span,
+  });
+}
+
+function objectNumber(obj: Extract<Expr, { kind: "object" }>, key: string): number {
+  const v = objectField(obj, key);
+  return v?.kind === "number" ? v.value : 0;
 }
 
 function node(name: string, props: Record<string, Expr>): SceneItem {
