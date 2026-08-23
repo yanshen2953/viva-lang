@@ -17,7 +17,7 @@ import {
   resetWidgetPlugins,
   setWidgetBuiltinSeed,
 } from "./plugins/registry.js";
-import { parseTimeValue, scaleKind, type ScaleKind } from "./space.js";
+import { domainMap, parseTimeValue, scaleKind, type ScaleKind } from "./space.js";
 
 export type { WidgetExpandContext, WidgetPlugin } from "./plugins/types.js";
 export { getWidget, listWidgets, registerWidget, resetWidgetPlugins };
@@ -254,7 +254,7 @@ function expandChart(
   const legendAt = legendPlacement(props, seriesField);
   const createdFrame = !artifact.frames.some((f) => f.name === frameName);
   const areaXExpr = reserveLegendArea(
-    props.areaX ?? (isPair(props.x) ? props.x : undefined) ?? literal([72, 720]),
+    props.areaX ?? (isPair(props.x) ? props.x : undefined) ?? literal([80, 720]),
     legendAt,
     createdFrame && Boolean(seriesField) && !props.areaX && !isPair(props.x),
     "x",
@@ -337,8 +337,8 @@ function expandChart(
       ...(props.plotOpacity ? { opacity: props.plotOpacity } : {}),
     }),
     ...expandGridLines(frameName, geom, span),
-    ...expandAxisTicks(frameName, geom, span),
-    ...expandAxisTitles(frameName, geom, span),
+    ...expandAxisTicks(frameName, geom, span, artifact),
+    ...expandAxisTitles(frameName, geom, span, artifact),
     node(`${frameName}_xAxis`, {
       role: literal("axis"),
       frame: literal(frameName),
@@ -558,7 +558,7 @@ function expandChart(
     );
   } else if (kind === "chart.violin") {
     marks.push(
-      ...expandViolinMarks(artifact, dataName, frameName, markXField, resolvedYField, span),
+      ...expandViolinMarks(artifact, dataName, frameName, markXField, resolvedYField, geom, span),
     );
   }
 
@@ -835,10 +835,10 @@ function expandLayoutFigure(
   const rows = Math.max(1, Math.floor(numProp(props, "rows", 2)));
   const gutter = numProp(props, "gutter", 28);
   const margin = numProp(props, "margin", 16);
-  const insetL = numProp(props, "insetL", numProp(props, "plotPadL", 52));
-  const insetR = numProp(props, "insetR", numProp(props, "plotPadR", 20));
+  const insetL = numProp(props, "insetL", numProp(props, "plotPadL", 68));
+  const insetR = numProp(props, "insetR", numProp(props, "plotPadR", 28));
   const insetT = numProp(props, "insetT", numProp(props, "plotPadT", 28));
-  const insetB = numProp(props, "insetB", numProp(props, "plotPadB", 40));
+  const insetB = numProp(props, "insetB", numProp(props, "plotPadB", 48));
   const count = cols * rows;
   const names = panelNamesFromProps(props, count, index);
   const innerW = width - margin * 2;
@@ -1525,10 +1525,77 @@ function numericTicksFromProps(
   return niceTicks(lim[0], lim[1]);
 }
 
+function plotBoxOf(props: Record<string, Expr>): {
+  px0: number;
+  px1: number;
+  py0: number;
+  py1: number;
+  xmin: number;
+  xmax: number;
+  ymin: number;
+  ymax: number;
+  xScale: ScaleKind;
+  yScale: ScaleKind;
+} | null {
+  const ax = numericPair(props.areaX ?? props.x, [80, 720]);
+  const ay = numericPair(props.areaY ?? props.y, [60, 400]);
+  const xl = numericPair(props.xlim, [0, 10]);
+  const yl = numericPair(props.ylim, [0, 100]);
+  if (!ax || !ay || !xl || !yl) return null;
+  return {
+    px0: ax[0],
+    px1: ax[1],
+    py0: ay[0],
+    py1: ay[1],
+    xmin: xl[0],
+    xmax: xl[1],
+    ymin: yl[0],
+    ymax: yl[1],
+    xScale: scaleKindFromExpr(props.xScale) ?? "linear",
+    yScale: scaleKindFromExpr(props.yScale) ?? "linear",
+  };
+}
+
+function sceneUnitOf(artifact: Artifact): string {
+  const expr = artifact.scene?.props.unit;
+  if (expr?.kind === "ident") return expr.path.join(".");
+  if (expr?.kind === "string") return expr.value;
+  return "px";
+}
+
+function isCompactScene(artifact: Artifact): boolean {
+  const unit = sceneUnitOf(artifact);
+  if (unit === "mm" || unit === "pt") return true;
+  const size = artifact.scene?.props.size;
+  const widthExpr = artifact.scene?.props.width;
+  const heightExpr = artifact.scene?.props.height;
+  const w =
+    widthExpr?.kind === "number"
+      ? widthExpr.value
+      : size?.kind === "array" && size.items[0]?.kind === "number"
+        ? size.items[0].value
+        : 880;
+  const h =
+    heightExpr?.kind === "number"
+      ? heightExpr.value
+      : size?.kind === "array" && size.items[1]?.kind === "number"
+        ? size.items[1].value
+        : 480;
+  return w <= 320 && h <= 240;
+}
+
+function isCompactPlot(box: { px0: number; px1: number; py0: number; py1: number }, unit: string): boolean {
+  const w = box.px1 - box.px0;
+  const h = box.py1 - box.py0;
+  if (unit === "mm" || unit === "pt") return w <= 90 || h <= 56;
+  return w <= 180 || h <= 140;
+}
+
 function expandAxisTicks(
   frameName: string,
   props: Record<string, Expr>,
   span: { line: number; column: number },
+  artifact: Artifact,
 ): SceneItem[] {
   const xlim = numericPair(props.xlim, [0, 10]);
   const ylim = numericPair(props.ylim, [0, 100]);
@@ -1537,28 +1604,45 @@ function expandAxisTicks(
   const xTicks = axisTicks(props, "x");
   const yTicks = axisTicks(props, "y");
   const items: SceneItem[] = [];
-
-  const xSpan = binary("-", xlimHigh(props), xlimLow(props), span);
+  const box = plotBoxOf(props);
+  const unit = sceneUnitOf(artifact);
+  const compact = box ? isCompactPlot(box, unit) : isCompactScene(artifact);
+  const font = compact ? 8 : 11;
   const ySpan = binary("-", ylimHigh(props), ylimLow(props), span);
-  const xPad = binary("*", xSpan, literal(0.12), span);
-  const yPad = binary("*", ySpan, literal(0.08), span);
   const tickLen = binary("*", ySpan, literal(0.02), span);
-
-  const yForXLabel = binary("-", ylimLow(props), yPad, span);
-  const xForYLabel = binary("-", xlimLow(props), xPad, span);
 
   for (let i = 0; i < xTicks.length; i++) {
     const tick = xTicks[i]!;
+    if (box) {
+      const sx = domainMap(tick.value, [box.xmin, box.xmax], [box.px0, box.px1], false, box.xScale);
+      const sy = box.py1 + (compact ? 11 : 15);
+      items.push(
+        node(`${frameName}_xtick_${i}`, {
+          role: literal("label"),
+          x: literal(sx),
+          y: literal(sy),
+          text: literal(tick.label),
+          font: literal(font),
+          align: literal("center"),
+          fill: literal("#3d3d3d"),
+        }),
+      );
+    } else {
+      const xSpan = binary("-", xlimHigh(props), xlimLow(props), span);
+      const yPad = binary("*", ySpan, literal(0.08), span);
+      items.push(
+        node(`${frameName}_xtick_${i}`, {
+          role: literal("label"),
+          frame: literal(frameName),
+          x: literal(tick.value),
+          y: binary("-", ylimLow(props), yPad, span),
+          text: literal(tick.label),
+          font: literal(font),
+          align: literal("center"),
+        }),
+      );
+    }
     items.push(
-      node(`${frameName}_xtick_${i}`, {
-        role: literal("label"),
-        frame: literal(frameName),
-        x: literal(tick.value),
-        y: yForXLabel,
-        text: literal(tick.label),
-        font: literal(8),
-        align: literal("center"),
-      }),
       node(`${frameName}_xtickMark_${i}`, {
         role: literal("axis"),
         frame: literal(frameName),
@@ -1573,16 +1657,36 @@ function expandAxisTicks(
 
   for (let i = 0; i < yTicks.length; i++) {
     const tick = yTicks[i]!;
+    if (box) {
+      const sy = domainMap(tick.value, [box.ymin, box.ymax], [box.py0, box.py1], true, box.yScale);
+      const sx = Math.max(compact ? 6 : 10, box.px0 - (compact ? 5 : 8));
+      items.push(
+        node(`${frameName}_ytick_${i}`, {
+          role: literal("label"),
+          x: literal(sx),
+          y: literal(sy),
+          text: literal(tick.label),
+          font: literal(font),
+          align: literal("right"),
+          fill: literal("#3d3d3d"),
+        }),
+      );
+    } else {
+      const xSpan = binary("-", xlimHigh(props), xlimLow(props), span);
+      const xPad = binary("*", xSpan, literal(0.12), span);
+      items.push(
+        node(`${frameName}_ytick_${i}`, {
+          role: literal("label"),
+          frame: literal(frameName),
+          x: binary("-", xlimLow(props), xPad, span),
+          y: literal(tick.value),
+          text: literal(tick.label),
+          font: literal(font),
+          align: literal("right"),
+        }),
+      );
+    }
     items.push(
-      node(`${frameName}_ytick_${i}`, {
-        role: literal("label"),
-        frame: literal(frameName),
-        x: xForYLabel,
-        y: literal(tick.value),
-        text: literal(tick.label),
-        font: literal(8),
-        align: literal("right"),
-      }),
       node(`${frameName}_ytickMark_${i}`, {
         role: literal("axis"),
         frame: literal(frameName),
@@ -1749,14 +1853,18 @@ function expandAxisTitles(
   frameName: string,
   props: Record<string, Expr>,
   span: { line: number; column: number },
+  artifact: Artifact,
 ): SceneItem[] {
   const items: SceneItem[] = [];
-  const x0 = pairAt(props.areaX ?? props.x, 0, 72);
+  const x0 = pairAt(props.areaX ?? props.x, 0, 80);
   const x1 = pairAt(props.areaX ?? props.x, 1, 720);
   const y0 = pairAt(props.areaY ?? props.y, 0, 60);
   const y1 = pairAt(props.areaY ?? props.y, 1, 400);
   const midX = binary("+", x0, binary("*", binary("-", x1, x0, span), literal(0.5), span), span);
   const midY = binary("+", y0, binary("*", binary("-", y1, y0, span), literal(0.5), span), span);
+  const box = plotBoxOf(props);
+  const compact = box ? isCompactPlot(box, sceneUnitOf(artifact)) : isCompactScene(artifact);
+  const font = compact ? 8 : 11;
   const xCap = axisCaption(props, "x");
   const yCap = axisCaption(props, "y");
   if (xCap) {
@@ -1764,24 +1872,26 @@ function expandAxisTitles(
       node(`${frameName}_xTitle`, {
         role: literal("axis"),
         x: midX,
-        y: binary("+", y1, literal(28), span),
+        y: binary("+", y1, literal(compact ? 22 : 32), span),
         text: literal(xCap),
-        font: literal(9),
+        font: literal(font),
         align: literal("center"),
+        fill: literal("#222222"),
       }),
     );
   }
   if (yCap) {
-    const left = x0.kind === "number" ? Math.max(12, x0.value - 28) : 16;
+    const left = x0.kind === "number" ? Math.max(compact ? 8 : 12, x0.value - (compact ? 18 : 36)) : 16;
     items.push(
       node(`${frameName}_yTitle`, {
         role: literal("axis"),
         x: literal(left),
         y: midY,
         text: literal(yCap),
-        font: literal(9),
+        font: literal(font),
         align: literal("center"),
         rotate: literal(-90),
+        fill: literal("#222222"),
       }),
     );
   }
@@ -2138,12 +2248,60 @@ function expandBrackets(
   return items;
 }
 
+function gaussianKDE(values: number[], y0: number, y1: number, n: number): number[] {
+  const span = y1 - y0 || 1;
+  const mean = values.reduce((s, v) => s + v, 0) / Math.max(1, values.length);
+  const variance =
+    values.reduce((s, v) => s + (v - mean) * (v - mean), 0) / Math.max(1, values.length);
+  const std = Math.sqrt(variance) || span / 8;
+  const h = Math.max(span / 18, 1.06 * std * Math.pow(Math.max(1, values.length), -0.2));
+  const dens: number[] = [];
+  for (let i = 0; i < n; i++) {
+    const y = y0 + (i / Math.max(1, n - 1)) * span;
+    let s = 0;
+    for (const v of values) {
+      const u = (y - v) / h;
+      s += Math.exp(-0.5 * u * u);
+    }
+    dens.push(s);
+  }
+  return dens;
+}
+
+function violinPathD(
+  cx: number,
+  dens: number[],
+  y0: number,
+  y1: number,
+  py0: number,
+  py1: number,
+  yScale: ScaleKind,
+  halfMax: number,
+): string {
+  const n = dens.length;
+  const peak = Math.max(...dens, 1e-9);
+  const right: string[] = [];
+  const left: string[] = [];
+  for (let i = 0; i < n; i++) {
+    const yVal = y0 + (i / Math.max(1, n - 1)) * (y1 - y0);
+    const sy = domainMap(yVal, [y0, y1], [py0, py1], true, yScale);
+    const w = (dens[i]! / peak) * halfMax;
+    right.push(`${(cx + w).toFixed(2)},${sy.toFixed(2)}`);
+    left.push(`${(cx - w).toFixed(2)},${sy.toFixed(2)}`);
+  }
+  return `M ${right[0]} L ${right.slice(1).join(" L ")} L ${left
+    .slice()
+    .reverse()
+    .join(" L ")} Z`;
+}
+
 function expandViolinMarks(
   artifact: Artifact,
   dataName: string,
   frameName: string,
   xField: string,
   yField: string,
+  geom: Record<string, Expr>,
   span: { line: number; column: number },
 ): SceneItem[] {
   const decl = artifact.data.find((d) => d.name === dataName);
@@ -2160,36 +2318,70 @@ function expandViolinMarks(
     list.push(yv.value);
     groups.set(key, list);
   }
+  const box = plotBoxOf(geom);
+  const cats = catsFromExpr(geom.xCats);
   const items: SceneItem[] = [];
   let gi = 0;
+  const nGroups = Math.max(1, groups.size);
   for (const [key, values] of groups) {
     const xNum = Number(key);
     const x = Number.isFinite(xNum) ? xNum : gi;
-    const min = Math.min(...values);
-    const max = Math.max(...values);
-    const bins = 10;
-    const spanY = max - min || 1;
-    const counts = new Array(bins).fill(0);
-    for (const v of values) {
-      const i = Math.min(bins - 1, Math.max(0, Math.floor(((v - min) / spanY) * bins)));
-      counts[i] += 1;
-    }
-    const peak = Math.max(...counts, 1);
-    for (let i = 0; i < bins; i++) {
-      const y0 = min + (i / bins) * spanY;
-      const y1 = min + ((i + 1) / bins) * spanY;
-      const half = 0.38 * (counts[i]! / peak);
+    const label = cats[x] ?? key;
+    const fill = {
+      kind: "call" as const,
+      callee: "palette",
+      args: [
+        { kind: "string" as const, value: label, span },
+        { kind: "string" as const, value: "categorical", span },
+      ],
+      span,
+    };
+    if (box) {
+      const ymin = box.ymin;
+      const ymax = box.ymax;
+      const dens = gaussianKDE(values, ymin, ymax, 28);
+      const cx = domainMap(x, [box.xmin, box.xmax], [box.px0, box.px1], false, box.xScale);
+      const halfStep =
+        Math.abs(
+          domainMap(x + 0.42, [box.xmin, box.xmax], [box.px0, box.px1], false, box.xScale) - cx,
+        ) || (box.px1 - box.px0) / (2 * nGroups);
       items.push(
-        node(`violin`, {
-          role: literal("mark-line"),
-          frame: literal(frameName),
-          x1: literal(x - half),
-          y1: literal((y0 + y1) / 2),
-          x2: literal(x + half),
-          y2: literal((y0 + y1) / 2),
-          strokeWidth: literal(Math.max(2, ((y1 - y0) / spanY) * 28)),
+        node("violin", {
+          role: literal("mark"),
+          d: literal(violinPathD(cx, dens, ymin, ymax, box.py0, box.py1, box.yScale, halfStep)),
+          fill,
+          stroke: literal("#1f2937"),
+          strokeWidth: literal(1),
+          opacity: literal(0.88),
         }),
       );
+    } else {
+      const min = Math.min(...values);
+      const max = Math.max(...values);
+      const bins = 10;
+      const spanY = max - min || 1;
+      const counts = new Array(bins).fill(0);
+      for (const v of values) {
+        const i = Math.min(bins - 1, Math.max(0, Math.floor(((v - min) / spanY) * bins)));
+        counts[i] += 1;
+      }
+      const peak = Math.max(...counts, 1);
+      for (let i = 0; i < bins; i++) {
+        const y0 = min + (i / bins) * spanY;
+        const y1 = min + ((i + 1) / bins) * spanY;
+        const half = 0.38 * (counts[i]! / peak);
+        items.push(
+          node("violin", {
+            role: literal("mark-line"),
+            frame: literal(frameName),
+            x1: literal(x - half),
+            y1: literal((y0 + y1) / 2),
+            x2: literal(x + half),
+            y2: literal((y0 + y1) / 2),
+            strokeWidth: literal(Math.max(2, ((y1 - y0) / spanY) * 28)),
+          }),
+        );
+      }
     }
     const med = quantile([...values].sort((a, b) => a - b), 0.5);
     items.push(
@@ -2374,11 +2566,10 @@ function ensureChartInteract(
     const size = artifact.scene.props.size;
     const width = size?.kind === "array" && size.items[0]?.kind === "number" ? size.items[0].value : 880;
     const height = size?.kind === "array" && size.items[1]?.kind === "number" ? size.items[1].value : 480;
-    artifact.scene.layers.push({
-      name: "__chart_hud",
-      span,
-      props: {},
-      items: [
+    const compact = isCompactScene(artifact);
+    const hudItems: SceneItem[] = [];
+    if (!compact) {
+      hudItems.push(
         node("chartTip", {
           role: literal("caption"),
           x: literal(Math.max(16, width - 220)),
@@ -2387,6 +2578,9 @@ function ensureChartInteract(
           font: literal(11),
           align: literal("right"),
         }),
+      );
+    }
+    hudItems.push(
         node("brushRect", {
           role: literal("chrome"),
           x: callExpr("min", [ident("__brush.x0"), ident("__brush.x1")], span),
@@ -2404,7 +2598,12 @@ function ensureChartInteract(
           fill: literal("#0072B2"),
           opacity: binary("*", ident("__brush.on"), literal(0.18), span),
         }),
-      ],
+    );
+    artifact.scene.layers.push({
+      name: "__chart_hud",
+      span,
+      props: {},
+      items: hudItems,
     });
   }
 

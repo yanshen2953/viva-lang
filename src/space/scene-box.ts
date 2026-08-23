@@ -55,6 +55,18 @@ export function sceneScaleOf(sceneProps: Record<string, unknown>): number {
 
 const SCENE_GEOM_KEYS = ["x", "y", "w", "h", "width", "height", "x1", "y1", "x2", "y2", "r", "size"] as const;
 
+/** Scale simple path `d` numbers (M/L/C/Z). Used when `unit: mm` expands to px. */
+export function scalePathD(d: string, scale: number): string {
+  if (scale === 1 || !d) return d;
+  return d.replace(/[-+]?(?:\d*\.\d+|\d+)(?:[eE][-+]?\d+)?/g, (raw) => {
+    const n = Number(raw);
+    if (!Number.isFinite(n)) return raw;
+    const scaled = n * scale;
+    if (Number.isInteger(scaled)) return String(scaled);
+    return String(Math.round(scaled * 1000) / 1000);
+  });
+}
+
 /** Scale scene-space numbers. Skip when `frame` is set (data domain). */
 export function scaleSceneGeom(
   props: Record<string, unknown>,
@@ -67,6 +79,8 @@ export function scaleSceneGeom(
     const value = next[key];
     if (typeof value === "number") next[key] = value * scale;
   }
+  if (typeof next.d === "string") next.d = scalePathD(next.d, scale);
+  if (typeof next.path === "string") next.path = scalePathD(next.path, scale);
   return next;
 }
 
