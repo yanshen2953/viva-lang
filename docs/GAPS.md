@@ -63,7 +63,7 @@
 1. 真正的碰撞求解（标题/刻度/图例仍只是字号感知间距）
 2. linked selection 已藏热图、折线、box/violin；仍缺过渡动画
 3. 再扩 CJK 或允许宿主挂全库；`scripts/subset-cjk-font.py` 可从 Droid 重建
-4. `layout.board play` / `typeGrid` 只是遮罩和基线；`export --beats` / MCP `beats` 是 PNG 序列，不是成片视频
+4. `layout.board play` 遮罩现在画在图表之上（layout 先展开、chart 后展开）；`export --beats` / MCP `beats` 仍是 PNG 序列，不是成片视频
 5. agent-exam 种子编译进 CI；生成成功率仍未测（要 LLM）
 
 对照真源：`docs/VISION.md`。
