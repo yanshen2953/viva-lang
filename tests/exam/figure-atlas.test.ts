@@ -69,7 +69,9 @@ describe("figure-atlas example", () => {
       l.items.some((i) => i.kind === "for" && i.body.some((b) => b.kind === "node" && b.name === "heatCell")),
     );
     expect(hasHeat).toBe(true);
-    expect(src).not.toMatch(/insetL|insetR|insetT|insetB|areaX|areaY/);
+    expect(src).not.toMatch(/insetL|insetR|insetT|insetB|areaX|areaY|panelAdeck|panelLbl/);
+    expect(result.ir!.scene.layers.some((l) => l.name === "__top_decks")).toBe(true);
+    expect(result.ir!.scene.layers.some((l) => l.name === "__top_labels")).toBe(true);
     const a = result.ir!.frames.find((f) => f.name === "a")!;
     const cell = evaluate(a.props.cellX!, [result.ir!.state, result.ir!.data]) as number[];
     const plot = evaluate(a.props.x, [result.ir!.state, result.ir!.data]) as number[];

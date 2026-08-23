@@ -153,84 +153,6 @@ scene
       radius: 8
       strokeWidth: 1.5
 
-    node panelLblA
-      role: panel-label
-      x: 48
-      y: 118
-      text: "(a)"
-
-    node panelAdeck
-      role: subpanel
-      x: 44
-      y: 136
-      w: 408
-      h: 348
-
-    node panelLblB
-      role: panel-label
-      x: 472
-      y: 118
-      text: "(b)"
-
-    node panelBdeck
-      role: subpanel
-      x: 468
-      y: 136
-      w: 408
-      h: 348
-
-    node panelLblC
-      role: panel-label
-      x: 896
-      y: 118
-      text: "(c)"
-
-    node panelCdeck
-      role: subpanel
-      x: 892
-      y: 136
-      w: 408
-      h: 348
-
-    node panelLblD
-      role: panel-label
-      x: 48
-      y: 498
-      text: "(d)"
-
-    node panelDdeck
-      role: subpanel
-      x: 44
-      y: 516
-      w: 408
-      h: 348
-
-    node panelLblE
-      role: panel-label
-      x: 472
-      y: 498
-      text: "(e)"
-
-    node panelEdeck
-      role: subpanel
-      x: 468
-      y: 516
-      w: 408
-      h: 348
-
-    node panelLblF
-      role: panel-label
-      x: 896
-      y: 498
-      text: "(f)"
-
-    node panelFdeck
-      role: subpanel
-      x: 892
-      y: 516
-      w: 408
-      h: 348
-
     node heatGeneLbl
       role: annotation
       x: 60
@@ -293,7 +215,6 @@ widget layout.figure
   rows: 1
   gutter: 24
   margin: 0
-  labels: false
 
 widget layout.figure
   id: bot
@@ -306,7 +227,6 @@ widget layout.figure
   gutter: 24
   margin: 0
   panels: [d, e, f]
-  labels: false
 
 widget chart.bar
   panel: a

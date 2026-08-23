@@ -939,7 +939,9 @@ function expandLayoutFigure(
   const cellW = (innerW - gutter * Math.max(0, cols - 1)) / cols;
   const cellH = (innerH - gutter * Math.max(0, rows - 1)) / rows;
   const labels = boolProp(props, "labels", true);
+  const decks = boolProp(props, "decks", true);
   const labelItems: SceneItem[] = [];
+  const deckItems: SceneItem[] = [];
 
   for (let i = 0; i < names.length; i++) {
     const name = names[i]!;
@@ -970,6 +972,18 @@ function expandLayoutFigure(
     } else {
       artifact.frames.push({ name, span, props: frameProps });
     }
+    if (decks) {
+      deckItems.push(
+        node(`${id}_deck_${name}`, {
+          role: literal("subpanel"),
+          x: literal(cellX0),
+          y: literal(cellY0),
+          w: literal(cellW),
+          h: literal(cellH),
+          radius: literal(6),
+        }),
+      );
+    }
     if (labels) {
       const raw = name.includes("_") ? name.slice(name.lastIndexOf("_") + 1) : name;
       labelItems.push(
@@ -983,6 +997,14 @@ function expandLayoutFigure(
     }
   }
 
+  if (deckItems.length) {
+    artifact.scene?.layers.push({
+      name: `__${id}_decks`,
+      span,
+      props: {},
+      items: deckItems,
+    });
+  }
   if (labelItems.length) {
     artifact.scene?.layers.push({
       name: `__${id}_labels`,
