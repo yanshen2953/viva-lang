@@ -351,6 +351,37 @@ widget chart.scatter
     expect(xTitleText).not.toMatch(/^\)$/);
   });
 
+  it("pins author xlim/ylim ends onto linear ticks", () => {
+    const src = `artifact "Ends"
+data rows = [
+  { x: 10, y: 12 }
+  { x: 40, y: 20 }
+]
+scene
+  size: 400 240
+widget chart.scatter
+  data: rows
+  xField: x
+  yField: y
+  xlim: 0 70
+  ylim: 6 28
+  interactive: false
+`;
+    const result = compileSource(src, "ends.viva", { handbookIds: ["print-nature"] });
+    expect(result.error).toBeNull();
+    const axes = result.ir!.scene.layers.find((l) => l.name.endsWith("_axes"))!;
+    const texts = (suffix: string) =>
+      axes.items
+        .filter((i) => i.kind === "node" && i.name.includes(suffix))
+        .map((i) => (i.kind === "node" && i.props.text?.kind === "string" ? i.props.text.value : ""));
+    const xs = texts("_xtick_");
+    const ys = texts("_ytick_");
+    expect(xs[0]).toBe("0");
+    expect(xs[xs.length - 1]).toBe("70");
+    expect(ys[0]).toBe("6");
+    expect(ys[ys.length - 1]).toBe("28");
+  });
+
   it("joins an unquoted multi-word xLabel onto a horizontal funnel", () => {
     const src = `artifact "Funnel words"
 data rows = [

@@ -733,6 +733,13 @@ widget chart.scatter
       expect(titleY).toBeGreaterThan(tickY);
       expect(titleY).toBeLessThan(cellY[1] + 0.8);
     }
+    const eTicks = eAxes.items
+      .filter((i) => i.kind === "node" && /_xtick_\d+$/.test(i.name))
+      .map((i) =>
+        i.kind === "node" && i.props.text?.kind === "string" ? i.props.text.value : "",
+      );
+    expect(eTicks[0]).toBe("0");
+    expect(eTicks[eTicks.length - 1]).toBe("70");
     expect(result.ir!.scene.layers.find((l) => l.name === "__e_marks")!.items.some((i) => i.kind === "for")).toBe(
       false,
     );

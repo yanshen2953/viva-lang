@@ -2585,7 +2585,23 @@ function niceTicks(min: number, max: number, maxTicks = 6): number[] {
     if (v >= min - niceStep * 0.01 && v <= max + niceStep * 0.01) ticks.push(v);
     if (ticks.length > 10) break;
   }
-  return ticks;
+  return pinDomainEnds(ticks, min, max);
+}
+
+/** Author xlim/ylim ends stay on the axis; nice steps fill the interior. */
+function pinDomainEnds(ticks: number[], min: number, max: number): number[] {
+  if (!Number.isFinite(min) || !Number.isFinite(max)) return ticks;
+  if (min === max) return [min];
+  const span = Math.abs(max - min);
+  const snap = Math.max(span * 0.04, 1e-9);
+  const out = [...ticks].sort((a, b) => a - b);
+  if (!out.length) return [min, max];
+  if (Math.abs(out[0]! - min) <= snap) out[0] = min;
+  else if (out[0]! > min) out.unshift(min);
+  const last = out.length - 1;
+  if (Math.abs(out[last]! - max) <= snap) out[last] = max;
+  else if (out[last]! < max) out.push(max);
+  return out;
 }
 
 function formatTickValue(v: number): string {
