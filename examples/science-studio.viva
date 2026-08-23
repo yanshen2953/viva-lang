@@ -116,13 +116,12 @@ scene
       radius: 8
       xlim: -2.5 2.5
       ylim: -2.5 2.5
-
-    node pcaTitle
-      role: title
-      x: 816
-      y: 340
-      text: "PCA · 3D ORBIT"
-      letterSpacing: 1
+      title: "PCA · 3D ORBIT"
+      controls: ["-", "+"]
+      bind: zoom
+      step: 0.12
+      min: 0.6
+      max: 2.2
 
     node pcaOrbit
       role: chrome
@@ -170,38 +169,6 @@ scene
           opacity: 0.12
           strokeWidth: 2
           dash: 5 4
-
-    node zoomOut
-      role: chrome
-      x: 1110
-      y: 336
-      w: 30
-      h: 30
-      radius: 8
-
-    node zoomIn
-      role: chrome
-      x: 1148
-      y: 336
-      w: 30
-      h: 30
-      radius: 8
-
-    node zoomOutLbl
-      role: label
-      x: 1125
-      y: 356
-      text: "-"
-      font: 20
-      align: center
-
-    node zoomInLbl
-      role: label
-      x: 1163
-      y: 356
-      text: "+"
-      font: 20
-      align: center
 
   layer typography
     node title
@@ -300,12 +267,6 @@ event drag on pcaOrbit
 
 event click on pcaPts
   pcaMark = p.id
-
-event click on zoomIn
-  zoom = clamp(zoom + 0.12, 0.6, 2.2)
-
-event click on zoomOut
-  zoom = clamp(zoom - 0.12, 0.6, 2.2)
 
 tick 30
   hint = "handbook:dashboard active"

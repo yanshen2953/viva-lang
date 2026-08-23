@@ -19,7 +19,7 @@ import {
 } from "./plugins/registry.js";
 import { domainMap, parseTimeValue, scaleKind, type ScaleKind } from "./space.js";
 import { COLUMN_MM, mmToPx, parsePage, sceneScaleOf } from "./space/scene-box.js";
-import { estimateBoardBands } from "./layout/board-chrome.js";
+import { estimateBoardBands, measureChipWidth } from "./layout/board-chrome.js";
 import { figureCopyDefaults, figureCopyPlace, figureGapDefaults } from "./layout/figure-gap.js";
 import { figurePageReserves, packFigureCellsToPages } from "./layout/figure-page.js";
 import { chartHostBox, promotePanelFrames } from "./layout/chart-fit.js";
@@ -133,6 +133,7 @@ export function expandWidgets(artifact: Artifact): Artifact {
   liftPlayLayers(next);
   paintPageFolio(next);
   bindFramedWorldInteract(next);
+  paintPlotFrameChrome(next);
   return next;
 }
 
@@ -1647,9 +1648,10 @@ function expandLayoutBoard(
       const chipW = bands.chipWs[i] ?? 44;
       cursorX -= chipW;
       const chipName = `${id}_ctl_${i}`;
-      const selected = controlBind
-        ? binary("+", literal(0.4), binary("*", binary("==", ident(controlBind), literal(key), span), literal(0.6), span), span)
-        : undefined;
+      const selected =
+        controlBind && !boundStateIsNumber(artifact, controlBind)
+          ? binary("+", literal(0.4), binary("*", binary("==", ident(controlBind), literal(key), span), literal(0.6), span), span)
+          : undefined;
       const paint: Record<string, Expr> = selected ? { opacity: selected } : {};
       const lblName = `${id}_ctlLbl_${i}`;
       ctlItems.push(
@@ -1672,7 +1674,7 @@ function expandLayoutBoard(
         }),
       );
       if (controlBind) {
-        const body = [assign(controlBind.split("."), literal(key))];
+        const body = controlBindBody(artifact, controlBind, key, props, span);
         for (const target of [chipName, lblName]) {
           if (!artifact.events.some((e) => e.type === "click" && e.target === target)) {
             artifact.events.push({ type: "click", target, body, span });
@@ -4320,6 +4322,152 @@ function emptyPaperChrome(): PaperChrome {
     cbarTitleY: 0,
     compact: false,
   };
+}
+
+function boundStateIsNumber(artifact: Artifact, bind: string): boolean {
+  const name = bind.split(".")[0] ?? bind;
+  const decl = artifact.states.find((s) => s.name === name);
+  return decl?.value.kind === "number";
+}
+
+function stepDeltaOf(key: string): number | null {
+  const k = key.trim().toLowerCase();
+  if (k === "+" || k === "plus" || k === "in" || k === "zoomin" || k === "inc") return 1;
+  if (k === "-" || k === "minus" || k === "out" || k === "zoomout" || k === "dec") return -1;
+  return null;
+}
+
+function controlBindBody(
+  artifact: Artifact,
+  bind: string,
+  key: string,
+  props: Record<string, Expr>,
+  span: { line: number; column: number },
+): Statement[] {
+  const path = bind.split(".");
+  const delta = boundStateIsNumber(artifact, bind) ? stepDeltaOf(key) : null;
+  if (delta === null) return [assign(path, literal(key))];
+  const step = Math.abs(numProp(props, "step", 0.1)) * delta;
+  let next: Expr = binary("+", ident(bind), literal(step), span);
+  const lo = props.min ?? props.low;
+  const hi = props.max ?? props.high;
+  if (lo && hi) next = callExpr("clamp", [next, lo, hi], span);
+  else if (lo) next = callExpr("max", [next, lo], span);
+  else if (hi) next = callExpr("min", [next, hi], span);
+  return [assign(path, next)];
+}
+
+/**
+ * Plot frames paint their own title band and numeric stepper chips.
+ * Reuses board `title` / `controls` / `bind` — not new keywords.
+ */
+function paintPlotFrameChrome(artifact: Artifact): void {
+  if (!artifact.scene) return;
+  const span = artifact.span;
+  for (const layer of artifact.scene.layers) {
+    if (layer.name.startsWith("__")) continue;
+    const nodes: Extract<SceneItem, { kind: "node" }>[] = [];
+    walkWorldNodes(layer.items, nodes);
+    for (const plot of nodes) {
+      if ((stringProp(plot.props, ["role"]) ?? "") !== "plot") continue;
+      const titleExpr = copyExpr(plot.props, ["title"]);
+      const keys = controlKeysFromProps(plot.props);
+      const bind = stringProp(plot.props, ["bind", "controlBind"]);
+      if (!titleExpr && !keys.length) continue;
+      const box = nodeSceneBox(plot) ?? frameSceneBox(artifact, plot.name);
+      if (!box) continue;
+      let panel: { x: number; y: number; w: number; h: number } | null = null;
+      for (const other of nodes) {
+        if ((stringProp(other.props, ["role"]) ?? "") !== "panel") continue;
+        const pb = nodeSceneBox(other);
+        if (pb && boxesOverlap(pb, box)) panel = pb;
+      }
+      const bandTop = panel ? panel.y : Math.max(0, box.y - 28);
+      const bandH = Math.max(20, box.y - bandTop);
+      const items: SceneItem[] = [];
+      if (titleExpr && !authorTitleNear(artifact, box, titleExpr)) {
+        items.push(
+          node(`${plot.name}_title`, {
+            role: literal("title"),
+            x: literal(box.x),
+            y: literal(bandTop + Math.min(16, bandH * 0.45)),
+            w: literal(Math.max(40, box.w - (keys.length ? 88 : 0))),
+            text: titleExpr,
+          }),
+        );
+      }
+      if (keys.length && bind) {
+        const hostRight = panel ? panel.x + panel.w : box.x + box.w;
+        const chipH = Math.min(30, Math.max(22, bandH - 6));
+        const chipY = bandTop + Math.max(4, (bandH - chipH) / 2);
+        let cursorX = hostRight - 4;
+        const gap = 8;
+        for (let i = keys.length - 1; i >= 0; i--) {
+          const key = keys[i]!;
+          const chipW = Math.min(36, measureChipWidth(key));
+          cursorX -= chipW;
+          const chipName = `${plot.name}_ctl_${i}`;
+          const lblName = `${plot.name}_ctlLbl_${i}`;
+          items.push(
+            node(chipName, {
+              role: literal("chrome"),
+              x: literal(cursorX),
+              y: literal(chipY),
+              w: literal(chipW),
+              h: literal(chipH),
+              radius: literal(8),
+            }),
+            node(lblName, {
+              role: literal("label"),
+              x: literal(cursorX + chipW / 2),
+              y: literal(chipY + chipH * 0.7),
+              text: literal(key),
+              font: literal(16),
+              align: literal("center"),
+            }),
+          );
+          const body = controlBindBody(artifact, bind, key, plot.props, span);
+          for (const target of [chipName, lblName]) {
+            if (!artifact.events.some((e) => e.type === "click" && e.target === target)) {
+              artifact.events.push({ type: "click", target, body, span });
+            }
+          }
+          cursorX -= gap;
+        }
+      }
+      if (items.length) {
+        artifact.scene.layers.push({
+          name: `__${plot.name}_chrome`,
+          span,
+          props: {},
+          items,
+        });
+      }
+    }
+  }
+}
+
+function authorTitleNear(
+  artifact: Artifact,
+  plot: { x: number; y: number; w: number; h: number },
+  titleExpr: Expr,
+): boolean {
+  const want = titleExpr.kind === "string" ? titleExpr.value : null;
+  for (const layer of artifact.scene?.layers ?? []) {
+    if (layer.name.startsWith("__")) continue;
+    const nodes: Extract<SceneItem, { kind: "node" }>[] = [];
+    walkWorldNodes(layer.items, nodes);
+    for (const node of nodes) {
+      if ((stringProp(node.props, ["role"]) ?? "") !== "title") continue;
+      const text = stringProp(node.props, ["text"]);
+      if (want && text && text !== want) continue;
+      const y = numericLiteral(node.props.y);
+      const x = numericLiteral(node.props.x);
+      if (y === null || x === null) continue;
+      if (Math.abs(y - plot.y) < 48 && x >= plot.x - 24 && x <= plot.x + plot.w + 24) return true;
+    }
+  }
+  return false;
 }
 
 function ensureInteractStates(artifact: Artifact, span: { line: number; column: number }): void {

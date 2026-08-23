@@ -132,4 +132,65 @@ scene
       expect(Number(lit)).toBeGreaterThan(Number(dim));
     }
   });
+
+  it("paints plot title and numeric stepper chips without author magic numbers", () => {
+    const src = readFileSync("examples/science-studio.viva", "utf8");
+    expect(src).not.toMatch(/node zoomIn|node pcaTitle|x: 1110|x: 1148/);
+    const result = compileSource(src, "science-studio.viva");
+    expect(result.error).toBeNull();
+    const nodes = flattenNodesFromIr(result.ir!).nodes;
+    const title = nodes.find((n) => n.name === "pcaPlotBg_title");
+    expect(title).toBeTruthy();
+    expect(String(title!.props.text)).toMatch(/PCA/);
+    expect(Number(title!.props.y)).toBeGreaterThan(328);
+    expect(Number(title!.props.y)).toBeLessThan(368);
+    const plus = nodes.find((n) => n.name === "pcaPlotBg_ctl_1");
+    expect(plus).toBeTruthy();
+    expect(Number(plus!.props.x) + Number(plus!.props.w)).toBeLessThanOrEqual(1164);
+    expect(Number(plus!.props.x)).toBeGreaterThan(1080);
+    const zoomed = simulate(result.ir!, {
+      events: [{ type: "click", target: "pcaPlotBg_ctl_1" }],
+    });
+    expect(zoomed.state.zoom).toBeCloseTo(1.27);
+    const out = simulate(result.ir!, {
+      events: [
+        { type: "click", target: "pcaPlotBg_ctl_0" },
+        { type: "click", target: "pcaPlotBg_ctl_0" },
+      ],
+    });
+    expect(out.state.zoom).toBeCloseTo(0.91);
+  });
+
+  it("increments a numeric board bind instead of writing + as a string", () => {
+    const result = compileSource(
+      `artifact StepBoard
+state zoom = 1
+scene
+  size: 320 200
+widget layout.board
+  title: "step"
+  controls: ["-", "+"]
+  bind: zoom
+  step: 0.25
+  min: 0.5
+  max: 2
+`,
+      "step-board.viva",
+    );
+    expect(result.error).toBeNull();
+    const up = simulate(result.ir!, {
+      events: [{ type: "click", target: "board_ctl_1" }],
+    });
+    expect(up.state.zoom).toBeCloseTo(1.25);
+    const cap = simulate(result.ir!, {
+      events: [
+        { type: "click", target: "board_ctl_1" },
+        { type: "click", target: "board_ctl_1" },
+        { type: "click", target: "board_ctl_1" },
+        { type: "click", target: "board_ctl_1" },
+        { type: "click", target: "board_ctl_1" },
+      ],
+    });
+    expect(cap.state.zoom).toBeCloseTo(2);
+  });
 });
