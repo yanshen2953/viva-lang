@@ -310,6 +310,53 @@ widget chart.scatter
     expect(after.state.__beat).toBe(0);
   });
 
+  it("hides box and violin summaries that are outside __sel keys", () => {
+    const box = compileSource(readFileSync("examples/box.viva", "utf8"), "box.viva");
+    expect(box.error).toBeNull();
+    const marks = box.ir!.scene.layers.find((l) => l.name.endsWith("_marks"))!;
+    const firstBox = marks.items.find((i) => i.kind === "node" && i.name === "box");
+    expect(firstBox?.kind).toBe("node");
+    if (firstBox?.kind === "node") {
+      expect(firstBox.props.visible).toBeDefined();
+      const keep = evaluate(firstBox.props.visible, [
+        { __sel: { n: 1, keys: ["placebo"] }, __brush: { frame: "other" } },
+      ]);
+      const drop = evaluate(firstBox.props.visible, [
+        { __sel: { n: 1, keys: ["drug-A"] }, __brush: { frame: "other" } },
+      ]);
+      expect(keep).toBe(true);
+      expect(drop).toBe(false);
+    }
+    const violin = compileSource(readFileSync("examples/violin.viva", "utf8"), "vl.viva");
+    const vMarks = violin.ir!.scene.layers.find((l) => l.name.endsWith("_marks"))!;
+    const firstViolin = vMarks.items.find((i) => i.kind === "node" && i.name === "violin");
+    expect(firstViolin?.kind).toBe("node");
+    if (firstViolin?.kind === "node") {
+      expect(JSON.stringify(firstViolin.props.visible)).toContain("__sel");
+    }
+  });
+
+  it("links a scatter brush onto a box summary through shared __sel keys", () => {
+    const result = compileSource(
+      readFileSync("examples/linked-summary.viva", "utf8"),
+      "linked-summary.viva",
+    );
+    expect(result.error).toBeNull();
+    const marks = result.ir!.scene.layers.find((l) => l.name === "__b_marks")!;
+    const boxNode = marks.items.find((i) => i.kind === "node" && i.name === "box");
+    expect(boxNode?.kind).toBe("node");
+    if (boxNode?.kind === "node") {
+      const hideB = evaluate(boxNode.props.visible, [
+        { __sel: { n: 1, keys: ["drug-A"] }, __brush: { frame: "a" } },
+      ]);
+      const keepA = evaluate(boxNode.props.visible, [
+        { __sel: { n: 1, keys: ["placebo"] }, __brush: { frame: "a" } },
+      ]);
+      expect(keepA).toBe(true);
+      expect(hideB).toBe(false);
+    }
+  });
+
   it("chart.box expands compiler quartiles onto a band axis", () => {
     const src = readFileSync("examples/box.viva", "utf8");
     const result = compileSource(src, "box.viva", { handbookIds: ["print-nature"] });

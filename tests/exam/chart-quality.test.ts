@@ -290,4 +290,44 @@ widget chart.scatter
     expect(svg).toContain('letter-spacing="0.08"');
     expect(svg).toContain('letter-spacing="0.2"');
   });
+
+  it("keeps mm paper chrome on the canvas and stacked title/tick/title", () => {
+    const result = compileSource(
+      readFileSync("examples/paper-cjk.viva", "utf8"),
+      "paper-cjk.viva",
+      { handbookIds: ["print-nature"] },
+    );
+    expect(result.error).toBeNull();
+    const axes = result.ir!.scene.layers.find((l) => l.name.endsWith("_axes"))!;
+    const nodeNamed = (suffix: string) =>
+      axes.items.find((i) => i.kind === "node" && i.name.endsWith(suffix));
+    const yTick = nodeNamed("_ytick_0");
+    const yTitle = nodeNamed("_yTitle");
+    const xTick = nodeNamed("_xtick_0");
+    const xTitle = nodeNamed("_xTitle");
+    const title = nodeNamed("_title");
+    expect(yTick?.kind).toBe("node");
+    expect(yTitle?.kind).toBe("node");
+    expect(xTick?.kind).toBe("node");
+    expect(xTitle?.kind).toBe("node");
+    if (
+      yTick?.kind === "node" &&
+      yTitle?.kind === "node" &&
+      xTick?.kind === "node" &&
+      xTitle?.kind === "node"
+    ) {
+      const yTickX = yTick.props.x?.kind === "number" ? yTick.props.x.value : 99;
+      const yTitleX = yTitle.props.x?.kind === "number" ? yTitle.props.x.value : 99;
+      const xTickY = xTick.props.y?.kind === "number" ? xTick.props.y.value : 0;
+      const xTitleY = xTitle.props.y?.kind === "number" ? xTitle.props.y.value : 0;
+      expect(yTitleX).toBeLessThan(yTickX);
+      expect(xTitleY).toBeGreaterThan(xTickY);
+      expect(xTitleY).toBeLessThan(68);
+    }
+    if (title?.kind === "node") {
+      const titleY = title.props.y?.kind === "number" ? title.props.y.value : 99;
+      expect(titleY).toBeLessThan(14);
+      expect(titleY).toBeGreaterThan(0);
+    }
+  });
 });
