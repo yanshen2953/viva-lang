@@ -1,0 +1,29 @@
+artifact "Violin"
+
+data pts = [
+  { arm: "placebo", y: 12 } { arm: "placebo", y: 14 } { arm: "placebo", y: 13 }
+  { arm: "placebo", y: 11 } { arm: "placebo", y: 15 } { arm: "placebo", y: 18 }
+  { arm: "placebo", y: 10 } { arm: "placebo", y: 16 }
+  { arm: "drug-A", y: 20 } { arm: "drug-A", y: 22 } { arm: "drug-A", y: 19 }
+  { arm: "drug-A", y: 24 } { arm: "drug-A", y: 21 } { arm: "drug-A", y: 28 }
+  { arm: "drug-A", y: 23 } { arm: "drug-A", y: 25 }
+  { arm: "drug-B", y: 16 } { arm: "drug-B", y: 17 } { arm: "drug-B", y: 15 }
+  { arm: "drug-B", y: 18 } { arm: "drug-B", y: 14 } { arm: "drug-B", y: 16 }
+  { arm: "drug-B", y: 15 } { arm: "drug-B", y: 17 }
+]
+
+scene
+  size: 560 340
+  background: #ffffff
+
+widget chart.violin
+  data: pts
+  xField: arm
+  yField: y
+  ylim: 8 32
+  xLabel: Arm
+  yLabel: Score
+  title: "Violin · compiler density"
+  areaX: 56 500
+  areaY: 40 280
+  interactive: false

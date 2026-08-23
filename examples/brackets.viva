@@ -1,0 +1,27 @@
+artifact "Brackets"
+
+data arms = [
+  { arm: "placebo", resp: 38 }
+  { arm: "drug-A", resp: 68 }
+  { arm: "drug-B", resp: 61 }
+]
+
+scene
+  size: 560 340
+  background: #ffffff
+
+widget chart.bar
+  data: arms
+  xField: arm
+  yField: resp
+  ylim: 0 90
+  xLabel: Arm
+  yLabel: Response
+  title: "Significance brackets"
+  areaX: 56 500
+  areaY: 48 280
+  brackets: [
+    { a: "placebo", b: "drug-A", label: "**" }
+    { a: "drug-A", b: "drug-B", label: "ns" }
+  ]
+  interactive: false

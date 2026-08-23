@@ -74,7 +74,7 @@ widget chart.scatter
     );
     expect(result.error).toBeNull();
     expect(Object.keys(result.ir!.state).sort()).toEqual(
-      expect.arrayContaining(["__brush", "__highlightGrp", "__hover", "__tip"]),
+      expect.arrayContaining(["__brush", "__highlightGrp", "__hover", "__sel", "__tip"]),
     );
     expect(result.ir!.events.some((e) => e.type === "hover" && e.target === "mark")).toBe(true);
     expect(result.ir!.events.some((e) => e.type === "dragstart")).toBe(true);
@@ -293,6 +293,54 @@ widget chart.scatter
     expect(names.some((n) => n === "box")).toBe(true);
     expect(names.some((n) => n.startsWith("boxWhisker_"))).toBe(true);
     expect(names.some((n) => n.startsWith("boxMed_"))).toBe(true);
+  });
+
+  it("collects a shared __sel key set while brushing", () => {
+    const result = compileSource(
+      `artifact S
+data series = [{ x: 1, y: 2, grp: "A" }, { x: 8, y: 8, grp: "B" }]
+scene
+  size: 400 240
+widget chart.scatter
+  data: series
+  xField: x
+  yField: y
+  group: grp
+  xlim: 0 10
+  ylim: 0 10
+  areaX: 0 200
+  areaY: 0 200
+`,
+      "sel.viva",
+    );
+    expect(result.error).toBeNull();
+    const drag = result.ir!.events.find((e) => e.type === "drag");
+    expect(drag?.body.some((s) => s.kind === "for")).toBe(true);
+    const world = simulate(result.ir!, {
+      events: [
+        { type: "dragstart", target: "__chart_1_plotBg", event: { x: 10, y: 190 } },
+        { type: "drag", target: "__chart_1_plotBg", event: { x: 50, y: 150 } },
+      ],
+    });
+    const sel = world.state.__sel as { n: number; keys: unknown[] };
+    expect(sel.n).toBeGreaterThan(0);
+    expect(sel.keys).toContain("A");
+    expect(sel.keys).not.toContain("B");
+  });
+
+  it("expands significance brackets and violin density", () => {
+    const br = compileSource(readFileSync("examples/brackets.viva", "utf8"), "br.viva");
+    expect(br.error).toBeNull();
+    const axes = br.ir!.scene.layers.find((l) => l.name.endsWith("_axes"))!;
+    const names = axes.items
+      .filter((i) => i.kind === "node")
+      .map((i) => (i.kind === "node" ? i.name : ""));
+    expect(names.some((n) => n.includes("_brk_"))).toBe(true);
+    expect(names.some((n) => n.includes("_brkLbl_"))).toBe(true);
+    const vl = compileSource(readFileSync("examples/violin.viva", "utf8"), "vl.viva");
+    expect(vl.error).toBeNull();
+    const marks = vl.ir!.scene.layers.find((l) => l.name.endsWith("_marks"))!;
+    expect(marks.items.some((i) => i.kind === "node" && i.name === "violin")).toBe(true);
   });
 
   it("layout.board splits body into left/right frames", () => {

@@ -35,6 +35,7 @@ setWidgetBuiltinSeed(() => {
     "chart.vector",
     "chart.funnel",
     "chart.box",
+    "chart.violin",
   ] as const) {
     registerWidget({
       name,
@@ -369,6 +370,7 @@ function expandChart(
     ...(seriesField && legendAt !== "off"
       ? expandSeriesLegend(frameName, artifact, dataName, seriesField, geom, legendAt, span)
       : []),
+    ...expandBrackets(props, frameName, geom, xCats, span),
   ];
 
   const axisLayer: LayerDecl = {
@@ -544,7 +546,7 @@ function expandChart(
     });
   } else if (kind === "chart.box") {
     marks.push(
-      ...expandBoxMarks(
+        ...expandBoxMarks(
         artifact,
         dataName,
         frameName,
@@ -553,6 +555,10 @@ function expandChart(
         seriesField,
         span,
       ),
+    );
+  } else if (kind === "chart.violin") {
+    marks.push(
+      ...expandViolinMarks(artifact, dataName, frameName, markXField, resolvedYField, span),
     );
   }
 
@@ -569,6 +575,7 @@ function expandChart(
       artifact,
       kind,
       frameName,
+      dataName,
       resolvedXField,
       resolvedYField,
       markXField,
@@ -2050,6 +2057,157 @@ function expandBoxMarks(
   return items;
 }
 
+function expandBrackets(
+  props: Record<string, Expr>,
+  frameName: string,
+  geom: Record<string, Expr>,
+  xCats: string[],
+  span: { line: number; column: number },
+): SceneItem[] {
+  const raw = props.brackets ?? props.compare ?? props.significance;
+  if (!raw || raw.kind !== "array") return [];
+  const ylim = numericPair(geom.ylim, [0, 100]) ?? [0, 100];
+  const items: SceneItem[] = [];
+  let slot = 0;
+  for (const entry of raw.items) {
+    let a = "";
+    let b = "";
+    let label = "*";
+    if (entry.kind === "object") {
+      const ae = objectField(entry, "a") ?? objectField(entry, "from") ?? objectField(entry, "left");
+      const be = objectField(entry, "b") ?? objectField(entry, "to") ?? objectField(entry, "right");
+      const le = objectField(entry, "label") ?? objectField(entry, "p") ?? objectField(entry, "text");
+      a = ae?.kind === "string" ? ae.value : ae?.kind === "number" ? String(ae.value) : "";
+      b = be?.kind === "string" ? be.value : be?.kind === "number" ? String(be.value) : "";
+      label =
+        le?.kind === "string" ? le.value : le?.kind === "number" ? `p=${le.value}` : "*";
+    } else if (entry.kind === "array" && entry.items.length >= 2) {
+      const ae = entry.items[0];
+      const be = entry.items[1];
+      const le = entry.items[2];
+      a = ae?.kind === "string" ? ae.value : ae?.kind === "number" ? String(ae.value) : "";
+      b = be?.kind === "string" ? be.value : be?.kind === "number" ? String(be.value) : "";
+      label = le?.kind === "string" ? le.value : "*";
+    }
+    if (!a || !b) continue;
+    const xa = xCats.length ? xCats.indexOf(a) : Number(a);
+    const xb = xCats.length ? xCats.indexOf(b) : Number(b);
+    if (!Number.isFinite(xa) || !Number.isFinite(xb) || xa < 0 || xb < 0) continue;
+    const y = ylim[1] - (ylim[1] - ylim[0]) * (0.06 + slot * 0.07);
+    const tick = (ylim[1] - ylim[0]) * 0.018;
+    items.push(
+      node(`${frameName}_brk_${slot}`, {
+        role: literal("axis"),
+        frame: literal(frameName),
+        x1: literal(xa),
+        y1: literal(y),
+        x2: literal(xb),
+        y2: literal(y),
+        strokeWidth: literal(1),
+      }),
+      node(`${frameName}_brkL_${slot}`, {
+        role: literal("axis"),
+        frame: literal(frameName),
+        x1: literal(xa),
+        y1: literal(y),
+        x2: literal(xa),
+        y2: literal(y - tick),
+        strokeWidth: literal(1),
+      }),
+      node(`${frameName}_brkR_${slot}`, {
+        role: literal("axis"),
+        frame: literal(frameName),
+        x1: literal(xb),
+        y1: literal(y),
+        x2: literal(xb),
+        y2: literal(y - tick),
+        strokeWidth: literal(1),
+      }),
+      node(`${frameName}_brkLbl_${slot}`, {
+        role: literal("label"),
+        frame: literal(frameName),
+        x: literal((xa + xb) / 2),
+        y: literal(y + tick * 0.8),
+        text: literal(label),
+        font: literal(9),
+        align: literal("center"),
+      }),
+    );
+    slot += 1;
+  }
+  return items;
+}
+
+function expandViolinMarks(
+  artifact: Artifact,
+  dataName: string,
+  frameName: string,
+  xField: string,
+  yField: string,
+  span: { line: number; column: number },
+): SceneItem[] {
+  const decl = artifact.data.find((d) => d.name === dataName);
+  if (!decl || decl.value.kind !== "array") return [];
+  const groups = new Map<string, number[]>();
+  for (const row of decl.value.items) {
+    if (row.kind !== "object") continue;
+    const xf = objectField(row, xField);
+    const yv = objectField(row, yField);
+    if (yv?.kind !== "number") continue;
+    const key =
+      xf?.kind === "number" ? String(xf.value) : xf?.kind === "string" ? xf.value : "0";
+    const list = groups.get(key) ?? [];
+    list.push(yv.value);
+    groups.set(key, list);
+  }
+  const items: SceneItem[] = [];
+  let gi = 0;
+  for (const [key, values] of groups) {
+    const xNum = Number(key);
+    const x = Number.isFinite(xNum) ? xNum : gi;
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const bins = 10;
+    const spanY = max - min || 1;
+    const counts = new Array(bins).fill(0);
+    for (const v of values) {
+      const i = Math.min(bins - 1, Math.max(0, Math.floor(((v - min) / spanY) * bins)));
+      counts[i] += 1;
+    }
+    const peak = Math.max(...counts, 1);
+    for (let i = 0; i < bins; i++) {
+      const y0 = min + (i / bins) * spanY;
+      const y1 = min + ((i + 1) / bins) * spanY;
+      const half = 0.38 * (counts[i]! / peak);
+      items.push(
+        node(`violin`, {
+          role: literal("mark-line"),
+          frame: literal(frameName),
+          x1: literal(x - half),
+          y1: literal((y0 + y1) / 2),
+          x2: literal(x + half),
+          y2: literal((y0 + y1) / 2),
+          strokeWidth: literal(Math.max(2, ((y1 - y0) / spanY) * 28)),
+        }),
+      );
+    }
+    const med = quantile([...values].sort((a, b) => a - b), 0.5);
+    items.push(
+      node(`violinMed_${gi}`, {
+        role: literal("mark-line"),
+        frame: literal(frameName),
+        x1: literal(x - 0.16),
+        y1: literal(med),
+        x2: literal(x + 0.16),
+        y2: literal(med),
+        strokeWidth: literal(2),
+      }),
+    );
+    gi += 1;
+  }
+  return items;
+}
+
 function noneExpr(span: { line: number; column: number }): Expr {
   return { kind: "none", span };
 }
@@ -2117,6 +2275,16 @@ function markInteractOpacity(
       );
       parts.push(binary("and", ident("__brush.on"), binary("and", linked, outX, span), span));
     }
+    const inSelX = callExpr("has", [ident("__sel.keys"), ident(`row.${xField}`)], span);
+    const inSelG = seriesField
+      ? callExpr("has", [ident("__sel.keys"), ident(`row.${seriesField}`)], span)
+      : literal(0);
+    const inSel = binary("or", inSelX, inSelG, span);
+    const otherFrame = binary("!=", ident("__brush.frame"), literal(frameName), span);
+    const notInSel: Expr = { kind: "unary", op: "not", expr: inSel, span };
+    parts.push(
+      binary("and", ident("__sel.n"), binary("and", otherFrame, notInSel, span), span),
+    );
   }
   if (!parts.length) return {};
   const dim = parts.reduce((acc, part) => binary("or", acc, part, span));
@@ -2133,6 +2301,7 @@ function ensureChartInteract(
   artifact: Artifact,
   kind: string,
   frameName: string,
+  dataName: string,
   xField: string,
   yField: string,
   markXField: string,
@@ -2162,6 +2331,20 @@ function ensureChartInteract(
   }
   if (!artifact.states.some((s) => s.name === "__highlightGrp")) {
     artifact.states.push({ name: "__highlightGrp", value: noneExpr(span), span });
+  }
+  if (!artifact.states.some((s) => s.name === "__sel")) {
+    artifact.states.push({
+      name: "__sel",
+      value: objectExpr(
+        [
+          { key: "keys", value: { kind: "array", items: [], span } },
+          { key: "n", value: literal(0) },
+          { key: "xField", value: literal("") },
+        ],
+        span,
+      ),
+      span,
+    });
   }
   if (!artifact.states.some((s) => s.name === "__brush")) {
     artifact.states.push({
@@ -2230,6 +2413,8 @@ function ensureChartInteract(
       ? "bar"
       : kind === "chart.box"
         ? "box"
+      : kind === "chart.violin"
+        ? "violin"
       : kind === "chart.heatmap"
         ? "heatCell"
         : kind === "chart.line"
@@ -2289,6 +2474,7 @@ function ensureChartInteract(
         assign(["__brush", "on"], literal(1)),
         assign(["__brush", "frame"], literal(frameName)),
         assign(["__brush", "xField"], literal(xField)),
+        ...collectSelStmts(dataName, markXField, markYField, seriesField, span),
       ],
       span,
     });
@@ -2303,10 +2489,65 @@ function ensureChartInteract(
         assign(["__brush", "on"], literal(1)),
         assign(["__brush", "frame"], literal(frameName)),
         assign(["__brush", "xField"], literal(xField)),
+        ...collectSelStmts(dataName, markXField, markYField, seriesField, span),
       ],
       span,
     });
   }
+}
+
+function collectSelStmts(
+  dataName: string,
+  xField: string,
+  yField: string,
+  seriesField: string | null,
+  span: { line: number; column: number },
+): Statement[] {
+  const loX = callExpr("min", [ident("__brush.dx0"), ident("__brush.dx1")], span);
+  const hiX = callExpr("max", [ident("__brush.dx0"), ident("__brush.dx1")], span);
+  const loY = callExpr("min", [ident("__brush.dy0"), ident("__brush.dy1")], span);
+  const hiY = callExpr("max", [ident("__brush.dy0"), ident("__brush.dy1")], span);
+  const inX = binary(
+    "and",
+    binary(">=", ident(`row.${xField}`), loX, span),
+    binary("<=", ident(`row.${xField}`), hiX, span),
+    span,
+  );
+  const inY = binary(
+    "and",
+    binary(">=", ident(`row.${yField}`), loY, span),
+    binary("<=", ident(`row.${yField}`), hiY, span),
+    span,
+  );
+  const key = seriesField ? ident(`row.${seriesField}`) : ident(`row.${xField}`);
+  const plus = binary(
+    "+",
+    ident("__sel.keys"),
+    { kind: "array", items: [key], span },
+    span,
+  );
+  return [
+    assign(["__sel", "keys"], { kind: "array", items: [], span }),
+    assign(["__sel", "n"], literal(0)),
+    assign(["__sel", "xField"], literal(xField)),
+    {
+      kind: "for",
+      item: "row",
+      source: ident(dataName),
+      body: [
+        {
+          kind: "if",
+          cond: binary("and", inX, inY, span),
+          body: [
+            assign(["__sel", "keys"], plus),
+            assign(["__sel", "n"], binary("+", ident("__sel.n"), literal(1), span)),
+          ],
+          span,
+        },
+      ],
+      span,
+    },
+  ];
 }
 
 function objectNumber(obj: Extract<Expr, { kind: "object" }>, key: string): number {

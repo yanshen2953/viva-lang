@@ -148,7 +148,9 @@ widget layout.board
 
 `layout.board` 可选 `splits: 2` → 在 `body` 里再切 `left` / `right`；`beats: 4` → 分镜槽 `beat0`…`beat3`。
 
-`xScale: time`（或 ISO 日期字符串列自动识别）出时间刻度。`chart.box` 由编译器算四分位，不是新关键字。跨面板 brush：同名 `xField` 会联动，不同域的图只看自己的 frame。
+`xScale: time`（或 ISO 日期字符串列自动识别）出时间刻度。`chart.box` / `chart.violin` 由编译器算四分位和密度。`brackets: [{ a, b, label }]` 画显著性括号。都不是新关键字。
+
+跨面板：`__brush` 按 frame 隔离，同名 `xField` 联动；刷选还会写入 `__sel.keys` 集合，其它图用 `has()` 变淡不在集合里的组。
 
 图表默认交互（`interactive: false` 可关）：`__tip` 字符串、`__hover` 对象、`__brush`（场景框 + 数据域 `dx0/dy0/dx1/dy1`，刷选外的点变淡）、同 `group` 跨面板 `__highlightGrp`。点图例色块也会写 `__highlightGrp`。
 
@@ -243,6 +245,6 @@ layer cards
 `+ - * / % == != < > <= >= and or not`
 
 - 两边都是数组时，`+` 表示拼接：`series = series + [{ t: t, v: x }]`
-- 安全数学调用（仅这些）：`sin cos tan abs sqrt floor ceil round min max clamp log exp`
+- 安全数学调用（仅这些）：`sin cos tan abs sqrt floor ceil round min max clamp log exp`；`has(array, value)` 做成员判断（跨面板 `__sel.keys`）
   例：`v = param * sin(t * 0.15)`，`x = clamp(__event.x, 40, 400)`
 - 不要发明 `pow` / 自定义 JS 函数

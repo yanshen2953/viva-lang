@@ -33,6 +33,24 @@ data a = [1] + [2, 3]
     expect(evaluate(expr, [{}])).toEqual([1, 2, 3]);
   });
 
+  it("tests membership with has()", () => {
+    const result = compileSource(
+      `artifact H
+state ok = has(["A", "B"], "A")
+state no = has(["A"], "C")
+scene
+  layer a
+    node t
+      x: 1
+      y: 1
+`,
+      "has.viva",
+    );
+    expect(result.error).toBeNull();
+    expect(result.ir!.state.ok).toBe(true);
+    expect(result.ir!.state.no).toBe(false);
+  });
+
   it("rejects unknown functions with a clear error", () => {
     const r = compileSource(
       `artifact A

@@ -29,6 +29,7 @@ scene
         "chart.line",
         "chart.scatter",
         "chart.vector",
+        "chart.violin",
         "layout.board",
         "layout.figure",
         "timeline",
@@ -85,13 +86,13 @@ widget demo.box
       `artifact P
 scene
   size: 100 100
-widget chart.violin
+widget chart.ridge
   data: series
 `,
       "u.viva",
     );
     expect(result.ir).toBeNull();
-    expect(result.error).toMatch(/unknown widget 'chart.violin'/);
+    expect(result.error).toMatch(/unknown widget 'chart.ridge'/);
     expect(result.error).toMatch(/layout.figure/);
     expect(result.diagnostics.some((d) => d.code === "unknown-widget")).toBe(true);
   });

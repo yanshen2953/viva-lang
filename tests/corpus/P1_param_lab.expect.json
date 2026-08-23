@@ -3,7 +3,7 @@
   "input": "examples/exam/P1_param_lab.viva",
   "expect": {
     "data": ["knob", "series"],
-    "state": ["__brush", "__highlightGrp", "__hover", "__tip", "param", "t"],
+    "state": ["__brush", "__highlightGrp", "__hover", "__sel", "__tip", "param", "t"],
     "events": [
       { "type": "drag", "target": "knob" },
       { "type": "hover", "target": "linePt" },

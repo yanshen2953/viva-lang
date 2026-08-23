@@ -182,9 +182,19 @@ function applyCall(callee: string, args: Value[]): Value {
   if (callee === "paletteStroke") {
     return evalPaletteStrokeBuiltin(args[0], args[1]);
   }
+  if (callee === "has") {
+    const hay = args[0];
+    const needle = args[1];
+    if (Array.isArray(hay)) return hay.some((item) => equals(item, needle));
+    if (typeof hay === "string") return hay.includes(String(needle ?? ""));
+    if (hay && typeof hay === "object") {
+      return needle !== null && needle !== undefined && String(needle) in hay;
+    }
+    return false;
+  }
   const fn = NUM_BUILTINS[callee];
   if (!fn) {
-    const allowed = [...Object.keys(NUM_BUILTINS), "palette", "paletteStroke"].join(", ");
+    const allowed = [...Object.keys(NUM_BUILTINS), "palette", "paletteStroke", "has"].join(", ");
     throw new Error(`unknown function '${callee}' (allowed: ${allowed})`);
   }
   return fn(...args.map(num));

@@ -8,7 +8,7 @@ Punctuation (critical):
 - Correct: \`state n = 0\` / \`data rows = [{ x: 1, y: 2 }]\` / \`frame plot\` then indented props.
 - Wrong: \`state:\` / \`data:\` / \`scene:\` / \`artifact {\` / nested YAML.
 - Top-level only: artifact, state, data, frame NAME, scene, widget chart.*, widget layout.figure, timeline, event, rule, bind, tick.
-- Charts: prefer xLabel/yLabel/xUnit/yUnit and errorField. chart.heatmap uses valueField + zlim. chart.vector uses uField/vField. chart.funnel (or chart.bar orient: h) is horizontal. chart.box computes quartiles. Hover writes __tip unless interactive: false.
+- Charts: prefer xLabel/yLabel/xUnit/yUnit and errorField. chart.heatmap uses valueField + zlim. chart.vector uses uField/vField. chart.funnel (or chart.bar orient: h) is horizontal. chart.box / chart.violin compute quartiles/density. brackets: [{ a, b, label }] draws significance. Hover writes __tip unless interactive: false.
 - Multi-panel: widget layout.figure (cols/rows) then widget chart.* with panel: a (not areaX magic numbers).
 - Video/image board: widget layout.board (safe/title/body/lower; splits: 2 → left/right; beats: 4 → beat0..). Scene unit: mm and column: single (89) or double (183). Frame xScale/yScale: log|band|time. ISO dates auto-time. String columns auto-band. Legend defaults outside (legend: right|bottom|inside|false).
 - Charts emit __hover / __brush (dx* data-domain, frame + xField for linked panels) / __highlightGrp by default. interactive: false disables them.
@@ -17,7 +17,7 @@ Punctuation (critical):
 - timeline body: \`from:\` \`to:\` \`bind:\` (not range/value).
 - tick: \`tick 30\` then body assigns. rule: \`rule when <expr>\` then body.
 - Draggable x/y on data/state fields; write back via __event.x / __event.y.
-- Arrays: \`a + b\` concatenates arrays. Safe math: sin cos tan abs sqrt floor ceil round min max clamp log exp.
+- Arrays: \`a + b\` concatenates arrays. Safe math: sin cos tan abs sqrt floor ceil round min max clamp log exp. has(array, value) tests membership.
 - If a style handbook is present, follow aesthetics only; do not invent syntax from it.
 
 A language reference follows. Match its examples' shape.
