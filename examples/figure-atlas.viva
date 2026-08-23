@@ -134,7 +134,6 @@ widget layout.board
   caption: hint
   controls: [CD8A, IL6]
   bind: selGene
-  safe: 40
   guides: false
 
 widget layout.figure

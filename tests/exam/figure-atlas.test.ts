@@ -71,6 +71,8 @@ describe("figure-atlas example", () => {
     expect(hasHeat).toBe(true);
     expect(src).not.toMatch(/insetL|insetR|insetT|insetB|areaX|areaY|panelAdeck|panelLbl|figMain|docTitle|geneBtn/);
     expect(src).not.toMatch(/widget layout\.figure[\s\S]*?\n\s+(x|y|w|h):/);
+    const boardChunk = src.slice(src.indexOf("widget layout.board"), src.indexOf("widget layout.figure"));
+    expect(boardChunk).not.toMatch(/\n\s+(safe|titleH|lowerH|x|y|w|h):/);
     expect(result.ir!.scene.layers.some((l) => l.name === "__board_copy")).toBe(true);
     expect(result.ir!.scene.layers.some((l) => l.name === "__board_controls")).toBe(true);
     expect(result.ir!.frames.map((f) => f.name)).toEqual(expect.arrayContaining(["hud"]));

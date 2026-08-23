@@ -19,6 +19,7 @@ import {
 } from "./plugins/registry.js";
 import { domainMap, parseTimeValue, scaleKind, type ScaleKind } from "./space.js";
 import { COLUMN_MM, sceneScaleOf } from "./space/scene-box.js";
+import { estimateBoardBands } from "./layout/board-chrome.js";
 import {
   growInsetsForChrome,
   growInsetsForNeighbors,
@@ -1220,28 +1221,29 @@ function expandLayoutBoard(
   const captionExpr = copyExpr(props, ["caption"]);
   const controlKeys = controlKeysFromProps(props);
   const controlBind = stringProp(props, ["bind", "controlBind"]);
-  const safe = numProp(props, "safe", 64);
   const typeGrid = boolProp(props, "typeGrid", false) || boolProp(props, "baseline", false);
   const typeStep = Math.max(4, numProp(props, "typeGridStep", numProp(props, "baselineStep", 8)));
   const typeCols = Math.max(0, Math.floor(numProp(props, "typeGridCols", 0) || numProp(props, "typeCols", 0)));
   const snapType = (n: number) =>
     typeGrid ? Math.max(typeStep, Math.round(n / typeStep) * typeStep) : n;
-  const titleH = snapType(
-    props.titleH !== undefined
-      ? numProp(props, "titleH", 72)
-      : titleExpr
-        ? subtitleExpr
-          ? 56
-          : 40
-        : 72,
-  );
-  const lowerH = snapType(
-    props.lowerH !== undefined
-      ? numProp(props, "lowerH", 96)
-      : captionExpr || controlKeys.length
-        ? 48
-        : 96,
-  );
+  const bands = estimateBoardBands({
+    width,
+    height,
+    safe: props.safe !== undefined ? numProp(props, "safe", 64) : undefined,
+    titleH: props.titleH !== undefined ? numProp(props, "titleH", 72) : undefined,
+    lowerH: props.lowerH !== undefined ? numProp(props, "lowerH", 96) : undefined,
+    title: staticCopyText(titleExpr),
+    subtitle: staticCopyText(subtitleExpr),
+    caption: staticCopyText(captionExpr),
+    hasTitle: Boolean(titleExpr),
+    hasSubtitle: Boolean(subtitleExpr),
+    hasCaption: Boolean(captionExpr),
+    controlKeys,
+    hasBind: Boolean(controlBind),
+  });
+  const safe = snapType(bands.safe);
+  const titleH = snapType(bands.titleH);
+  const lowerH = snapType(bands.lowerH);
   const prefix = stringProp(props, ["prefix"]) ?? "";
   const nameOf = (slot: string) => (prefix ? `${prefix}_${slot}` : slot);
 
@@ -1257,7 +1259,7 @@ function expandLayoutBoard(
   const trimY0 = originY + bleed;
   const trimX1 = originX + width - bleed;
   const trimY1 = originY + height - bleed;
-  const hudW = controlKeys.length ? Math.min(280, Math.max(160, controlKeys.length * 68 + 72)) : 0;
+  const hudW = bands.hudW;
   const slots: { name: string; x: [number, number]; y: [number, number] }[] = [
     { name: nameOf("safe"), x: [safeX0, safeX1], y: [safeY0, safeY1] },
     { name: nameOf("title"), x: [safeX0, safeX1], y: [safeY0, titleY1] },
@@ -1388,38 +1390,54 @@ function expandLayoutBoard(
   }
 
   const copyItems: SceneItem[] = [];
+  const copyW = Math.max(40, safeX1 - safeX0);
+  let titleCursor = safeY0 + 16;
   if (titleExpr) {
-    copyItems.push(
-      node(`${id}_docTitle`, {
-        role: literal("title"),
-        x: literal(safeX0),
-        y: literal(safeY0 + (subtitleExpr ? 24 : Math.min(32, titleH * 0.55))),
-        w: literal(Math.max(40, safeX1 - safeX0)),
-        text: titleExpr,
-      }),
-    );
+    const lines = bands.titleLines.length ? bands.titleLines : [null];
+    for (const [i, line] of lines.entries()) {
+      copyItems.push(
+        node(`${id}_docTitle${i ? `_${i}` : ""}`, {
+          role: literal("title"),
+          x: literal(safeX0),
+          y: literal(titleCursor),
+          w: literal(copyW),
+          text: line === null ? titleExpr : literal(line),
+        }),
+      );
+      titleCursor += 16;
+    }
   }
   if (subtitleExpr) {
-    copyItems.push(
-      node(`${id}_docSub`, {
-        role: literal("subtitle"),
-        x: literal(safeX0),
-        y: literal(safeY0 + Math.min(titleH - 12, 48)),
-        w: literal(Math.max(40, safeX1 - safeX0)),
-        text: subtitleExpr,
-      }),
-    );
+    const lines = bands.subtitleLines.length ? bands.subtitleLines : [null];
+    for (const [i, line] of lines.entries()) {
+      copyItems.push(
+        node(`${id}_docSub${i ? `_${i}` : ""}`, {
+          role: literal("subtitle"),
+          x: literal(safeX0),
+          y: literal(titleCursor),
+          w: literal(copyW),
+          text: line === null ? subtitleExpr : literal(line),
+        }),
+      );
+      titleCursor += 14;
+    }
   }
   if (captionExpr) {
-    copyItems.push(
-      node(`${id}_docCap`, {
-        role: literal("caption"),
-        x: literal(safeX0),
-        y: literal(lowerY0 + Math.min(22, lowerH * 0.45)),
-        w: literal(Math.max(40, safeX1 - safeX0 - 220)),
-        text: captionExpr,
-      }),
-    );
+    const capW = Math.max(40, copyW - (hudW ? hudW + 12 : 0));
+    let capCursor = lowerY0 + Math.min(16, lowerH * 0.4);
+    const lines = bands.captionLines.length ? bands.captionLines : [null];
+    for (const [i, line] of lines.entries()) {
+      copyItems.push(
+        node(`${id}_docCap${i ? `_${i}` : ""}`, {
+          role: literal("caption"),
+          x: literal(safeX0),
+          y: literal(capCursor),
+          w: literal(capW),
+          text: line === null ? captionExpr : literal(line),
+        }),
+      );
+      capCursor += 12;
+    }
   }
   if (copyItems.length) {
     artifact.scene?.layers.push({
@@ -1431,8 +1449,7 @@ function expandLayoutBoard(
   }
 
   if (controlKeys.length) {
-    const chipW = 52;
-    const chipH = 22;
+    const chipH = bands.chipH;
     const gap = 8;
     const chipY = lowerY0 + Math.max(8, (lowerH - chipH) / 2);
     let cursorX = safeX1 - 4;
@@ -1449,6 +1466,7 @@ function expandLayoutBoard(
     }
     for (let i = controlKeys.length - 1; i >= 0; i--) {
       const key = controlKeys[i]!;
+      const chipW = bands.chipWs[i] ?? 44;
       cursorX -= chipW;
       const chipName = `${id}_ctl_${i}`;
       ctlItems.push(
@@ -2239,6 +2257,10 @@ function copyExpr(props: Record<string, Expr>, keys: string[]): Expr | undefined
     return expr;
   }
   return undefined;
+}
+
+function staticCopyText(expr: Expr | undefined): string | null {
+  return expr?.kind === "string" ? expr.value : null;
 }
 
 function frameBoxOf(
