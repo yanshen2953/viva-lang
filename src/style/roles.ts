@@ -110,13 +110,15 @@ export function roleTypographyKey(role: StyleRole): string | null {
     case "caption":
       return role;
     case "legend-label":
-    case "panel-label":
       return "legend";
+    case "panel-label":
+      return "panel";
     case "axis":
       return "axis";
-    case "label":
     case "annotation":
-      return "label";
+      return "axis";
+    case "label":
+      return "tick";
     default:
       return null;
   }

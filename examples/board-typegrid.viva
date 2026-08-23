@@ -1,0 +1,31 @@
+artifact "Board Type Grid"
+
+scene
+  size: 1280 720
+  background: #ffffff
+
+  layer copy
+    node headline
+      x: 96
+      y: 118
+      text: "16:9 board · type grid"
+      font: 26
+      fill: #111111
+
+    node lowerThird
+      x: 96
+      y: 628
+      text: "layout.board typeGrid: true · columns snap to the baseline"
+      font: 16
+      fill: #4b5563
+
+widget layout.board
+  w: 1280
+  h: 720
+  safe: 64
+  titleH: 80
+  lowerH: 96
+  typeGrid: true
+  typeGridStep: 8
+  typeGridCols: 12
+  guides: true

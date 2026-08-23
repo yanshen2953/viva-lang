@@ -62,8 +62,10 @@ function applyRoleToProps(
     defaults.fontFamily = preset.scene.fontFamily;
   }
 
+  const typoKeys = new Set(["font", "fontWeight", "fontFamily", "letterSpacing", "lineHeight"]);
   for (const [key, value] of Object.entries(defaults)) {
-    if (props[key] !== undefined) continue;
+    const handbookTypeWins = Boolean(typo) && typoKeys.has(key);
+    if (props[key] !== undefined && !handbookTypeWins) continue;
     props[key] = lit(value);
   }
 }

@@ -848,10 +848,10 @@ function expandLayoutFigure(
   const rows = Math.max(1, Math.floor(numProp(props, "rows", 2)));
   const gutter = numProp(props, "gutter", 28);
   const margin = numProp(props, "margin", 16);
-  const insetL = numProp(props, "insetL", numProp(props, "plotPadL", 68));
-  const insetR = numProp(props, "insetR", numProp(props, "plotPadR", 28));
-  const insetT = numProp(props, "insetT", numProp(props, "plotPadT", 28));
-  const insetB = numProp(props, "insetB", numProp(props, "plotPadB", 48));
+  const insetL = numProp(props, "insetL", numProp(props, "plotPadL", 76));
+  const insetR = numProp(props, "insetR", numProp(props, "plotPadR", 32));
+  const insetT = numProp(props, "insetT", numProp(props, "plotPadT", 32));
+  const insetB = numProp(props, "insetB", numProp(props, "plotPadB", 52));
   const count = cols * rows;
   const names = panelNamesFromProps(props, count, index);
   const innerW = width - margin * 2;
@@ -887,12 +887,10 @@ function expandLayoutFigure(
       const raw = name.includes("_") ? name.slice(name.lastIndexOf("_") + 1) : name;
       labelItems.push(
         node(`${id}_lab_${name}`, {
-          role: literal("label"),
+          role: literal("panel-label"),
           x: literal(cellX0 + 6),
           y: literal(cellY0 + 14),
           text: literal(`(${raw})`),
-          font: literal(11),
-          fontWeight: literal(700),
         }),
       );
     }
@@ -920,8 +918,13 @@ function expandLayoutBoard(
   const width = numProp(props, "w", 1280);
   const height = numProp(props, "h", 720);
   const safe = numProp(props, "safe", 64);
-  const titleH = numProp(props, "titleH", 72);
-  const lowerH = numProp(props, "lowerH", 96);
+  const typeGrid = boolProp(props, "typeGrid", false) || boolProp(props, "baseline", false);
+  const typeStep = Math.max(4, numProp(props, "typeGridStep", numProp(props, "baselineStep", 8)));
+  const typeCols = Math.max(0, Math.floor(numProp(props, "typeGridCols", 0) || numProp(props, "typeCols", 0)));
+  const snapType = (n: number) =>
+    typeGrid ? Math.max(typeStep, Math.round(n / typeStep) * typeStep) : n;
+  const titleH = snapType(numProp(props, "titleH", 72));
+  const lowerH = snapType(numProp(props, "lowerH", 96));
   const prefix = stringProp(props, ["prefix"]) ?? "";
   const nameOf = (slot: string) => (prefix ? `${prefix}_${slot}` : slot);
 
@@ -961,6 +964,20 @@ function expandLayoutBoard(
       const slotName =
         splits === 2 ? nameOf(i === 0 ? "left" : "right") : nameOf(`split${i}`);
       slots.push({ name: slotName, x: [x0, x1], y: [titleY1, lowerY0] });
+    }
+  }
+
+  if (typeGrid && typeCols >= 2) {
+    const gutter = numProp(props, "typeGutter", 0);
+    const bodyW = safeX1 - safeX0;
+    const cellW = (bodyW - gutter * (typeCols - 1)) / typeCols;
+    for (let i = 0; i < typeCols; i++) {
+      const x0 = safeX0 + i * (cellW + gutter);
+      slots.push({
+        name: nameOf(`type${i}`),
+        x: [x0, x0 + cellW],
+        y: [titleY1, lowerY0],
+      });
     }
   }
 
@@ -1009,14 +1026,12 @@ function expandLayoutBoard(
         x: literal(safeX0 + 8),
         y: literal(safeY0 + 22),
         text: literal("title"),
-        font: literal(11),
       }),
       node(`${id}_lower`, {
         role: literal("label"),
         x: literal(safeX0 + 8),
         y: literal(lowerY0 + 22),
         text: literal("lower"),
-        font: literal(11),
       }),
     ];
     if (beats >= 2) {
@@ -1031,7 +1046,6 @@ function expandLayoutBoard(
             x: literal(x0 + 8),
             y: literal(titleY1 + 18),
             text: literal(String(i + 1)),
-            font: literal(11),
           }),
         );
       }
@@ -1126,6 +1140,74 @@ function expandLayoutBoard(
       items: veilItems,
     });
   }
+
+  if (typeGrid) {
+    expandBoardTypeGrid(
+      artifact,
+      id,
+      span,
+      { x0: safeX0, x1: safeX1, y0: safeY0, y1: safeY1 },
+      typeStep,
+      typeCols,
+    );
+  }
+}
+
+function expandBoardTypeGrid(
+  artifact: Artifact,
+  id: string,
+  span: { line: number; column: number },
+  box: { x0: number; x1: number; y0: number; y1: number },
+  step: number,
+  cols: number,
+): void {
+  const items: SceneItem[] = [];
+  const maxLines = 96;
+  const height = Math.max(1, box.y1 - box.y0);
+  let used = step;
+  if (height / used > maxLines) used = Math.ceil(height / maxLines);
+  let i = 0;
+  for (let y = box.y0; y <= box.y1 + 0.01; y += used) {
+    const major = i % 4 === 0;
+    items.push(
+      node(`${id}_typeGridH_${i}`, {
+        role: literal("grid"),
+        x1: literal(box.x0),
+        y1: literal(y),
+        x2: literal(box.x1),
+        y2: literal(y),
+        stroke: literal("#94a3b8"),
+        strokeWidth: literal(major ? 0.7 : 0.4),
+        opacity: literal(major ? 0.28 : 0.12),
+      }),
+    );
+    i += 1;
+  }
+  if (cols >= 2) {
+    const cellW = (box.x1 - box.x0) / cols;
+    for (let c = 0; c <= cols; c++) {
+      const x = box.x0 + c * cellW;
+      items.push(
+        node(`${id}_typeGridV_${c}`, {
+          role: literal("grid"),
+          x1: literal(x),
+          y1: literal(box.y0),
+          x2: literal(x),
+          y2: literal(box.y1),
+          stroke: literal("#64748b"),
+          strokeWidth: literal(0.6),
+          dash: literal("3 5"),
+          opacity: literal(0.35),
+        }),
+      );
+    }
+  }
+  artifact.scene?.layers.push({
+    name: `__${id}_typeGrid`,
+    span,
+    props: {},
+    items,
+  });
 }
 
 type LegendPlace = "right" | "bottom" | "inside" | "off";
@@ -1716,7 +1798,6 @@ function expandAxisTicks(
   const box = plotBoxOf(props);
   const unit = sceneUnitOf(artifact);
   const compact = box ? isCompactPlot(box, unit) : isCompactScene(artifact);
-  const font = compact ? 8 : 11;
   const ySpan = binary("-", ylimHigh(props), ylimLow(props), span);
   const dataTickLen = binary("*", ySpan, literal(0.02), span);
   const sceneTick =
@@ -1739,9 +1820,7 @@ function expandAxisTicks(
           x: literal(sx),
           y: literal(sy),
           text: literal(tick.label),
-          font: literal(font),
           align: literal("center"),
-          fill: literal("#3d3d3d"),
         }),
         node(`${frameName}_xtickMark_${i}`, {
           role: literal("axis"),
@@ -1762,7 +1841,6 @@ function expandAxisTicks(
           x: literal(tick.value),
           y: binary("-", ylimLow(props), yPad, span),
           text: literal(tick.label),
-          font: literal(font),
           align: literal("center"),
         }),
         node(`${frameName}_xtickMark_${i}`, {
@@ -1789,9 +1867,7 @@ function expandAxisTicks(
           x: literal(sx),
           y: literal(sy),
           text: literal(tick.label),
-          font: literal(font),
           align: literal("right"),
-          fill: literal("#3d3d3d"),
         }),
         node(`${frameName}_ytickMark_${i}`, {
           role: literal("axis"),
@@ -1812,7 +1888,6 @@ function expandAxisTicks(
           x: binary("-", xlimLow(props), xPad, span),
           y: literal(tick.value),
           text: literal(tick.label),
-          font: literal(font),
           align: literal("right"),
         }),
         node(`${frameName}_ytickMark_${i}`, {
@@ -1917,7 +1992,6 @@ function expandSeriesLegend(
         x: literal(swatchX + 14),
         y: literal(swatchY),
         text: literal(key),
-        font: literal(8),
       }),
     );
     if (!artifact.events.some((e) => e.type === "click" && e.target === `${frameName}_leg_${i}`)) {
@@ -2023,34 +2097,29 @@ function expandAxisTitles(
   const midY = binary("+", y0, binary("*", binary("-", y1, y0, span), literal(0.5), span), span);
   const box = plotBoxOf(props);
   const compact = box ? isCompactPlot(box, sceneUnitOf(artifact)) : isCompactScene(artifact);
-  const font = compact ? 8 : 11;
   const xCap = axisCaption(props, "x");
   const yCap = axisCaption(props, "y");
   if (xCap) {
     items.push(
       node(`${frameName}_xTitle`, {
-        role: literal("axis"),
+        role: literal("annotation"),
         x: midX,
         y: binary("+", y1, literal(compact ? 22 : 32), span),
         text: literal(xCap),
-        font: literal(font),
         align: literal("center"),
-        fill: literal("#222222"),
       }),
     );
   }
   if (yCap) {
-    const left = x0.kind === "number" ? Math.max(compact ? 8 : 12, x0.value - (compact ? 18 : 36)) : 16;
+    const left = x0.kind === "number" ? Math.max(compact ? 8 : 14, x0.value - (compact ? 20 : 40)) : 16;
     items.push(
       node(`${frameName}_yTitle`, {
-        role: literal("axis"),
+        role: literal("annotation"),
         x: literal(left),
         y: midY,
         text: literal(yCap),
-        font: literal(font),
         align: literal("center"),
         rotate: literal(-90),
-        fill: literal("#222222"),
       }),
     );
   }
@@ -2211,11 +2280,10 @@ function expandColorbar(
       const value = z0 + t * (z1 - z0);
       items.push(
         node(`${frameName}_cbarLbl_${i}`, {
-          role: literal("tick"),
+          role: literal("label"),
           x: literal(barX + 14),
           y: literal(bot - t * h + 3),
           text: literal(formatTickValue(value)),
-          font: literal(7),
         }),
       );
     }
@@ -2400,7 +2468,6 @@ function expandBrackets(
         x: literal((xa + xb) / 2),
         y: literal(y + tick * 0.8),
         text: literal(label),
-        font: literal(9),
         align: literal("center"),
       }),
     );
@@ -2777,7 +2844,7 @@ function ensureChartInteract(
     if (!compact) {
       hudItems.push(
         node("chartTip", {
-          role: literal("caption"),
+          role: literal("hud"),
           x: literal(Math.max(16, width - 220)),
           y: literal(Math.max(16, height - 16)),
           text: ident("__tip"),
