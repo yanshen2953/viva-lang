@@ -60,6 +60,7 @@ export function expandWidgets(artifact: Artifact): Artifact {
     next.scene = { props: {}, layers: [], span: artifact.span };
   }
 
+  implicitFigureIfNeeded(next);
   const widgets = [...next.widgets];
   const layout = widgets.filter((w) => w.name.startsWith("layout."));
   const rest = widgets.filter((w) => !w.name.startsWith("layout."));
@@ -96,6 +97,47 @@ export function expandWidgets(artifact: Artifact): Artifact {
   }
   liftPlayLayers(next);
   return next;
+}
+
+function isUnboundChart(widget: Artifact["widgets"][number]): boolean {
+  if (!widget.name.startsWith("chart.")) return false;
+  if (widget.props.panel || widget.props.frame) return false;
+  if (widget.props.areaX || widget.props.areaY || isPair(widget.props.x) || isPair(widget.props.y)) {
+    return false;
+  }
+  return true;
+}
+
+/** Two or more charts with no panel/area become a figure grid. No new keyword. */
+function implicitFigureIfNeeded(artifact: Artifact): void {
+  if (artifact.widgets.some((w) => w.name.startsWith("layout."))) return;
+  const unbound = artifact.widgets.filter(isUnboundChart);
+  if (unbound.length < 2) return;
+  const n = unbound.length;
+  const cols = n <= 3 ? n : Math.ceil(Math.sqrt(n));
+  const rows = Math.ceil(n / cols);
+  for (let i = 0; i < n; i++) {
+    unbound[i]!.props.panel = literal(panelLetter(i));
+  }
+  const extent = sceneExtentOf(artifact);
+  const unit = sceneUnitOf(artifact);
+  const compact = unit === "mm" || unit === "pt";
+  expandLayoutFigure(
+    artifact,
+    {
+      id: literal("auto"),
+      x: literal(0),
+      y: literal(0),
+      w: literal(extent.w),
+      h: literal(Math.max(compact ? 40 : 120, extent.h - (compact ? 4 : 36))),
+      cols: literal(cols),
+      rows: literal(rows),
+      gutter: literal(compact ? 3 : 20),
+      margin: literal(compact ? 2 : 12),
+      labels: literal(true),
+    },
+    1,
+  );
 }
 
 /** `layout.board play` veils must paint after chart marks (layout expands first). */

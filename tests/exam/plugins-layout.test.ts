@@ -171,4 +171,37 @@ widget layout.figure
     expect(plot[1]).toBeLessThan(cell[1]!);
     expect(plot[0]! - cell[0]!).toBeGreaterThan(12);
   });
+
+  it("tiles two unbound charts into a figure grid without areaX", () => {
+    const src = `artifact Pair
+data a = [{ x: 1, y: 2 }, { x: 2, y: 4 }]
+data b = [{ x: 1, y: 8 }, { x: 2, y: 3 }]
+scene
+  size: 640 240
+  background: #ffffff
+widget chart.line
+  data: a
+  xField: x
+  yField: y
+  xlim: 0 3
+  ylim: 0 6
+  interactive: false
+widget chart.line
+  data: b
+  xField: x
+  yField: y
+  xlim: 0 3
+  ylim: 0 10
+  interactive: false
+`;
+    const result = compileSource(src, "pair.viva", { handbookIds: ["print-nature"] });
+    expect(result.error).toBeNull();
+    expect(result.ir!.frames.map((f) => f.name)).toEqual(expect.arrayContaining(["a", "b"]));
+    expect(result.ir!.scene.layers.some((l) => l.name === "__auto_labels")).toBe(true);
+    const a = result.ir!.frames.find((f) => f.name === "a")!;
+    const b = result.ir!.frames.find((f) => f.name === "b")!;
+    const ax = evaluate(a.props.x, [result.ir!.state, result.ir!.data]) as number[];
+    const bx = evaluate(b.props.x, [result.ir!.state, result.ir!.data]) as number[];
+    expect(ax[1]!).toBeLessThan(bx[0]!);
+  });
 });
