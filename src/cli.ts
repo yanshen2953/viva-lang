@@ -220,7 +220,11 @@ async function main(): Promise<void> {
       const result = await exportArtifact(
         source,
         format,
-        { width, handbookIds: handbookIds.length ? handbookIds : undefined },
+        {
+          width,
+          handbookIds: handbookIds.length ? handbookIds : undefined,
+          cjkFontPath: flagValue(argv, "--cjk-font"),
+        },
         input,
       );
       const target =
@@ -325,6 +329,7 @@ Commands:
   html <file> [-o out.html]        Standalone HTML shell
   svg <file> [-o out.svg]          Export static SVG
   export <file> -f <fmt>           Export svg|png|jpg|pdf (repeat --handbook for style)
+  export <file> -f pdf --cjk-font  Host TTF/OTF for PDF CJK (also VIVA_PDF_CJK_FONT)
   export <file> --beats            PNG sequence from layout.board __beat
   export <file> --beats -f gif|mp4 slideshow via ffmpeg (not a timeline / edited film)
   simulate <file> [--ticks N] Headless world JSON

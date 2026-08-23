@@ -51,7 +51,8 @@ Response: same as `compileSource()` — `ir`, `diagnostics`, `error`.
   "source": "...",
   "format": "pdf",
   "handbookIds": ["print-nature"],
-  "width": 1280
+  "width": 1280,
+  "cjkFontPath": "/path/to/NotoSansCJK-Regular.ttf"
 }
 ```
 

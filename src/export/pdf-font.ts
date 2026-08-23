@@ -7,13 +7,17 @@ import fontkit from "@pdf-lib/fontkit";
 const BUNDLED_NAME = "VivaSansFallback.ttf";
 
 const SYSTEM_CJK_CANDIDATES = [
-  process.env.VIVA_PDF_CJK_FONT,
   "/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf",
   "/usr/share/fonts/truetype/droid/DroidSansFallback.ttf",
   "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc",
   "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
   "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
-].filter((p): p is string => Boolean(p));
+];
+
+export type CjkFontResolveOpts = {
+  /** Host TTF/OTF. Wins over `VIVA_PDF_CJK_FONT` and the bundled subset. */
+  fontPath?: string;
+};
 
 export type PdfTextFonts = {
   latin: PDFFont;
@@ -31,18 +35,31 @@ function bundledCjkCandidates(): string[] {
   ];
 }
 
-/** First readable CJK TTF: env override, bundled subset, then system fonts. */
-export function resolveCjkFontPath(): string | null {
-  for (const path of [...bundledCjkCandidates(), ...SYSTEM_CJK_CANDIDATES]) {
+/**
+ * First readable CJK TTF: host path, then `VIVA_PDF_CJK_FONT`, then the
+ * bundled subset, then system fonts. Missing files fall through. Not a
+ * language keyword — export fidelity only.
+ */
+export function resolveCjkFontPath(opts?: CjkFontResolveOpts): string | null {
+  const candidates = [
+    opts?.fontPath,
+    process.env.VIVA_PDF_CJK_FONT,
+    ...bundledCjkCandidates(),
+    ...SYSTEM_CJK_CANDIDATES,
+  ];
+  for (const path of candidates) {
     if (path && existsSync(path)) return path;
   }
   return null;
 }
 
-export async function embedPdfFonts(pdf: PDFDocument): Promise<PdfTextFonts> {
+export async function embedPdfFonts(
+  pdf: PDFDocument,
+  opts?: CjkFontResolveOpts,
+): Promise<PdfTextFonts> {
   pdf.registerFontkit(fontkit);
   const latin = await pdf.embedFont(StandardFonts.Helvetica);
-  const path = resolveCjkFontPath();
+  const path = resolveCjkFontPath(opts);
   if (!path) return { latin, rich: latin, hasCjk: false };
   try {
     const bytes = readFileSync(path);

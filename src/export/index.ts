@@ -29,6 +29,11 @@ export type ExportOptions = {
   /** Style handbook ids applied at compile time (same as session handbooks). */
   handbookIds?: string[];
   /**
+   * Host TTF/OTF for vector PDF CJK. Wins over `VIVA_PDF_CJK_FONT` and the
+   * bundled subset. Missing path falls through. Not a language keyword.
+   */
+  cjkFontPath?: string;
+  /**
    * When true, export every `layout.board` beat as its own raster.
    * No new language keyword — uses existing `__beat` state.
    */
@@ -92,10 +97,10 @@ export async function exportArtifact(
   if (fmt === "pdf" || fmt === "pdf-raster") {
     const mode = fmt === "pdf-raster" ? "raster" : (opts.pdfMode ?? "vector");
     if (mode === "vector") {
-      const bytes = await renderVectorPdfFromIr(
-        result.ir,
-        opts.scale !== undefined ? { scale: opts.scale } : {},
-      );
+      const bytes = await renderVectorPdfFromIr(result.ir, {
+        ...(opts.scale !== undefined ? { scale: opts.scale } : {}),
+        cjkFontPath: opts.cjkFontPath,
+      });
       return { format: "pdf", bytes, mime: "application/pdf", svg, vector: true };
     }
     const raster = await rasterize(svg, { ...opts, background: opts.background ?? sceneBg });

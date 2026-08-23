@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
+import { copyFileSync, readFileSync, unlinkSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { compileSource } from "../../src/pipeline.js";
 import { renderSvgFromIr } from "../../src/export/static-svg.js";
 import { exportArtifact } from "../../src/export/index.js";
@@ -127,6 +129,28 @@ widget chart.scatter
     const hover = result.ir!.events.find((e) => e.type === "hover")!;
     expect(hover.body.some((s) => s.kind === "assign" && s.target[0] === "__hover")).toBe(true);
     expect(hover.body.some((s) => s.kind === "assign" && s.target[0] === "__highlightGrp")).toBe(true);
+  });
+
+  it("lets a host CJK font win over the bundled subset", () => {
+    const bundled = resolveCjkFontPath();
+    expect(bundled).toMatch(/VivaSansFallback\.ttf$/);
+    const host = join(tmpdir(), `viva-host-cjk-${process.pid}.ttf`);
+    copyFileSync(bundled!, host);
+    const prev = process.env.VIVA_PDF_CJK_FONT;
+    try {
+      expect(resolveCjkFontPath({ fontPath: host })).toBe(host);
+      process.env.VIVA_PDF_CJK_FONT = host;
+      expect(resolveCjkFontPath()).toBe(host);
+      process.env.VIVA_PDF_CJK_FONT = "/no/such/viva-cjk.ttf";
+      expect(resolveCjkFontPath()).toMatch(/VivaSansFallback\.ttf$/);
+      expect(resolveCjkFontPath({ fontPath: "/no/such/viva-cjk.ttf" })).toMatch(
+        /VivaSansFallback\.ttf$/,
+      );
+    } finally {
+      if (prev === undefined) delete process.env.VIVA_PDF_CJK_FONT;
+      else process.env.VIVA_PDF_CJK_FONT = prev;
+      unlinkSync(host);
+    }
   });
 
   it("embeds CJK in vector PDF instead of replacing with ?", async () => {

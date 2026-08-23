@@ -93,6 +93,7 @@ async function toolExport(args: Record<string, unknown>) {
   const format = (String(args.format ?? "svg") as ExportFormat);
   const handbookIds = args.handbookIds as string[] | undefined;
   const width = typeof args.width === "number" ? args.width : undefined;
+  const cjkFontPath = args.cjkFontPath ? String(args.cjkFontPath) : undefined;
   const outputPath = args.outputPath ? String(args.outputPath) : undefined;
   if (args.beats) {
     if (isBeatAnimFormat(format)) {
@@ -140,7 +141,7 @@ async function toolExport(args: Record<string, unknown>) {
       }),
     );
   }
-  const out = await exportArtifact(source, format, { handbookIds, width }, "mcp.viva");
+  const out = await exportArtifact(source, format, { handbookIds, width, cjkFontPath }, "mcp.viva");
   if (outputPath) {
     const { writeFile } = await import("node:fs/promises");
     await writeFile(outputPath, out.bytes);
@@ -327,6 +328,7 @@ export const MCP_TOOL_DEFINITIONS = [
         format: { type: "string", enum: ["svg", "png", "jpg", "jpeg", "pdf", "pdf-raster", "gif", "mp4"] },
         handbookIds: { type: "array", items: { type: "string" } },
         width: { type: "number" },
+        cjkFontPath: { type: "string", description: "Host TTF/OTF for vector PDF CJK (also VIVA_PDF_CJK_FONT)" },
         outputPath: { type: "string", description: "Optional file path to write bytes" },
         beats: { type: "boolean", description: "PNG sequence from layout.board __beat; gif|mp4 is a ffmpeg slideshow" },
       },
@@ -434,6 +436,7 @@ export const mcpToolSchemas = {
     format: z.enum(["svg", "png", "jpg", "jpeg", "pdf", "pdf-raster", "gif", "mp4"]),
     handbookIds: handbookIdsSchema,
     width: z.number().optional(),
+    cjkFontPath: z.string().optional(),
     outputPath: z.string().optional(),
     beats: z.boolean().optional(),
   },

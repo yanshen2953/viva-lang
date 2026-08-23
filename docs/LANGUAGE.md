@@ -135,7 +135,7 @@ widget layout.board
 
 不写 `w`/`h` 时铺满场景。得到 frame `safe` `title` `body` `lower`，并画出 title/subtitle/caption。`controls: [CD8A, IL6]` + `bind: selGene` 在 lower 右侧画 HUD 芯片（选中不透明、未选 0.4，不再旁路写当前值；再出 `hud` 槽）。图表或 `layout.figure` 可 `panel: body`。`bleed: 16` 再出 `bleed` / `trim`，并默认画裁切十字（`crop: false` 可关）。
 
-投稿尺寸：`scene` 上写 `unit: mm` 与 `column: single`（89 mm）或 `double`（183 mm）。`page: a4`（或 `letter`）在省略宽高时落到该纸页；场景高度超过页高时，**PDF** 按页高切片，并在每页盖 `n / N` 页码（续页可带 figure 题注 `(continued)`）。SVG/PNG 仍是一张长画布。这是 scene 属性，不是新关键字，也不是会重排图或跑页眉的排版器。
+投稿尺寸：`scene` 上写 `unit: mm` 与 `column: single`（89 mm）或 `double`（183 mm）。`page: a4`（或 `letter`）在省略宽高时落到该纸页；场景高度超过页高时，**PDF** 按页高切片，并在每页盖 `n / N` 页码（续页可带 figure 题注 `(continued)`）。SVG/PNG 仍是一张长画布。这是 scene 属性，不是新关键字，也不是会重排图或跑页眉的排版器。PDF 中文默认用随包子集；宿主可用环境变量 `VIVA_PDF_CJK_FONT`、CLI `--cjk-font` 或导出选项 `cjkFontPath` 挂自己的 TTF/OTF（仍不是语言关键字）。未覆盖的字仍可能变成 `?`。
 
 轴尺度（frame 或 chart 属性，不是新关键字）：
 

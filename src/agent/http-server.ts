@@ -153,6 +153,7 @@ export function createAgentHttpServer(opts: AgentHttpOptions): Server {
           format?: ExportFormat;
           handbookIds?: string[];
           width?: number;
+          cjkFontPath?: string;
           beats?: boolean;
         };
         if (payload.beats) {
@@ -204,6 +205,7 @@ export function createAgentHttpServer(opts: AgentHttpOptions): Server {
           {
             width: payload.width,
             handbookIds: payload.handbookIds,
+            cjkFontPath: payload.cjkFontPath,
           },
           "api.viva",
         );

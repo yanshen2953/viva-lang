@@ -8,6 +8,8 @@ import type { VisualIR } from "../ir.js";
 export type VectorPdfOptions = {
   /** Scale scene units → PDF points. Default 1 (1:1 with viewBox). */
   scale?: number;
+  /** Host CJK TTF/OTF. Also `VIVA_PDF_CJK_FONT`. Not a language keyword. */
+  cjkFontPath?: string;
 };
 
 /**
@@ -28,7 +30,7 @@ export async function renderVectorPdfFromIr(
   const pageH = sliceH * scale;
 
   const pdf = await PDFDocument.create();
-  const fonts = await embedPdfFonts(pdf);
+  const fonts = await embedPdfFonts(pdf, { fontPath: opts.cjkFontPath });
   const bg = parseColor(scene.background) ?? parseColor(DEFAULT_SCENE_BACKGROUND) ?? rgb(1, 1, 1);
 
   for (let i = 0; i < pages; i++) {
