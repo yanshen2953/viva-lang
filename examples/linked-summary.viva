@@ -13,22 +13,13 @@ data rows = [
 ]
 
 scene
-  size: 880 360
+  size: 1080 380
   background: #ffffff
 
 widget layout.figure
-  x: 16
-  y: 16
-  w: 848
-  h: 328
-  cols: 2
+  title: "Linked views · brush a visit or arm"
+  cols: 3
   rows: 1
-  gutter: 28
-  margin: 8
-  insetL: 56
-  insetR: 24
-  insetT: 28
-  insetB: 40
 
 widget chart.scatter
   panel: a
@@ -51,3 +42,13 @@ widget chart.box
   xLabel: Arm
   yLabel: Score
   title: "Box follows __sel"
+
+widget chart.violin
+  panel: c
+  data: rows
+  xField: arm
+  yField: score
+  ylim: 8 28
+  xLabel: Arm
+  yLabel: Score
+  title: "Violin follows __sel"

@@ -22,6 +22,7 @@ import { COLUMN_MM, sceneScaleOf } from "./space/scene-box.js";
 import { estimateBoardBands } from "./layout/board-chrome.js";
 import { figureCopyDefaults, figureCopyPlace, figureGapDefaults } from "./layout/figure-gap.js";
 import { boxStats, quantile } from "./layout/summary-stats.js";
+import { gaussianKDE, violinPathD } from "./layout/violin-density.js";
 import {
   clampChartInsets,
   growInsetsForChrome,
@@ -3307,57 +3308,6 @@ function expandBrackets(
   return items;
 }
 
-function gaussianKDE(values: number[], y0: number, y1: number, n: number): number[] {
-  const span = y1 - y0 || 1;
-  const mean = values.reduce((s, v) => s + v, 0) / Math.max(1, values.length);
-  const variance =
-    values.reduce((s, v) => s + (v - mean) * (v - mean), 0) / Math.max(1, values.length);
-  const std = Math.sqrt(variance) || span / 8;
-  const h = Math.max(span / 28, 0.85 * std * Math.pow(Math.max(1, values.length), -0.2));
-  const dens: number[] = [];
-  for (let i = 0; i < n; i++) {
-    const y = y0 + (i / Math.max(1, n - 1)) * span;
-    let s = 0;
-    for (const v of values) {
-      const u = (y - v) / h;
-      s += Math.exp(-0.5 * u * u);
-    }
-    dens.push(s);
-  }
-  if (dens.length) {
-    dens[0] = 0;
-    dens[dens.length - 1] = 0;
-  }
-  return dens;
-}
-
-function violinPathD(
-  cx: number,
-  dens: number[],
-  y0: number,
-  y1: number,
-  py0: number,
-  py1: number,
-  yScale: ScaleKind,
-  halfMax: number,
-): string {
-  const n = dens.length;
-  const peak = Math.max(...dens, 1e-9);
-  const right: string[] = [];
-  const left: string[] = [];
-  for (let i = 0; i < n; i++) {
-    const yVal = y0 + (i / Math.max(1, n - 1)) * (y1 - y0);
-    const sy = domainMap(yVal, [y0, y1], [py0, py1], true, yScale);
-    const w = (dens[i]! / peak) * halfMax;
-    right.push(`${(cx + w).toFixed(2)},${sy.toFixed(2)}`);
-    left.push(`${(cx - w).toFixed(2)},${sy.toFixed(2)}`);
-  }
-  return `M ${right[0]} L ${right.slice(1).join(" L ")} L ${left
-    .slice()
-    .reverse()
-    .join(" L ")} Z`;
-}
-
 function expandViolinMarks(
   artifact: Artifact,
   dataName: string,
@@ -3383,6 +3333,7 @@ function expandViolinMarks(
   }
   const box = plotBoxOf(geom);
   const cats = catsFromExpr(geom.xCats);
+  const allKeys = [...groups.keys()];
   const items: SceneItem[] = [];
   let gi = 0;
   const nGroups = Math.max(1, groups.size);
@@ -3391,6 +3342,14 @@ function expandViolinMarks(
     const x = Number.isFinite(xNum) ? xNum : gi;
     const label = cats[x] ?? key;
     const selVis = markSelKeysVisible([key, label], frameName, span);
+    const violinMeta = {
+      __violinData: literal(dataName),
+      __violinKey: literal(key),
+      __violinXField: literal(xField),
+      __violinYField: literal(yField),
+      __violinCats: literal(allKeys),
+      __violinFrame: literal(frameName),
+    };
     const fill = {
       kind: "call" as const,
       callee: "palette",
@@ -3416,6 +3375,15 @@ function expandViolinMarks(
         node("violin", {
           role: literal("mark"),
           ...selVis,
+          ...violinMeta,
+          __violinPart: literal("shape"),
+          __violinCx: literal(cx),
+          __violinYmin: literal(ymin),
+          __violinYmax: literal(ymax),
+          __violinPy0: literal(box.py0),
+          __violinPy1: literal(box.py1),
+          __violinYScale: literal(box.yScale),
+          __violinHalf: literal(halfStep),
           d: literal(violinPathD(cx, dens, ymin, ymax, box.py0, box.py1, box.yScale, halfStep)),
           fill,
           stroke: literal("#1f2937"),
@@ -3443,6 +3411,8 @@ function expandViolinMarks(
             role: literal("mark-line"),
             frame: literal(frameName),
             ...selVis,
+            ...violinMeta,
+            __violinPart: literal("bin"),
             x1: literal(x - half),
             y1: literal((y0 + y1) / 2),
             x2: literal(x + half),
@@ -3458,6 +3428,8 @@ function expandViolinMarks(
         role: literal("mark-line"),
         frame: literal(frameName),
         ...selVis,
+        ...violinMeta,
+        __violinPart: literal("med"),
         x1: literal(x - 0.16),
         y1: literal(med),
         x2: literal(x + 0.16),

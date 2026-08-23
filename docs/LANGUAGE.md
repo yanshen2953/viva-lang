@@ -111,7 +111,6 @@ widget layout.figure
   title: "Figure 2. Survival and response by cohort"
   cols: 2
   rows: 2
-  gutter: 32
 
 widget chart.scatter
   panel: a

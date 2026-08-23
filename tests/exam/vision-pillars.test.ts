@@ -382,6 +382,72 @@ widget chart.scatter
     expect(other.visible).toBe(false);
   });
 
+  it("recomputes a violin density from visit keys in __sel instead of hiding the arm", () => {
+    const result = compileSource(
+      readFileSync("examples/linked-summary.viva", "utf8"),
+      "linked-summary.viva",
+    );
+    expect(result.error).toBeNull();
+    const marks = result.ir!.scene.layers.find((l) => l.name === "__c_marks")!;
+    const violinNode = marks.items.find((i) => i.kind === "node" && i.name === "violin");
+    expect(violinNode?.kind).toBe("node");
+    if (violinNode?.kind === "node") {
+      expect(violinNode.props.__violinData).toMatchObject({ kind: "string", value: "rows" });
+      expect(violinNode.props.__violinPart).toMatchObject({ kind: "string", value: "shape" });
+    }
+    const data = result.ir!.data as Record<string, unknown>;
+    const raw = {
+      __violinData: "rows",
+      __violinKey: "placebo",
+      __violinXField: "arm",
+      __violinYField: "score",
+      __violinCats: ["placebo", "drug-A", "drug-B"],
+      __violinPart: "shape",
+      __violinFrame: "c",
+      __violinCx: 100,
+      __violinYmin: 8,
+      __violinYmax: 28,
+      __violinPy0: 40,
+      __violinPy1: 320,
+      __violinYScale: "linear",
+      __violinHalf: 20,
+      d: "M 0,0 Z",
+      frame: undefined,
+    };
+    const visit = applySelSummary(raw, {
+      data,
+      state: { __sel: { n: 1, keys: [1] }, __brush: { frame: "a" } },
+    });
+    expect(visit.visible).toBe(true);
+    expect(String(visit.d)).toMatch(/^M /);
+    expect(visit.d).not.toBe("M 0,0 Z");
+    const med = applySelSummary(
+      { ...raw, __violinPart: "med", y1: 13, y2: 13 },
+      { data, state: { __sel: { n: 1, keys: [1] }, __brush: { frame: "a" } } },
+    );
+    expect(med.y1).toBe(12);
+    expect(med.y2).toBe(12);
+    const other = applySelSummary(raw, {
+      data,
+      state: { __sel: { n: 1, keys: ["drug-A"] }, __brush: { frame: "a" } },
+    });
+    expect(other.visible).toBe(false);
+    const ownBrush = applySelSummary(raw, {
+      data,
+      state: { __sel: { n: 1, keys: [1] }, __brush: { frame: "c" } },
+    });
+    expect(ownBrush.d).toBe("M 0,0 Z");
+  });
+
+  it("lets the compiler own linked-summary chrome instead of inset magic numbers", () => {
+    const src = readFileSync("examples/linked-summary.viva", "utf8");
+    expect(src).not.toMatch(/insetL|insetR|insetT|insetB|areaX|areaY/);
+    expect(src).not.toMatch(/^\s+(x|y|w|h|gutter|margin):/m);
+    const result = compileSource(src, "linked-summary.viva", { handbookIds: ["print-nature"] });
+    expect(result.error).toBeNull();
+    expect(result.ir!.frames.map((f) => f.name)).toEqual(expect.arrayContaining(["a", "b", "c"]));
+  });
+
   it("links a scatter brush onto a box summary through shared __sel keys", () => {
     const result = compileSource(
       readFileSync("examples/linked-summary.viva", "utf8"),
