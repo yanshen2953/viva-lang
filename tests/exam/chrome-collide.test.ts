@@ -11,6 +11,13 @@ import {
 } from "../../src/layout/chrome-collide.js";
 
 describe("paper chrome collision", () => {
+  it("breaks hyphenated legend keys before mid-word cuts", () => {
+    const lines = wrapTextLines("placebo-control", 48, 8, 0.1, 2);
+    expect(lines.length).toBeGreaterThan(1);
+    expect(lines[0]).toMatch(/placebo-/);
+    expect(lines.join("").replace(/\s/g, "")).toMatch(/control/);
+  });
+
   it("wraps a long title on spaces before mid-word breaks", () => {
     const lines = wrapTextLines("Survival and response by treatment cohort", 80, 12, 0.35);
     expect(lines.length).toBeGreaterThan(1);
@@ -255,6 +262,27 @@ widget chart.bar
     expect(box.w).toBeGreaterThan(9);
   });
 
+  it("wraps a long right-legend key inside the cell", () => {
+    const { chrome, rects } = placePaperChrome(
+      { px0: 40, px1: 160, py0: 20, py1: 140 },
+      (px) => px,
+      false,
+      {
+        legendAt: "right",
+        legendKeys: ["placebo-control", "active-drug"],
+        yTicks: [{ label: "0", y: 130 }],
+        xTicks: [{ label: "1", x: 80 }],
+      },
+      { x0: 0, y0: 0, x1: 220, y1: 160 },
+    );
+    expect(chrome.legendLines[0]?.length).toBeGreaterThan(1);
+    expect(chrome.legendLines[0]?.join("").replace(/\s/g, "")).toMatch(/placebo/);
+    expect(chrome.legendLines[0]?.join("").replace(/\s/g, "")).toMatch(/control/);
+    const box = rects.find((r) => r.id === "legend-0")!;
+    const unwrapped = 14 + estimateTextWidthPx("placebo-control", 8, 0.1);
+    expect(box.w).toBeLessThan(unwrapped);
+  });
+
   it("grows the right inset when chrome overlaps the neighbor cell", () => {
     const grow = growInsetsForNeighbors(
       [{ id: "legend-0", x: 168, y: 20, w: 40, h: 12 }],
@@ -329,6 +357,42 @@ widget chart.line
       i.kind === "node" ? String(evaluate(i.props.text, [{}, {}])) : "",
     );
     expect(texts.join(" ")).toMatch(/Follow-up|randomization|Serum|cytokine/);
+  });
+
+  it("emits wrapped legend label lines for a hyphenated series key", () => {
+    const result = compileSource(
+      `artifact LegWrap
+data rows = [
+  { x: 1, y: 20, grp: "placebo-control" }
+  { x: 2, y: 40, grp: "active-drug" }
+  { x: 1, y: 18, grp: "placebo-control" }
+  { x: 2, y: 36, grp: "active-drug" }
+]
+scene
+  size: 200 140
+  background: #ffffff
+widget chart.line
+  data: rows
+  xField: x
+  yField: y
+  group: grp
+  xlim: 0 3
+  ylim: 0 50
+  legend: right
+  interactive: false
+`,
+      "leg-wrap.viva",
+      { handbookIds: ["print-nature"] },
+    );
+    expect(result.error).toBeNull();
+    const axes = result.ir!.scene.layers.find((l) => l.name.endsWith("_axes"))!;
+    const labels = axes.items.filter((i) => i.kind === "node" && /_legLbl_/.test(i.name));
+    const texts = labels.map((i) =>
+      i.kind === "node" ? String(evaluate(i.props.text, [{}, {}])) : "",
+    );
+    expect(labels.length).toBeGreaterThan(2);
+    expect(texts.join(" ")).toMatch(/placebo-/);
+    expect(texts.join(" ")).toMatch(/control/);
   });
 
   it("keeps adjacent-panel chrome boxes from overlapping", () => {

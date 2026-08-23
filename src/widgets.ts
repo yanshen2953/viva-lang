@@ -2707,13 +2707,18 @@ function expandSeriesLegend(
         },
         styleSkip: literal(true),
       }),
-      node(`${frameName}_legLbl_${i}`, {
-        role: literal("legend-label"),
-        x: literal(swatchX + 14),
-        y: literal(swatchY),
-        text: literal(key),
-      }),
     );
+    const legendLines = chrome?.legendLines?.[i]?.length ? chrome.legendLines[i]! : [key];
+    for (const [j, line] of legendLines.entries()) {
+      items.push(
+        node(`${frameName}_legLbl_${i}${j ? `_${j}` : ""}`, {
+          role: literal("legend-label"),
+          x: literal(swatchX + 14),
+          y: literal(swatchY + j * 10),
+          text: literal(line),
+        }),
+      );
+    }
     if (!artifact.events.some((e) => e.type === "click" && e.target === `${frameName}_leg_${i}`)) {
       ensureInteractStates(artifact, span);
       if (!artifact.states.some((s) => s.name === "__legPick")) {

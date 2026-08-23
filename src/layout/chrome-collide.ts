@@ -24,6 +24,7 @@ export type PaperChrome = {
   titleLines: string[];
   xTitleLines: string[];
   yTitleLines: string[];
+  legendLines: string[][];
   legendX: number;
   legendY: number;
   legendStep: number;
@@ -124,9 +125,13 @@ export function wrapTextLines(
     const trial = line + ch;
     if (line && estimateTextWidthPx(trial.trimEnd(), font, tracking) > maxWidth) {
       const space = line.lastIndexOf(" ");
-      if (space > 0) {
+      const hyphen = line.lastIndexOf("-");
+      if (space > 0 && space >= hyphen) {
         lines.push(line.slice(0, space).trim());
         line = `${line.slice(space + 1)}${ch}`;
+      } else if (hyphen > 0) {
+        lines.push(line.slice(0, hyphen + 1).trimEnd());
+        line = `${line.slice(hyphen + 1)}${ch}`;
       } else {
         flush();
         if (ch !== " ") line = ch;
@@ -207,7 +212,9 @@ export function placePaperChrome(
   let titleLines = title ? [title] : [];
   let xTitleLines = xCap ? [xCap] : [];
   let yTitleLines = yCap ? [yCap] : [];
+  let legendLines = keys.map((key) => [key]);
   const axisLine = AXIS_FONT + 2;
+  const legendLine = TICK_FONT + 2;
   let cbarX = box.px1 + toScene(compact ? 4 : 8);
   const cbarLabelW = Math.max(
     ...cbarLabels.map((s) => estimateTextWidthPx(s, TICK_FONT, 0.08)),
@@ -314,7 +321,10 @@ export function placePaperChrome(
     }
     if (extras.legendAt && extras.legendAt !== "inside") {
       for (const [i, key] of keys.entries()) {
-        const tw = estimateTextWidthPx(key, TICK_FONT, 0.1);
+        const lines = legendLines[i] ?? [key];
+        const tw = Math.max(
+          ...lines.map((line) => estimateTextWidthPx(line, TICK_FONT, 0.1)),
+        );
         const x = extras.legendAt === "bottom" ? legendX + i * legendStep : legendX;
         const y = extras.legendAt === "bottom" ? legendY : legendY + i * legendStep;
         rects.push({
@@ -322,7 +332,7 @@ export function placePaperChrome(
           x,
           y: y - 6,
           w: toScene(14) + tw,
-          h: TICK_FONT + 4,
+          h: TICK_FONT + 4 + (lines.length - 1) * legendLine,
         });
       }
     }
@@ -382,6 +392,25 @@ export function placePaperChrome(
     legendY = xTitleY + toScene(AXIS_FONT + gap) + (xTitleLines.length - 1) * axisLine;
     rects = build();
   }
+  if (keys.length && extras.legendAt && extras.legendAt !== "inside") {
+    const swatch = toScene(14);
+    const padW = toScene(6);
+    const maxW =
+      extras.legendAt === "bottom"
+        ? Math.max(TICK_FONT * 5, legendStep - swatch - padW)
+        : cell
+          ? Math.max(TICK_FONT * 5, cell.x1 - legendX - swatch - padW)
+          : toScene(compact ? 52 : 72);
+    legendLines = keys.map((key) => {
+      const lines = wrapTextLines(key, maxW, TICK_FONT, 0.1, 2);
+      return lines.length ? lines : [key];
+    });
+    const extra = Math.max(0, ...legendLines.map((lines) => lines.length - 1));
+    if (extras.legendAt !== "bottom" && extra > 0) {
+      legendStep = toScene(14) + extra * legendLine;
+    }
+    rects = build();
+  }
 
   return {
     chrome: {
@@ -394,6 +423,7 @@ export function placePaperChrome(
       titleLines,
       xTitleLines,
       yTitleLines,
+      legendLines,
       legendX,
       legendY,
       legendStep,
