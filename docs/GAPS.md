@@ -52,7 +52,7 @@
 1. PDF 随包 `assets/fonts/VivaSansFallback.ttf`（Droid 子集）；缺字仍可能回退 Helvetica
 2. 有 time / box / violin（KDE 轮廓）/ 显著性括号；轴刻度在场景坐标。观感仍粗，不是投稿成品
 3. Atlas (a–f) 已走 `layout.figure` + chart 插件；(e)(f) 不再手摆像素
-4. `__brush` 是单图数据域 marquee，不是多图共享 filter
+4. `__sel` 默认跨面板藏行；本地 brush 仍是单图 marquee，没有过渡动画
 5. session visual diagnostics 不挡编译成功
 6. MCP/HTTP/CLI prompt 默认 slim；生成成功率未测
 7. 小栏宽 mm 图默认不再画常驻 `__tip` HUD，只留 brush 框；留白仍不像投稿成品
@@ -60,9 +60,9 @@
 ## 下一刀（质量，不再铺接口）
 
 1. 投稿级留白 / 字距 / 出血（仍走编译器，不加关键字）
-2. linked selection：`__sel` 升级成可隐藏行的共享 filter，而不只是变淡
+2. linked selection 还缺过渡 / 反向刷选清空 / 热图格子同步藏
 3. 扩大随包 CJK 子集（现在只覆盖 examples + 一小撮论文用字）
-4. `layout.board` 已有 `bleed`/`trim`/裁切十字；时间分镜仍只是空间槽，不是播放
+4. `layout.board play` 只是拍遮罩，不是导出视频
 5. agent-exam 进 CI
 
 对照真源：`docs/VISION.md`。

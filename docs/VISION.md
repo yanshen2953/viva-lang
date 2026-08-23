@@ -67,7 +67,7 @@
 ### 3.1 游戏式交互
 
 有：节点可拖、碰撞、键盘、tick、图层；图表默认数据域 tooltip、brush 反演（按 frame 隔离，同名 xField 联动）、跨面板 group 高亮、点图例高亮。  
-没有：动画过渡、内联卡上的检查/修复壳。`__sel.keys` 已是跨面板集合（`has()`），还不是完整 linked-view filter。
+没有：动画过渡、内联卡上的检查/修复壳。`__sel.keys` 默认让其它面板 **藏行**（`link: dim` 可改回变淡），仍不是带过渡的完整 linked-view。
 
 ### 3.2 论文级图表
 
@@ -100,7 +100,7 @@
 1. 投稿级留白 / 字距 / 出血（编译器，不加关键字）
 2. brush 升级成可共享的数据域 selection，而不只是变淡
 3. 扩大随包 CJK 子集
-4. `layout.board` 时间轴分镜（播放，不只是空间槽）
+4. `layout.board play` 已能推进 `__beat` 并遮罩非当前拍；仍不是成片时间轴 / 导出视频
 5. agent 生成成功率进 CI；不要把 visual diagnostics 误报成「已经闭环」
 
 发现插件：`viva widgets` 或 `listWidgets()`。

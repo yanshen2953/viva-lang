@@ -146,11 +146,11 @@ widget layout.board
 - `xScale: band` / `category`（字符串列会自动 band）；也可用 `xCats` / `yCats`
 - 图例默认在图外右侧：`legend: right|bottom|inside|false`
 
-`layout.board` 可选 `splits: 2` → 在 `body` 里再切 `left` / `right`；`beats: 4` → 分镜槽 `beat0`…`beat3`。
+`layout.board` 可选 `splits: 2` → 在 `body` 里再切 `left` / `right`；`beats: 4` → 分镜槽 `beat0`…`beat3`。`play: true` 用 `tick` 推进 `__beat`，非当前拍加遮罩（仍不是成片时间轴）。
 
 `xScale: time`（或 ISO 日期字符串列自动识别）出时间刻度。`chart.box` / `chart.violin` 由编译器算四分位和密度（violin 是高斯 KDE 闭合轮廓，不是直方切片）。`brackets: [{ a, b, label }]` 画显著性括号。轴刻度数字写在场景坐标（图框左侧 / 底侧），避免数据域 padding 把 y 标签裁进绘图区。都不是新关键字。
 
-跨面板：`__brush` 按 frame 隔离，同名 `xField` 联动；刷选还会写入 `__sel.keys` 集合，其它图用 `has()` 变淡不在集合里的组。
+跨面板：`__brush` 按 frame 隔离，同名 `xField` 联动；刷选写入 `__sel.keys`。其它图默认 **藏起** 不在集合里的行（`visible` + `has()`）。`link: dim` 可改回变淡。
 
 图表默认交互（`interactive: false` 可关）：`__tip` 字符串、`__hover` 对象、`__brush`（场景框 + 数据域 `dx0/dy0/dx1/dy1`，刷选外的点变淡）、同 `group` 跨面板 `__highlightGrp`。点图例色块也会写 `__highlightGrp`。
 
