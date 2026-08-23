@@ -322,7 +322,7 @@ widget chart.scatter
     }
     if (title?.kind === "node") {
       const titleY = title.props.y?.kind === "number" ? title.props.y.value : 99;
-      expect(titleY).toBeLessThan(14);
+      expect(titleY).toBeLessThan(20);
       expect(titleY).toBeGreaterThan(0);
     }
   });

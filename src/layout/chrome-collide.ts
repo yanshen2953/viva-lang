@@ -1,0 +1,312 @@
+/** Box-based paper chrome: measure, detect overlap, nudge, grow insets. */
+
+export type PlotBox = {
+  px0: number;
+  px1: number;
+  py0: number;
+  py1: number;
+};
+
+export type CellBox = {
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
+};
+
+export type PaperChrome = {
+  yTickX: number;
+  xTickY: number;
+  yTitleX: number;
+  xTitleY: number;
+  titleX: number;
+  titleY: number;
+  legendX: number;
+  legendY: number;
+  legendStep: number;
+  cbarX: number;
+  compact: boolean;
+};
+
+export type ChromeRect = {
+  id: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+};
+
+export type ChromeExtras = {
+  colorbar?: boolean;
+  legendAt?: "right" | "bottom" | "inside";
+  legendKeys?: string[];
+  title?: string;
+  yCaption?: string | null;
+  xCaption?: string | null;
+  yTicks?: { label: string; y: number }[];
+  xTicks?: { label: string; x: number }[];
+  panelLabel?: string | null;
+  cbarLabels?: string[];
+};
+
+const TICK_FONT = 8;
+const AXIS_FONT = 9;
+const TITLE_FONT = 12;
+const PANEL_FONT = 11;
+
+export function estimateTextWidthPx(text: string, font: number, tracking = 0): number {
+  let w = 0;
+  for (const ch of text) {
+    w += ch.charCodeAt(0) >= 0x3000 ? font : font * 0.58;
+    w += tracking;
+  }
+  return Math.max(font * 0.4, w);
+}
+
+export function rectsOverlap(a: ChromeRect, b: ChromeRect, gap = 2): boolean {
+  return (
+    a.x < b.x + b.w + gap &&
+    a.x + a.w + gap > b.x &&
+    a.y < b.y + b.h + gap &&
+    a.y + a.h + gap > b.y
+  );
+}
+
+export function overflowDelta(
+  rect: ChromeRect,
+  cell: CellBox,
+  pad: number,
+): { l: number; r: number; t: number; b: number } {
+  return {
+    l: Math.max(0, cell.x0 + pad - rect.x),
+    r: Math.max(0, rect.x + rect.w - (cell.x1 - pad)),
+    t: Math.max(0, cell.y0 + pad - rect.y),
+    b: Math.max(0, rect.y + rect.h - (cell.y1 - pad)),
+  };
+}
+
+export function placePaperChrome(
+  box: PlotBox,
+  toScene: (px: number) => number,
+  compact: boolean,
+  extras: ChromeExtras = {},
+  cell?: CellBox,
+): { chrome: PaperChrome; rects: ChromeRect[] } {
+  const gap = toScene(compact ? 3 : 5);
+  const yTicks = extras.yTicks ?? [];
+  const xTicks = extras.xTicks ?? [];
+  const yTickW = Math.max(
+    TICK_FONT,
+    ...yTicks.map((t) => estimateTextWidthPx(t.label, TICK_FONT, 0.08)),
+  );
+  const keys = extras.legendKeys ?? [];
+  const keyW = Math.max(0, ...keys.map((k) => estimateTextWidthPx(k, TICK_FONT, 0.1)));
+  const yCap = extras.yCaption ?? null;
+  const xCap = extras.xCaption ?? null;
+  const title = extras.title ?? "";
+  const cbarLabels = extras.cbarLabels ?? ["0.00"];
+
+  let yTickX = box.px0 - gap;
+  let yTitleX = Math.max(
+    toScene(compact ? 4 : 8),
+    yTickX - toScene(yTickW + AXIS_FONT * 0.55 + gap),
+  );
+  let xTickY = box.py1 + toScene(TICK_FONT + gap);
+  let xTitleY = xTickY + toScene(AXIS_FONT + gap);
+  let titleX = box.px0;
+  let titleY = Math.max(toScene(compact ? 8 : 14), box.py0 - toScene(TITLE_FONT + gap));
+  let cbarX = box.px1 + toScene(compact ? 4 : 8);
+  const cbarLabelW = Math.max(
+    ...cbarLabels.map((s) => estimateTextWidthPx(s, TICK_FONT, 0.08)),
+  );
+  const cbarRight = extras.colorbar ? cbarX + toScene(10 + 4 + cbarLabelW) : box.px1;
+  let legendX =
+    extras.legendAt === "right"
+      ? (extras.colorbar ? cbarRight : box.px1) + toScene(compact ? 6 : 10)
+      : extras.legendAt === "inside"
+        ? box.px0 + toScene(12)
+        : box.px0 + toScene(8);
+  let legendY =
+    extras.legendAt === "bottom"
+      ? xTitleY + toScene(AXIS_FONT + gap)
+      : extras.legendAt === "inside"
+        ? box.py1 - toScene(14)
+        : box.py0 + toScene(12);
+  let legendStep =
+    extras.legendAt === "bottom"
+      ? Math.max(toScene(72), toScene(14 + keyW + 10))
+      : toScene(14);
+
+  const panel =
+    extras.panelLabel && cell
+      ? {
+          id: "panel-label",
+          x: cell.x0 + 6,
+          y: cell.y0 + 4,
+          w: estimateTextWidthPx(extras.panelLabel, PANEL_FONT, 0.15),
+          h: PANEL_FONT + 2,
+        }
+      : null;
+
+  const build = (): ChromeRect[] => {
+    const rects: ChromeRect[] = [];
+    if (panel) rects.push(panel);
+    if (title) {
+      rects.push({
+        id: "title",
+        x: titleX,
+        y: titleY - TITLE_FONT * 0.75,
+        w: estimateTextWidthPx(title, TITLE_FONT, 0.35),
+        h: TITLE_FONT,
+      });
+    }
+    for (const [i, tick] of yTicks.entries()) {
+      const tw = estimateTextWidthPx(tick.label, TICK_FONT, 0.08);
+      rects.push({
+        id: `ytick-${i}`,
+        x: yTickX - tw,
+        y: tick.y - TICK_FONT * 0.5,
+        w: tw,
+        h: TICK_FONT,
+      });
+    }
+    for (const [i, tick] of xTicks.entries()) {
+      const tw = estimateTextWidthPx(tick.label, TICK_FONT, 0.08);
+      rects.push({
+        id: `xtick-${i}`,
+        x: tick.x - tw / 2,
+        y: xTickY - TICK_FONT * 0.75,
+        w: tw,
+        h: TICK_FONT,
+      });
+    }
+    if (yCap) {
+      const tw = estimateTextWidthPx(yCap, AXIS_FONT, 0.2);
+      rects.push({
+        id: "yTitle",
+        x: yTitleX - AXIS_FONT * 0.5,
+        y: (box.py0 + box.py1) / 2 - tw / 2,
+        w: AXIS_FONT,
+        h: tw,
+      });
+    }
+    if (xCap) {
+      const tw = estimateTextWidthPx(xCap, AXIS_FONT, 0.2);
+      rects.push({
+        id: "xTitle",
+        x: (box.px0 + box.px1) / 2 - tw / 2,
+        y: xTitleY - AXIS_FONT * 0.75,
+        w: tw,
+        h: AXIS_FONT,
+      });
+    }
+    if (extras.colorbar) {
+      rects.push({
+        id: "cbar",
+        x: cbarX,
+        y: box.py0,
+        w: toScene(10 + 4 + cbarLabelW),
+        h: Math.max(8, box.py1 - box.py0),
+      });
+    }
+    if (extras.legendAt && extras.legendAt !== "inside") {
+      for (const [i, key] of keys.entries()) {
+        const tw = estimateTextWidthPx(key, TICK_FONT, 0.1);
+        const x = extras.legendAt === "bottom" ? legendX + i * legendStep : legendX;
+        const y = extras.legendAt === "bottom" ? legendY : legendY + i * legendStep;
+        rects.push({
+          id: `legend-${i}`,
+          x,
+          y: y - 6,
+          w: toScene(14) + tw,
+          h: TICK_FONT + 4,
+        });
+      }
+    }
+    return rects;
+  };
+
+  let rects = build();
+  const collide = (id: string, other: string) =>
+    rects.some((a) => {
+      if (a.id !== id && !a.id.startsWith(id)) return false;
+      return rects.some((b) => (b.id === other || b.id.startsWith(other)) && a.id !== b.id && rectsOverlap(a, b, gap));
+    });
+
+  if (panel && title && collide("title", "panel-label")) {
+    titleX = panel.x + panel.w + gap;
+    rects = build();
+  }
+  if (yCap && yTicks.length && collide("yTitle", "ytick-")) {
+    const tickLeft = Math.min(...rects.filter((r) => r.id.startsWith("ytick-")).map((r) => r.x));
+    yTitleX = tickLeft - gap - AXIS_FONT * 0.5;
+    rects = build();
+  }
+  if (xCap && xTicks.length && collide("xTitle", "xtick-")) {
+    const tickBot = Math.max(...rects.filter((r) => r.id.startsWith("xtick-")).map((r) => r.y + r.h));
+    xTitleY = tickBot + gap + AXIS_FONT * 0.75;
+    rects = build();
+  }
+  if (extras.colorbar && extras.legendAt === "right" && collide("legend-", "cbar")) {
+    const cbar = rects.find((r) => r.id === "cbar");
+    if (cbar) {
+      legendX = cbar.x + cbar.w + gap;
+      rects = build();
+    }
+  }
+  if (extras.legendAt === "bottom" && xCap && collide("legend-", "xTitle")) {
+    legendY = xTitleY + toScene(AXIS_FONT + gap);
+    rects = build();
+  }
+
+  return {
+    chrome: {
+      yTickX,
+      xTickY,
+      yTitleX,
+      xTitleY,
+      titleX,
+      titleY,
+      legendX,
+      legendY,
+      legendStep,
+      cbarX,
+      compact,
+    },
+    rects,
+  };
+}
+
+export function growInsetsForChrome(
+  rects: ChromeRect[],
+  cell: CellBox,
+  pad: number,
+): { l: number; r: number; t: number; b: number } {
+  const out = { l: 0, r: 0, t: 0, b: 0 };
+  for (const rect of rects) {
+    const d = overflowDelta(rect, cell, pad);
+    out.l = Math.max(out.l, d.l);
+    out.r = Math.max(out.r, d.r);
+    out.t = Math.max(out.t, d.t);
+    out.b = Math.max(out.b, d.b);
+  }
+  for (let i = 0; i < rects.length; i++) {
+    for (let j = i + 1; j < rects.length; j++) {
+      const a = rects[i]!;
+      const b = rects[j]!;
+      if (!rectsOverlap(a, b, 2)) continue;
+      const pair = `${a.id} ${b.id}`;
+      const leftish = /yTitle|ytick|panel-label/.test(pair);
+      const rightish = /cbar|legend-/.test(pair);
+      const topish = /title|panel-label/.test(pair);
+      const botish = /xTitle|xtick|legend-/.test(pair);
+      const overlapW = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x) + 2;
+      const overlapH = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y) + 2;
+      if (leftish) out.l = Math.max(out.l, overlapW * 0.5);
+      if (rightish) out.r = Math.max(out.r, overlapW * 0.5);
+      if (topish) out.t = Math.max(out.t, overlapH * 0.5);
+      if (botish) out.b = Math.max(out.b, overlapH * 0.5);
+    }
+  }
+  return out;
+}

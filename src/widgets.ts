@@ -19,6 +19,12 @@ import {
 } from "./plugins/registry.js";
 import { domainMap, parseTimeValue, scaleKind, type ScaleKind } from "./space.js";
 import { COLUMN_MM, sceneScaleOf } from "./space/scene-box.js";
+import {
+  growInsetsForChrome,
+  placePaperChrome,
+  type ChromeRect,
+  type PaperChrome,
+} from "./layout/chrome-collide.js";
 
 export type { WidgetExpandContext, WidgetPlugin } from "./plugins/types.js";
 export { getWidget, listWidgets, registerWidget, resetWidgetPlugins };
@@ -359,6 +365,12 @@ function expandChart(
       props: {
         x: areaXExpr,
         y: areaYExpr,
+        ...(!boundPanel && createdFrame && !hasAreaX && !hasAreaY
+          ? {
+              cellX: literal([0, sceneExtentOf(artifact).w]),
+              cellY: literal([0, sceneExtentOf(artifact).h]),
+            }
+          : {}),
         xlim: xlimExpr ?? literal([0, 10]),
         ylim: ylimExpr ?? literal([0, 100]),
         ...(xScaleExpr ? { xScale: xScaleExpr } : {}),
@@ -381,6 +393,8 @@ function expandChart(
     ...props,
     areaX: fr.props.x ?? props.areaX,
     areaY: fr.props.y ?? props.areaY,
+    ...(fr.props.cellX ? { cellX: fr.props.cellX } : {}),
+    ...(fr.props.cellY ? { cellY: fr.props.cellY } : {}),
     xlim: xlimExpr ?? fr.props.xlim ?? literal([0, 10]),
     ylim: ylimExpr ?? fr.props.ylim ?? literal([0, 100]),
     ...(xScaleExpr ? { xScale: xScaleExpr } : {}),
@@ -403,7 +417,7 @@ function expandChart(
     legendKeys,
     title,
   });
-  const titleX = pairAt(geom.areaX ?? geom.x, 0, 72);
+  const titleX = chrome ? literal(chrome.titleX) : pairAt(geom.areaX ?? geom.x, 0, 72);
   const titleYExpr = chrome
     ? literal(chrome.titleY)
     : (() => {
@@ -1992,26 +2006,65 @@ function numericTicksFromProps(
   return niceTicks(lim[0], lim[1]);
 }
 
-function estimateTextWidthPx(text: string, font: number, tracking = 0): number {
-  let w = 0;
-  for (const ch of text) {
-    w += ch.charCodeAt(0) >= 0x3000 ? font : font * 0.58;
-    w += tracking;
-  }
-  return Math.max(font * 0.4, w);
+function panelLabelOf(props: Record<string, Expr>): string | null {
+  const panel = stringProp(props, ["panel", "frame"]);
+  if (!panel || panel.startsWith("__chart_")) return null;
+  const raw = panel.includes("_") ? panel.slice(panel.lastIndexOf("_") + 1) : panel;
+  return `(${raw})`;
 }
 
-type PaperChrome = {
-  yTickX: number;
-  xTickY: number;
-  yTitleX: number;
-  xTitleY: number;
-  titleY: number;
-  legendX: number;
-  legendY: number;
-  cbarX: number;
-  compact: boolean;
-};
+function cellBoxOf(props: Record<string, Expr>): { x0: number; y0: number; x1: number; y1: number } | undefined {
+  const xs = numericPair(props.cellX, [Number.NaN, Number.NaN]);
+  const ys = numericPair(props.cellY, [Number.NaN, Number.NaN]);
+  if (!xs || !ys || !Number.isFinite(xs[0]) || !Number.isFinite(ys[0])) return undefined;
+  if (!(xs[1] > xs[0]) || !(ys[1] > ys[0])) return undefined;
+  return { x0: xs[0], y0: ys[0], x1: xs[1], y1: ys[1] };
+}
+
+function chromeLayoutOf(
+  props: Record<string, Expr>,
+  artifact: Artifact,
+  extras: {
+    colorbar?: boolean;
+    legendAt?: LegendPlace;
+    legendKeys?: string[];
+    title?: string;
+  } = {},
+): { chrome: PaperChrome; rects: ChromeRect[] } | null {
+  const box = plotBoxOf(props);
+  if (!box) return null;
+  const unit = sceneUnitOf(artifact);
+  const scale = sceneScaleOf({ unit });
+  const compact = isCompactPlot(box, unit);
+  const toScene = (px: number) => px / Math.max(scale, 1e-6);
+  const yTicks = axisTicks(props, "y").map((t) => ({
+    label: t.label,
+    y: domainMap(t.value, [box.ymin, box.ymax], [box.py0, box.py1], true, box.yScale),
+  }));
+  const xTicks = axisTicks(props, "x").map((t) => ({
+    label: t.label,
+    x: domainMap(t.value, [box.xmin, box.xmax], [box.px0, box.px1], false, box.xScale),
+  }));
+  const [z0, z1] = zlimPair(props);
+  return placePaperChrome(
+    box,
+    toScene,
+    compact,
+    {
+      colorbar: extras.colorbar,
+      legendAt: extras.legendAt === "off" ? undefined : extras.legendAt,
+      legendKeys: extras.legendKeys,
+      title: extras.title,
+      yCaption: axisCaption(props, "y"),
+      xCaption: axisCaption(props, "x"),
+      yTicks,
+      xTicks,
+      panelLabel: panelLabelOf(props),
+      cbarLabels: extras.colorbar ? [formatTickValue(z0), formatTickValue(z1)] : [],
+    },
+    cellBoxOf(props),
+  );
+}
 
 function paperChromeOf(
   props: Record<string, Expr>,
@@ -2023,47 +2076,7 @@ function paperChromeOf(
     title?: string;
   } = {},
 ): PaperChrome | null {
-  const box = plotBoxOf(props);
-  if (!box) return null;
-  const unit = sceneUnitOf(artifact);
-  const scale = sceneScaleOf({ unit });
-  const compact = isCompactPlot(box, unit);
-  const toScene = (px: number) => px / Math.max(scale, 1e-6);
-  const tickFont = 8;
-  const axisFont = 9;
-  const titleFont = 12;
-  const gap = compact ? 3 : 5;
-  const yTickW = Math.max(
-    tickFont,
-    ...axisTicks(props, "y").map((t) => estimateTextWidthPx(t.label, tickFont, 0.08)),
-  );
-  const yTickX = box.px0 - toScene(gap);
-  const yTitleX = Math.max(
-    toScene(compact ? 4 : 8),
-    yTickX - toScene(yTickW + axisFont * 0.55 + gap),
-  );
-  const xTickY = box.py1 + toScene(tickFont + gap);
-  const xTitleY = xTickY + toScene(axisFont + gap);
-  const titleY = Math.max(toScene(compact ? 8 : 14), box.py0 - toScene(titleFont + gap));
-  const cbarX = box.px1 + toScene(compact ? 4 : 8);
-  const cbarRight = extras.colorbar
-    ? cbarX + toScene(10 + 4 + estimateTextWidthPx("0.00", tickFont, 0.08))
-    : box.px1;
-  const legendX =
-    extras.legendAt === "right"
-      ? (extras.colorbar ? cbarRight : box.px1) + toScene(compact ? 6 : 10)
-      : extras.legendAt === "inside"
-        ? box.px0 + toScene(12)
-        : box.px0 + toScene(8);
-  const legendY =
-    extras.legendAt === "bottom"
-      ? xTitleY + toScene(axisFont + gap)
-      : extras.legendAt === "inside"
-        ? box.py1 - toScene(14)
-        : box.py0 + toScene(12);
-  void extras.title;
-  void extras.legendKeys;
-  return { yTickX, xTickY, yTitleX, xTitleY, titleY, legendX, legendY, cbarX, compact };
+  return chromeLayoutOf(props, artifact, extras)?.chrome ?? null;
 }
 
 function copyExpr(props: Record<string, Expr>, keys: string[]): Expr | undefined {
@@ -2160,12 +2173,7 @@ function fitChartInsets(
   const unit = sceneUnitOf(artifact);
   const scale = sceneScaleOf({ unit });
   const toScene = (px: number) => px / Math.max(scale, 1e-6);
-  const tickFont = 8;
-  const axisFont = 9;
-  const titleFont = 12;
   const pad = toScene(3);
-  const yCap = axisCaption(chart.props, "y");
-  const xCap = axisCaption(chart.props, "x");
   const title =
     chart.props.title?.kind === "string"
       ? chart.props.title.value
@@ -2181,11 +2189,6 @@ function fitChartInsets(
   const seriesField = seriesFieldName(chart.props);
   const legendAt = legendPlacement(chart.props, seriesField);
   const keys = seriesField ? uniqueSeriesKeys(artifact, dataName, seriesField) : [];
-  const keyW = Math.max(0, ...keys.map((k) => estimateTextWidthPx(k, tickFont, 0.1)));
-  const yTickW = Math.max(
-    tickFont,
-    ...axisTicks(chart.props, "y").map((t) => estimateTextWidthPx(t.label, tickFont, 0.08)),
-  );
   const extras = {
     colorbar: chart.name === "chart.heatmap",
     legendAt: seriesField && legendAt !== "off" ? legendAt : undefined,
@@ -2203,32 +2206,27 @@ function fitChartInsets(
     b = Math.min(Math.max(toScene(10), b), cellH * 0.32);
   };
   clamp();
-  for (let iter = 0; iter < 4; iter++) {
+  for (let iter = 0; iter < 8; iter++) {
     const geom: Record<string, Expr> = {
       ...chart.props,
       areaX: literal([cellX0 + l, Math.max(cellX0 + l + 8, cellX0 + cellW - r)]),
       areaY: literal([cellY0 + t, Math.max(cellY0 + t + 8, cellY0 + cellH - b)]),
+      cellX: literal([cellX0, cellX0 + cellW]),
+      cellY: literal([cellY0, cellY0 + cellH]),
     };
-    const chrome = paperChromeOf(geom, artifact, extras);
-    if (!chrome) break;
-    if (chrome.yTickX - yTickW < cellX0 + pad) l += cellX0 + pad - (chrome.yTickX - yTickW);
-    if (yCap && chrome.yTitleX < cellX0 + pad) l += cellX0 + pad - chrome.yTitleX;
-    if (title && chrome.titleY < cellY0 + pad + toScene(titleFont * 0.35)) {
-      t += cellY0 + pad + toScene(titleFont * 0.35) - chrome.titleY;
-    }
-    if (chrome.xTickY > cellY0 + cellH - pad) b += chrome.xTickY - (cellY0 + cellH - pad);
-    if (xCap && chrome.xTitleY > cellY0 + cellH - pad) b += chrome.xTitleY - (cellY0 + cellH - pad);
-    if (seriesField && legendAt === "right") {
-      const legendRight = chrome.legendX + toScene(14 + keyW);
-      if (legendRight > cellX0 + cellW - pad) r += legendRight - (cellX0 + cellW - pad);
-    }
-    if (seriesField && legendAt === "bottom" && chrome.legendY > cellY0 + cellH - pad) {
-      b += chrome.legendY - (cellY0 + cellH - pad);
-    }
-    if (extras.colorbar) {
-      const cbarRight = chrome.cbarX + toScene(10 + 4 + estimateTextWidthPx("0.00", tickFont, 0.08));
-      if (cbarRight > cellX0 + cellW - pad) r += cbarRight - (cellX0 + cellW - pad);
-    }
+    const layout = chromeLayoutOf(geom, artifact, extras);
+    if (!layout) break;
+    const grow = growInsetsForChrome(layout.rects, {
+      x0: cellX0,
+      y0: cellY0,
+      x1: cellX0 + cellW,
+      y1: cellY0 + cellH,
+    }, pad);
+    if (grow.l <= 0.5 && grow.r <= 0.5 && grow.t <= 0.5 && grow.b <= 0.5) break;
+    l += grow.l;
+    r += grow.r;
+    t += grow.t;
+    b += grow.b;
     clamp();
   }
   return { l, r, t, b };
@@ -2479,7 +2477,7 @@ function expandSeriesLegend(
     let swatchX: number;
     let swatchY: number;
     if (place === "bottom") {
-      swatchX = (chrome?.legendX ?? plotX0 + 8) + i * 72;
+      swatchX = (chrome?.legendX ?? plotX0 + 8) + i * (chrome?.legendStep ?? 72);
       swatchY = chrome?.legendY ?? plotY1 + 32;
     } else if (place === "inside") {
       swatchX = chrome?.legendX ?? plotX0 + 12;
