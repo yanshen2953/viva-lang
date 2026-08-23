@@ -51,7 +51,7 @@
 
 1. PDF 随包 `assets/fonts/VivaSansFallback.ttf`（Droid 子集，examples + 论文用字）；缺字仍可能 `?`
 2. 有 time / box / violin（KDE 轮廓）/ 显著性括号；轴刻度在场景坐标。`print-nature` 刻度 8 / 轴标题 9。观感仍粗，不是投稿成品
-3. Atlas / figure-grid 已去掉 `inset*`；单图 box/violin/time/heatmap/legend/brackets 已去掉 `areaX`。仍不是全图碰撞求解
+3. Atlas / figure-grid 已去掉 `inset*`；单图与 `charts.viva` 已去掉 `areaX`。两张以上未绑 panel 的 chart 会自动成网格。仍不是碰撞求解
 4. `__sel` 默认跨面板藏行；本地 brush 仍是单图 marquee，没有过渡动画
 5. session visual diagnostics 不挡编译成功
 6. MCP/HTTP/CLI prompt 默认 slim；生成成功率未测
