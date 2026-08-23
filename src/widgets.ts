@@ -137,6 +137,7 @@ export function expandWidgets(artifact: Artifact): Artifact {
       index,
     });
   }
+  liftFramedWorldLayers(next);
   liftPlayLayers(next);
   paintPageFolio(next);
   fillAuthorSlotNodes(next);
@@ -239,6 +240,48 @@ function implicitFigureIfNeeded(artifact: Artifact): void {
     },
     1,
   );
+}
+
+/** Author plot/mark layers must paint after figure decks, not under them. */
+function liftFramedWorldLayers(artifact: Artifact): void {
+  const layers = artifact.scene?.layers;
+  if (!layers?.length) return;
+  const world: LayerDecl[] = [];
+  const rest: LayerDecl[] = [];
+  for (const layer of layers) {
+    if (layerHasFramedWorld(layer)) world.push(layer);
+    else rest.push(layer);
+  }
+  if (!world.length) return;
+  let insertAt = -1;
+  for (let i = 0; i < rest.length; i++) {
+    const name = rest[i]!.name;
+    if (name.startsWith("__") && (name.includes("_decks") || name.includes("_plate"))) {
+      insertAt = i;
+    }
+  }
+  if (insertAt < 0) return;
+  rest.splice(insertAt + 1, 0, ...world);
+  artifact.scene!.layers = rest;
+}
+
+function layerHasFramedWorld(layer: LayerDecl): boolean {
+  if (layer.name.startsWith("__")) return false;
+  return sceneItemsAreFramedWorld(layer.items);
+}
+
+function sceneItemsAreFramedWorld(items: SceneItem[]): boolean {
+  for (const item of items) {
+    if (item.kind === "for" || item.kind === "if") {
+      if (sceneItemsAreFramedWorld(item.body)) return true;
+      continue;
+    }
+    if (item.kind !== "node") continue;
+    const role = stringProp(item.props, ["role"]) ?? "";
+    if (role === "plot") return true;
+    if (stringProp(item.props, ["frame"])) return true;
+  }
+  return false;
 }
 
 /** `layout.board play` veils must paint after chart marks (layout expands first). */
@@ -1291,7 +1334,7 @@ function expandLayoutFigure(
     } else {
       artifact.frames.push({ name, span, props: frameProps });
     }
-    if (decks) {
+    if (decks && !slotHasAuthorPlot(artifact, name)) {
       deckItems.push(
         node(`${id}_deck_${name}`, {
           role: literal("subpanel"),

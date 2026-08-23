@@ -138,6 +138,13 @@ widget chart.line
     expect(copy?.items.some((item) => item.kind === "node" && item.name.startsWith("board_docBody"))).toBe(
       true,
     );
+    const layerNames = result.ir!.scene.layers.map((l) => l.name);
+    expect(layerNames.indexOf("pca")).toBeGreaterThan(layerNames.indexOf("__fig_decks"));
+    expect(
+      result.ir!.scene.layers
+        .find((l) => l.name === "__fig_decks")
+        ?.items.some((item) => item.kind === "node" && item.name.endsWith("_deck_d")),
+    ).toBe(false);
   });
 
   it("maps science-studio PCA marks through the promoted plot frame", () => {
