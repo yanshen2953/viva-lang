@@ -148,7 +148,7 @@ widget layout.board
 
 `xScale: time`（或 ISO 日期字符串列自动识别）出时间刻度。`chart.box` / `chart.violin` 由编译器算四分位和密度（violin 是高斯 KDE 闭合轮廓，不是直方切片）。`brackets: [{ a, b, label }]` 画显著性括号。轴刻度数字写在场景坐标（图框左侧 / 底侧），避免数据域 padding 把 y 标签裁进绘图区。都不是新关键字。
 
-跨面板：`__brush` 按 frame 隔离，同名 `xField` 联动；刷选写入 `__sel.keys`。有效刷选在 `dragend` 后 **保持** 选择窗（`__brush.on` 仍为 1），空点 `dragend` 才清。其它图默认 **藏起** 不在集合里的行（含 heatmap 格子、折线线段、box / violin 摘要）。Runtime 用现有 opacity 做短淡入淡出。点图例色块也会写入 `__sel`（再点一次清空）。`link: dim` 可改回变淡。仍是矩形窗，不是套索。
+跨面板：`__brush` 按 frame 隔离，同名 `xField` 联动；刷选写入 `__sel.keys`。有效刷选在 `dragend` 后 **保持** 选择窗（`__brush.on` 仍为 1），空点 `dragend` 才清。拖路径明显长于对角时切到数据域套索（`inside` + `pathd`），否则仍是矩形窗。其它图默认 **藏起** 不在集合里的行（含 heatmap 格子、折线线段、box / violin 摘要）。Runtime 用现有 opacity 做短淡入淡出。点图例色块也会写入 `__sel`（再点一次清空）。`link: dim` 可改回变淡。
 
 图表默认交互（`interactive: false` 可关）：`__tip` 字符串、`__hover` 对象、`__brush`（场景框 + 数据域 `dx0/dy0/dx1/dy1`，刷选外的点变淡）、同 `group` 跨面板 `__highlightGrp`。点图例色块也会写 `__highlightGrp`。
 
@@ -243,6 +243,6 @@ layer cards
 `+ - * / % == != < > <= >= and or not`
 
 - 两边都是数组时，`+` 表示拼接：`series = series + [{ t: t, v: x }]`
-- 安全数学调用（仅这些）：`sin cos tan abs sqrt floor ceil round min max clamp log exp`；`has(array, value)` 做成员判断（跨面板 `__sel.keys`）
+- 安全数学调用（仅这些）：`sin cos tan abs sqrt floor ceil round min max clamp log exp`；`has(array, value)` 做成员判断（跨面板 `__sel.keys`）；`inside(x, y, pts)` 点在多边形内
   例：`v = param * sin(t * 0.15)`，`x = clamp(__event.x, 40, 400)`
 - 不要发明 `pow` / 自定义 JS 函数
