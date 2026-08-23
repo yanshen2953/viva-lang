@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
 import { compileSource } from "../../src/pipeline.js";
 import { renderSvgFromIr } from "../../src/export/static-svg.js";
 import { simulate } from "../../src/simulate.js";
+import { scalePathD } from "../../src/space/scene-box.js";
 
 const SCATTER = `artifact "Quality"
 data series = [
@@ -173,5 +175,88 @@ widget chart.heatmap
     expect(svg).toContain("stroke-dasharray=");
     expect(svg).toContain("Time (week)");
     expect(svg).toContain("Heart rate (bpm)");
+  });
+
+  it("places y-tick labels in scene space so they sit left of the plot, not in the data pad", () => {
+    const result = compileSource(
+      readFileSync("examples/box.viva", "utf8"),
+      "box.viva",
+      { handbookIds: ["print-nature"] },
+    );
+    expect(result.error).toBeNull();
+    const axes = result.ir!.scene.layers.find((l) => l.name.endsWith("_axes"))!;
+    const ytick = axes.items.find((i) => i.kind === "node" && i.name.includes("_ytick_"));
+    expect(ytick?.kind).toBe("node");
+    if (ytick?.kind === "node") {
+      expect(ytick.props.frame).toBeUndefined();
+      expect(ytick.props.x).toMatchObject({ kind: "number" });
+      expect(ytick.props.align).toMatchObject({ kind: "string", value: "right" });
+      const x = ytick.props.x?.kind === "number" ? ytick.props.x.value : 0;
+      expect(x).toBeGreaterThanOrEqual(10);
+      expect(x).toBeLessThan(72);
+    }
+    const svg = renderSvgFromIr(result.ir!);
+    expect(svg).not.toMatch(/NaN|Infinity/);
+    const tickXs = [...svg.matchAll(/data-viva-name="[^"]+_ytick_\d+"[^>]*\sx="([\d.]+)"/g)].map(
+      (m) => Number(m[1]),
+    );
+    expect(tickXs.length).toBeGreaterThan(0);
+    expect(Math.min(...tickXs)).toBeGreaterThan(8);
+    expect(Math.max(...tickXs)).toBeLessThan(72);
+  });
+
+  it("expands chart.violin as a closed scene-space density path", () => {
+    const result = compileSource(readFileSync("examples/violin.viva", "utf8"), "vl.viva");
+    expect(result.error).toBeNull();
+    const marks = result.ir!.scene.layers.find((l) => l.name.endsWith("_marks"))!;
+    const violins = marks.items.filter((i) => i.kind === "node" && i.name === "violin");
+    expect(violins.length).toBeGreaterThanOrEqual(3);
+    const first = violins[0];
+    expect(first?.kind).toBe("node");
+    if (first?.kind === "node") {
+      expect(first.props.frame).toBeUndefined();
+      expect(first.props.d?.kind).toBe("string");
+      const d = first.props.d?.kind === "string" ? first.props.d.value : "";
+      expect(d.startsWith("M ")).toBe(true);
+      expect(d.includes(" Z") || d.endsWith("Z")).toBe(true);
+    }
+    const svg = renderSvgFromIr(result.ir!);
+    expect(svg).toContain("<path ");
+    expect(svg).not.toMatch(/NaN|Infinity/);
+  });
+
+  it("keeps the mm paper HUD to the brush overlay (no standing tip)", () => {
+    const result = compileSource(
+      `artifact "Mm"
+data series = [{ x: 1, y: 2 }, { x: 4, y: 6 }]
+scene
+  unit: mm
+  column: single
+  width: 89
+  height: 68
+widget chart.scatter
+  data: series
+  xField: x
+  yField: y
+  xlim: 0 8
+  ylim: 0 10
+  areaX: 16 80
+  areaY: 12 56
+`,
+      "mm.viva",
+    );
+    expect(result.error).toBeNull();
+    const hud = result.ir!.scene.layers.find((l) => l.name === "__chart_hud");
+    expect(hud).toBeTruthy();
+    const names = hud!.items
+      .filter((i) => i.kind === "node")
+      .map((i) => (i.kind === "node" ? i.name : ""));
+    expect(names).toContain("brushRect");
+    expect(names).not.toContain("chartTip");
+  });
+
+  it("scales path d with unit: mm so violin/scene paths stay aligned", () => {
+    expect(scalePathD("M 10,20 L 30,40 Z", 2)).toBe("M 20,40 L 60,80 Z");
+    expect(scalePathD("M 1.5,2 L 3,4 Z", 1)).toBe("M 1.5,2 L 3,4 Z");
   });
 });
