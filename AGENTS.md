@@ -16,6 +16,7 @@ Dependency refresh on pod start is `npm install` (see environment update script)
 | CLI without dist | `npx vite-node src/cli.ts -- compile examples/hello.viva` |
 | Agent Host smoke | `npx vite-node scripts/hello-agent.ts` |
 | Export SVG/JPG/PDF | `npx vite-node src/cli.ts -- export examples/hello.viva -f pdf -o /tmp/h.pdf` |
+| Beat slideshow | `npx vite-node src/cli.ts -- export examples/storyboard.viva --beats -f gif -o /tmp/story.gif` (ffmpeg stitch, not a timeline) |
 | Layout checks | `npx vite-node src/cli.ts -- check examples/figure-atlas.viva --visual --handbook print-nature` |
 | Multimodal check | `npx vite-node src/cli.ts -- check file.viva --vision` (see `viva.models.json.example`) |
 | Model slots | `npx vite-node src/cli.ts -- models` |

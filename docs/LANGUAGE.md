@@ -144,7 +144,7 @@ widget layout.board
 - `xScale: band` / `category`（字符串列会自动 band）；也可用 `xCats` / `yCats`
 - 图例默认在图外右侧：`legend: right|bottom|inside|false`
 
-`layout.board` 可选 `splits: 2` → 在 `body` 里再切 `left` / `right`；`beats: 4` → 分镜槽 `beat0`…`beat3`。`play: true` 用 `tick` 推进 `__beat`，非当前拍加遮罩。`viva export file.viva --beats` 按 `__beat` 导出 PNG 序列（仍不是成片视频）。`typeGrid: true` 在安全框上画字级基线；`typeGridCols: 12` 再切 `type0`… 栏（仍不是跨页）。
+`layout.board` 可选 `splits: 2` → 在 `body` 里再切 `left` / `right`；`beats: 4` → 分镜槽 `beat0`…`beat3`。`play: true` 用 `tick` 推进 `__beat`，非当前拍加遮罩。`viva export file.viva --beats` 按 `__beat` 导出 PNG 序列；`--beats -f gif|mp4` 用 ffmpeg 把这些帧拼成幻灯（仍不是成片时间轴）。`typeGrid: true` 在安全框上画字级基线；`typeGridCols: 12` 再切 `type0`… 栏（仍不是跨页）。
 
 `xScale: time`（或 ISO 日期字符串列自动识别）出时间刻度。`chart.box` / `chart.violin` 由编译器算四分位和密度（violin 是高斯 KDE 闭合轮廓，不是直方切片）。`brackets: [{ a, b, label }]` 画显著性括号。轴刻度数字写在场景坐标（图框左侧 / 底侧），避免数据域 padding 把 y 标签裁进绘图区。都不是新关键字。
 

@@ -57,6 +57,8 @@ Response: same as `compileSource()` — `ir`, `diagnostics`, `error`.
 
 Returns binary body (`application/pdf`, etc.).
 
+`beats: true` returns JSON: PNG frames from `layout.board` `__beat`. With `format: "gif"` or `"mp4"`, the same frames are stitched by ffmpeg into one slideshow (not a timeline).
+
 ### Session / Pipeline / Provenance
 
 | Method | Path | Purpose |

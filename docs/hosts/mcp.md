@@ -17,7 +17,7 @@ HTTP (`viva serve`) and MCP solve the same problems; pick one per host:
 | --- | --- |
 | `viva_compile` | Source → IR JSON (+ optional structural check) |
 | `viva_check` | Structural / `--visual` / `--vision` QA |
-| `viva_export` | svg/png/jpg/pdf (base64 or `outputPath`)；`beats:true` 出 `__beat` PNG 序列 |
+| `viva_export` | svg/png/jpg/pdf (base64 or `outputPath`)；`beats:true` 出 `__beat` PNG 序列；`format` gif\|mp4 用 ffmpeg 拼幻灯（不是时间轴） |
 | `viva_prompt` | System prompt + handbooks |
 | `viva_models` | Resolved base/vision model slots |
 | `viva_session` | Headless session: `create` / `compile` / `patch` / `world` / `set` / `simulate` / `provenance` / `bundle` / `dispose` |

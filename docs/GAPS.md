@@ -42,7 +42,7 @@
 | SVG 导出 | `font-family` / `font-weight` / `letter-spacing` / `stroke-dasharray` / 旋转轴标题 |
 | 动态 widget 插件 | `registerWidget()` / `listWidgets()` |
 | `layout.figure` | `cols/rows/gutter/margin`；不写 `inset*` 时按绑定 chart 的 chrome 迭代估留白；相邻格 chrome 互叠时再长 inset；不写 `x/y/w/h` 铺满场景或 `panel: body`；`title`/`subtitle`/`caption`/`plate` 由编译器画 |
-| `layout.board` | `safe`/`title`/`body`/`lower`/`hud`；题注 + `controls`/`bind` 芯片；不写 `w/h` 铺满场景；`splits` / `beats` / `bleed` / `typeGrid`；`--beats` 出 PNG 序列 |
+| `layout.board` | `safe`/`title`/`body`/`lower`/`hud`；题注 + `controls`/`bind` 芯片；不写 `w/h` 铺满场景；`splits` / `beats` / `bleed` / `typeGrid`；`--beats` 出 PNG 序列，可选 ffmpeg 拼 GIF/MP4 幻灯 |
 | 图表对位 | `panel: a` 吃已有 frame |
 | 投稿尺寸 | `unit: mm` + `column: single\|double` |
 | Agent 热路径 | slim prompt 默认；session compile 附 visual diagnostics |
@@ -63,7 +63,7 @@
 1. 更完整的排版求解（跨页、栏宽文法、色条长标签）；图/轴标题和图例键会按栏宽折行，重叠刻度会抽稀，相邻格 chrome 会再让一档
 2. linked selection 已藏热图、折线、box/violin；高亮有 scale 缓动，仍缺时间轴动画
 3. 再扩 CJK 或允许宿主挂全库；`scripts/subset-cjk-font.py` 可从 Droid 重建
-4. `layout.board play` 遮罩现在画在图表之上（layout 先展开、chart 后展开）；`export --beats` / MCP `beats` 仍是 PNG 序列，不是成片视频
+4. `layout.board play` 遮罩现在画在图表之上（layout 先展开、chart 后展开）；`export --beats` / MCP `beats` 默认 PNG 序列，`gif|mp4` 只是 ffmpeg 幻灯，不是成片时间轴
 5. agent-exam 种子编译进 CI；生成成功率仍未测（要 LLM）
 
 对照真源：`docs/VISION.md`。
