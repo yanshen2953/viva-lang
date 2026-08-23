@@ -153,6 +153,12 @@ describe("chart quality: axis titles, error bars, hover, heatmap", () => {
     expect(tickText("_ytick_")).toEqual(expect.arrayContaining(["1", "2"]));
     expect(tickText("_xtick_")).not.toContain("0");
     expect(tickText("_xtick_")).not.toContain("3");
+    const zTicks = tickText("_cbarLbl_");
+    expect(zTicks[0]).toBe("1");
+    expect(zTicks[zTicks.length - 1]).toBe("0");
+    expect(zTicks).toContain("0");
+    expect(zTicks).toContain("1");
+    expect(names.some((n) => n.includes("_cbarMark_"))).toBe(true);
   });
 
   it("infers heat cell pitch from unique numeric spacing", () => {
@@ -217,6 +223,13 @@ widget chart.heatmap
       .filter((i) => i.kind === "node" && /_xtick_\d+$/.test(i.name))
       .map((i) => (i.kind === "node" && i.props.text?.kind === "string" ? i.props.text.value : ""));
     expect(heatTicks).toEqual(["1", "2", "3"]);
+    const zTicks = axes.items
+      .filter((i) => i.kind === "node" && /_cbarLbl_\d+$/.test(i.name))
+      .map((i) => (i.kind === "node" && i.props.text?.kind === "string" ? i.props.text.value : ""));
+    expect(zTicks[0]).toBe("28");
+    expect(zTicks[zTicks.length - 1]).toBe("6");
+    expect(zTicks).not.toContain("17");
+    expect(axes.items.some((i) => i.kind === "node" && i.name.includes("_cbarMark_"))).toBe(true);
     if (title?.kind === "node") {
       expect(title.props.role).toMatchObject({ kind: "string", value: "annotation" });
       expect(title.props.rotate).toMatchObject({ kind: "number", value: -90 });

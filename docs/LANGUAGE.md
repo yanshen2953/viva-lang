@@ -135,7 +135,7 @@ widget layout.board
 轴尺度（frame 或 chart 属性，不是新关键字）：
 
 - `xScale: log` / `yScale: log`
-- 热图第三轴：`zLabel` / `zUnit`（与 `xLabel` 同类属性，不是新关键字）；色条数字和标题按剩余栏宽折行
+- 热图第三轴：`zLabel` / `zUnit`（与 `xLabel` 同类属性，不是新关键字）；色条刻度落在 `zlim`，数字和标题按剩余栏宽折行
 - `xScale: band` / `category`（字符串列会自动 band；`chart.heatmap` 的字符串 Y 同样自动 band，不必手写 `yScale`）；也可用 `xCats` / `yCats`
 - 图例默认在图外右侧：`legend: right|bottom|inside|false`
 
@@ -168,7 +168,7 @@ widget chart.scatter
 - `xLabel` / `yLabel` + `xUnit` / `yUnit` → 轴标题（如 `Time (week)`）。未加引号的多词（`xLabel: Sum score`）会拼成一句，不必写成 `"Sum score"`
 - 线性轴会键上作者 `xlim` / `ylim` 端点（`0 70` 会画出 `70`），中间仍走 nice step；挤时抽稀保留两端。`chart.bar` / `box` / `violin` 的少量整数类目轴刻在取值上（`visit` 1–6 不会因为 `xlim: 0 7` 画出 0 和 7）。折线 / 散点 / 矢量的整数 x 若铺满大部分 `xlim`（周次 0,2,…,12）也刻在取值上，不再插入 nice 的 5；稀疏散点仍键端点。漏斗的数值轴仍键端点
 - `errorField` / `yerr` → 竖直误差棒
-- `chart.heatmap`：`valueField` + `zlim`，右侧连续色条。色条宽高按场景比例（mm 不再把 10/40 px 当成毫米），`zLabel` 在色标数字右侧 −90° 竖排，和 `yLabel` 同一套轴标题，按绘图区高度折行。未写 `cellW`/`cellH` 时按相邻唯一 x/y 的中位步长铺格；离散数值轴刻度落在格心（`xlim: -0.5 7.5` 不再把 −0.5 / 7.5 画成刻度）；格子白缝按短边比例，不是 1 个场景单位。热图 Y 不翻转：第一行 / 最小 row 在顶上（和数据表一样），不是笛卡尔底边
+- `chart.heatmap`：`valueField` + `zlim`，右侧连续色条。色条宽高按场景比例（mm 不再把 10/40 px 当成毫米），`zLabel` 在色标数字右侧 −90° 竖排，和 `yLabel` 同一套轴标题，按绘图区高度折行。色条刻度落在 `zlim` 值上（整数 0…4 每隔一档；更宽的域走 nice 并键两端），不再只标底/中/顶三段。未写 `cellW`/`cellH` 时按相邻唯一 x/y 的中位步长铺格；离散数值轴刻度落在格心（`xlim: -0.5 7.5` 不再把 −0.5 / 7.5 画成刻度）；格子白缝按短边比例，不是 1 个场景单位。热图 Y 不翻转：第一行 / 最小 row 在顶上（和数据表一样），不是笛卡尔底边
 - 默认 `hover` 把读数写入 `__tip`，指针写入 `__tipX` / `__tipY`（跟手 tip；`interactive: false` 可关）
 
 ## 图层（z-order = 声明顺序）

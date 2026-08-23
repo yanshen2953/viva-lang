@@ -137,6 +137,13 @@ describe("figure-atlas example", () => {
     expect(ys).not.toContain("5.5");
     expect(ys[0]).toBe("0");
     expect(ys[ys.length - 1]).toBe("5");
+    const zTicks = heatTicks("_cbarLbl_");
+    expect(zTicks[0]).toBe("4");
+    expect(zTicks[zTicks.length - 1]).toBe("0");
+    expect(zTicks).toEqual(expect.arrayContaining(["0", "4"]));
+    expect(zTicks).not.toContain("5");
+    expect(zTicks).not.toContain("6");
+    expect(dAxes.items.some((i) => i.kind === "node" && i.name.includes("_cbarMark_"))).toBe(true);
     const heatCells = result.ir!.scene.layers
       .find((l) => l.name === "__d_marks")!
       .items.filter((i) => i.kind === "node" && i.name === "heatCell");

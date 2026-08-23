@@ -2812,9 +2812,7 @@ function chromeLayoutOf(
       yTicks,
       xTicks,
       panelLabel: panelLabelOf(props),
-      cbarLabels: extras.colorbar
-        ? [formatTickValue(z0), formatTickValue((z0 + z1) / 2), formatTickValue(z1)]
-        : [],
+      cbarLabels: extras.colorbar ? colorbarTicks(z0, z1).map((v) => formatTickValue(v)) : [],
       zCaption: extras.colorbar ? axisCaption(props, "z") : null,
     },
     cellBoxOf(props),
@@ -3689,6 +3687,21 @@ function zlimPair(props: Record<string, Expr>): [number, number] {
   return pair ?? [0, 1];
 }
 
+/** Integer zlim 0…4 ticks every unit; 0…1 and wider domains keep nice + pinned ends. */
+function colorbarTicks(z0: number, z1: number): number[] {
+  if (!Number.isFinite(z0) || !Number.isFinite(z1)) return [];
+  if (z0 === z1) return [z0];
+  const lo = Math.min(z0, z1);
+  const hi = Math.max(z0, z1);
+  const span = hi - lo;
+  if (Number.isInteger(lo) && Number.isInteger(hi) && span >= 2 && span <= 8) {
+    const out: number[] = [];
+    for (let v = lo; v <= hi; v++) out.push(v);
+    return z0 <= z1 ? out : [...out].reverse();
+  }
+  return niceTicks(lo, hi);
+}
+
 function expandAggregatedBars(
   artifact: Artifact,
   dataName: string,
@@ -3904,7 +3917,6 @@ function expandColorbar(
   const steps = 7;
   const items: SceneItem[] = [];
   for (let i = 0; i < steps; i++) {
-    const t = i / (steps - 1);
     items.push(
       node(`${frameName}_cbar_${i}`, {
         role: literal("colorbar"),
@@ -3921,22 +3933,44 @@ function expandColorbar(
         styleSkip: literal(true),
       }),
     );
-    if (i === 0 || i === steps - 1 || i === Math.floor(steps / 2)) {
-      const value = z0 + t * (z1 - z0);
-      const slot = i === 0 ? 0 : i === steps - 1 ? 2 : 1;
-      const lines = chrome?.cbarLines?.[slot]?.length
-        ? chrome.cbarLines[slot]!
-        : [formatTickValue(value)];
-      for (const [li, line] of lines.entries()) {
-        items.push(
-          node(`${frameName}_cbarLbl_${i}${li ? `_${li}` : ""}`, {
-            role: literal("label"),
-            x: literal(barX + labelDx),
-            y: literal(bot - t * h + labelDy + li * labelLh),
-            text: literal(line),
-          }),
-        );
-      }
+  }
+  const zTicks = colorbarTicks(z0, z1);
+  const labeled = thinYTicks(
+    zTicks.map((value, i) => {
+      const t = (z1 === z0 ? 0 : (value - z0) / (z1 - z0));
+      const lines = chrome?.cbarLines?.[i]?.length ? chrome.cbarLines[i]! : [formatTickValue(value)];
+      return {
+        value,
+        label: lines[0] ?? formatTickValue(value),
+        lines,
+        y: bot - t * h,
+      };
+    }),
+    8,
+    3,
+    toScene,
+  );
+  const markLen = toScene(4);
+  for (const [i, tick] of labeled.entries()) {
+    items.push(
+      node(`${frameName}_cbarMark_${i}`, {
+        role: literal("axis"),
+        x1: literal(barX + barW),
+        y1: literal(tick.y),
+        x2: literal(barX + barW + markLen),
+        y2: literal(tick.y),
+        strokeWidth: literal(1),
+      }),
+    );
+    for (const [li, line] of tick.lines.entries()) {
+      items.push(
+        node(`${frameName}_cbarLbl_${i}${li ? `_${li}` : ""}`, {
+          role: literal("label"),
+          x: literal(barX + labelDx),
+          y: literal(tick.y + labelDy + li * labelLh),
+          text: literal(line),
+        }),
+      );
     }
   }
   if (chrome?.cbarTitleLines?.length) {
