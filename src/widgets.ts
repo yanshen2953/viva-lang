@@ -819,7 +819,7 @@ function expandChart(
           ...(props.barStrokeWidth ?? props.markStrokeWidth
             ? { strokeWidth: props.barStrokeWidth ?? props.markStrokeWidth! }
             : {}),
-          ...(props.barRadius ? { radius: props.barRadius } : { radius: literal(3) }),
+          ...(props.barRadius ? { radius: props.barRadius } : {}),
           __chartBar: literal(true),
           ...(horizontal ? { __chartBarOrient: literal("h") } : {}),
           ...(props.hoverFill ? { hoverFill: props.hoverFill } : { hoverFill: literal("#E69F00") }),
@@ -3757,7 +3757,7 @@ function expandAggregatedBars(
       h: literal(horizontal ? barW : total),
       ...(fill ? { fill } : {}),
       hoverFill: literal("#E69F00"),
-      radius: literal(3),
+      ...(props.barRadius ? { radius: props.barRadius } : {}),
       __chartBar: literal(true),
       ...(horizontal ? { __chartBarOrient: literal("h"), __barOrient: literal("h") } : { __barOrient: literal("v") }),
       __barData: literal(dataName),

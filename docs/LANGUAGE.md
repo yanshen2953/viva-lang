@@ -168,7 +168,7 @@ widget chart.scatter
 - `xLabel` / `yLabel` + `xUnit` / `yUnit` → 轴标题（如 `Time (week)`）。未加引号的多词（`xLabel: Sum score`）会拼成一句，不必写成 `"Sum score"`
 - 线性轴会键上作者 `xlim` / `ylim` 端点（`0 70` 会画出 `70`），中间仍走 nice step；挤时抽稀保留两端。`chart.bar` / `box` / `violin` 的少量整数类目轴刻在取值上（`visit` 1–6 不会因为 `xlim: 0 7` 画出 0 和 7）。折线 / 散点 / 矢量的整数 x 若铺满大部分 `xlim`（周次 0,2,…,12）也刻在取值上，不再插入 nice 的 5；稀疏散点仍键端点。漏斗的数值轴仍键端点
 - `errorField` / `yerr` → 竖直误差棒
-- `chart.heatmap`：`valueField` + `zlim`，右侧连续色条。色条宽高按场景比例（mm 不再把 10/40 px 当成毫米），`zLabel` 在色标数字右侧 −90° 竖排，和 `yLabel` 同一套轴标题，按绘图区高度折行。色条刻度落在 `zlim` 值上（整数 0…4 每隔一档；更宽的域走 nice 并键两端），不再只标底/中/顶三段；色带是顺序色 `linearGradient`（导出与 Runtime 同一套）。未写 `cellW`/`cellH` 时按相邻唯一 x/y 的中位步长铺格；离散数值轴刻度落在格心（`xlim: -0.5 7.5` 不再把 −0.5 / 7.5 画成刻度）；格子白缝按短边比例，不是 1 个场景单位。热图 Y 不翻转：第一行 / 最小 row 在顶上（和数据表一样），不是笛卡尔底边。热图默认不画穿过格子的笛卡尔虚线网格（散点 / 折线 / 柱仍画）。`print-nature` 的绘图区 / figure 甲板 / 外框是方角（手册 `radius`）；`dashboard` 仍是圆角卡片。图表可写 `plotRadius` 覆盖绘图区圆角
+- `chart.heatmap`：`valueField` + `zlim`，右侧连续色条。色条宽高按场景比例（mm 不再把 10/40 px 当成毫米），`zLabel` 在色标数字右侧 −90° 竖排，和 `yLabel` 同一套轴标题，按绘图区高度折行。色条刻度落在 `zlim` 值上（整数 0…4 每隔一档；更宽的域走 nice 并键两端），不再只标底/中/顶三段；色带是顺序色 `linearGradient`（导出与 Runtime 同一套）。未写 `cellW`/`cellH` 时按相邻唯一 x/y 的中位步长铺格；离散数值轴刻度落在格心（`xlim: -0.5 7.5` 不再把 −0.5 / 7.5 画成刻度）；格子白缝按短边比例，不是 1 个场景单位。热图 Y 不翻转：第一行 / 最小 row 在顶上（和数据表一样），不是笛卡尔底边。热图默认不画穿过格子的笛卡尔虚线网格（散点 / 折线 / 柱仍画）。`print-nature` 的绘图区 / figure 甲板 / 外框 / 柱形是方角（手册 `radius`）；`dashboard` 仍是圆角卡片和圆角柱。图表可写 `plotRadius` / `barRadius` 覆盖
 - 默认 `hover` 把读数写入 `__tip`，指针写入 `__tipX` / `__tipY`（跟手 tip；`interactive: false` 可关）
 
 ## 图层（z-order = 声明顺序）

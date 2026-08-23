@@ -608,6 +608,34 @@ widget chart.scatter
     expect(radiusOf("dashboard")).toBe(6);
   });
 
+  it("lets print-nature square bars while dashboard keeps rounded marks", () => {
+    const src = `artifact "Bars"
+data rows = [
+  { visit: 1, pct: 38 }
+  { visit: 2, pct: 41 }
+]
+scene
+  size: 240 160
+widget chart.bar
+  data: rows
+  xField: visit
+  yField: pct
+  interactive: false
+`;
+    const radiusOf = (handbook: string) => {
+      const result = compileSource(src, "bars.viva", { handbookIds: [handbook] });
+      expect(result.error).toBeNull();
+      const marks = result.ir!.scene.layers.find((l) => l.name.endsWith("_marks"))!;
+      const nodes = marks.items.flatMap((i) =>
+        i.kind === "node" ? [i] : i.kind === "for" ? i.body.filter((b) => b.kind === "node") : [],
+      );
+      const bar = nodes.find((i) => i.kind === "node" && i.name === "bar");
+      return bar?.kind === "node" && bar.props.radius?.kind === "number" ? bar.props.radius.value : NaN;
+    };
+    expect(radiusOf("print-nature")).toBe(0);
+    expect(radiusOf("dashboard")).toBe(3);
+  });
+
   it("joins an unquoted multi-word xLabel onto a horizontal funnel", () => {
     const src = `artifact "Funnel words"
 data rows = [

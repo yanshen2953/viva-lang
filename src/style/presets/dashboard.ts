@@ -28,7 +28,7 @@ export const dashboardPreset: StylePreset = {
     subpanel: { fill: "#0b1220", stroke: "#475569", strokeWidth: 1.5, radius: 10 },
     colorbar: { stroke: "#64748b", strokeWidth: 1 },
     "mark-area": { opacity: 0.92, strokeWidth: 0.5 },
-    mark: { stroke: "#0f172a", strokeWidth: 1.25 },
+    mark: { stroke: "#0f172a", strokeWidth: 1.25, radius: 3 },
     "mark-line": { strokeWidth: 2 },
     chrome: { fill: "#1e293b", stroke: "#94a3b8", strokeWidth: 1.5 },
     atmosphere: { opacity: 0.35 },
