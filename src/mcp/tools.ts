@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { compileSource } from "../pipeline.js";
-import { runArtifactChecks } from "../check/index.js";
+import { attachHotPathVisual, runArtifactChecks } from "../check/index.js";
 import { exportArtifact, exportBeatAnimation, exportBeatSequence, isBeatAnimFormat, type ExportFormat } from "../export/index.js";
 import { SYSTEM_PROMPT } from "../llm/system-prompt.js";
 import { SYSTEM_PROMPT_SLIM } from "../llm/system-prompt-slim.js";
@@ -57,13 +57,17 @@ async function toolCompile(args: Record<string, unknown>) {
     handbookIds,
     check: checkStructural ? { structural: true } : undefined,
   });
-  return textResult(JSON.stringify(result, null, 2), !result.ir);
+  const attached = await attachHotPathVisual(result, {
+    visual: args.visual === false ? false : undefined,
+    source,
+  });
+  return textResult(JSON.stringify(attached, null, 2), !attached.ir);
 }
 
 async function toolCheck(args: Record<string, unknown>) {
   const source = String(args.source ?? "");
   const handbookIds = args.handbookIds as string[] | undefined;
-  const visual = Boolean(args.visual);
+  const visual = args.visual === false ? false : true;
   const vision = Boolean(args.vision);
   const width = typeof args.width === "number" ? args.width : 960;
   const compiled = compileSource(source, "mcp.viva", { handbookIds });
@@ -217,10 +221,10 @@ async function toolSession(args: Record<string, unknown>, host: VivaAgentHost) {
       const compiled = await api.compile(sessionId, String(args.source ?? ""), meta, includeIr);
       return textResult(JSON.stringify(compiled), !compiled.ok);
     }
-    case "patch":
-      return textResult(
-        JSON.stringify(api.patch(sessionId, String(args.source ?? ""), meta, includeIr)),
-      );
+    case "patch": {
+      const patched = await api.patch(sessionId, String(args.source ?? ""), meta, includeIr);
+      return textResult(JSON.stringify(patched), !patched.ok);
+    }
     case "world":
       return textResult(JSON.stringify(api.world(sessionId)));
     case "set":
@@ -291,20 +295,22 @@ async function toolPipeline(args: Record<string, unknown>, host: VivaAgentHost) 
 export const MCP_TOOL_DEFINITIONS = [
   {
     name: "viva_compile",
-    description: "Compile Viva source to Visual IR JSON (optional structural check).",
+    description:
+      "Compile Viva source to Visual IR JSON. Attaches structural + raster visual QA; visual:false skips the raster. Visual findings do not fail IR success (not a repair loop).",
     inputSchema: {
       type: "object",
       properties: {
         source: { type: "string", description: "Viva source text" },
         handbookIds: { type: "array", items: { type: "string" }, description: "e.g. print-nature" },
         checkStructural: { type: "boolean" },
+        visual: { type: "boolean", description: "Raster QA on compile (default true)" },
       },
       required: ["source"],
     },
   },
   {
     name: "viva_check",
-    description: "Run structural / raster / vision QA on compiled figure.",
+    description: "Run structural / raster / vision QA on compiled figure. Raster visual defaults on; visual:false skips it.",
     inputSchema: {
       type: "object",
       properties: {
@@ -423,6 +429,7 @@ export const mcpToolSchemas = {
     source: z.string(),
     handbookIds: handbookIdsSchema,
     checkStructural: z.boolean().optional(),
+    visual: z.boolean().optional(),
   },
   viva_check: {
     source: z.string(),

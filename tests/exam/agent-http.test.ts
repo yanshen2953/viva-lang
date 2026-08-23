@@ -33,8 +33,12 @@ describe("agent HTTP server", () => {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ source: HELLO }),
     });
-    const compileJson = (await compile.json()) as { ir: { name: string } | null };
+    const compileJson = (await compile.json()) as {
+      ir: { name: string } | null;
+      visualOk?: boolean;
+    };
     expect(compileJson.ir?.name).toBe("Hi");
+    expect(typeof compileJson.visualOk).toBe("boolean");
 
     const check = await fetch(`${base}/api/check`, {
       method: "POST",

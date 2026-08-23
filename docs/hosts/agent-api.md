@@ -26,11 +26,12 @@ Resolved `base` / `vision` model slots from `viva.models.json` or env.
 {
   "source": "artifact \"Hi\" ...",
   "handbookIds": ["print-nature"],
-  "checkStructural": true
+  "checkStructural": true,
+  "visual": true
 }
 ```
 
-Response: same as `compileSource()` — `ir`, `diagnostics`, `error`.
+Response: `compileSource()` fields plus raster `visual` / `visualOk`. Visual findings do not fail IR success. `visual: false` skips the raster.
 
 ### `POST /api/check`
 

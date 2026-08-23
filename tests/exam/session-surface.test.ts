@@ -105,8 +105,12 @@ describe("MCP session + pipeline tools", () => {
       { action: "compile", sessionId: session.id, source: HELLO },
       host,
     );
-    const compileJson = JSON.parse(compiled.content[0]!.text) as { ok: boolean };
+    const compileJson = JSON.parse(compiled.content[0]!.text) as {
+      ok: boolean;
+      visualOk?: boolean;
+    };
     expect(compileJson.ok).toBe(true);
+    expect(typeof compileJson.visualOk).toBe("boolean");
 
     const patched = await handleMcpTool(
       "viva_session",

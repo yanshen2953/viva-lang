@@ -25,7 +25,7 @@
 | 语法 | 原语极小，新能力只加插件名 | 核还算小；widget 走 `registerWidget()` | 语言表面没涨关键字。不要为图种/槽位加关键字 |
 | 编译器 | 度量、避让、对齐、交互默认、导出保真全在编译/运行时 | band/log/linear + handbook 涂颜料/接管字号字距 + 图核默认交互 | handbook **仍不**执行图语法（避让、对齐、栏宽文法）；导出保真仍有缺口 |
 | 插件 | 宿主运行时注册：图种、排版、领域视图，agent 可发现 | 手册 / 领域视图 / 结构宏都可注册 | 还不是热加载 / 沙箱包；未知 widget 编译失败并列出已注册名 |
-| Agent | 内联写短意图 → 编译 → 交互卡 → 检查 → 补丁 | CLI / MCP / HTTP / SDK 能编能导；prompt 默认 slim；session compile 附带 visual diagnostics | 生成成功率未测；visual 不挡编译成功 |
+| Agent | 内联写短意图 → 编译 → 交互卡 → 检查 → 补丁 | CLI / MCP / HTTP / SDK 能编能导；prompt 默认 slim；MCP/HTTP compile 附 raster visual QA | 生成成功率未测；visual 不挡 IR 成功；内联卡无 raster；无自动修复 |
 
 一句话：今天是 **World + Space + Paint** 粘在一起，脊柱已能同时展开三柱，但出版观感与 agent 闭环都还没齐。愿景是 **同一套极小原语**，三柱都是编译器展开，插件只换展开器。
 
@@ -101,6 +101,6 @@
 2. `__sel` 已是共享 key 集并藏行；box / violin / 折线按选中行重算或重连；高亮、play 遮罩、box/折线几何和同骨架 violin `d` 走 220ms 缓动，仍缺时间轴
 3. 再扩随包 CJK 子集；宿主已能挂全库。未覆盖的字仍可能 `?`
 4. `layout.board play` / `typeGrid` 已在；省略 `safe`/`titleH`/`lowerH` 时按题注估条带；`--beats` 默认 PNG 序列，`-f gif|mp4` 只是 ffmpeg 幻灯，不是成片时间轴
-5. 例子与 exam 种子编译已进 CI；LLM 生成成功率仍未测。不要把 visual diagnostics 误报成「已经闭环」
+5. 例子与 exam 种子编译已进 CI；MCP/HTTP compile 已附 raster visual QA，仍不挡 IR 成功。LLM 生成成功率仍未测。不要把 visual 误报成「已经闭环」
 
 发现插件：`viva widgets` 或 `listWidgets()`。

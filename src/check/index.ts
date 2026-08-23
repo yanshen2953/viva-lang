@@ -79,3 +79,50 @@ export async function runArtifactChecks(
     },
   };
 }
+
+export type HotPathVisualFields = {
+  visualOk?: boolean;
+  visual?: import("./types.js").CheckDiagnostic[];
+};
+
+/**
+ * Attach raster visual QA after a successful compile. Does not flip IR
+ * success — agents still get a world. `visual: false` skips the raster.
+ * Not a repair loop.
+ */
+export async function attachHotPathVisual<
+  T extends {
+    ir: VisualIR | null;
+    diagnostics: Array<{ message: string; code?: string }>;
+    checkDiagnostics?: import("./types.js").CheckDiagnostic[];
+    checkOk?: boolean;
+  },
+>(
+  compiled: T,
+  opts: { visual?: boolean; rasterWidth?: number; source?: string } = {},
+): Promise<T & HotPathVisualFields> {
+  if (!compiled.ir || opts.visual === false) return compiled;
+  const checks = await runArtifactChecks(compiled.ir, {
+    structural: true,
+    visual: true,
+    rasterWidth: opts.rasterWidth ?? 640,
+    source: opts.source,
+  });
+  const seen = new Set(
+    compiled.diagnostics.map((d) => `${"code" in d ? String(d.code ?? "") : ""}|${d.message}`),
+  );
+  const extra = [...checks.structural, ...checks.visual].filter((d) => {
+    const key = `${d.code}|${d.message}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  return {
+    ...compiled,
+    diagnostics: [...compiled.diagnostics, ...extra],
+    checkDiagnostics: [...(compiled.checkDiagnostics ?? []), ...extra],
+    checkOk: checks.ok,
+    visualOk: !hasCheckErrors(checks.visual),
+    visual: checks.visual,
+  };
+}

@@ -15,8 +15,8 @@ HTTP (`viva serve`) and MCP solve the same problems; pick one per host:
 
 | Tool | Purpose |
 | --- | --- |
-| `viva_compile` | Source → IR JSON (+ optional structural check) |
-| `viva_check` | Structural / `--visual` / `--vision` QA |
+| `viva_compile` | Source → IR JSON；默认附 structural + raster visual QA（`visual:false` 可关）。visual 不挡 IR 成功，不是自动修复 |
+| `viva_check` | Structural / raster visual（默认开）/ `--vision` QA |
 | `viva_export` | svg/png/jpg/pdf (base64 or `outputPath`)；`cjkFontPath` 挂宿主 TTF 做 PDF CJK（也认 `VIVA_PDF_CJK_FONT`）；`beats:true` 出 `__beat` PNG 序列；`format` gif\|mp4 用 ffmpeg 拼幻灯（不是时间轴） |
 | `viva_prompt` | System prompt + handbooks |
 | `viva_models` | Resolved base/vision model slots |

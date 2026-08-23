@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
 import { handleMcpTool } from "../../src/mcp/tools.js";
 import { ffmpegAvailable } from "../../src/export/index.js";
 
@@ -17,6 +18,25 @@ describe("MCP tools", () => {
     expect(out.isError).toBeFalsy();
     const json = JSON.parse(out.content[0]!.text);
     expect(json.ir?.name).toBe("MCP");
+    expect(typeof json.visualOk).toBe("boolean");
+    expect(Array.isArray(json.visual)).toBe(true);
+  });
+
+  it("viva_compile marks an inked paper figure visualOk", async () => {
+    const out = await handleMcpTool("viva_compile", {
+      source: readFileSync("examples/paper-column.viva", "utf8"),
+      handbookIds: ["print-nature"],
+    });
+    const json = JSON.parse(out.content[0]!.text);
+    expect(json.ir?.name).toBeTruthy();
+    expect(json.visualOk).toBe(true);
+  }, 30_000);
+
+  it("viva_compile visual:false skips the raster", async () => {
+    const out = await handleMcpTool("viva_compile", { source: HELLO, visual: false });
+    const json = JSON.parse(out.content[0]!.text);
+    expect(json.ir?.name).toBe("MCP");
+    expect(json.visualOk).toBeUndefined();
   });
 
   it("viva_prompt includes system prompt", async () => {

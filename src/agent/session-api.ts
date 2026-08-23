@@ -11,7 +11,7 @@ import type {
 } from "./types.js";
 import { createHttpWebhookPipeline } from "./pipeline/adapters/http-webhook.js";
 import { createInlinePipeline } from "./pipeline/port.js";
-import { runArtifactChecks } from "../check/index.js";
+import { attachHotPathVisual } from "../check/index.js";
 
 export type SessionSummary = {
   id: string;
@@ -124,27 +124,24 @@ export function createSessionFacade(host: VivaAgentHost) {
     ): Promise<CompileSummary> {
       const session = requireSession(host, sessionId);
       const compiled = session.compile(source, meta);
-      const summary = summarizeCompile(session, compiled, includeIr);
-      if (compiled.ir) {
-        const checks = await runArtifactChecks(compiled.ir, {
-          structural: true,
-          visual: true,
-          rasterWidth: 640,
-        });
-        summary.diagnostics = [...summary.diagnostics, ...checks.structural, ...checks.visual];
-        summary.visualOk = checks.ok;
-      }
+      const attached = await attachHotPathVisual(compiled, { source });
+      const summary = summarizeCompile(session, attached, includeIr);
+      summary.visualOk = attached.visualOk;
       return summary;
     },
 
-    patch(
+    async patch(
       sessionId: string,
       source: string,
       meta?: CompileMeta,
       includeIr = false,
-    ): CompileSummary {
+    ): Promise<CompileSummary> {
       const session = requireSession(host, sessionId);
-      return summarizeCompile(session, session.patch(source, meta), includeIr);
+      const patched = session.patch(source, meta);
+      const attached = await attachHotPathVisual(patched, { source });
+      const summary = summarizeCompile(session, attached, includeIr);
+      summary.visualOk = attached.visualOk;
+      return summary;
     },
 
     world(sessionId: string) {

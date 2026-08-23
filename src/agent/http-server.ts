@@ -5,7 +5,7 @@ import { createServer, type Server } from "node:http";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { runArtifactChecks } from "../check/index.js";
+import { attachHotPathVisual, runArtifactChecks } from "../check/index.js";
 import { describeModelSlots, resolveModelsConfig } from "../check/models/index.js";
 import {
   exportArtifact,
@@ -107,12 +107,19 @@ export function createAgentHttpServer(opts: AgentHttpOptions): Server {
           source?: string;
           handbookIds?: string[];
           checkStructural?: boolean;
+          visual?: boolean;
         };
         const result = compileSource(payload.source ?? "", "api.viva", {
           handbookIds: payload.handbookIds,
           check: payload.checkStructural ? { structural: true } : undefined,
         });
-        json(200, result);
+        json(
+          200,
+          await attachHotPathVisual(result, {
+            visual: payload.visual === false ? false : undefined,
+            source: payload.source,
+          }),
+        );
         return;
       }
 
@@ -133,7 +140,7 @@ export function createAgentHttpServer(opts: AgentHttpOptions): Server {
         }
         const checks = await runArtifactChecks(compiled.ir, {
           structural: true,
-          visual: Boolean(payload.visual),
+          visual: payload.visual === false ? false : true,
           vision: Boolean(payload.vision),
           source: payload.source,
           rasterWidth: payload.width ?? 960,
@@ -325,7 +332,7 @@ async function handleSessionRoutes(
     };
     json(
       200,
-      sessions.patch(
+      await sessions.patch(
         sessionId,
         payload.source ?? "",
         { reason: payload.reason ?? "repair", handbooks: payload.handbookIds },
@@ -467,7 +474,7 @@ function openApiSpec(): Record<string, unknown> {
       "/api/prompt": { get: { summary: "Core system prompt" } },
       "/api/compile": {
         post: {
-          summary: "Compile Viva source → IR JSON",
+          summary: "Compile Viva source → IR JSON (attaches raster visual QA; visual:false skips)"
           requestBody: {
             content: {
               "application/json": {
@@ -477,6 +484,7 @@ function openApiSpec(): Record<string, unknown> {
                     source: { type: "string" },
                     handbookIds: { type: "array", items: { type: "string" } },
                     checkStructural: { type: "boolean" },
+                    visual: { type: "boolean" },
                   },
                 },
               },
