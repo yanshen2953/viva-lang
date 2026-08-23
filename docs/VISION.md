@@ -19,7 +19,7 @@
 
 | 柱 | 愿景里的样子 | 今天实际 | 差在哪 |
 | --- | --- | --- | --- |
-| 交互 | 汇报件本身就是活世界：点、刷、拖、联动、时间，和游戏同一套原语 | Runtime 有 click/hover/drag/collide/key/tick；图表默认 `__tip` / `__hover` / `__brush`（数据域） / `__highlightGrp` | 刷选还不是完整 linked selection；无动画过渡；内联卡上的检查/修复壳仍弱 |
+| 交互 | 汇报件本身就是活世界：点、刷、拖、联动、时间，和游戏同一套原语 | Runtime 有 click/hover/drag/collide/key/tick；图表默认 `__tip` / `__hover` / `__brush`（数据域） / `__highlightGrp`；挂了 `frame:` 的 World 点走同一套（投影坐标不绑 brush） | 刷选还不是完整 linked selection；无动画过渡；内联卡上的检查/修复壳仍弱 |
 | 图表 | 轴、误差、分组、色标、投稿可读，由编译器长出来 | `chart.scatter/line/bar/heatmap/vector/funnel/box/violin` + 线性/log/band/time；轴标题在场景坐标；violin 为 KDE 轮廓；`print-nature` 接管刻度/轴标题字号与字距；PDF 默认 CJK 子集，宿主可挂全库 | 小栏宽间距仍粗；默认子集不是全库；不是投稿成品 |
 | 排版 | 作者只说「2×2 图、单栏 89 mm、安全框」；格子、出血、字幕条、对位由编译器算 | `layout.figure` 网格（不写 `inset*` 时按绑定 chart 估留白）；`layout.board` 安全框 + `splits` / `beats` / `bleed` / `typeGrid`（不写 `safe`/`titleH`/`lowerH` 时按题注和芯片估条带）；`unit: mm` + 单/双栏；`page: a4` PDF 切片 + `n / N` 页戳；figure 格子避开页缝；`--beats` 出 PNG 序列，可选 ffmpeg 拼 GIF/MP4 幻灯 | 页装箱不是栏宽重排；估 inset ≠ 碰撞求解；`play` 仍是拍遮罩，不是成片时间轴 |
 | 语法 | 原语极小，新能力只加插件名 | 核还算小；widget 走 `registerWidget()` | 语言表面没涨关键字。不要为图种/槽位加关键字 |
@@ -66,7 +66,7 @@
 
 ### 3.1 游戏式交互
 
-有：节点可拖、碰撞、键盘、tick、图层；图表默认数据域 tooltip、brush 反演（按 frame 隔离，同名 xField 联动）、跨面板 group 高亮、点图例高亮。有效刷选松手后保持选择窗；拖路径明显长于对角时用套索，否则矩形。  
+有：节点可拖、碰撞、键盘、tick、图层；图表默认数据域 tooltip、brush 反演（按 frame 隔离，同名 xField 联动）、跨面板 group 高亮、点图例高亮。挂了 `frame:` 的 World 点（`role: mark` / `colorBy`）默认同一套 `__tip` / `__hover` / `__highlightGrp` / `__sel`；`x`/`y` 是数据字段且平面上没有作者拖轨道时再绑 brush；作者没画图例时编译器按 `colorBy` 补可点图例。有效刷选松手后保持选择窗；拖路径明显长于对角时用套索，否则矩形。  
 没有：完整游戏级过渡曲线。内联卡有只读结构检查条，仍无 visual/raster、也没有自动修复。`__sel.keys` 默认让其它面板 **藏行**（含 box / violin / 折线；box 四分位、violin KDE 和折线线段按选中行重算/重连；`link: dim` 可改回变淡）。Runtime 用 CSS `opacity` + 命中组 `scale` 做 220ms 缓动（含 `layout.board play` 拍遮罩）；box / 折线摘要几何和同骨架 violin 路径 `d` 也按同一时段插值；命令骨架不同则硬切。静态导出仍硬切。不是时间轴。
 
 ### 3.2 论文级图表

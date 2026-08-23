@@ -171,54 +171,6 @@ scene
           strokeWidth: 2
           dash: 5 4
 
-    node legA
-      role: legend
-      x: 824
-      y: 548
-      w: 10
-      h: 10
-      radius: 2
-      fill: palette("A", "categorical")
-      styleSkip: true
-
-    node legALbl
-      role: legend-label
-      x: 840
-      y: 558
-      text: "cluster A"
-
-    node legB
-      role: legend
-      x: 920
-      y: 548
-      w: 10
-      h: 10
-      radius: 2
-      fill: palette("B", "categorical")
-      styleSkip: true
-
-    node legBLbl
-      role: legend-label
-      x: 936
-      y: 558
-      text: "cluster B"
-
-    node legC
-      role: legend
-      x: 1016
-      y: 548
-      w: 10
-      h: 10
-      radius: 2
-      fill: palette("C", "categorical")
-      styleSkip: true
-
-    node legCLbl
-      role: legend-label
-      x: 1032
-      y: 558
-      text: "cluster C"
-
     node zoomOut
       role: chrome
       x: 1110
@@ -270,7 +222,7 @@ scene
       x: 48
       y: 148
       w: 420
-      text: "数据只写 grp；色板/框线/网格由 dashboard 预设注入。图表吃 role: panel 甲板；PCA 投影走 plot frame，拖轨道仍是 World。"
+      text: "数据只写 grp；色板/框线/网格由 dashboard 预设注入。图表吃 role: panel 甲板；PCA 投影走 plot frame，悬停/高亮与图表同一套 Runtime，拖轨道仍是 World。"
       lineHeight: 1.55
 
     node caption

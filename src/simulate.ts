@@ -9,8 +9,14 @@ export type SimWorld = {
 export type SimulateOptions = {
   /** How many tick-body executions to run (not wall-clock frames). */
   ticks?: number;
-  /** Fire named events: `{ type, target, event? }` */
-  events?: { type: string; target: string; event?: Record<string, unknown> }[];
+  /** Fire named events: `{ type, target, event?, item? }` */
+  events?: {
+    type: string;
+    target: string;
+    event?: Record<string, unknown>;
+    /** Flattened row fields, same as Runtime `fire()` on a for-loop mark. */
+    item?: Record<string, unknown>;
+  }[];
 };
 
 /**
@@ -58,7 +64,7 @@ export function simulate(ir: VisualIR, opts: SimulateOptions = {}): SimWorld {
     const handlers = ir.events.filter(
       (e) => e.type === fire.type && e.target === fire.target,
     );
-    const extra: Scope = { __event: fire.event ?? {} };
+    const extra: Scope = { __event: fire.event ?? {}, ...(fire.item ?? {}) };
     for (const handler of handlers) {
       execute(handler.body, [extra, ...scopes()]);
     }

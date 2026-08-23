@@ -132,6 +132,7 @@ export function expandWidgets(artifact: Artifact): Artifact {
   }
   liftPlayLayers(next);
   paintPageFolio(next);
+  bindFramedWorldInteract(next);
   return next;
 }
 
@@ -3712,11 +3713,14 @@ function selHideExpr(
   xField: string | null,
   frameName: string,
   span: { line: number; column: number },
+  loopVar = "row",
 ): Expr | null {
-  if (!xField) return null;
-  const inSelX = callExpr("has", [ident("__sel.keys"), ident(`row.${xField}`)], span);
+  if (!xField && !seriesField) return null;
+  const inSelX = xField
+    ? callExpr("has", [ident("__sel.keys"), ident(`${loopVar}.${xField}`)], span)
+    : literal(0);
   const inSelG = seriesField
-    ? callExpr("has", [ident("__sel.keys"), ident(`row.${seriesField}`)], span)
+    ? callExpr("has", [ident("__sel.keys"), ident(`${loopVar}.${seriesField}`)], span)
     : literal(0);
   const inSel = binary("or", inSelX, inSelG, span);
   const otherFrame = binary("!=", ident("__brush.frame"), literal(frameName), span);
@@ -3729,8 +3733,9 @@ function markSelVisible(
   xField: string | null,
   frameName: string,
   span: { line: number; column: number },
+  loopVar = "row",
 ): Record<string, Expr> {
-  const hide = selHideExpr(seriesField, xField, frameName, span);
+  const hide = selHideExpr(seriesField, xField, frameName, span, loopVar);
   if (!hide) return {};
   return { visible: { kind: "unary", op: "not", expr: hide, span } };
 }
@@ -3769,6 +3774,7 @@ function markInteractOpacity(
   linkXField: string | null,
   span: { line: number; column: number },
   includeSelDim = false,
+  loopVar = "row",
 ): Record<string, Expr> {
   const parts: Expr[] = [];
   if (seriesField) {
@@ -3776,7 +3782,7 @@ function markInteractOpacity(
       binary(
         "and",
         binary("!=", ident("__highlightGrp"), noneExpr(span), span),
-        binary("!=", ident(`row.${seriesField}`), ident("__highlightGrp"), span),
+        binary("!=", ident(`${loopVar}.${seriesField}`), ident("__highlightGrp"), span),
         span,
       ),
     );
@@ -3788,14 +3794,14 @@ function markInteractOpacity(
     const hiY = callExpr("max", [ident("__brush.dy0"), ident("__brush.dy1")], span);
     const outRectX = binary(
       "or",
-      binary("<", ident(`row.${xField}`), loX, span),
-      binary(">", ident(`row.${xField}`), hiX, span),
+      binary("<", ident(`${loopVar}.${xField}`), loX, span),
+      binary(">", ident(`${loopVar}.${xField}`), hiX, span),
       span,
     );
     const outRectY = binary(
       "or",
-      binary("<", ident(`row.${yField}`), loY, span),
-      binary(">", ident(`row.${yField}`), hiY, span),
+      binary("<", ident(`${loopVar}.${yField}`), loY, span),
+      binary(">", ident(`${loopVar}.${yField}`), hiY, span),
       span,
     );
     const outPoly = {
@@ -3803,7 +3809,7 @@ function markInteractOpacity(
       op: "not" as const,
       expr: callExpr(
         "inside",
-        [ident(`row.${xField}`), ident(`row.${yField}`), ident("__brush.dpts")],
+        [ident(`${loopVar}.${xField}`), ident(`${loopVar}.${yField}`), ident("__brush.dpts")],
         span,
       ),
       span,
@@ -3834,7 +3840,7 @@ function markInteractOpacity(
       parts.push(binary("and", ident("__brush.on"), binary("and", linked, outLink, span), span));
     }
     if (includeSelDim) {
-      const hide = selHideExpr(seriesField, xField, frameName, span);
+      const hide = selHideExpr(seriesField, xField, frameName, span, loopVar);
       if (hide) parts.push(hide);
     }
   }
@@ -3849,12 +3855,13 @@ function markHighlightMotion(
   props: Record<string, Expr>,
   seriesField: string | null,
   span: { line: number; column: number },
+  loopVar = "row",
 ): Record<string, Expr> {
   if (!seriesField || props.scale) return {};
   const hit = binary(
     "and",
     binary("!=", ident("__highlightGrp"), noneExpr(span), span),
-    binary("==", ident(`row.${seriesField}`), ident("__highlightGrp"), span),
+    binary("==", ident(`${loopVar}.${seriesField}`), ident("__highlightGrp"), span),
     span,
   );
   return {
@@ -3864,6 +3871,455 @@ function markHighlightMotion(
 
 function callExpr(callee: string, args: Expr[], span: { line: number; column: number }): Expr {
   return { kind: "call", callee, args, span };
+}
+
+const WORLD_SKIP_ROLES = new Set([
+  "atmosphere",
+  "backdrop",
+  "grid",
+  "axis",
+  "legend",
+  "legend-label",
+  "chrome",
+  "caption",
+  "title",
+  "subtitle",
+  "label",
+  "annotation",
+  "hud",
+  "panel",
+  "plot",
+]);
+
+type WorldMarkBind = {
+  node: Extract<SceneItem, { kind: "node" }>;
+  target: string;
+  frameName: string;
+  loopVar: string;
+  dataName: string | null;
+  colorBy: string | null;
+  xField: string | null;
+  yField: string | null;
+};
+
+/**
+ * Author marks with `frame:` share chart Runtime defaults: __tip / __hover /
+ * __highlightGrp, linked __sel, and brush when x/y are data fields.
+ * No new keyword. `interactive: false` or an author hover keeps control.
+ */
+function bindFramedWorldInteract(artifact: Artifact): void {
+  if (!artifact.scene) return;
+  const marks = collectFramedWorldMarks(artifact);
+  if (!marks.length) return;
+  const span = artifact.span;
+  ensureInteractStates(artifact, span);
+  ensureBrushState(artifact, span);
+  ensureChartHud(artifact, span);
+
+  const seenHover = new Set<string>();
+  for (const mark of marks) {
+    if (!chartInteractive(mark.node.props)) continue;
+    const motion = {
+      ...markInteractOpacity(
+        mark.colorBy,
+        mark.xField,
+        mark.yField,
+        mark.frameName,
+        mark.xField,
+        span,
+        false,
+        mark.loopVar,
+      ),
+      ...markHighlightMotion(mark.node.props, mark.colorBy, span, mark.loopVar),
+      ...markSelVisible(mark.colorBy, mark.xField, mark.frameName, span, mark.loopVar),
+    };
+    if (!mark.node.props.opacity && motion.opacity) mark.node.props.opacity = motion.opacity;
+    if (!mark.node.props.scale && motion.scale) mark.node.props.scale = motion.scale;
+    if (!mark.node.props.visible && motion.visible) mark.node.props.visible = motion.visible;
+    if (seenHover.has(mark.target)) continue;
+    if (artifact.events.some((e) => e.type === "hover" && e.target === mark.target)) continue;
+    seenHover.add(mark.target);
+    const tipExpr = worldTipExpr(artifact, mark, span);
+    const labelField = worldLabelField(artifact, mark);
+    const hoverObj = objectExpr(
+      [
+        { key: "x", value: ident(mark.xField ?? "x") },
+        { key: "y", value: ident(mark.yField ?? "y") },
+        { key: "v", value: ident(labelField ?? mark.colorBy ?? mark.xField ?? "x") },
+        { key: "grp", value: mark.colorBy ? ident(mark.colorBy) : noneExpr(span) },
+      ],
+      span,
+    );
+    artifact.events.push({
+      type: "hover",
+      target: mark.target,
+      body: [
+        assign(["__tip"], tipExpr),
+        assign(["__hover"], hoverObj),
+        ...(mark.colorBy ? [assign(["__highlightGrp"], ident(mark.colorBy))] : []),
+      ],
+      span,
+    });
+  }
+
+  const byFrame = new Map<string, WorldMarkBind[]>();
+  for (const mark of marks) {
+    const list = byFrame.get(mark.frameName) ?? [];
+    list.push(mark);
+    byFrame.set(mark.frameName, list);
+  }
+  for (const [frameName, group] of byFrame) {
+    const live = group.filter((m) => chartInteractive(m.node.props));
+    if (!live.length) continue;
+    const brushable = live.find((m) => m.xField && m.yField && m.dataName);
+    const frame = artifact.frames.find((f) => f.name === frameName);
+    if (brushable && frame && !worldDragCoversFrame(artifact, frameName)) {
+      insertWorldPlotBrushHit(artifact, frameName);
+      ensureBrushOnPlot(
+        artifact,
+        `${frameName}_plotBg`,
+        frameName,
+        brushable.dataName!,
+        brushable.xField!,
+        brushable.xField!,
+        brushable.yField!,
+        brushable.colorBy,
+        frame.props,
+        span,
+      );
+    }
+    const legendMark = live.find((m) => m.colorBy && m.dataName);
+    if (
+      legendMark &&
+      !worldLegendSuppressed(artifact, frameName, live) &&
+      !hasAuthorLegend(artifact, frameName)
+    ) {
+      const place = worldLegendPlace(artifact, frameName);
+      const items = expandSeriesLegend(
+        frameName,
+        artifact,
+        legendMark.dataName!,
+        legendMark.colorBy!,
+        frame?.props ?? {},
+        place.place,
+        span,
+        place.chrome,
+      );
+      if (items.length) {
+        artifact.scene.layers.push({
+          name: `__${frameName}_legend`,
+          span,
+          props: {},
+          items,
+        });
+      }
+    }
+  }
+}
+
+function collectFramedWorldMarks(artifact: Artifact): WorldMarkBind[] {
+  const out: WorldMarkBind[] = [];
+  for (const layer of artifact.scene?.layers ?? []) {
+    if (layer.name.startsWith("__")) continue;
+    walkWorldItems(layer.items, { loopVar: null, dataName: null }, out);
+  }
+  return out;
+}
+
+function walkWorldItems(
+  items: SceneItem[],
+  ctx: { loopVar: string | null; dataName: string | null },
+  out: WorldMarkBind[],
+): void {
+  for (const item of items) {
+    if (item.kind === "if") {
+      walkWorldItems(item.body, ctx, out);
+      continue;
+    }
+    if (item.kind === "for") {
+      const dataName =
+        item.source.kind === "ident" ? item.source.path[0] ?? null : ctx.dataName;
+      walkWorldItems(item.body, { loopVar: item.item, dataName }, out);
+      continue;
+    }
+    if (!ctx.loopVar) continue;
+    if (item.name.startsWith("__")) continue;
+    const frameName = stringProp(item.props, ["frame"]);
+    if (!frameName) continue;
+    const role = stringProp(item.props, ["role"]) ?? "";
+    const colorBy = stringProp(item.props, ["colorBy", "group", "groupField"]);
+    if (WORLD_SKIP_ROLES.has(role)) continue;
+    if (role !== "mark" && !colorBy) continue;
+    out.push({
+      node: item,
+      target: item.alias || item.name,
+      frameName,
+      loopVar: ctx.loopVar,
+      dataName: ctx.dataName,
+      colorBy,
+      xField: fieldRefOf(item.props.x, ctx.loopVar),
+      yField: fieldRefOf(item.props.y, ctx.loopVar),
+    });
+  }
+}
+
+function fieldRefOf(expr: Expr | undefined, loopVar: string): string | null {
+  if (!expr || expr.kind !== "ident") return null;
+  if (expr.path.length === 2 && expr.path[0] === loopVar) return expr.path[1] ?? null;
+  if (expr.path.length === 1) return expr.path[0] ?? null;
+  return null;
+}
+
+function worldRowFields(artifact: Artifact, dataName: string | null): Set<string> {
+  const fields = new Set<string>();
+  if (!dataName) return fields;
+  const decl = artifact.data.find((d) => d.name === dataName);
+  if (!decl || decl.value.kind !== "array") return fields;
+  const row = decl.value.items.find((item) => item.kind === "object");
+  if (!row || row.kind !== "object") return fields;
+  for (const entry of row.entries) fields.add(entry.key);
+  return fields;
+}
+
+function worldLabelField(artifact: Artifact, mark: WorldMarkBind): string | null {
+  const fields = worldRowFields(artifact, mark.dataName);
+  for (const key of ["id", "label", "name", "key"]) {
+    if (fields.has(key)) return key;
+  }
+  return mark.colorBy;
+}
+
+function worldTipExpr(
+  artifact: Artifact,
+  mark: WorldMarkBind,
+  span: { line: number; column: number },
+): Expr {
+  const label = worldLabelField(artifact, mark);
+  const parts: Expr[] = [];
+  if (label) parts.push(ident(label));
+  if (mark.colorBy && mark.colorBy !== label) parts.push(ident(mark.colorBy));
+  if (mark.xField && mark.yField) {
+    parts.push(
+      binary("+", binary("+", ident(mark.xField), literal(", "), span), ident(mark.yField), span),
+    );
+  }
+  if (!parts.length) return literal("");
+  return parts.reduce((acc, part) => binary("+", binary("+", acc, literal(" · "), span), part, span));
+}
+
+function worldLegendSuppressed(
+  artifact: Artifact,
+  frameName: string,
+  marks: WorldMarkBind[],
+): boolean {
+  if (artifact.events.some((e) => e.target.startsWith(`${frameName}_leg_`))) return true;
+  const frameNode = findAuthorNode(artifact, frameName);
+  if (frameNode && legendPlacement(frameNode.props, marks[0]?.colorBy ?? "grp") === "off") return true;
+  return marks.some((m) => legendPlacement(m.node.props, m.colorBy) === "off");
+}
+
+function hasAuthorLegend(artifact: Artifact, frameName: string): boolean {
+  for (const layer of artifact.scene?.layers ?? []) {
+    if (layer.name.startsWith("__")) continue;
+    const nodes: Extract<SceneItem, { kind: "node" }>[] = [];
+    walkWorldNodes(layer.items, nodes);
+    for (const node of nodes) {
+      if (node.name.startsWith(`${frameName}_leg`)) return true;
+      const role = stringProp(node.props, ["role"]) ?? "";
+      if (role === "legend" || role === "legend-label") return true;
+    }
+  }
+  return false;
+}
+
+function walkWorldNodes(items: SceneItem[], out: Extract<SceneItem, { kind: "node" }>[]): void {
+  for (const item of items) {
+    if (item.kind === "node") out.push(item);
+    else if (item.kind === "if" || item.kind === "for") walkWorldNodes(item.body, out);
+  }
+}
+
+function findAuthorNode(
+  artifact: Artifact,
+  name: string,
+): Extract<SceneItem, { kind: "node" }> | null {
+  for (const layer of artifact.scene?.layers ?? []) {
+    if (layer.name.startsWith("__")) continue;
+    const nodes: Extract<SceneItem, { kind: "node" }>[] = [];
+    walkWorldNodes(layer.items, nodes);
+    const hit = nodes.find((n) => n.name === name);
+    if (hit) return hit;
+  }
+  return null;
+}
+
+function nodeSceneBox(node: Extract<SceneItem, { kind: "node" }>): {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+} | null {
+  const x = numericLiteral(node.props.x);
+  const y = numericLiteral(node.props.y);
+  const w = numericLiteral(node.props.w ?? node.props.width);
+  const h = numericLiteral(node.props.h ?? node.props.height);
+  if (x === null || y === null || w === null || h === null) return null;
+  if (!(w > 0) || !(h > 0)) return null;
+  return { x, y, w, h };
+}
+
+function frameSceneBox(
+  artifact: Artifact,
+  frameName: string,
+): { x: number; y: number; w: number; h: number } | null {
+  const frame = artifact.frames.find((f) => f.name === frameName);
+  if (!frame) return null;
+  const xs = pairNums(frame.props.x ?? frame.props.areaX);
+  const ys = pairNums(frame.props.y ?? frame.props.areaY);
+  if (!xs || !ys) return null;
+  return {
+    x: Math.min(xs[0], xs[1]),
+    y: Math.min(ys[0], ys[1]),
+    w: Math.abs(xs[1] - xs[0]),
+    h: Math.abs(ys[1] - ys[0]),
+  };
+}
+
+function pairNums(expr: Expr | undefined): [number, number] | null {
+  if (expr?.kind !== "array" || expr.items.length < 2) return null;
+  const a = numericLiteral(expr.items[0]);
+  const b = numericLiteral(expr.items[1]);
+  if (a === null || b === null) return null;
+  return [a, b];
+}
+
+function boxesOverlap(
+  a: { x: number; y: number; w: number; h: number },
+  b: { x: number; y: number; w: number; h: number },
+): boolean {
+  return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+}
+
+function nodeIsDraggy(node: Extract<SceneItem, { kind: "node" }>): boolean {
+  if (node.props.__chartBrush) return false;
+  const raw = node.props.drag ?? node.props.draggable;
+  if (!raw) return false;
+  if (raw.kind === "boolean") return raw.value;
+  if (raw.kind === "string") return raw.value !== "false" && raw.value !== "off";
+  return true;
+}
+
+function worldDragCoversFrame(artifact: Artifact, frameName: string): boolean {
+  const box = frameSceneBox(artifact, frameName);
+  if (!box) return false;
+  for (const layer of artifact.scene?.layers ?? []) {
+    if (layer.name.startsWith("__")) continue;
+    const nodes: Extract<SceneItem, { kind: "node" }>[] = [];
+    walkWorldNodes(layer.items, nodes);
+    for (const node of nodes) {
+      if (node.name === frameName || node.name === `${frameName}_plotBg`) continue;
+      if (!nodeIsDraggy(node) && !artifact.events.some((e) => e.type === "drag" && e.target === (node.alias || node.name))) {
+        continue;
+      }
+      const other = nodeSceneBox(node);
+      if (other && boxesOverlap(box, other)) return true;
+    }
+  }
+  return false;
+}
+
+function insertWorldPlotBrushHit(artifact: Artifact, frameName: string): void {
+  if (findAuthorNode(artifact, `${frameName}_plotBg`)) return;
+  const box = frameSceneBox(artifact, frameName);
+  if (!box) return;
+  const hit = node(`${frameName}_plotBg`, {
+    role: literal("plot"),
+    x: literal(box.x),
+    y: literal(box.y),
+    w: literal(box.w),
+    h: literal(box.h),
+    drag: literal(true),
+    __chartBrush: literal(true),
+    fill: literal("#000000"),
+    opacity: literal(0.001),
+  });
+  for (const layer of artifact.scene?.layers ?? []) {
+    if (layer.name.startsWith("__")) continue;
+    const idx = layer.items.findIndex((item) => item.kind === "node" && item.name === frameName);
+    if (idx >= 0) {
+      layer.items.splice(idx + 1, 0, hit);
+      return;
+    }
+  }
+  const host = artifact.scene?.layers.find((l) => !l.name.startsWith("__"));
+  host?.items.unshift(hit);
+}
+
+function worldLegendPlace(
+  artifact: Artifact,
+  frameName: string,
+): { place: "bottom" | "right" | "inside"; chrome: PaperChrome } {
+  const box = frameSceneBox(artifact, frameName);
+  const scene = sceneExtentOf(artifact);
+  const dummy = emptyPaperChrome();
+  if (!box) return { place: "right", chrome: dummy };
+  let panelBottom: number | null = null;
+  for (const layer of artifact.scene?.layers ?? []) {
+    if (layer.name.startsWith("__")) continue;
+    const nodes: Extract<SceneItem, { kind: "node" }>[] = [];
+    walkWorldNodes(layer.items, nodes);
+    for (const node of nodes) {
+      if ((stringProp(node.props, ["role"]) ?? "") !== "panel") continue;
+      const panel = nodeSceneBox(node);
+      if (panel && boxesOverlap(panel, box)) {
+        panelBottom = panel.y + panel.h;
+      }
+    }
+  }
+  const plotBottom = box.y + box.h;
+  const gap = panelBottom !== null ? panelBottom - plotBottom : scene.h - plotBottom;
+  const keys = 3;
+  const step = Math.min(96, Math.max(56, box.w / Math.max(1, keys)));
+  if (gap >= 14) {
+    dummy.legendX = box.x + 8;
+    dummy.legendY = plotBottom + Math.min(12, Math.max(8, gap * 0.45));
+    dummy.legendStep = step;
+    return { place: "bottom", chrome: dummy };
+  }
+  if (scene.w - (box.x + box.w) >= 48) {
+    dummy.legendX = box.x + box.w + 10;
+    dummy.legendY = box.y + 12;
+    dummy.legendStep = 14;
+    return { place: "right", chrome: dummy };
+  }
+  dummy.legendX = box.x + 12;
+  dummy.legendY = plotBottom - 14;
+  dummy.legendStep = 14;
+  return { place: "inside", chrome: dummy };
+}
+
+function emptyPaperChrome(): PaperChrome {
+  return {
+    yTickX: 0,
+    xTickY: 0,
+    yTitleX: 0,
+    xTitleY: 0,
+    titleX: 0,
+    titleY: 0,
+    titleLines: [],
+    xTitleLines: [],
+    yTitleLines: [],
+    legendLines: [],
+    legendX: 0,
+    legendY: 0,
+    legendStep: 72,
+    cbarX: 0,
+    cbarLines: [],
+    cbarTitleLines: [],
+    cbarTitleX: 0,
+    cbarTitleY: 0,
+    compact: false,
+  };
 }
 
 function ensureInteractStates(artifact: Artifact, span: { line: number; column: number }): void {
@@ -3904,6 +4360,101 @@ function ensureInteractStates(artifact: Artifact, span: { line: number; column: 
   }
 }
 
+function ensureBrushState(artifact: Artifact, span: { line: number; column: number }): void {
+  if (artifact.states.some((s) => s.name === "__brush")) return;
+  artifact.states.push({
+    name: "__brush",
+    value: objectExpr(
+      [
+        { key: "x0", value: literal(0) },
+        { key: "y0", value: literal(0) },
+        { key: "x1", value: literal(0) },
+        { key: "y1", value: literal(0) },
+        { key: "dx0", value: literal(0) },
+        { key: "dy0", value: literal(0) },
+        { key: "dx1", value: literal(0) },
+        { key: "dy1", value: literal(0) },
+        { key: "on", value: literal(0) },
+        { key: "frame", value: literal("") },
+        { key: "xField", value: literal("") },
+        { key: "pts", value: { kind: "array", items: [], span } },
+        { key: "dpts", value: { kind: "array", items: [], span } },
+        { key: "len", value: literal(0) },
+        { key: "lx", value: literal(0) },
+        { key: "ly", value: literal(0) },
+        { key: "mode", value: literal(0) },
+      ],
+      span,
+    ),
+    span,
+  });
+}
+
+function ensureChartHud(artifact: Artifact, span: { line: number; column: number }): void {
+  if (!artifact.scene) return;
+  if (artifact.scene.layers.some((l) => l.name === "__chart_hud")) return;
+  const size = artifact.scene.props.size;
+  const width = size?.kind === "array" && size.items[0]?.kind === "number" ? size.items[0].value : 880;
+  const height = size?.kind === "array" && size.items[1]?.kind === "number" ? size.items[1].value : 480;
+  const compact = isCompactScene(artifact);
+  const hudItems: SceneItem[] = [];
+  if (!compact) {
+    hudItems.push(
+      node("chartTip", {
+        role: literal("hud"),
+        x: literal(Math.max(16, width - 220)),
+        y: literal(Math.max(16, height - 16)),
+        text: ident("__tip"),
+        font: literal(11),
+        align: literal("right"),
+      }),
+    );
+  }
+  hudItems.push(
+    node("brushRect", {
+      role: literal("chrome"),
+      x: callExpr("min", [ident("__brush.x0"), ident("__brush.x1")], span),
+      y: callExpr("min", [ident("__brush.y0"), ident("__brush.y1")], span),
+      w: callExpr(
+        "abs",
+        [binary("-", ident("__brush.x1"), ident("__brush.x0"), span)],
+        span,
+      ),
+      h: callExpr(
+        "abs",
+        [binary("-", ident("__brush.y1"), ident("__brush.y0"), span)],
+        span,
+      ),
+      fill: literal("#0072B2"),
+      opacity: binary(
+        "*",
+        ident("__brush.on"),
+        binary("*", binary("-", literal(1), ident("__brush.mode"), span), literal(0.18), span),
+        span,
+      ),
+    }),
+    node("brushPath", {
+      role: literal("chrome"),
+      d: callExpr("pathd", [ident("__brush.pts")], span),
+      fill: literal("#0072B2"),
+      stroke: literal("#0072B2"),
+      strokeWidth: literal(1.25),
+      opacity: binary(
+        "*",
+        ident("__brush.on"),
+        binary("*", ident("__brush.mode"), literal(0.2), span),
+        span,
+      ),
+    }),
+  );
+  artifact.scene.layers.push({
+    name: "__chart_hud",
+    span,
+    props: {},
+    items: hudItems,
+  });
+}
+
 function ensureChartInteract(
   artifact: Artifact,
   kind: string,
@@ -3919,98 +4470,9 @@ function ensureChartInteract(
   span: { line: number; column: number },
 ): void {
   ensureInteractStates(artifact, span);
-  if (!artifact.states.some((s) => s.name === "__brush")) {
-    artifact.states.push({
-      name: "__brush",
-      value: objectExpr(
-        [
-          { key: "x0", value: literal(0) },
-          { key: "y0", value: literal(0) },
-          { key: "x1", value: literal(0) },
-          { key: "y1", value: literal(0) },
-          { key: "dx0", value: literal(0) },
-          { key: "dy0", value: literal(0) },
-          { key: "dx1", value: literal(0) },
-          { key: "dy1", value: literal(0) },
-          { key: "on", value: literal(0) },
-          { key: "frame", value: literal("") },
-          { key: "xField", value: literal("") },
-          { key: "pts", value: { kind: "array", items: [], span } },
-          { key: "dpts", value: { kind: "array", items: [], span } },
-          { key: "len", value: literal(0) },
-          { key: "lx", value: literal(0) },
-          { key: "ly", value: literal(0) },
-          { key: "mode", value: literal(0) },
-        ],
-        span,
-      ),
-      span,
-    });
-  }
+  ensureBrushState(artifact, span);
+  ensureChartHud(artifact, span);
   if (!artifact.scene) return;
-  const hasHud = artifact.scene.layers.some((l) => l.name === "__chart_hud");
-  if (!hasHud) {
-    const size = artifact.scene.props.size;
-    const width = size?.kind === "array" && size.items[0]?.kind === "number" ? size.items[0].value : 880;
-    const height = size?.kind === "array" && size.items[1]?.kind === "number" ? size.items[1].value : 480;
-    const compact = isCompactScene(artifact);
-    const hudItems: SceneItem[] = [];
-    if (!compact) {
-      hudItems.push(
-        node("chartTip", {
-          role: literal("hud"),
-          x: literal(Math.max(16, width - 220)),
-          y: literal(Math.max(16, height - 16)),
-          text: ident("__tip"),
-          font: literal(11),
-          align: literal("right"),
-        }),
-      );
-    }
-    hudItems.push(
-        node("brushRect", {
-          role: literal("chrome"),
-          x: callExpr("min", [ident("__brush.x0"), ident("__brush.x1")], span),
-          y: callExpr("min", [ident("__brush.y0"), ident("__brush.y1")], span),
-          w: callExpr(
-            "abs",
-            [binary("-", ident("__brush.x1"), ident("__brush.x0"), span)],
-            span,
-          ),
-          h: callExpr(
-            "abs",
-            [binary("-", ident("__brush.y1"), ident("__brush.y0"), span)],
-            span,
-          ),
-          fill: literal("#0072B2"),
-          opacity: binary(
-            "*",
-            ident("__brush.on"),
-            binary("*", binary("-", literal(1), ident("__brush.mode"), span), literal(0.18), span),
-            span,
-          ),
-        }),
-        node("brushPath", {
-          role: literal("chrome"),
-          d: callExpr("pathd", [ident("__brush.pts")], span),
-          fill: literal("#0072B2"),
-          stroke: literal("#0072B2"),
-          strokeWidth: literal(1.25),
-          opacity: binary(
-            "*",
-            ident("__brush.on"),
-            binary("*", ident("__brush.mode"), literal(0.2), span),
-            span,
-          ),
-        }),
-    );
-    artifact.scene.layers.push({
-      name: "__chart_hud",
-      span,
-      props: {},
-      items: hudItems,
-    });
-  }
 
   const target =
     kind === "chart.bar" || kind === "chart.funnel"
@@ -4059,140 +4521,164 @@ function ensureChartInteract(
     });
   }
 
-  const plotName = `${frameName}_plotBg`;
-  if (!artifact.events.some((e) => e.type === "dragstart" && e.target === plotName)) {
-    const invertX = invertSceneXExpr(ident("__event.x"), geom, span);
-    const invertY = invertSceneYExpr(ident("__event.y"), geom, span);
-    const eventPt = objectExpr(
-      [
-        { key: "x", value: ident("__event.x") },
-        { key: "y", value: ident("__event.y") },
-      ],
-      span,
-    );
-    const dataPt = objectExpr(
-      [
-        { key: "x", value: invertSceneXExpr(ident("__event.x"), geom, span) },
-        { key: "y", value: invertSceneYExpr(ident("__event.y"), geom, span) },
-      ],
-      span,
-    );
-    const onePt = (pt: Expr): Expr => ({ kind: "array", items: [pt], span });
-    const step = callExpr(
-      "sqrt",
-      [
+  ensureBrushOnPlot(
+    artifact,
+    `${frameName}_plotBg`,
+    frameName,
+    dataName,
+    xField,
+    markXField,
+    markYField,
+    seriesField,
+    geom,
+    span,
+  );
+}
+
+function ensureBrushOnPlot(
+  artifact: Artifact,
+  plotName: string,
+  frameName: string,
+  dataName: string,
+  xField: string,
+  markXField: string,
+  markYField: string,
+  seriesField: string | null,
+  geom: Record<string, Expr>,
+  span: { line: number; column: number },
+): void {
+  if (artifact.events.some((e) => e.type === "dragstart" && e.target === plotName)) return;
+  const invertX = invertSceneXExpr(ident("__event.x"), geom, span);
+  const invertY = invertSceneYExpr(ident("__event.y"), geom, span);
+  const eventPt = objectExpr(
+    [
+      { key: "x", value: ident("__event.x") },
+      { key: "y", value: ident("__event.y") },
+    ],
+    span,
+  );
+  const dataPt = objectExpr(
+    [
+      { key: "x", value: invertSceneXExpr(ident("__event.x"), geom, span) },
+      { key: "y", value: invertSceneYExpr(ident("__event.y"), geom, span) },
+    ],
+    span,
+  );
+  const onePt = (pt: Expr): Expr => ({ kind: "array", items: [pt], span });
+  const step = callExpr(
+    "sqrt",
+    [
+      binary(
+        "+",
+        binary("*", binary("-", ident("__event.x"), ident("__brush.lx"), span), binary("-", ident("__event.x"), ident("__brush.lx"), span), span),
+        binary("*", binary("-", ident("__event.y"), ident("__brush.ly"), span), binary("-", ident("__event.y"), ident("__brush.ly"), span), span),
+        span,
+      ),
+    ],
+    span,
+  );
+  const boxManhattan = binary(
+    "+",
+    callExpr("abs", [binary("-", ident("__brush.x1"), ident("__brush.x0"), span)], span),
+    callExpr("abs", [binary("-", ident("__brush.y1"), ident("__brush.y0"), span)], span),
+    span,
+  );
+  artifact.events.push({
+    type: "dragstart",
+    target: plotName,
+    body: [
+      assign(["__brush", "x0"], ident("__event.x")),
+      assign(["__brush", "y0"], ident("__event.y")),
+      assign(["__brush", "x1"], ident("__event.x")),
+      assign(["__brush", "y1"], ident("__event.y")),
+      assign(["__brush", "dx0"], invertX),
+      assign(["__brush", "dy0"], invertY),
+      assign(["__brush", "dx1"], invertX),
+      assign(["__brush", "dy1"], invertY),
+      assign(["__brush", "on"], literal(1)),
+      assign(["__brush", "frame"], literal(frameName)),
+      assign(["__brush", "xField"], literal(xField)),
+      assign(["__brush", "pts"], onePt(eventPt)),
+      assign(["__brush", "dpts"], onePt(objectExpr([{ key: "x", value: invertX }, { key: "y", value: invertY }], span))),
+      assign(["__brush", "len"], literal(0)),
+      assign(["__brush", "lx"], ident("__event.x")),
+      assign(["__brush", "ly"], ident("__event.y")),
+      assign(["__brush", "mode"], literal(0)),
+      ...collectSelStmts(dataName, markXField, markYField, seriesField, span),
+    ],
+    span,
+  });
+  artifact.events.push({
+    type: "drag",
+    target: plotName,
+    body: [
+      assign(["__brush", "x1"], ident("__event.x")),
+      assign(["__brush", "y1"], ident("__event.y")),
+      assign(["__brush", "dx1"], invertSceneXExpr(ident("__event.x"), geom, span)),
+      assign(["__brush", "dy1"], invertSceneYExpr(ident("__event.y"), geom, span)),
+      assign(["__brush", "on"], literal(1)),
+      assign(["__brush", "frame"], literal(frameName)),
+      assign(["__brush", "xField"], literal(xField)),
+      {
+        kind: "if",
+        cond: binary(">", step, literal(3), span),
+        body: [
+          assign(["__brush", "pts"], binary("+", ident("__brush.pts"), onePt(eventPt), span)),
+          assign(["__brush", "dpts"], binary("+", ident("__brush.dpts"), onePt(dataPt), span)),
+          assign(["__brush", "len"], binary("+", ident("__brush.len"), step, span)),
+          assign(["__brush", "lx"], ident("__event.x")),
+          assign(["__brush", "ly"], ident("__event.y")),
+        ],
+        span,
+      },
+      assign(
+        ["__brush", "mode"],
         binary(
-          "+",
-          binary("*", binary("-", ident("__event.x"), ident("__brush.lx"), span), binary("-", ident("__event.x"), ident("__brush.lx"), span), span),
-          binary("*", binary("-", ident("__event.y"), ident("__brush.ly"), span), binary("-", ident("__event.y"), ident("__brush.ly"), span), span),
+          ">",
+          ident("__brush.len"),
+          binary("*", literal(1.6), boxManhattan, span),
           span,
         ),
-      ],
-      span,
-    );
-    const boxManhattan = binary(
-      "+",
-      callExpr("abs", [binary("-", ident("__brush.x1"), ident("__brush.x0"), span)], span),
-      callExpr("abs", [binary("-", ident("__brush.y1"), ident("__brush.y0"), span)], span),
-      span,
-    );
-    artifact.events.push({
-      type: "dragstart",
-      target: plotName,
-      body: [
-        assign(["__brush", "x0"], ident("__event.x")),
-        assign(["__brush", "y0"], ident("__event.y")),
-        assign(["__brush", "x1"], ident("__event.x")),
-        assign(["__brush", "y1"], ident("__event.y")),
-        assign(["__brush", "dx0"], invertX),
-        assign(["__brush", "dy0"], invertY),
-        assign(["__brush", "dx1"], invertX),
-        assign(["__brush", "dy1"], invertY),
-        assign(["__brush", "on"], literal(1)),
-        assign(["__brush", "frame"], literal(frameName)),
-        assign(["__brush", "xField"], literal(xField)),
-        assign(["__brush", "pts"], onePt(eventPt)),
-        assign(["__brush", "dpts"], onePt(objectExpr([{ key: "x", value: invertX }, { key: "y", value: invertY }], span))),
-        assign(["__brush", "len"], literal(0)),
-        assign(["__brush", "lx"], ident("__event.x")),
-        assign(["__brush", "ly"], ident("__event.y")),
-        assign(["__brush", "mode"], literal(0)),
-        ...collectSelStmts(dataName, markXField, markYField, seriesField, span),
-      ],
-      span,
-    });
-    artifact.events.push({
-      type: "drag",
-      target: plotName,
-      body: [
-        assign(["__brush", "x1"], ident("__event.x")),
-        assign(["__brush", "y1"], ident("__event.y")),
-        assign(["__brush", "dx1"], invertSceneXExpr(ident("__event.x"), geom, span)),
-        assign(["__brush", "dy1"], invertSceneYExpr(ident("__event.y"), geom, span)),
-        assign(["__brush", "on"], literal(1)),
-        assign(["__brush", "frame"], literal(frameName)),
-        assign(["__brush", "xField"], literal(xField)),
-        {
-          kind: "if",
-          cond: binary(">", step, literal(3), span),
-          body: [
-            assign(["__brush", "pts"], binary("+", ident("__brush.pts"), onePt(eventPt), span)),
-            assign(["__brush", "dpts"], binary("+", ident("__brush.dpts"), onePt(dataPt), span)),
-            assign(["__brush", "len"], binary("+", ident("__brush.len"), step, span)),
-            assign(["__brush", "lx"], ident("__event.x")),
-            assign(["__brush", "ly"], ident("__event.y")),
-          ],
-          span,
-        },
-        assign(
-          ["__brush", "mode"],
-          binary(
-            ">",
-            ident("__brush.len"),
-            binary("*", literal(1.6), boxManhattan, span),
-            span,
-          ),
-        ),
-        ...collectSelStmts(dataName, markXField, markYField, seriesField, span),
-      ],
-      span,
-    });
-    const tinyX = binary(
-      "<",
-      callExpr("abs", [binary("-", ident("__brush.x1"), ident("__brush.x0"), span)], span),
-      literal(4),
-      span,
-    );
-    const tinyY = binary(
-      "<",
-      callExpr("abs", [binary("-", ident("__brush.y1"), ident("__brush.y0"), span)], span),
-      literal(4),
-      span,
-    );
-    artifact.events.push({
-      type: "dragend",
-      target: plotName,
-      body: [
-        {
-          kind: "if",
-          cond: binary("and", tinyX, tinyY, span),
-          body: [
-            assign(["__brush", "on"], literal(0)),
-            assign(["__brush", "mode"], literal(0)),
-            assign(["__brush", "pts"], { kind: "array", items: [], span }),
-            assign(["__brush", "dpts"], { kind: "array", items: [], span }),
-            assign(["__brush", "len"], literal(0)),
-            assign(["__sel", "keys"], { kind: "array", items: [], span }),
-            assign(["__sel", "n"], literal(0)),
-            assign(["__sel", "xField"], literal("")),
-            assign(["__highlightGrp"], noneExpr(span)),
-          ],
-          span,
-        },
-      ],
-      span,
-    });
-  }
+      ),
+      ...collectSelStmts(dataName, markXField, markYField, seriesField, span),
+    ],
+    span,
+  });
+  const tinyX = binary(
+    "<",
+    callExpr("abs", [binary("-", ident("__brush.x1"), ident("__brush.x0"), span)], span),
+    literal(4),
+    span,
+  );
+  const tinyY = binary(
+    "<",
+    callExpr("abs", [binary("-", ident("__brush.y1"), ident("__brush.y0"), span)], span),
+    literal(4),
+    span,
+  );
+  artifact.events.push({
+    type: "dragend",
+    target: plotName,
+    body: [
+      {
+        kind: "if",
+        cond: binary("and", tinyX, tinyY, span),
+        body: [
+          assign(["__brush", "on"], literal(0)),
+          assign(["__brush", "mode"], literal(0)),
+          assign(["__brush", "pts"], { kind: "array", items: [], span }),
+          assign(["__brush", "dpts"], { kind: "array", items: [], span }),
+          assign(["__brush", "len"], literal(0)),
+          assign(["__sel", "keys"], { kind: "array", items: [], span }),
+          assign(["__sel", "n"], literal(0)),
+          assign(["__sel", "xField"], literal("")),
+          assign(["__highlightGrp"], noneExpr(span)),
+        ],
+        span,
+      },
+    ],
+    span,
+  });
 }
 
 function collectSelStmts(
