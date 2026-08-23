@@ -1468,7 +1468,7 @@ function expandLayoutBoard(
       const selected = controlBind
         ? binary("+", literal(0.4), binary("*", binary("==", ident(controlBind), literal(key), span), literal(0.6), span), span)
         : undefined;
-      const paint = selected ? { opacity: selected } : {};
+      const paint: Record<string, Expr> = selected ? { opacity: selected } : {};
       const lblName = `${id}_ctlLbl_${i}`;
       ctlItems.push(
         node(chipName, {
