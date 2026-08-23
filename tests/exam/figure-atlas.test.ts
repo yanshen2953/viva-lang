@@ -101,6 +101,13 @@ describe("figure-atlas example", () => {
     expect(plot[1]).toBeLessThan(cell[1]!);
     expect(plot[0]! - cell[0]!).toBeGreaterThan(12);
     expect(cell[1]! - plot[1]!).toBeGreaterThan(20);
+    const env = [result.ir!.state, result.ir!.data];
+    const bLegs = result.ir!.scene.layers
+      .flatMap((l) => l.items)
+      .filter((i) => i.kind === "node" && /^b_legLbl_/.test(i.name))
+      .map((i) => (i.kind === "node" ? String(evaluate(i.props.text, env)) : ""));
+    expect(bLegs.join(" ")).toMatch(/treatment/);
+    expect(bLegs.some((t) => t === "t" || t === "treatmen")).toBe(false);
     expectChromeInsideCells(result.ir!);
   });
 });

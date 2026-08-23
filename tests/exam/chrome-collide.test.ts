@@ -13,6 +13,27 @@ import {
 } from "../../src/layout/chrome-collide.js";
 
 describe("paper chrome collision", () => {
+  it("keeps an unhyphenated Latin legend key intact and grows leftover", () => {
+    const need = minWidthForLines("treatment", 8, 0.1, 2);
+    expect(need).toBeGreaterThanOrEqual(estimateTextWidthPx("treatment", 8, 0.1) - 0.5);
+    expect(wrapTextLines("treatment", need, 8, 0.1, 2).join("")).toBe("treatment");
+    const { chrome } = placePaperChrome(
+      { px0: 40, px1: 160, py0: 20, py1: 140 },
+      (px) => px,
+      false,
+      {
+        legendAt: "right",
+        legendKeys: ["control", "treatment"],
+        yTicks: [{ label: "0", y: 130 }],
+        xTicks: [{ label: "1", x: 80 }],
+      },
+      { x0: 0, y0: 0, x1: 260, y1: 160 },
+    );
+    const keys = chrome.legendLines.flat();
+    expect(keys.join(" ")).toMatch(/treatment/);
+    expect(keys.some((t) => t === "t" || t === "treatmen")).toBe(false);
+  });
+
   it("breaks hyphenated legend keys before mid-word cuts", () => {
     const lines = wrapTextLines("placebo-control", 48, 8, 0.1, 2);
     expect(lines.length).toBeGreaterThan(1);

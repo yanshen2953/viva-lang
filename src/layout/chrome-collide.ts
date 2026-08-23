@@ -147,6 +147,21 @@ export function ellipsizeToWidth(
   return cut ? `${cut}${ELLIPSIS}` : ELLIPSIS;
 }
 
+function isUnbreakableLatin(text: string): boolean {
+  return ![...text].some((ch) => ch === " " || ch === "-" || ch.charCodeAt(0) >= 0x3000);
+}
+
+function linesFitWidth(
+  lines: string[],
+  width: number,
+  font: number,
+  tracking: number,
+  maxLines: number,
+): boolean {
+  if (!lines.length || (maxLines > 0 && lines.length > maxLines)) return false;
+  return lines.every((line) => estimateTextWidthPx(line, font, tracking) <= width + 0.5);
+}
+
 /** Narrowest width that holds `text` in `maxLines` without ellipsis. */
 export function minWidthForLines(
   text: string,
@@ -157,13 +172,15 @@ export function minWidthForLines(
   const src = text.trim();
   if (!src) return 0;
   const full = estimateTextWidthPx(src, font, tracking);
-  if (maxLines <= 1) return full;
+  if (maxLines <= 1 || isUnbreakableLatin(src)) return full;
+  const fits = (width: number) =>
+    linesFitWidth(wrapTextLines(src, width, font, tracking, 0), width, font, tracking, maxLines);
+  if (!fits(full)) return full;
   let lo = font;
   let hi = Math.max(font, full);
-  if (wrapTextLines(src, hi, font, tracking, 0).length > maxLines) return full;
   while (hi - lo > 0.5) {
     const mid = (lo + hi) / 2;
-    if (wrapTextLines(src, mid, font, tracking, 0).length <= maxLines) hi = mid;
+    if (fits(mid)) hi = mid;
     else lo = mid;
   }
   return hi;
@@ -505,7 +522,13 @@ export function placePaperChrome(
           : toScene(compact ? 52 : 72);
     const maxW = Math.max(TICK_FONT * 5, toPx(leftover));
     legendLines = keys.map((key) => {
-      const lines = wrapTextLines(key, maxW, TICK_FONT, 0.1, 2);
+      const need = minWidthForLines(key, TICK_FONT, 0.1, 2);
+      const room = cell ? toPx((cell.x1 - cell.x0) * 0.5 - toScene(20)) : maxW;
+      const wrapW =
+        extras.legendAt === "right" && isUnbreakableLatin(key) && need <= Math.max(maxW, room)
+          ? Math.max(maxW, need)
+          : maxW;
+      const lines = wrapTextLines(key, wrapW, TICK_FONT, 0.1, 2);
       return lines.length ? lines : [key];
     });
     if (extras.legendAt === "right") {
