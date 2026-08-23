@@ -678,11 +678,17 @@ widget chart.scatter
 
   it("recomputes heatmap mean, funnel sum, and vector head from visit keys", () => {
     const src = readFileSync("examples/paper-linked-marks.viva", "utf8");
-    expect(src).not.toMatch(/interactive:\s*false|areaX|areaY/);
+    expect(src).not.toMatch(/interactive:\s*false|areaX|areaY|yScale:/);
     const result = compileSource(src, "paper-linked-marks.viva", { handbookIds: ["print-nature"] });
     expect(result.error).toBeNull();
     expect(result.ir!.events.some((e) => e.type === "hover" && e.target === "mark")).toBe(true);
     expect(result.ir!.events.some((e) => e.type === "hover" && e.target === "heatCell")).toBe(true);
+    expect(
+      evaluate(result.ir!.frames.find((f) => f.name === "b")!.props.yScale!, [
+        result.ir!.state,
+        result.ir!.data,
+      ]),
+    ).toBe("band");
     const heatCells = result.ir!.scene.layers
       .find((l) => l.name === "__b_marks")!
       .items.filter((i) => i.kind === "node" && i.name === "heatCell");

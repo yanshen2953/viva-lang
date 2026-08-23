@@ -136,7 +136,7 @@ widget layout.board
 
 - `xScale: log` / `yScale: log`
 - 热图第三轴：`zLabel` / `zUnit`（与 `xLabel` 同类属性，不是新关键字）；色条数字和标题按剩余栏宽折行
-- `xScale: band` / `category`（字符串列会自动 band）；也可用 `xCats` / `yCats`
+- `xScale: band` / `category`（字符串列会自动 band；`chart.heatmap` 的字符串 Y 同样自动 band，不必手写 `yScale`）；也可用 `xCats` / `yCats`
 - 图例默认在图外右侧：`legend: right|bottom|inside|false`
 
 `layout.board` 可选 `splits: 2` → 在 `body` 里再切 `left` / `right`；`beats: 4` → 分镜槽 `beat0`…`beat3`。不写 `safe` / `titleH` / `lowerH` 时，编译器按题注折行和 `controls` 芯片宽度估安全框与上下条（仍可手写覆盖）。`controls` + `bind` 只画芯片，选中项提高不透明度，不再旁路再写一份当前值。`bind` 若是数值 state，芯片 `+`/`-`（或 plus/minus）按 `step` 增减，可用 `min`/`max` clamp。`play: true` 用 `tick` 推进 `__beat`，非当前拍加遮罩；遮罩是 HUD，永不抢指针，暗着的拍也能刷选。Runtime 用 220ms CSS opacity 淡入淡出（静态导出仍硬切，不是时间轴）。`examples/paper-storyboard.viva` 是 183×103 mm 的 16:9 分镜，四拍共用同一套 `__sel`。`viva export file.viva --beats` 按 `__beat` 导出 PNG 序列；`--beats -f gif|mp4` 用 ffmpeg 把这些帧拼成幻灯（仍不是成片时间轴）。`typeGrid: true` 在安全框上画字级基线；`typeGridCols: 12` 再切 `type0`… 栏（仍不是跨页）。

@@ -41,7 +41,6 @@ widget chart.heatmap
   xField: t
   yField: arm
   valueField: score
-  yScale: band
   xlim: 0 4
   zlim: 6 28
   zLabel: Score

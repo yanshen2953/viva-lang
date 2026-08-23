@@ -418,7 +418,9 @@ function expandChart(
   const yLooksBand =
     scaleKindFromExpr(props.yScale) === "band" ||
     yCatsProp.length > 0 ||
-    (horizontal && !yLooksTime && fieldLooksCategorical(artifact, dataName, resolvedYField));
+    ((horizontal || kind === "chart.heatmap") &&
+      !yLooksTime &&
+      fieldLooksCategorical(artifact, dataName, resolvedYField));
   const xCats = xLooksBand
     ? xCatsProp.length
       ? xCatsProp
