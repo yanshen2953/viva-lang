@@ -123,48 +123,18 @@ scene
   size: 1360 920
   background: #ffffff
 
-  layer typography
-    node docTitle
-      role: title
-      x: 40
-      y: 36
-      text: "多面板综合图 · 虚拟临床队列"
-      font: 26
-
-    node docSub
-      role: subtitle
-      x: 40
-      y: 72
-      text: "Figure 2 · n=248 · IL-6 / CRP 生物标志物 · 六类子图组合"
-
-    node docCap
-      role: caption
-      x: 40
-      y: 896
-      text: hint
-
-  layer figureChrome
-    node figMain
-      role: panel
-      x: 28
-      y: 100
-      w: 1304
-      h: 784
-      radius: 8
-      strokeWidth: 1.5
-
+  layer hud
     node heatGeneLbl
       role: annotation
-      x: 60
-      y: 848
+      x: 1080
+      y: 854
       text: selGene
       font: 11
       fontWeight: 600
 
-  layer hud
     node geneBtnA
       role: chrome
-      x: 200
+      x: 1140
       y: 842
       w: 52
       h: 22
@@ -172,7 +142,7 @@ scene
 
     node geneBtnALbl
       role: label
-      x: 226
+      x: 1166
       y: 856
       text: "CD8A"
       font: 10
@@ -180,7 +150,7 @@ scene
 
     node geneBtnB
       role: chrome
-      x: 260
+      x: 1200
       y: 842
       w: 52
       h: 22
@@ -188,7 +158,7 @@ scene
 
     node geneBtnBLbl
       role: label
-      x: 286
+      x: 1226
       y: 856
       text: "IL6"
       font: 10
@@ -203,30 +173,21 @@ event click on geneBtnB
 tick 40
   hint = "print-nature 默认 · 可选手册 dashboard / 无"
 
-# ── 顶栏三格 + 底栏热图：排版插件出格子，图表只写 panel ──
+# 页面槽位 + 六联图：board 出题注，figure 吃 body，图表只写 panel
+
+widget layout.board
+  title: "多面板综合图 · 虚拟临床队列"
+  subtitle: "Figure 2 · n=248 · IL-6 / CRP 生物标志物 · 六类子图组合"
+  caption: hint
+  safe: 40
+  guides: false
 
 widget layout.figure
-  id: top
-  x: 44
-  y: 140
-  w: 1272
-  h: 348
+  panel: body
   cols: 3
-  rows: 1
+  rows: 2
   gutter: 24
-  margin: 0
-
-widget layout.figure
-  id: bot
-  x: 44
-  y: 516
-  w: 1272
-  h: 348
-  cols: 3
-  rows: 1
-  gutter: 24
-  margin: 0
-  panels: [d, e, f]
+  margin: 4
 
 widget chart.bar
   panel: a

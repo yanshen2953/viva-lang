@@ -36,10 +36,7 @@ scene
   background: #ffffff
 
 widget layout.figure
-  x: 24
-  y: 28
-  w: 912
-  h: 620
+  title: "Figure 2. Survival and response by cohort"
   cols: 2
   rows: 2
   gutter: 32

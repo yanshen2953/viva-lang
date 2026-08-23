@@ -69,13 +69,29 @@ describe("figure-atlas example", () => {
       l.items.some((i) => i.kind === "for" && i.body.some((b) => b.kind === "node" && b.name === "heatCell")),
     );
     expect(hasHeat).toBe(true);
-    expect(src).not.toMatch(/insetL|insetR|insetT|insetB|areaX|areaY|panelAdeck|panelLbl/);
-    expect(result.ir!.scene.layers.some((l) => l.name === "__top_decks")).toBe(true);
-    expect(result.ir!.scene.layers.some((l) => l.name === "__top_labels")).toBe(true);
+    expect(src).not.toMatch(/insetL|insetR|insetT|insetB|areaX|areaY|panelAdeck|panelLbl|figMain|docTitle/);
+    expect(src).not.toMatch(/widget layout\.figure[\s\S]*?\n\s+(x|y|w|h):/);
+    expect(result.ir!.scene.layers.some((l) => l.name === "__board_copy")).toBe(true);
+    expect(result.ir!.scene.layers.some((l) => l.name === "__fig_decks")).toBe(true);
+    expect(result.ir!.scene.layers.some((l) => l.name === "__fig_labels")).toBe(true);
+    expect(result.ir!.scene.layers.some((l) => l.name === "__fig_plate")).toBe(true);
+    expect(result.ir!.frames.map((f) => f.name)).toEqual(
+      expect.arrayContaining(["safe", "title", "body", "lower", "a", "b", "c", "d", "e", "f"]),
+    );
+    const title = result.ir!.scene.layers
+      .find((l) => l.name === "__board_copy")!
+      .items.find((i) => i.kind === "node" && i.name === "board_docTitle");
+    expect(title?.kind).toBe("node");
+    if (title?.kind === "node") {
+      expect(evaluate(title.props.text, [result.ir!.state, result.ir!.data])).toMatch(/虚拟临床队列/);
+    }
     const a = result.ir!.frames.find((f) => f.name === "a")!;
+    const body = result.ir!.frames.find((f) => f.name === "body")!;
     const cell = evaluate(a.props.cellX!, [result.ir!.state, result.ir!.data]) as number[];
     const plot = evaluate(a.props.x, [result.ir!.state, result.ir!.data]) as number[];
-    expect(cell[0]).toBeCloseTo(44);
+    const bodyX = evaluate(body.props.x, [result.ir!.state, result.ir!.data]) as number[];
+    expect(cell[0]).toBeGreaterThanOrEqual(bodyX[0]!);
+    expect(cell[1]).toBeLessThanOrEqual(bodyX[1]!);
     expect(plot[0]).toBeGreaterThan(cell[0]!);
     expect(plot[1]).toBeLessThan(cell[1]!);
     expect(plot[0]! - cell[0]!).toBeGreaterThan(12);
