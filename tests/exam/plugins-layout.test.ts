@@ -291,8 +291,24 @@ widget layout.board
     expect(ir.scene.layers.some((l) => l.name === "__board_controls")).toBe(true);
     const click = ir.events.find((e) => e.type === "click" && e.target === "board_ctl_1");
     expect(click).toBeTruthy();
-    const after = simulate(ir, { events: [{ type: "click", target: "board_ctl_1" }] });
+    const after = simulate(ir, { events: [{ type: "click", target: "board_ctlLbl_1" }] });
     expect(after.state.gene).toBe("IL6");
+    const chips = ir.scene.layers
+      .find((l) => l.name === "__board_controls")!
+      .items.filter((i) => i.kind === "node");
+    expect(chips.some((i) => i.kind === "node" && i.name === "board_ctlVal")).toBe(false);
+    const on = chips.find((i) => i.kind === "node" && i.name === "board_ctl_0");
+    const off = chips.find((i) => i.kind === "node" && i.name === "board_ctl_1");
+    const offLbl = chips.find((i) => i.kind === "node" && i.name === "board_ctlLbl_1");
+    expect(on?.kind).toBe("node");
+    expect(off?.kind).toBe("node");
+    expect(offLbl?.kind).toBe("node");
+    if (on?.kind === "node" && off?.kind === "node" && offLbl?.kind === "node") {
+      expect(evaluate(on.props.opacity!, [ir.state, ir.data])).toBeCloseTo(1);
+      expect(evaluate(off.props.opacity!, [ir.state, ir.data])).toBeCloseTo(0.4);
+      expect(evaluate(offLbl.props.opacity!, [ir.state, ir.data])).toBeCloseTo(0.4);
+      expect(evaluate(off.props.opacity!, [after.state, ir.data])).toBeCloseTo(1);
+    }
   });
 
   it("tiles two unbound charts into a figure grid without areaX", () => {

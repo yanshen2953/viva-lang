@@ -55,15 +55,14 @@ export function estimateBoardBands(opts: {
     : [];
 
   let chipWs = opts.controlKeys.map(measureChipWidth);
-  const bindW = opts.hasBind ? 52 : 0;
   const gaps = Math.max(0, opts.controlKeys.length) * 8 + 8;
-  let hudW = opts.controlKeys.length ? bindW + chipWs.reduce((a, b) => a + b, 0) + gaps : 0;
+  let hudW = opts.controlKeys.length ? chipWs.reduce((a, b) => a + b, 0) + gaps : 0;
   const hudCap = copyW * 0.5;
   if (hudW > hudCap && chipWs.length) {
-    const room = Math.max(36 * chipWs.length, hudCap - bindW - gaps);
+    const room = Math.max(36 * chipWs.length, hudCap - gaps);
     const scale = room / chipWs.reduce((a, b) => a + b, 0);
     chipWs = chipWs.map((w) => Math.max(36, Math.round(w * scale)));
-    hudW = bindW + chipWs.reduce((a, b) => a + b, 0) + gaps;
+    hudW = chipWs.reduce((a, b) => a + b, 0) + gaps;
   }
 
   const capW = Math.max(40, copyW - (hudW ? hudW + 12 : 0));

@@ -1460,21 +1460,16 @@ function expandLayoutBoard(
     const chipY = lowerY0 + Math.max(8, (lowerH - chipH) / 2);
     let cursorX = safeX1 - 4;
     const ctlItems: SceneItem[] = [];
-    if (controlBind) {
-      ctlItems.push(
-        node(`${id}_ctlVal`, {
-          role: literal("annotation"),
-          x: literal(safeX1 - hudW + 8),
-          y: literal(chipY + 15),
-          text: ident(controlBind),
-        }),
-      );
-    }
     for (let i = controlKeys.length - 1; i >= 0; i--) {
       const key = controlKeys[i]!;
       const chipW = bands.chipWs[i] ?? 44;
       cursorX -= chipW;
       const chipName = `${id}_ctl_${i}`;
+      const selected = controlBind
+        ? binary("+", literal(0.4), binary("*", binary("==", ident(controlBind), literal(key), span), literal(0.6), span), span)
+        : undefined;
+      const paint = selected ? { opacity: selected } : {};
+      const lblName = `${id}_ctlLbl_${i}`;
       ctlItems.push(
         node(chipName, {
           role: literal("chrome"),
@@ -1483,22 +1478,24 @@ function expandLayoutBoard(
           w: literal(chipW),
           h: literal(chipH),
           radius: literal(6),
+          ...paint,
         }),
-        node(`${id}_ctlLbl_${i}`, {
+        node(lblName, {
           role: literal("label"),
           x: literal(cursorX + chipW / 2),
           y: literal(chipY + 14),
           text: literal(key),
           align: literal("center"),
+          ...paint,
         }),
       );
-      if (controlBind && !artifact.events.some((e) => e.type === "click" && e.target === chipName)) {
-        artifact.events.push({
-          type: "click",
-          target: chipName,
-          body: [assign(controlBind.split("."), literal(key))],
-          span,
-        });
+      if (controlBind) {
+        const body = [assign(controlBind.split("."), literal(key))];
+        for (const target of [chipName, lblName]) {
+          if (!artifact.events.some((e) => e.type === "click" && e.target === target)) {
+            artifact.events.push({ type: "click", target, body, span });
+          }
+        }
       }
       cursorX -= gap;
     }

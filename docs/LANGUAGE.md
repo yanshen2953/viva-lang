@@ -134,7 +134,7 @@ widget layout.board
   safe: 64
 ```
 
-不写 `w`/`h` 时铺满场景。得到 frame `safe` `title` `body` `lower`，并画出 title/subtitle/caption。`controls: [CD8A, IL6]` + `bind: selGene` 在 lower 右侧画 HUD 芯片（再出 `hud` 槽）。图表或 `layout.figure` 可 `panel: body`。`bleed: 16` 再出 `bleed` / `trim`，并默认画裁切十字（`crop: false` 可关）。
+不写 `w`/`h` 时铺满场景。得到 frame `safe` `title` `body` `lower`，并画出 title/subtitle/caption。`controls: [CD8A, IL6]` + `bind: selGene` 在 lower 右侧画 HUD 芯片（选中不透明、未选 0.4，不再旁路写当前值；再出 `hud` 槽）。图表或 `layout.figure` 可 `panel: body`。`bleed: 16` 再出 `bleed` / `trim`，并默认画裁切十字（`crop: false` 可关）。
 
 投稿尺寸：`scene` 上写 `unit: mm` 与 `column: single`（89 mm）或 `double`（183 mm）。
 
@@ -145,7 +145,7 @@ widget layout.board
 - `xScale: band` / `category`（字符串列会自动 band）；也可用 `xCats` / `yCats`
 - 图例默认在图外右侧：`legend: right|bottom|inside|false`
 
-`layout.board` 可选 `splits: 2` → 在 `body` 里再切 `left` / `right`；`beats: 4` → 分镜槽 `beat0`…`beat3`。不写 `safe` / `titleH` / `lowerH` 时，编译器按题注折行和 `controls` 芯片宽度估安全框与上下条（仍可手写覆盖）。`play: true` 用 `tick` 推进 `__beat`，非当前拍加遮罩；Runtime 用 220ms CSS opacity 淡入淡出（静态导出仍硬切，不是时间轴）。`viva export file.viva --beats` 按 `__beat` 导出 PNG 序列；`--beats -f gif|mp4` 用 ffmpeg 把这些帧拼成幻灯（仍不是成片时间轴）。`typeGrid: true` 在安全框上画字级基线；`typeGridCols: 12` 再切 `type0`… 栏（仍不是跨页）。
+`layout.board` 可选 `splits: 2` → 在 `body` 里再切 `left` / `right`；`beats: 4` → 分镜槽 `beat0`…`beat3`。不写 `safe` / `titleH` / `lowerH` 时，编译器按题注折行和 `controls` 芯片宽度估安全框与上下条（仍可手写覆盖）。`controls` + `bind` 只画芯片，选中项提高不透明度，不再旁路再写一份当前值。`play: true` 用 `tick` 推进 `__beat`，非当前拍加遮罩；Runtime 用 220ms CSS opacity 淡入淡出（静态导出仍硬切，不是时间轴）。`viva export file.viva --beats` 按 `__beat` 导出 PNG 序列；`--beats -f gif|mp4` 用 ffmpeg 把这些帧拼成幻灯（仍不是成片时间轴）。`typeGrid: true` 在安全框上画字级基线；`typeGridCols: 12` 再切 `type0`… 栏（仍不是跨页）。
 
 `xScale: time`（或 ISO 日期字符串列自动识别）出时间刻度。`chart.box` / `chart.violin` 由编译器算四分位和密度（violin 是高斯 KDE 闭合轮廓，不是直方切片）。`brackets: [{ a, b, label }]` 画显著性括号。轴刻度数字写在场景坐标（图框左侧 / 底侧），避免数据域 padding 把 y 标签裁进绘图区。折行的 Y 轴标题在 −90° 后从上往下读第一行。都不是新关键字。
 
