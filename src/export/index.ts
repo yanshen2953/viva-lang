@@ -2,7 +2,7 @@ import { PDFDocument } from "pdf-lib";
 import { Resvg } from "@resvg/resvg-js";
 import sharp from "sharp";
 import { compileSource } from "../pipeline.js";
-import { renderSvgFromIr } from "./static-svg.js";
+import { flattenNodesFromIr, renderSvgFromIr } from "./static-svg.js";
 import { renderVectorPdfFromIr } from "./vector-pdf.js";
 
 export type ExportFormat = "svg" | "png" | "jpg" | "jpeg" | "pdf" | "pdf-raster";
@@ -54,6 +54,7 @@ export async function exportArtifact(
   });
   if (!result.ir) throw new Error(result.error ?? "compile failed");
   const svg = renderSvgFromIr(result.ir);
+  const sceneBg = flattenNodesFromIr(result.ir).scene.background;
   const fmt = format === "jpeg" ? "jpg" : format;
 
   if (fmt === "svg") {
@@ -72,7 +73,7 @@ export async function exportArtifact(
       const bytes = await renderVectorPdfFromIr(result.ir, { scale: opts.scale ?? 1 });
       return { format: "pdf", bytes, mime: "application/pdf", svg, vector: true };
     }
-    const raster = await rasterize(svg, opts);
+    const raster = await rasterize(svg, { ...opts, background: opts.background ?? sceneBg });
     const pdf = await PDFDocument.create();
     const pngImage = await pdf.embedPng(raster);
     const page = pdf.addPage([pngImage.width, pngImage.height]);
@@ -81,7 +82,7 @@ export async function exportArtifact(
     return { format: "pdf-raster", bytes: pdfBytes, mime: "application/pdf", svg, vector: false };
   }
 
-  const png = await rasterize(svg, opts);
+  const png = await rasterize(svg, { ...opts, background: opts.background ?? sceneBg });
 
   if (fmt === "png") {
     return { format: "png", bytes: png, mime: "image/png", svg };
@@ -101,7 +102,7 @@ async function rasterize(svg: string, opts: ExportOptions): Promise<Uint8Array> 
   const width = opts.width ?? 1280;
   const resvg = new Resvg(svg, {
     fitTo: { mode: "width", value: width },
-    background: opts.background,
+    background: opts.background ?? "#ffffff",
   });
   return resvg.render().asPng();
 }

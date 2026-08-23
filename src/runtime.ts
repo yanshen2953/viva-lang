@@ -19,6 +19,7 @@ import {
 import { evalSceneProps, resolveSceneBox, scaleSceneGeom, sceneScaleOf } from "./space/scene-box.js";
 import { DEFAULT_SCENE_BACKGROUND, resetPaletteSeries, setStyleContext } from "./style/index.js";
 import { STYLE_META_PROPS } from "./style/types.js";
+import { MARK_EASE_MS, markPaintState } from "./runtime/mark-ease.js";
 
 export type RuntimeOptions = {
   mount: HTMLElement;
@@ -76,6 +77,7 @@ export class Runtime {
   private activeCollisions = new Set<string>();
   private keyHandler: ((event: KeyboardEvent) => void) | null = null;
   private lastNodes: RenderNode[] = [];
+  private hideTimers = new Map<string, number>();
 
   constructor(options: RuntimeOptions) {
     this.ir = options.ir;
@@ -122,6 +124,8 @@ export class Runtime {
     }
     this.drag = null;
     this.activeCollisions.clear();
+    for (const id of this.hideTimers.values()) window.clearTimeout(id);
+    this.hideTimers.clear();
   }
 
   getWorld(): { state: Record<string, unknown>; data: Record<string, unknown> } {
@@ -429,8 +433,24 @@ export class Runtime {
     const opacity = p.opacity === undefined ? 1 : num(p.opacity, 1);
     const visible = p.visible === undefined ? true : Boolean(p.visible);
     const hovered = this.hoverId === node.id;
-    el.style.display = visible ? "" : "none";
-    el.setAttribute("opacity", String(opacity));
+    const paint = markPaintState(visible, opacity);
+    el.style.transition = `opacity ${MARK_EASE_MS}ms ease`;
+    el.style.pointerEvents = paint.pointerEvents || "auto";
+    el.style.display = paint.display;
+    el.setAttribute("opacity", String(paint.opacity));
+    const prevHide = this.hideTimers.get(node.id);
+    if (prevHide) window.clearTimeout(prevHide);
+    if (paint.hideAfterMs !== null) {
+      this.hideTimers.set(
+        node.id,
+        window.setTimeout(() => {
+          if (el.getAttribute("opacity") === "0") el.style.display = "none";
+          this.hideTimers.delete(node.id);
+        }, paint.hideAfterMs) as unknown as number,
+      );
+    } else {
+      this.hideTimers.delete(node.id);
+    }
     el.setAttribute("data-viva-name", node.name);
     if (node.group) el.setAttribute("data-viva-group", node.group);
     el.style.cursor =
