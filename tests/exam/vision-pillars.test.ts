@@ -11,6 +11,7 @@ import { mmToPx, resolveSceneBox, COLUMN_MM } from "../../src/space/scene-box.js
 import { handleMcpTool } from "../../src/mcp/tools.js";
 import { SYSTEM_PROMPT_SLIM } from "../../src/llm/system-prompt-slim.js";
 import { simulate } from "../../src/simulate.js";
+import { applySelSummary } from "../../src/layout/summary-stats.js";
 
 describe("vision pillars: board, mm, log, hover object, CJK pdf", () => {
   it("layout.board creates safe/title/body/lower frames", () => {
@@ -342,6 +343,43 @@ widget chart.scatter
     if (firstViolin?.kind === "node") {
       expect(JSON.stringify(firstViolin.props.visible)).toContain("__sel");
     }
+  });
+
+  it("recomputes a box from visit keys in __sel instead of hiding the arm", () => {
+    const result = compileSource(
+      readFileSync("examples/linked-summary.viva", "utf8"),
+      "linked-summary.viva",
+    );
+    expect(result.error).toBeNull();
+    const marks = result.ir!.scene.layers.find((l) => l.name === "__b_marks")!;
+    const boxNode = marks.items.find((i) => i.kind === "node" && i.name === "box");
+    expect(boxNode?.kind).toBe("node");
+    if (boxNode?.kind !== "node") return;
+    const data = result.ir!.data as Record<string, unknown>;
+    const raw = {
+      __boxData: "rows",
+      __boxKey: "placebo",
+      __boxXField: "arm",
+      __boxYField: "score",
+      __boxCats: ["placebo", "drug-A", "drug-B"],
+      __boxPart: "body",
+      __chartBox: true,
+      frame: "b",
+      q1: 11,
+      y: 14,
+    };
+    const visit = applySelSummary(raw, {
+      data,
+      state: { __sel: { n: 1, keys: [1] }, __brush: { frame: "a" } },
+    });
+    expect(visit.visible).toBe(true);
+    expect(visit.q1).toBe(12);
+    expect(visit.y).toBe(12);
+    const other = applySelSummary(raw, {
+      data,
+      state: { __sel: { n: 1, keys: ["drug-A"] }, __brush: { frame: "a" } },
+    });
+    expect(other.visible).toBe(false);
   });
 
   it("links a scatter brush onto a box summary through shared __sel keys", () => {

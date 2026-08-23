@@ -147,7 +147,7 @@ widget layout.board
 
 `layout.board` 可选 `splits: 2` → 在 `body` 里再切 `left` / `right`；`beats: 4` → 分镜槽 `beat0`…`beat3`。不写 `safe` / `titleH` / `lowerH` 时，编译器按题注折行和 `controls` 芯片宽度估安全框与上下条（仍可手写覆盖）。`controls` + `bind` 只画芯片，选中项提高不透明度，不再旁路再写一份当前值。`play: true` 用 `tick` 推进 `__beat`，非当前拍加遮罩；Runtime 用 220ms CSS opacity 淡入淡出（静态导出仍硬切，不是时间轴）。`viva export file.viva --beats` 按 `__beat` 导出 PNG 序列；`--beats -f gif|mp4` 用 ffmpeg 把这些帧拼成幻灯（仍不是成片时间轴）。`typeGrid: true` 在安全框上画字级基线；`typeGridCols: 12` 再切 `type0`… 栏（仍不是跨页）。
 
-`xScale: time`（或 ISO 日期字符串列自动识别）出时间刻度。`chart.box` / `chart.violin` 由编译器算四分位和密度（violin 是高斯 KDE 闭合轮廓，不是直方切片）。`brackets: [{ a, b, label }]` 画显著性括号。轴刻度数字写在场景坐标（图框左侧 / 底侧），避免数据域 padding 把 y 标签裁进绘图区。折行的 Y 轴标题在 −90° 后从上往下读第一行。都不是新关键字。
+`xScale: time`（或 ISO 日期字符串列自动识别）出时间刻度。`chart.box` / `chart.violin` 由编译器算四分位和密度（violin 是高斯 KDE 闭合轮廓，不是直方切片）。跨面板 `__sel` 时 box 按选中行重算四分位，不是只藏整组。`brackets: [{ a, b, label }]` 画显著性括号。轴刻度数字写在场景坐标（图框左侧 / 底侧），避免数据域 padding 把 y 标签裁进绘图区。折行的 Y 轴标题在 −90° 后从上往下读第一行。都不是新关键字。
 
 跨面板：`__brush` 按 frame 隔离，同名 `xField` 联动；刷选写入 `__sel.keys`。有效刷选在 `dragend` 后 **保持** 选择窗（`__brush.on` 仍为 1），空点 `dragend` 才清。拖路径明显长于对角时切到数据域套索（`inside` + `pathd`），否则仍是矩形窗。其它图默认 **藏起** 不在集合里的行（含 heatmap 格子、折线线段、box / violin 摘要）。Runtime 用 opacity + 命中组 `scale` 做短缓动，不是时间轴。点图例色块也会写入 `__sel`（再点一次清空）。`link: dim` 可改回变淡。
 

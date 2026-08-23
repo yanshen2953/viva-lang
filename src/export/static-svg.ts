@@ -6,6 +6,7 @@ import type { SceneNodeIR, VisualIR } from "../ir.js";
 import {
   applyFrameToProps,
   layoutChartGeom,
+  prepareChartGeom,
   scalesFromFrameProps,
   type FrameScales,
 } from "../space.js";
@@ -110,7 +111,13 @@ function flattenItems(
 ): void {
   for (const item of items) {
     if (item.kind === "node") {
-      const raw = scaleSceneGeom(evalProps(item.props, scopes), sceneScale);
+      const raw = scaleSceneGeom(
+        prepareChartGeom(evalProps(item.props, scopes), {
+          data: scopes[1] as Record<string, unknown>,
+          state: scopes[0] as Record<string, unknown>,
+        }),
+        sceneScale,
+      );
       const framed = applyFrameToProps(raw, scales);
       const props = layoutChartGeom(framed, scales);
       out.push({

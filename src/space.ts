@@ -1,6 +1,9 @@
 import type { Expr } from "./ast.js";
-import { binary, ident, literal } from "./ast.js";
+import { binary, ident } from "./ast.js";
 import type { Span } from "./diagnostics.js";
+import { applySelSummary, type SummaryCtx } from "./layout/summary-stats.js";
+
+export type { SummaryCtx };
 
 /** Linear: data domain → scene coordinate. */
 export function linearMap(
@@ -232,6 +235,14 @@ export function layoutChartGeom(
   if (props.__chartBox) return layoutChartBox(props, frames);
   if (props.__chartHeat) return layoutChartHeat(props, frames);
   return props;
+}
+
+/** Apply __sel row filters in data domain, before frame mapping. */
+export function prepareChartGeom(
+  props: Record<string, unknown>,
+  ctx?: SummaryCtx,
+): Record<string, unknown> {
+  return ctx ? applySelSummary(props, ctx) : props;
 }
 
 /** Box body: x/y already scene-mapped (center / q3); h still data (q3-q1). */

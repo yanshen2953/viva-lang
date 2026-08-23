@@ -21,6 +21,7 @@ import { domainMap, parseTimeValue, scaleKind, type ScaleKind } from "./space.js
 import { COLUMN_MM, sceneScaleOf } from "./space/scene-box.js";
 import { estimateBoardBands } from "./layout/board-chrome.js";
 import { figureCopyDefaults, figureCopyPlace, figureGapDefaults } from "./layout/figure-gap.js";
+import { boxStats, quantile } from "./layout/summary-stats.js";
 import {
   clampChartInsets,
   growInsetsForChrome,
@@ -3109,14 +3110,6 @@ function expandColorbar(
   return items;
 }
 
-function quantile(sorted: number[], p: number): number {
-  if (!sorted.length) return 0;
-  const i = (sorted.length - 1) * p;
-  const lo = Math.floor(i);
-  const hi = Math.ceil(i);
-  return sorted[lo]! + ((sorted[hi] ?? sorted[lo]!) - sorted[lo]!) * (i - lo);
-}
-
 function expandBoxMarks(
   artifact: Artifact,
   dataName: string,
@@ -3142,23 +3135,27 @@ function expandBoxMarks(
     groups.set(key, list);
   }
   const cats = catsFromExpr(geom.xCats);
+  const allKeys = [...groups.keys()];
   const items: SceneItem[] = [];
   let i = 0;
   for (const [key, values] of groups) {
-    const sorted = [...values].sort((a, b) => a - b);
-    const q1 = quantile(sorted, 0.25);
-    const med = quantile(sorted, 0.5);
-    const q3 = quantile(sorted, 0.75);
+    const stats = boxStats(values);
+    if (!stats) continue;
+    const { q1, med, q3, whiskLo, whiskHi } = stats;
     const iqr = q3 - q1;
     const loFence = q1 - 1.5 * iqr;
     const hiFence = q3 + 1.5 * iqr;
-    const inside = sorted.filter((v) => v >= loFence && v <= hiFence);
-    const whiskLo = inside[0] ?? q1;
-    const whiskHi = inside[inside.length - 1] ?? q3;
     const xNum = Number(key);
     const x = Number.isFinite(xNum) ? xNum : i;
     const label = cats[x] ?? key;
     const selVis = markSelKeysVisible([key, label], frameName, span);
+    const boxMeta = {
+      __boxData: literal(dataName),
+      __boxKey: literal(key),
+      __boxXField: literal(xField),
+      __boxYField: literal(yField),
+      __boxCats: literal(allKeys),
+    };
     const fill = seriesField
       ? {
           kind: "call" as const,
@@ -3175,6 +3172,8 @@ function expandBoxMarks(
         role: literal("mark-line"),
         frame: literal(frameName),
         ...selVis,
+        ...boxMeta,
+        __boxPart: literal("whisk"),
         x1: literal(x),
         y1: literal(whiskLo),
         x2: literal(x),
@@ -3185,6 +3184,8 @@ function expandBoxMarks(
         role: literal("mark"),
         frame: literal(frameName),
         ...selVis,
+        ...boxMeta,
+        __boxPart: literal("body"),
         x: literal(x),
         y: literal(q3),
         q1: literal(q1),
@@ -3197,6 +3198,8 @@ function expandBoxMarks(
         role: literal("mark-line"),
         frame: literal(frameName),
         ...selVis,
+        ...boxMeta,
+        __boxPart: literal("med"),
         x1: literal(x - 0.22),
         y1: literal(med),
         x2: literal(x + 0.22),
@@ -3204,13 +3207,15 @@ function expandBoxMarks(
         strokeWidth: literal(1.6),
       }),
     );
-    for (const v of sorted) {
+    for (const v of values) {
       if (v >= loFence && v <= hiFence) continue;
       items.push(
         node(`boxOut_${i}_${v}`, {
           role: literal("mark"),
           frame: literal(frameName),
           ...selVis,
+          ...boxMeta,
+          __boxPart: literal("out"),
           x: literal(x),
           y: literal(v),
           r: literal(2.4),
@@ -4026,7 +4031,7 @@ function collectSelStmts(
   const plus = binary(
     "+",
     ident("__sel.keys"),
-    { kind: "array", items: [key], span },
+    { kind: "array", items: seriesField ? [key, ident(`row.${xField}`)] : [key], span },
     span,
   );
   return [

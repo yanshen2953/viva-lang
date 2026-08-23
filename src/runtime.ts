@@ -13,6 +13,7 @@ import {
 import {
   applyFrameToProps,
   layoutChartGeom,
+  prepareChartGeom,
   scalesFromFrameProps,
   type FrameScales,
 } from "./space.js";
@@ -305,7 +306,10 @@ export class Runtime {
     for (const item of items) {
       if (item.kind === "node") {
         const raw = scaleSceneGeom(
-          evalProps(item.props, scopes),
+          prepareChartGeom(evalProps(item.props, scopes), {
+            data: this.ir.data as Record<string, unknown>,
+            state: this.scopes()[0] as Record<string, unknown>,
+          }),
           sceneScaleOf(evalSceneProps(this.ir.scene.props, scopes)),
         );
         const framed = applyFrameToProps(raw, this.frameScales());
