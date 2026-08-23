@@ -21,6 +21,9 @@ export type PaperChrome = {
   xTitleY: number;
   titleX: number;
   titleY: number;
+  titleLineH: number;
+  axisLineH: number;
+  legendLineH: number;
   titleLines: string[];
   xTitleLines: string[];
   yTitleLines: string[];
@@ -67,17 +70,19 @@ export function thinXTicks<T extends { label: string; x: number }>(
   ticks: T[],
   font = TICK_FONT,
   gap = 4,
+  toScene: (px: number) => number = (px) => px,
 ): T[] {
   if (ticks.length <= 2) return ticks;
   const sorted = [...ticks].sort((a, b) => a.x - b.x);
+  const gapScene = toScene(gap);
   const box = (t: T) => {
-    const w = estimateTextWidthPx(t.label, font, 0.08);
+    const w = toScene(estimateTextWidthPx(t.label, font, 0.08));
     return { x: t.x - w / 2, w };
   };
   const fits = (a: T, b: T) => {
     const left = box(a);
     const right = box(b);
-    return left.x + left.w + gap <= right.x;
+    return left.x + left.w + gapScene <= right.x;
   };
   const kept: T[] = [sorted[0]!];
   const last = sorted[sorted.length - 1]!;
@@ -94,12 +99,14 @@ export function thinYTicks<T extends { label: string; y: number }>(
   ticks: T[],
   font = TICK_FONT,
   gap = 3,
+  toScene: (px: number) => number = (px) => px,
 ): T[] {
   if (ticks.length <= 2) return ticks;
   const sorted = [...ticks].sort((a, b) => a.y - b.y);
   const kept: T[] = [sorted[0]!];
   const last = sorted[sorted.length - 1]!;
-  const fits = (a: T, b: T) => Math.abs(a.y - b.y) >= font + gap;
+  const minGap = toScene(font + gap);
+  const fits = (a: T, b: T) => Math.abs(a.y - b.y) >= minGap;
   for (let i = 1; i < sorted.length - 1; i++) {
     const cur = sorted[i]!;
     if (fits(kept[kept.length - 1]!, cur) && fits(cur, last)) kept.push(cur);
@@ -242,6 +249,12 @@ export function overflowDelta(
   };
 }
 
+/** Scene leftover → px wrap budget. Identity `toScene` keeps px exams green. */
+function sceneToPx(scene: number, toScene: (px: number) => number): number {
+  const unit = toScene(1);
+  return unit === 0 ? scene : scene / unit;
+}
+
 export function placePaperChrome(
   box: PlotBox,
   toScene: (px: number) => number,
@@ -250,6 +263,9 @@ export function placePaperChrome(
   cell?: CellBox,
 ): { chrome: PaperChrome; rects: ChromeRect[] } {
   const gap = toScene(compact ? 3 : 5);
+  const toPx = (scene: number) => sceneToPx(scene, toScene);
+  const textW = (s: string, font: number, tracking: number) =>
+    toScene(estimateTextWidthPx(s, font, tracking));
   const yTicks = extras.yTicks ?? [];
   const xTicks = extras.xTicks ?? [];
   const yTickW = Math.max(
@@ -267,18 +283,19 @@ export function placePaperChrome(
   let yTickX = box.px0 - gap;
   let yTitleX = Math.max(
     toScene(compact ? 4 : 8),
-    yTickX - toScene(yTickW + AXIS_FONT * 0.55 + gap),
+    yTickX - toScene(yTickW) - toScene(AXIS_FONT * 0.55) - gap,
   );
-  let xTickY = box.py1 + toScene(TICK_FONT + gap);
-  let xTitleY = xTickY + toScene(AXIS_FONT + gap);
+  let xTickY = box.py1 + toScene(TICK_FONT) + gap;
+  let xTitleY = xTickY + toScene(AXIS_FONT) + gap;
   let titleX = box.px0;
-  let titleY = Math.max(toScene(compact ? 8 : 14), box.py0 - toScene(TITLE_FONT + gap));
+  let titleY = Math.max(toScene(compact ? 8 : 14), box.py0 - toScene(TITLE_FONT) - gap);
   let titleLines = title ? [title] : [];
   let xTitleLines = xCap ? [xCap] : [];
   let yTitleLines = yCap ? [yCap] : [];
   let legendLines = keys.map((key) => [key]);
-  const axisLine = AXIS_FONT + 2;
-  const legendLine = TICK_FONT + 2;
+  const titleLineH = toScene(TITLE_FONT + 2);
+  const axisLineH = toScene(AXIS_FONT + 2);
+  const legendLineH = toScene(TICK_FONT + 2);
   let cbarX = box.px1 + toScene(compact ? 4 : 8);
   let cbarLines = cbarLabels.map((s) => [s]);
   let cbarTitleLines: string[] = [];
@@ -303,7 +320,7 @@ export function placePaperChrome(
         : box.px0 + toScene(8);
   let legendY =
     extras.legendAt === "bottom"
-      ? xTitleY + toScene(AXIS_FONT + gap)
+      ? xTitleY + toScene(AXIS_FONT) + gap
       : extras.legendAt === "inside"
         ? box.py1 - toScene(14)
         : box.py0 + toScene(12);
@@ -316,10 +333,10 @@ export function placePaperChrome(
     extras.panelLabel && cell
       ? {
           id: "panel-label",
-          x: cell.x0 + 6,
-          y: cell.y0 + 4,
-          w: estimateTextWidthPx(extras.panelLabel, PANEL_FONT, 0.15),
-          h: PANEL_FONT + 2,
+          x: cell.x0 + toScene(6),
+          y: cell.y0 + toScene(4),
+          w: textW(extras.panelLabel, PANEL_FONT, 0.15),
+          h: toScene(PANEL_FONT + 2),
         }
       : null;
 
@@ -327,102 +344,99 @@ export function placePaperChrome(
     const rects: ChromeRect[] = [];
     if (panel) rects.push(panel);
     if (titleLines.length) {
-      const lineH = TITLE_FONT + 2;
-      const lineW = Math.max(
-        ...titleLines.map((line) => estimateTextWidthPx(line, TITLE_FONT, 0.35)),
-      );
+      const lineW = Math.max(...titleLines.map((line) => textW(line, TITLE_FONT, 0.35)));
       rects.push({
         id: "title",
         x: titleX,
-        y: titleY - TITLE_FONT * 0.75,
+        y: titleY - toScene(TITLE_FONT * 0.75),
         w: lineW,
-        h: lineH * titleLines.length,
+        h: titleLineH * titleLines.length,
       });
     }
     for (const [i, tick] of yTicks.entries()) {
-      const tw = estimateTextWidthPx(tick.label, TICK_FONT, 0.08);
+      const tw = textW(tick.label, TICK_FONT, 0.08);
       rects.push({
         id: `ytick-${i}`,
         x: yTickX - tw,
-        y: tick.y - TICK_FONT * 0.5,
+        y: tick.y - toScene(TICK_FONT * 0.5),
         w: tw,
-        h: TICK_FONT,
+        h: toScene(TICK_FONT),
       });
     }
     for (const [i, tick] of xTicks.entries()) {
-      const tw = estimateTextWidthPx(tick.label, TICK_FONT, 0.08);
+      const tw = textW(tick.label, TICK_FONT, 0.08);
       rects.push({
         id: `xtick-${i}`,
         x: tick.x - tw / 2,
-        y: xTickY - TICK_FONT * 0.75,
+        y: xTickY - toScene(TICK_FONT * 0.75),
         w: tw,
-        h: TICK_FONT,
+        h: toScene(TICK_FONT),
       });
     }
     if (yTitleLines.length) {
-      const tw = Math.max(
-        ...yTitleLines.map((line) => estimateTextWidthPx(line, AXIS_FONT, 0.2)),
-      );
+      const tw = Math.max(...yTitleLines.map((line) => textW(line, AXIS_FONT, 0.2)));
       const n = yTitleLines.length;
       rects.push({
         id: "yTitle",
-        x: yTitleX - AXIS_FONT * 0.5 - (n - 1) * axisLine,
+        x: yTitleX - toScene(AXIS_FONT * 0.5) - (n - 1) * axisLineH,
         y: (box.py0 + box.py1) / 2 - tw / 2,
-        w: AXIS_FONT + (n - 1) * axisLine,
+        w: toScene(AXIS_FONT) + (n - 1) * axisLineH,
         h: tw,
       });
     }
     if (xTitleLines.length) {
-      const tw = Math.max(
-        ...xTitleLines.map((line) => estimateTextWidthPx(line, AXIS_FONT, 0.2)),
-      );
+      const tw = Math.max(...xTitleLines.map((line) => textW(line, AXIS_FONT, 0.2)));
       const n = xTitleLines.length;
       rects.push({
         id: "xTitle",
         x: (box.px0 + box.px1) / 2 - tw / 2,
-        y: xTitleY - AXIS_FONT * 0.75,
+        y: xTitleY - toScene(AXIS_FONT * 0.75),
         w: tw,
-        h: AXIS_FONT + (n - 1) * axisLine,
+        h: toScene(AXIS_FONT) + (n - 1) * axisLineH,
       });
     }
     if (extras.colorbar) {
-      const extraH = cbarTitleLines.length ? cbarTitleLines.length * axisLine + 4 : 0;
+      const extraH = cbarTitleLines.length ? cbarTitleLines.length * axisLineH + toScene(4) : 0;
       rects.push({
         id: "cbar",
         x: cbarX,
         y: box.py0 - extraH,
         w: toScene(10 + 4 + cbarLabelW()),
-        h: Math.max(8, box.py1 - box.py0) + extraH,
+        h: Math.max(toScene(8), box.py1 - box.py0) + extraH,
       });
       if (cbarTitleLines.length) {
-        const tw = Math.max(
-          cbarNeedW,
-          ...cbarTitleLines.map((line) => estimateTextWidthPx(line, AXIS_FONT, 0.2)),
+        const tw = toScene(
+          Math.max(
+            cbarNeedW,
+            ...cbarTitleLines.map((line) => estimateTextWidthPx(line, AXIS_FONT, 0.2)),
+          ),
         );
         rects.push({
           id: "cbar-title",
           x: cbarTitleX,
-          y: cbarTitleY - AXIS_FONT * 0.75,
+          y: cbarTitleY - toScene(AXIS_FONT * 0.75),
           w: tw,
-          h: AXIS_FONT + (cbarTitleLines.length - 1) * axisLine,
+          h: toScene(AXIS_FONT) + (cbarTitleLines.length - 1) * axisLineH,
         });
       }
     }
     if (extras.legendAt && extras.legendAt !== "inside") {
       for (const [i, key] of keys.entries()) {
         const lines = legendLines[i] ?? [key];
-        const tw = Math.max(
-          extras.legendAt === "right" ? legendNeedW : 0,
-          ...lines.map((line) => estimateTextWidthPx(line, TICK_FONT, 0.1)),
+        const tw = toScene(
+          Math.max(
+            extras.legendAt === "right" ? legendNeedW : 0,
+            ...lines.map((line) => estimateTextWidthPx(line, TICK_FONT, 0.1)),
+          ),
         );
         const x = extras.legendAt === "bottom" ? legendX + i * legendStep : legendX;
         const y = extras.legendAt === "bottom" ? legendY : legendY + i * legendStep;
         rects.push({
           id: `legend-${i}`,
           x,
-          y: y - 6,
+          y: y - toScene(6),
           w: toScene(14) + tw,
-          h: TICK_FONT + 4 + (lines.length - 1) * legendLine,
+          h: toScene(TICK_FONT + 4) + (lines.length - 1) * legendLineH,
         });
       }
     }
@@ -441,34 +455,34 @@ export function placePaperChrome(
     rects = build();
   }
   if (title) {
-    const maxW = Math.max(TITLE_FONT * 4, box.px1 - titleX - 4);
+    const maxW = Math.max(TITLE_FONT * 4, toPx(box.px1 - titleX) - 4);
     titleLines = wrapTextLines(title, maxW, TITLE_FONT, 0.35, 3);
     if (!titleLines.length) titleLines = [title];
     if (titleLines.length > 1) {
-      titleY -= (titleLines.length - 1) * (TITLE_FONT + 2);
+      titleY -= (titleLines.length - 1) * titleLineH;
     }
     rects = build();
   }
   if (xCap) {
-    const maxW = Math.max(AXIS_FONT * 4, box.px1 - box.px0);
+    const maxW = Math.max(AXIS_FONT * 4, toPx(box.px1 - box.px0));
     xTitleLines = wrapTextLines(xCap, maxW, AXIS_FONT, 0.2, 3);
     if (!xTitleLines.length) xTitleLines = [xCap];
     rects = build();
   }
   if (yCap) {
-    const maxW = Math.max(AXIS_FONT * 4, box.py1 - box.py0);
+    const maxW = Math.max(AXIS_FONT * 4, toPx(box.py1 - box.py0));
     yTitleLines = wrapTextLines(yCap, maxW, AXIS_FONT, 0.2, 3);
     if (!yTitleLines.length) yTitleLines = [yCap];
     rects = build();
   }
   if (yCap && yTicks.length && collide("yTitle", "ytick-")) {
     const tickLeft = Math.min(...rects.filter((r) => r.id.startsWith("ytick-")).map((r) => r.x));
-    yTitleX = tickLeft - gap - AXIS_FONT * 0.5;
+    yTitleX = tickLeft - gap - toScene(AXIS_FONT * 0.5);
     rects = build();
   }
   if (xCap && xTicks.length && collide("xTitle", "xtick-")) {
     const tickBot = Math.max(...rects.filter((r) => r.id.startsWith("xtick-")).map((r) => r.y + r.h));
-    xTitleY = tickBot + gap + AXIS_FONT * 0.75;
+    xTitleY = tickBot + gap + toScene(AXIS_FONT * 0.75);
     rects = build();
   }
   if (extras.colorbar && extras.legendAt === "right" && collide("legend-", "cbar")) {
@@ -479,18 +493,17 @@ export function placePaperChrome(
     }
   }
   if (extras.legendAt === "bottom" && xCap && collide("legend-", "xTitle")) {
-    legendY = xTitleY + toScene(AXIS_FONT + gap) + (xTitleLines.length - 1) * axisLine;
+    legendY = xTitleY + toScene(AXIS_FONT) + gap + (xTitleLines.length - 1) * axisLineH;
     rects = build();
   }
   if (keys.length && extras.legendAt && extras.legendAt !== "inside") {
-    const swatch = toScene(14);
-    const padW = toScene(6);
-    const maxW =
+    const leftover =
       extras.legendAt === "bottom"
-        ? Math.max(TICK_FONT * 5, legendStep - swatch - padW)
+        ? legendStep - toScene(14) - toScene(6)
         : cell
-          ? Math.max(TICK_FONT * 5, cell.x1 - legendX - swatch - padW)
+          ? cell.x1 - legendX - toScene(14) - toScene(6)
           : toScene(compact ? 52 : 72);
+    const maxW = Math.max(TICK_FONT * 5, toPx(leftover));
     legendLines = keys.map((key) => {
       const lines = wrapTextLines(key, maxW, TICK_FONT, 0.1, 2);
       return lines.length ? lines : [key];
@@ -500,14 +513,15 @@ export function placePaperChrome(
     }
     const extra = Math.max(0, ...legendLines.map((lines) => lines.length - 1));
     if (extras.legendAt !== "bottom" && extra > 0) {
-      legendStep = toScene(14) + extra * legendLine;
+      legendStep = toScene(14) + extra * legendLineH;
     }
     rects = build();
   }
   if (extras.colorbar) {
-    const leftover = cell
-      ? Math.max(TICK_FONT * 4, cell.x1 - (cbarX + toScene(14)) - 4)
+    const leftoverScene = cell
+      ? cell.x1 - (cbarX + toScene(14)) - toScene(4)
       : toScene(compact ? 36 : 56);
+    const leftover = Math.max(TICK_FONT * 4, toPx(leftoverScene));
     cbarLines = cbarLabels.map((label) => {
       cbarNeedW = Math.max(cbarNeedW, minWidthForLines(label, TICK_FONT, 0.08, 2));
       const lines = wrapTextLines(label, leftover, TICK_FONT, 0.08, 2);
@@ -518,7 +532,7 @@ export function placePaperChrome(
       cbarTitleLines = wrapTextLines(zCap, leftover, AXIS_FONT, 0.2, 2);
       if (!cbarTitleLines.length) cbarTitleLines = [zCap];
       cbarTitleX = cbarX + toScene(14);
-      cbarTitleY = box.py0 - toScene(AXIS_FONT + 2) - Math.max(0, cbarTitleLines.length - 1) * axisLine;
+      cbarTitleY = box.py0 - toScene(AXIS_FONT + 2) - Math.max(0, cbarTitleLines.length - 1) * axisLineH;
     }
     if (extras.legendAt === "right") {
       legendX = cbarRight() + toScene(compact ? 6 : 10);
@@ -534,6 +548,9 @@ export function placePaperChrome(
       xTitleY,
       titleX,
       titleY,
+      titleLineH,
+      axisLineH,
+      legendLineH,
       titleLines,
       xTitleLines,
       yTitleLines,

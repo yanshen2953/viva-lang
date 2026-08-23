@@ -334,6 +334,16 @@ widget chart.scatter
       const titleY = title.props.y?.kind === "number" ? title.props.y.value : 99;
       expect(titleY).toBeLessThan(20);
       expect(titleY).toBeGreaterThan(0);
+      expect(title.props.text?.kind === "string" ? title.props.text.value : "").toBe("单栏投稿图");
     }
+    const titleLines = axes.items.filter((i) => i.kind === "node" && /_title(_\d+)?$/.test(i.name));
+    expect(titleLines).toHaveLength(1);
+    const xTitleText =
+      xTitle?.kind === "node" && xTitle.props.text?.kind === "string" ? xTitle.props.text.value : "";
+    const yTitleText =
+      yTitle?.kind === "node" && yTitle.props.text?.kind === "string" ? yTitle.props.text.value : "";
+    expect(xTitleText).toBe("时间 (周)");
+    expect(yTitleText).toBe("心率 (次每分)");
+    expect(xTitleText).not.toMatch(/^\)$/);
   });
 });

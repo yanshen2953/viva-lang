@@ -617,7 +617,7 @@ function expandChart(
           node(`${frameName}_title${i ? `_${i}` : ""}`, {
             role: literal("title"),
             x: titleX,
-            y: chrome ? literal(chrome.titleY + i * 14) : titleYExpr,
+            y: chrome ? literal(chrome.titleY + i * chrome.titleLineH) : titleYExpr,
             text: literal(line),
           }),
         )
@@ -2502,12 +2502,18 @@ function chromeLayoutOf(
       label: t.label,
       y: domainMap(t.value, [box.ymin, box.ymax], [box.py0, box.py1], true, box.yScale),
     })),
+    8,
+    3,
+    toScene,
   );
   const xTicks = thinXTicks(
     axisTicks(props, "x").map((t) => ({
       label: t.label,
       x: domainMap(t.value, [box.xmin, box.xmax], [box.px0, box.px1], false, box.xScale),
     })),
+    8,
+    4,
+    toScene,
   );
   const [z0, z1] = zlimPair(props);
   return placePaperChrome(
@@ -2924,23 +2930,30 @@ function expandAxisTicks(
 
   const items: SceneItem[] = [];
   const box = plotBoxOf(props);
+  const unit = sceneUnitOf(artifact);
   let xTicks = axisTicks(props, "x");
   let yTicks = axisTicks(props, "y");
   if (box) {
+    const toScene = (px: number) => px / Math.max(sceneScaleOf({ unit }), 1e-6);
     xTicks = thinXTicks(
       xTicks.map((t) => ({
         ...t,
         x: domainMap(t.value, [box.xmin, box.xmax], [box.px0, box.px1], false, box.xScale),
       })),
+      8,
+      4,
+      toScene,
     );
     yTicks = thinYTicks(
       yTicks.map((t) => ({
         ...t,
         y: domainMap(t.value, [box.ymin, box.ymax], [box.py0, box.py1], true, box.yScale),
       })),
+      8,
+      3,
+      toScene,
     );
   }
-  const unit = sceneUnitOf(artifact);
   const compact = box ? isCompactPlot(box, unit) : isCompactScene(artifact);
   const ySpan = binary("-", ylimHigh(props), ylimLow(props), span);
   const dataTickLen = binary("*", ySpan, literal(0.02), span);
@@ -3134,12 +3147,13 @@ function expandSeriesLegend(
       }),
     );
     const legendLines = chrome?.legendLines?.[i]?.length ? chrome.legendLines[i]! : [key];
+    const legendLineH = chrome?.legendLineH ?? 10;
     for (const [j, line] of legendLines.entries()) {
       items.push(
         node(`${frameName}_legLbl_${i}${j ? `_${j}` : ""}`, {
           role: literal("legend-label"),
           x: literal(swatchX + 14),
-          y: literal(swatchY + j * 10),
+          y: literal(swatchY + j * legendLineH),
           text: literal(line),
         }),
       );
@@ -3256,7 +3270,7 @@ function expandAxisTitles(
   const yCap = axisCaption(props, "y");
   const xLines = chrome?.xTitleLines?.length ? chrome.xTitleLines : xCap ? [xCap] : [];
   const yLines = chrome?.yTitleLines?.length ? chrome.yTitleLines : yCap ? [yCap] : [];
-  const axisLine = 11;
+  const axisLine = chrome?.axisLineH ?? 11;
   for (const [i, line] of xLines.entries()) {
     items.push(
       node(`${frameName}_xTitle${i ? `_${i}` : ""}`, {
@@ -4446,6 +4460,9 @@ function emptyPaperChrome(): PaperChrome {
     xTitleY: 0,
     titleX: 0,
     titleY: 0,
+    titleLineH: 14,
+    axisLineH: 11,
+    legendLineH: 10,
     titleLines: [],
     xTitleLines: [],
     yTitleLines: [],

@@ -27,6 +27,38 @@ describe("paper chrome collision", () => {
     expect(lines.some((line) => /^T$/.test(line) || /坐标。T$/.test(line))).toBe(false);
   });
 
+  it("measures mm-sheet wrap in px so a CJK title stays one line", () => {
+    const scale = 96 / 25.4;
+    const toScene = (px: number) => px / scale;
+    const { chrome } = placePaperChrome(
+      { px0: 18, px1: 80, py0: 14, py1: 56 },
+      toScene,
+      true,
+      {
+        title: "单栏投稿图",
+        xCaption: "时间 (周)",
+        yCaption: "心率 (次每分)",
+        yTicks: [
+          { label: "24", y: 14 },
+          { label: "0", y: 56 },
+        ],
+        xTicks: [
+          { label: "0", x: 18 },
+          { label: "5", x: 80 },
+        ],
+      },
+      { x0: 0, y0: 0, x1: 89, y1: 68 },
+    );
+    expect(chrome.titleLines).toEqual(["单栏投稿图"]);
+    expect(chrome.xTitleLines).toEqual(["时间 (周)"]);
+    expect(chrome.yTitleLines).toEqual(["心率 (次每分)"]);
+    expect(chrome.xTitleLines.join("")).not.toMatch(/^\)$/);
+    expect(chrome.titleY).toBeGreaterThan(2);
+    expect(chrome.titleY).toBeLessThan(14);
+    expect(chrome.yTitleX).toBeGreaterThan(1);
+    expect(chrome.yTitleX).toBeLessThan(chrome.yTickX);
+  });
+
   it("wraps a long title on spaces before mid-word breaks", () => {
     const lines = wrapTextLines("Survival and response by treatment cohort", 80, 12, 0.35);
     expect(lines.length).toBeGreaterThan(1);
