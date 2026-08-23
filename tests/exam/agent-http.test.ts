@@ -87,7 +87,17 @@ widget chart.line
     expect(beatsJson.beats).toBe(2);
     expect(beatsJson.frames).toHaveLength(2);
     expect(beatsJson.frames[0]!.base64).not.toBe(beatsJson.frames[1]!.base64);
-  });
+
+    const gif = await fetch(`${base}/api/export`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ source: beatsSrc, format: "gif", width: 160, beats: true }),
+    });
+    const gifJson = (await gif.json()) as { ok: boolean; mime: string; base64: string };
+    expect(gifJson.ok).toBe(true);
+    expect(gifJson.mime).toBe("image/gif");
+    expect(Buffer.from(gifJson.base64, "base64").subarray(0, 6).toString("ascii")).toBe("GIF89a");
+  }, 45_000);
 
   it("compile matches pipeline compileSource", async () => {
     const local = compileSource(HELLO, "t.viva");

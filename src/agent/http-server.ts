@@ -7,7 +7,13 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { runArtifactChecks } from "../check/index.js";
 import { describeModelSlots, resolveModelsConfig } from "../check/models/index.js";
-import { exportArtifact, exportBeatSequence, type ExportFormat } from "../export/index.js";
+import {
+  exportArtifact,
+  exportBeatAnimation,
+  exportBeatSequence,
+  isBeatAnimFormat,
+  type ExportFormat,
+} from "../export/index.js";
 import { compileSource } from "../pipeline.js";
 import { SYSTEM_PROMPT } from "../llm/system-prompt.js";
 import { SYSTEM_PROMPT_SLIM } from "../llm/system-prompt-slim.js";
@@ -150,6 +156,27 @@ export function createAgentHttpServer(opts: AgentHttpOptions): Server {
           beats?: boolean;
         };
         if (payload.beats) {
+          const format = payload.format ?? "png";
+          if (isBeatAnimFormat(format)) {
+            const anim = await exportBeatAnimation(
+              payload.source ?? "",
+              format,
+              {
+                width: payload.width,
+                handbookIds: payload.handbookIds,
+                beats: true,
+              },
+              "api.viva",
+            );
+            json(200, {
+              ok: true,
+              beats: true,
+              mime: anim.mime,
+              bytes: anim.bytes.byteLength,
+              base64: Buffer.from(anim.bytes).toString("base64"),
+            });
+            return;
+          }
           const frames = await exportBeatSequence(
             payload.source ?? "",
             {
@@ -494,7 +521,8 @@ function openApiSpec(): Record<string, unknown> {
       },
       "/api/export": {
         post: {
-          summary: "Export svg|png|jpg|pdf. beats:true returns PNG frames from layout.board __beat.",
+          summary:
+            "Export svg|png|jpg|pdf. beats:true returns PNG frames from layout.board __beat. format gif|mp4 stitches those frames with ffmpeg (slideshow, not a timeline).",
           requestBody: {
             content: {
               "application/json": {

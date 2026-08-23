@@ -16,7 +16,7 @@ import {
   resolveModelsConfig,
 } from "./check/index.js";
 import { renderStandaloneHtml } from "./html.js";
-import { exportArtifact, exportBeatSequence, type ExportFormat } from "./export/index.js";
+import { exportArtifact, exportBeatAnimation, exportBeatSequence, isBeatAnimFormat, type ExportFormat } from "./export/index.js";
 import { simulate } from "./simulate.js";
 import { SYSTEM_PROMPT } from "./llm/system-prompt.js";
 import { SYSTEM_PROMPT_SLIM } from "./llm/system-prompt-slim.js";
@@ -190,12 +190,25 @@ async function main(): Promise<void> {
     const width = Number(flagValue(argv, "--width") ?? "1280");
     try {
       if (argv.includes("--beats")) {
+        if (isBeatAnimFormat(format)) {
+          const result = await exportBeatAnimation(
+            source,
+            format,
+            { width, handbookIds: handbookIds.length ? handbookIds : undefined, beats: true },
+            input,
+          );
+          const target = outPath ?? input.replace(/\.viva$/i, `.${format}`);
+          await mkdir(path.dirname(path.resolve(target)), { recursive: true });
+          await writeFile(target, result.bytes);
+          console.log(target);
+          return;
+        }
         const frames = await exportBeatSequence(
           source,
           { width, handbookIds: handbookIds.length ? handbookIds : undefined, beats: true },
           input,
         );
-        const stem = (outPath ?? input.replace(/\.viva$/i, "")).replace(/\.(png|jpg|jpeg|svg|pdf)$/i, "");
+        const stem = (outPath ?? input.replace(/\.viva$/i, "")).replace(/\.(png|jpg|jpeg|svg|pdf|gif|mp4)$/i, "");
         await mkdir(path.dirname(path.resolve(`${stem}-beat0.png`)), { recursive: true });
         for (const frame of frames) {
           const target = `${stem}-beat${frame.index}.png`;
@@ -312,7 +325,8 @@ Commands:
   html <file> [-o out.html]        Standalone HTML shell
   svg <file> [-o out.svg]          Export static SVG
   export <file> -f <fmt>           Export svg|png|jpg|pdf (repeat --handbook for style)
-  export <file> --beats            PNG sequence from layout.board __beat (not a video file)
+  export <file> --beats            PNG sequence from layout.board __beat
+  export <file> --beats -f gif|mp4 slideshow via ffmpeg (not a timeline / edited film)
   simulate <file> [--ticks N] Headless world JSON
   provenance <file> [-o out.json]  Compile via session and export provenance bundle
   prompt [--handbook id]      Print system prompt (+ handbooks)

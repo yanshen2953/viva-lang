@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { compileSource } from "../../src/pipeline";
 import { renderSvgFromIr } from "../../src/export/static-svg";
-import { exportArtifact } from "../../src/export/index";
+import { exportArtifact, exportBeatAnimation } from "../../src/export/index";
 
 describe("static SVG + raster/pdf export", () => {
   it("renders hello.viva to SVG without a browser", () => {
@@ -64,4 +64,24 @@ describe("static SVG + raster/pdf export", () => {
     const beat1Left = await meanBand(frames[1]!.bytes, 0.06, 0.24);
     expect(beat0Left).toBeGreaterThan(beat1Left + 15);
   }, 30_000);
+
+  it("stitches __beat rasters into a gif/mp4 slideshow via ffmpeg", async () => {
+    const src = readFileSync(path.resolve("examples/storyboard.viva"), "utf8");
+    const gif = await exportBeatAnimation(src, "gif", { width: 320, handbookIds: ["print-nature"] }, "storyboard.viva");
+    expect(gif.mime).toBe("image/gif");
+    expect(String.fromCharCode(...gif.bytes.slice(0, 6))).toBe("GIF89a");
+    expect(gif.bytes.byteLength).toBeGreaterThan(400);
+
+    const mp4 = await exportBeatAnimation(src, "mp4", { width: 320, handbookIds: ["print-nature"] }, "storyboard.viva");
+    expect(mp4.mime).toBe("video/mp4");
+    const header = Buffer.from(mp4.bytes.slice(0, 32)).toString("latin1");
+    expect(header).toContain("ftyp");
+    expect(mp4.bytes.byteLength).toBeGreaterThan(400);
+    expect(Buffer.from(gif.bytes).equals(Buffer.from(mp4.bytes))).toBe(false);
+  }, 45_000);
+
+  it("refuses gif/mp4 without beats", async () => {
+    const src = readFileSync(path.resolve("examples/hello.viva"), "utf8");
+    await expect(exportArtifact(src, "gif", { width: 160 }, "hello.viva")).rejects.toThrow(/beats/);
+  });
 });

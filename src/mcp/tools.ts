@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { compileSource } from "../pipeline.js";
 import { runArtifactChecks } from "../check/index.js";
-import { exportArtifact, exportBeatSequence, type ExportFormat } from "../export/index.js";
+import { exportArtifact, exportBeatAnimation, exportBeatSequence, isBeatAnimFormat, type ExportFormat } from "../export/index.js";
 import { SYSTEM_PROMPT } from "../llm/system-prompt.js";
 import { SYSTEM_PROMPT_SLIM } from "../llm/system-prompt-slim.js";
 import { createNodePromptService } from "../agent/prompt.node.js";
@@ -95,11 +95,29 @@ async function toolExport(args: Record<string, unknown>) {
   const width = typeof args.width === "number" ? args.width : undefined;
   const outputPath = args.outputPath ? String(args.outputPath) : undefined;
   if (args.beats) {
+    if (isBeatAnimFormat(format)) {
+      const anim = await exportBeatAnimation(source, format, { handbookIds, width, beats: true }, "mcp.viva");
+      if (outputPath) {
+        const { writeFile, mkdir } = await import("node:fs/promises");
+        const { dirname } = await import("node:path");
+        await mkdir(dirname(outputPath), { recursive: true });
+        await writeFile(outputPath, anim.bytes);
+        return textResult(JSON.stringify({ ok: true, beats: true, path: outputPath, mime: anim.mime, bytes: anim.bytes.byteLength }));
+      }
+      return textResult(
+        JSON.stringify({
+          ok: true,
+          mime: anim.mime,
+          bytes: anim.bytes.byteLength,
+          base64: Buffer.from(anim.bytes).toString("base64"),
+        }),
+      );
+    }
     const frames = await exportBeatSequence(source, { handbookIds, width, beats: true }, "mcp.viva");
     if (outputPath) {
       const { writeFile, mkdir } = await import("node:fs/promises");
       const { dirname } = await import("node:path");
-      const stem = outputPath.replace(/\.(png|jpg|jpeg|svg|pdf)$/i, "");
+      const stem = outputPath.replace(/\.(png|jpg|jpeg|svg|pdf|gif|mp4)$/i, "");
       await mkdir(dirname(stem), { recursive: true });
       const paths: string[] = [];
       for (const frame of frames) {
@@ -301,16 +319,16 @@ export const MCP_TOOL_DEFINITIONS = [
   {
     name: "viva_export",
     description:
-      "Export artifact to svg|png|jpg|pdf. beats:true writes one PNG per layout.board __beat (not a video).",
+      "Export artifact to svg|png|jpg|pdf. beats:true writes one PNG per layout.board __beat. format gif|mp4 stitches those frames with ffmpeg (slideshow, not a timeline).",
     inputSchema: {
       type: "object",
       properties: {
         source: { type: "string" },
-        format: { type: "string", enum: ["svg", "png", "jpg", "jpeg", "pdf", "pdf-raster"] },
+        format: { type: "string", enum: ["svg", "png", "jpg", "jpeg", "pdf", "pdf-raster", "gif", "mp4"] },
         handbookIds: { type: "array", items: { type: "string" } },
         width: { type: "number" },
         outputPath: { type: "string", description: "Optional file path to write bytes" },
-        beats: { type: "boolean", description: "PNG sequence from layout.board __beat (not a video file)" },
+        beats: { type: "boolean", description: "PNG sequence from layout.board __beat; gif|mp4 is a ffmpeg slideshow" },
       },
       required: ["source", "format"],
     },
@@ -413,7 +431,7 @@ export const mcpToolSchemas = {
   },
   viva_export: {
     source: z.string(),
-    format: z.enum(["svg", "png", "jpg", "jpeg", "pdf", "pdf-raster"]),
+    format: z.enum(["svg", "png", "jpg", "jpeg", "pdf", "pdf-raster", "gif", "mp4"]),
     handbookIds: handbookIdsSchema,
     width: z.number().optional(),
     outputPath: z.string().optional(),

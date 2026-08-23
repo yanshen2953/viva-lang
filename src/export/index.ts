@@ -1,3 +1,7 @@
+import { spawn } from "node:child_process";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { PDFDocument } from "pdf-lib";
 import { Resvg } from "@resvg/resvg-js";
 import sharp from "sharp";
@@ -6,7 +10,8 @@ import type { VisualIR } from "../ir.js";
 import { flattenNodesFromIr, renderSvgFromIr } from "./static-svg.js";
 import { renderVectorPdfFromIr } from "./vector-pdf.js";
 
-export type ExportFormat = "svg" | "png" | "jpg" | "jpeg" | "pdf" | "pdf-raster";
+export type ExportFormat = "svg" | "png" | "jpg" | "jpeg" | "pdf" | "pdf-raster" | "gif" | "mp4";
+export type BeatAnimFormat = "gif" | "mp4";
 
 export type ExportOptions = {
   /** Raster width in CSS pixels (SVG viewBox mapped). Default 1280. */
@@ -69,6 +74,10 @@ export async function exportArtifact(
   const svg = renderSvgFromIr(result.ir);
   const sceneBg = flattenNodesFromIr(result.ir).scene.background;
   const fmt = format === "jpeg" ? "jpg" : format;
+
+  if (fmt === "gif" || fmt === "mp4") {
+    throw new Error(`${fmt} is a ffmpeg slideshow of layout.board __beat rasters — pass beats:true / --beats`);
+  }
 
   if (fmt === "svg") {
     return {
@@ -143,6 +152,90 @@ export async function exportBeatSequence(
     frames.push({ index: i, bytes, mime: "image/png", svg });
   }
   return frames;
+}
+
+export function isBeatAnimFormat(format: string): format is BeatAnimFormat {
+  return format === "gif" || format === "mp4";
+}
+
+function spawnOnce(cmd: string, args: string[], timeoutMs = 30_000): Promise<{ ok: boolean; stderr: string }> {
+  return new Promise((resolve) => {
+    const child = spawn(cmd, args, { stdio: ["ignore", "pipe", "pipe"] });
+    let stderr = "";
+    const timer = setTimeout(() => {
+      child.kill("SIGKILL");
+      resolve({ ok: false, stderr: stderr || "ffmpeg timed out" });
+    }, timeoutMs);
+    child.stderr?.on("data", (chunk) => {
+      stderr += String(chunk);
+    });
+    child.on("error", (err) => {
+      clearTimeout(timer);
+      resolve({ ok: false, stderr: err.message });
+    });
+    child.on("close", (code) => {
+      clearTimeout(timer);
+      resolve({ ok: code === 0, stderr });
+    });
+  });
+}
+
+/** Assemble beat PNGs with ffmpeg. Still a slideshow, not an edited video. */
+export async function exportBeatAnimation(
+  source: string,
+  kind: BeatAnimFormat,
+  opts: ExportOptions = {},
+  filename = "<input>",
+): Promise<ExportResult> {
+  const frames = await exportBeatSequence(source, opts, filename);
+  const probe = await spawnOnce("ffmpeg", ["-version"]);
+  if (!probe.ok) {
+    throw new Error("ffmpeg not found — export --beats PNG frames, or install ffmpeg to stitch gif/mp4");
+  }
+  const dir = await mkdtemp(join(tmpdir(), "viva-beats-"));
+  try {
+    for (const frame of frames) {
+      await writeFile(join(dir, `frame-${frame.index}.png`), frame.bytes);
+    }
+    const out = join(dir, kind === "gif" ? "out.gif" : "out.mp4");
+    const input = join(dir, "frame-%d.png");
+    const args =
+      kind === "gif"
+        ? ["-y", "-hide_banner", "-loglevel", "error", "-framerate", "2", "-start_number", "0", "-i", input, "-loop", "0", out]
+        : [
+            "-y",
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-framerate",
+            "2",
+            "-start_number",
+            "0",
+            "-i",
+            input,
+            "-an",
+            "-vf",
+            "scale=trunc(iw/2)*2:trunc(ih/2)*2",
+            "-pix_fmt",
+            "yuv420p",
+            "-movflags",
+            "+faststart",
+            out,
+          ];
+    const ran = await spawnOnce("ffmpeg", args);
+    if (!ran.ok) {
+      throw new Error(`ffmpeg failed to stitch ${kind}: ${ran.stderr.slice(0, 400)}`);
+    }
+    const bytes = new Uint8Array(await readFile(out));
+    return {
+      format: kind,
+      bytes,
+      mime: kind === "gif" ? "image/gif" : "video/mp4",
+      svg: frames[0]?.svg ?? "",
+    };
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
 }
 
 export { renderSvgFromIr, flattenNodesFromIr } from "./static-svg.js";
