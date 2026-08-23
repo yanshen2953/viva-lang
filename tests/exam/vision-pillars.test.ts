@@ -85,8 +85,29 @@ widget chart.scatter
 
   it("embeds CJK in vector PDF instead of replacing with ?", async () => {
     expect(resolveCjkFontPath()).toMatch(/VivaSansFallback\.ttf$/);
-    const src = readFileSync("examples/hello.viva", "utf8");
-    const pdf = await exportArtifact(src, "pdf", {}, "hello.viva");
+    const { PDFDocument } = await import("pdf-lib");
+    const { embedPdfFonts, pdfSafeText, pickPdfFont } = await import(
+      "../../src/export/pdf-font.js"
+    );
+    const doc = await PDFDocument.create();
+    const fonts = await embedPdfFonts(doc);
+    expect(fonts.hasCjk).toBe(true);
+    const phrases = [
+      "模型负责意图，编译器负责复杂性",
+      "点击数字 +1",
+      "摘要",
+      "方法",
+      "结果",
+      "点击上方章节切换交互论文内容",
+      "时间 (周)",
+      "心率 (次每分)",
+      "单栏投稿图",
+    ];
+    for (const phrase of phrases) {
+      expect(pdfSafeText(pickPdfFont(fonts, phrase), phrase)).toBe(phrase);
+    }
+    const src = readFileSync("examples/paper-cjk.viva", "utf8");
+    const pdf = await exportArtifact(src, "pdf", {}, "paper-cjk.viva");
     const text = Buffer.from(pdf.bytes).toString("latin1");
     expect(text.startsWith("%PDF")).toBe(true);
     expect(text).not.toMatch(/\?{8,}/);
@@ -442,6 +463,24 @@ widget layout.board
     expect(result.ir!.frames.map((f) => f.name)).toEqual(
       expect.arrayContaining(["safe", "title", "body", "lower", "left", "right"]),
     );
+  });
+
+  it("layout.board typeGrid paints a baseline and type columns", () => {
+    const result = compileSource(
+      readFileSync("examples/board-typegrid.viva", "utf8"),
+      "typegrid.viva",
+    );
+    expect(result.error).toBeNull();
+    expect(result.ir!.frames.map((f) => f.name)).toEqual(
+      expect.arrayContaining(["safe", "title", "body", "lower", "type0", "type11"]),
+    );
+    expect(result.ir!.scene.layers.some((l) => l.name === "__board_typeGrid")).toBe(true);
+    const grid = result.ir!.scene.layers.find((l) => l.name === "__board_typeGrid")!;
+    expect(grid.items.filter((i) => i.kind === "node").length).toBeGreaterThan(20);
+    const col0 = result.ir!.frames.find((f) => f.name === "type0")!;
+    const x = evaluate(col0.props.x, [result.ir!.state, result.ir!.data]) as number[];
+    expect(x[0]).toBeCloseTo(64);
+    expect(x[1]).toBeCloseTo(64 + (1280 - 128) / 12);
   });
 
   it("layout.board bleed creates trim/bleed frames and crop marks", () => {

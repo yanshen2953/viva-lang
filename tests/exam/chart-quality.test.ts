@@ -269,4 +269,25 @@ widget chart.scatter
     expect(scalePathD("M 10,20 L 30,40 Z", 2)).toBe("M 20,40 L 60,80 Z");
     expect(scalePathD("M 1.5,2 L 3,4 Z", 1)).toBe("M 1.5,2 L 3,4 Z");
   });
+
+  it("lets print-nature own tick and axis title type", () => {
+    const result = compileSource(SCATTER, "q.viva", { handbookIds: ["print-nature"] });
+    expect(result.error).toBeNull();
+    const axes = result.ir!.scene.layers.find((l) => l.name.endsWith("_axes"))!;
+    const ytick = axes.items.find((i) => i.kind === "node" && i.name.includes("_ytick_"));
+    expect(ytick?.kind).toBe("node");
+    if (ytick?.kind === "node") {
+      expect(ytick.props.font).toMatchObject({ kind: "number", value: 8 });
+      expect(ytick.props.letterSpacing).toMatchObject({ kind: "number", value: 0.08 });
+    }
+    const xTitle = axes.items.find((i) => i.kind === "node" && i.name.endsWith("_xTitle"));
+    expect(xTitle?.kind).toBe("node");
+    if (xTitle?.kind === "node") {
+      expect(xTitle.props.font).toMatchObject({ kind: "number", value: 9 });
+      expect(xTitle.props.letterSpacing).toMatchObject({ kind: "number", value: 0.2 });
+    }
+    const svg = renderSvgFromIr(result.ir!);
+    expect(svg).toContain('letter-spacing="0.08"');
+    expect(svg).toContain('letter-spacing="0.2"');
+  });
 });
