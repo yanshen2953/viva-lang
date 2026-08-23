@@ -3,6 +3,7 @@ dist/
 .DS_Store
 .env
 .env.*
+viva.models.json
 .idea/
 *.log
 node_modules/

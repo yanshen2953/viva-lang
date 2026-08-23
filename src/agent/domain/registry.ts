@@ -3,12 +3,12 @@ import type {
   DomainSelection,
   PipelineArtifact,
 } from "../types.js";
-
-type HostLike = {
-  events: {
-    emit(e: { type: "domain-selection"; sessionId?: string; detail?: unknown }): void;
-  };
-};
+import type { VivaAgentHost } from "../host.js";
+import {
+  applyInlineEmbedChrome,
+  INLINE_DEFAULT_HANDBOOKS,
+  VIVA_INLINE_PLUGIN_ID,
+} from "../../embed/inline-styles.js";
 
 export type DomainBridge = {
   pushToViva(path: string, value: unknown): void;
@@ -19,7 +19,7 @@ export type DomainBridge = {
 
 export type DomainViewContext = {
   session: VivaSession;
-  host: HostLike;
+  host: VivaAgentHost;
   bridge: DomainBridge;
 };
 
@@ -51,7 +51,7 @@ export type DomainViewRegistry = {
   }): Promise<DomainViewInstance>;
 };
 
-export function createDomainViewRegistry(host: () => HostLike): DomainViewRegistry {
+export function createDomainViewRegistry(host: () => VivaAgentHost): DomainViewRegistry {
   const views = new Map<string, DomainView>();
 
   const registry: DomainViewRegistry = {
@@ -116,6 +116,7 @@ export function createDomainViewRegistry(host: () => HostLike): DomainViewRegist
     },
   };
 
+  registry.register(createVivaInlineView());
   registry.register(createImageView());
   registry.register(createIframeView());
   return registry;
@@ -127,6 +128,62 @@ function matchMedia(accept: string, mediaType: string): boolean {
     return mediaType.startsWith(accept.slice(0, -1));
   }
   return false;
+}
+
+async function loadVivaSourceFromUri(uri: string): Promise<string> {
+  if (uri.startsWith("data:")) {
+    const comma = uri.indexOf(",");
+    if (comma < 0) throw new Error("invalid data uri");
+    const meta = uri.slice(5, comma);
+    const payload = uri.slice(comma + 1);
+    if (meta.includes(";base64")) {
+      return Buffer.from(payload, "base64").toString("utf8");
+    }
+    return decodeURIComponent(payload);
+  }
+  const res = await fetch(uri);
+  if (!res.ok) throw new Error(`failed to load viva source: ${res.status}`);
+  return await res.text();
+}
+
+/** Default inline plugin: print-nature card + interactive Runtime. */
+function createVivaInlineView(): DomainView {
+  return {
+    id: VIVA_INLINE_PLUGIN_ID,
+    title: "Viva Inline",
+    accept: [
+      "application/vnd.viva",
+      "text/x-viva",
+      "viva/source",
+      "viva/*",
+    ],
+    mount(el, ctx) {
+      el.innerHTML = "";
+      const stage = applyInlineEmbedChrome(el);
+      const inlineSession = ctx.host.createSession({
+        mount: stage,
+        handbooks: [...INLINE_DEFAULT_HANDBOOKS],
+        statePolicy: "preserve-data",
+      });
+      const unsub = inlineSession.on("user-interact", () => {
+        ctx.bridge.pushToViva("inlineActive", true);
+      });
+      return {
+        async load(resource) {
+          const source = await loadVivaSourceFromUri(resource.uri);
+          inlineSession.compile(source, {
+            reason: "generate",
+            handbooks: [...INLINE_DEFAULT_HANDBOOKS],
+          });
+        },
+        dispose() {
+          unsub();
+          inlineSession.dispose();
+          el.innerHTML = "";
+        },
+      };
+    },
+  };
 }
 
 function createImageView(): DomainView {
@@ -193,5 +250,10 @@ export function suggestViewForArtifact(
   if (artifact.suggestDomainView) {
     return registry.list().find((v) => v.id === artifact.suggestDomainView);
   }
+  if (/viva/i.test(artifact.mediaType) || artifact.mediaType === "application/vnd.viva") {
+    return registry.list().find((v) => v.id === VIVA_INLINE_PLUGIN_ID);
+  }
   return registry.resolve(artifact.mediaType);
 }
+
+export { VIVA_INLINE_PLUGIN_ID } from "../../embed/inline-styles.js";

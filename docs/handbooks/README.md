@@ -18,7 +18,7 @@ Full hook architecture: [`HOOK.md`](./HOOK.md). Design rules: `docs/DESIGN.md` Â
 
 | id | Prose | Preset | Intent |
 | --- | --- | --- | --- |
-| `print-nature` | `print-nature.md` | `src/style/presets/print-nature.json` | Publication / inline report figures |
+| `print-nature` | `print-nature.md` | `src/style/presets/print-nature.json` | Publication / inline report figures; **default inline embed plugin** |
 | `dashboard` | `dashboard.md` | `src/style/presets/dashboard.json` | Ops / studio dashboards |
 | `slides` | (planned prose) | `src/style/presets/slides.json` | Large-type presentation boards |
 

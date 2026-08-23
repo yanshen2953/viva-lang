@@ -21,6 +21,7 @@ export {
 export {
   createDomainViewRegistry,
   suggestViewForArtifact,
+  VIVA_INLINE_PLUGIN_ID,
   type DomainView,
   type DomainViewRegistry,
 } from "./domain/registry.js";
