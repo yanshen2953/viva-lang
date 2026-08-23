@@ -338,7 +338,7 @@ export function placePaperChrome(
   let cbarLines = cbarLabels.map((s) => [s]);
   let cbarTitleLines: string[] = [];
   let cbarTitleX = cbarX + toScene(14);
-  let cbarTitleY = box.py0 - toScene(AXIS_FONT + 2);
+  let cbarTitleY = (box.py0 + box.py1) / 2;
   let cbarNeedW = 0;
   let legendNeedW = 0;
   const cbarLabelW = () =>
@@ -346,10 +346,13 @@ export function placePaperChrome(
       TICK_FONT,
       cbarNeedW,
       ...cbarLines.flatMap((lines) => lines.map((s) => estimateTextWidthPx(s, TICK_FONT, 0.08))),
-      ...cbarTitleLines.map((s) => estimateTextWidthPx(s, AXIS_FONT, 0.2)),
     );
+  const cbarTitleCol = () =>
+    cbarTitleLines.length
+      ? toScene(AXIS_FONT) + (cbarTitleLines.length - 1) * axisLineH + toScene(4)
+      : 0;
   const cbarRight = () =>
-    extras.colorbar ? cbarX + toScene(10 + 4 + cbarLabelW()) : box.px1;
+    extras.colorbar ? cbarX + toScene(10 + 4 + cbarLabelW()) + cbarTitleCol() : box.px1;
   let legendX =
     extras.legendAt === "right"
       ? (extras.colorbar ? cbarRight() : box.px1) + toScene(compact ? 6 : 10)
@@ -434,27 +437,22 @@ export function placePaperChrome(
       });
     }
     if (extras.colorbar) {
-      const extraH = cbarTitleLines.length ? cbarTitleLines.length * axisLineH + toScene(4) : 0;
       rects.push({
         id: "cbar",
         x: cbarX,
-        y: box.py0 - extraH,
+        y: box.py0,
         w: toScene(10 + 4 + cbarLabelW()),
-        h: Math.max(toScene(8), box.py1 - box.py0) + extraH,
+        h: Math.max(toScene(8), box.py1 - box.py0),
       });
       if (cbarTitleLines.length) {
-        const tw = toScene(
-          Math.max(
-            cbarNeedW,
-            ...cbarTitleLines.map((line) => estimateTextWidthPx(line, AXIS_FONT, 0.2)),
-          ),
-        );
+        const tw = Math.max(...cbarTitleLines.map((line) => textW(line, AXIS_FONT, 0.2)));
+        const n = cbarTitleLines.length;
         rects.push({
           id: "cbar-title",
-          x: cbarTitleX,
-          y: cbarTitleY - toScene(AXIS_FONT * 0.75),
-          w: tw,
-          h: toScene(AXIS_FONT) + (cbarTitleLines.length - 1) * axisLineH,
+          x: cbarTitleX - toScene(AXIS_FONT * 0.5) - (n - 1) * axisLineH,
+          y: cbarTitleY - tw / 2,
+          w: toScene(AXIS_FONT) + (n - 1) * axisLineH,
+          h: tw,
         });
       }
     }
@@ -572,11 +570,11 @@ export function placePaperChrome(
       return lines.length ? lines : [label];
     });
     if (zCap) {
-      cbarNeedW = Math.max(cbarNeedW, minWidthForLines(zCap, AXIS_FONT, 0.2, 2));
-      cbarTitleLines = wrapTextLines(zCap, leftover, AXIS_FONT, 0.2, 2);
+      const maxW = Math.max(AXIS_FONT * 4, toPx(box.py1 - box.py0));
+      cbarTitleLines = wrapTextLines(zCap, maxW, AXIS_FONT, 0.2, 3);
       if (!cbarTitleLines.length) cbarTitleLines = [zCap];
-      cbarTitleX = cbarX + toScene(14);
-      cbarTitleY = box.py0 - toScene(AXIS_FONT + 2) - Math.max(0, cbarTitleLines.length - 1) * axisLineH;
+      cbarTitleX = cbarX + toScene(10 + 4 + cbarLabelW()) + toScene(AXIS_FONT * 0.55);
+      cbarTitleY = (box.py0 + box.py1) / 2;
     }
     if (extras.legendAt === "right") {
       legendX = cbarRight() + toScene(compact ? 6 : 10);
@@ -628,6 +626,10 @@ export function placePaperChrome(
         const dx = fitShift(cbarBox.x0, cbarBox.x1, wantX0, wantX1, plotRight - (cbarBox.x1 - cbarBox.x0), wantX1);
         cbarX += dx;
         cbarTitleX += dx;
+      }
+      const zTitleBox = union(["cbar-title"]);
+      if (zTitleBox) {
+        cbarTitleY += fitShift(zTitleBox.y0, zTitleBox.y1, wantY0, wantY1, box.py0, box.py1);
       }
     }
     if (extras.legendAt === "right" || extras.legendAt === "bottom") {

@@ -167,11 +167,14 @@ describe("chart quality: axis titles, error bars, hover, heatmap", () => {
     expect(barW).toBeLessThan(4);
     expect(titleX).toBeGreaterThan(barX + barW);
     expect(topY).toBeGreaterThan(plotTop - 1);
-    expect(titleY).toBeLessThan(plotTop);
+    const plotY1 = plotY0?.kind === "array" && plotY0.items[1]?.kind === "number" ? plotY0.items[1].value : 0;
+    expect(titleY).toBeGreaterThan(plotTop);
+    expect(titleY).toBeLessThan(plotY1);
     const title = axes.items.find((i) => i.kind === "node" && i.name === "b_cbarTitle");
     expect(title?.kind).toBe("node");
     if (title?.kind === "node") {
       expect(title.props.role).toMatchObject({ kind: "string", value: "annotation" });
+      expect(title.props.rotate).toMatchObject({ kind: "number", value: -90 });
       expect(title.props.font).toMatchObject({ kind: "number", value: 9 });
       expect(title.props.letterSpacing).toMatchObject({ kind: "number", value: 0.2 });
     }

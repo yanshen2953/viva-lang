@@ -198,13 +198,17 @@ describe("paper chrome collision", () => {
     expect(chrome.cbarLines.some((lines) => lines.length > 1)).toBe(true);
     expect(chrome.cbarTitleLines.length).toBeGreaterThan(1);
     expect(chrome.cbarTitleLines.join("").replace(/\s/g, "")).toMatch(/normalized/);
-    const leftover = Math.max(32, 200 - (chrome.cbarX + 14) - 4);
+    const plotH = 160 - 30;
     for (const line of chrome.cbarTitleLines) {
-      expect(estimateTextWidthPx(line, 9, 0.2)).toBeLessThanOrEqual(leftover + 1);
+      expect(estimateTextWidthPx(line, 9, 0.2)).toBeLessThanOrEqual(plotH + 1);
     }
     const cbar = rects.find((r) => r.id === "cbar")!;
+    const zTitle = rects.find((r) => r.id === "cbar-title")!;
     expect(cbar).toBeTruthy();
-    expect(rects.some((r) => r.id === "cbar-title")).toBe(true);
+    expect(zTitle).toBeTruthy();
+    expect(zTitle.h).toBeGreaterThan(zTitle.w);
+    expect(chrome.cbarTitleY).toBeGreaterThan(30);
+    expect(chrome.cbarTitleY).toBeLessThan(160);
   });
 
   it("keeps a right legend clear of the colorbar", () => {

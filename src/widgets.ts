@@ -3809,13 +3809,16 @@ function expandColorbar(
     }
   }
   if (chrome?.cbarTitleLines?.length) {
+    const n = chrome.cbarTitleLines.length;
     for (const [i, line] of chrome.cbarTitleLines.entries()) {
       items.push(
         node(`${frameName}_cbarTitle${i ? `_${i}` : ""}`, {
           role: literal("annotation"),
-          x: literal(chrome.cbarTitleX),
-          y: literal(chrome.cbarTitleY + i * titleStep),
+          x: literal(chrome.cbarTitleX - (n - 1 - i) * titleStep),
+          y: literal(chrome.cbarTitleY),
           text: literal(line),
+          align: literal("center"),
+          rotate: literal(-90),
         }),
       );
     }
