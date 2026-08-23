@@ -66,7 +66,11 @@ describe("figure-atlas example", () => {
       expect.arrayContaining(["a", "b", "c", "d", "e", "f"]),
     );
     const hasHeat = result.ir?.scene.layers.some((l) =>
-      l.items.some((i) => i.kind === "for" && i.body.some((b) => b.kind === "node" && b.name === "heatCell")),
+      l.items.some(
+        (i) =>
+          (i.kind === "node" && i.name === "heatCell") ||
+          (i.kind === "for" && i.body.some((b) => b.kind === "node" && b.name === "heatCell")),
+      ),
     );
     expect(hasHeat).toBe(true);
     expect(src).not.toMatch(/insetL|insetR|insetT|insetB|areaX|areaY|gutter:|margin:|panelAdeck|panelLbl|figMain|docTitle|geneBtn/);

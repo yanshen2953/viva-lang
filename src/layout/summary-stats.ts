@@ -1,6 +1,7 @@
-/** Recompute box / violin summaries from __sel rows. Not a query engine. */
+/** Recompute box / violin / heat / bar / vector summaries from __sel rows. Not a query engine. */
 
 import { gaussianKDE, violinPathD } from "./violin-density.js";
+import { evalPaletteBuiltin } from "../style/context.js";
 
 export type BoxStats = {
   q1: number;
@@ -101,6 +102,15 @@ export function applySelSummary(
   props: Record<string, unknown>,
   ctx: SummaryCtx,
 ): Record<string, unknown> {
+  if (typeof props.__heatData === "string" && props.__heatData) {
+    return applyHeatSummary(props, ctx);
+  }
+  if (typeof props.__barData === "string" && props.__barData) {
+    return applyBarSummary(props, ctx);
+  }
+  if (typeof props.__vecData === "string" && props.__vecData) {
+    return applyVectorSummary(props, ctx);
+  }
   if (typeof props.__lineData === "string" && props.__lineData) {
     return applyLineSummary(props, ctx);
   }
@@ -203,5 +213,115 @@ function applyViolinSummary(
   if (![cx, ymin, ymax, py0, py1, half].every(Number.isFinite)) return next;
   const dens = gaussianKDE(values, ymin, ymax, 48);
   next.d = violinPathD(cx, dens, ymin, ymax, py0, py1, yScale, half);
+  return next;
+}
+
+function selScope(
+  props: Record<string, unknown>,
+  ctx: SummaryCtx,
+  dataKey: string,
+  frameKeys: unknown[],
+): { rows: unknown; keys: unknown[] } | null {
+  const sel = (ctx.state?.__sel ?? {}) as { n?: unknown; keys?: unknown };
+  const n = Number(sel.n ?? 0);
+  if (!(n > 0)) return null;
+  const brush = (ctx.state?.__brush ?? {}) as { frame?: unknown };
+  const ownFrame = frameKeys.find((v) => v != null && v !== "");
+  if (brush.frame != null && String(brush.frame) === String(ownFrame ?? "")) return null;
+  return { rows: ctx.data?.[dataKey], keys: asKeys(sel.keys) };
+}
+
+function meanOf(values: number[]): number {
+  return values.reduce((a, b) => a + b, 0) / values.length;
+}
+
+function applyHeatSummary(
+  props: Record<string, unknown>,
+  ctx: SummaryCtx,
+): Record<string, unknown> {
+  const dataName = String(props.__heatData ?? "");
+  const scoped = selScope(props, ctx, dataName, [props.frame, props.__heatFrame]);
+  if (!scoped) return props;
+  const xField = String(props.__heatXField ?? "");
+  const yField = String(props.__heatYField ?? "");
+  const vField = String(props.__heatVField ?? "");
+  const xVal = props.__heatXVal ?? props.x;
+  const yVal = props.__heatYVal ?? props.y;
+  const rows = filterSummaryRows(scoped.rows, xVal, xField, [xVal], scoped.keys).filter((row) =>
+    yField ? sameKey(row[yField], yVal) : true,
+  );
+  const values = rows.map((row) => Number(row[vField])).filter((v) => Number.isFinite(v));
+  if (!values.length) return { ...props, visible: false };
+  const z = meanOf(values);
+  const z0 = Number(props.__heatZ0);
+  const z1 = Number(props.__heatZ1);
+  const span = z1 - z0;
+  const norm = span === 0 ? 0 : (z - z0) / span;
+  const tier = Math.min(6, Math.max(0, Math.round(norm * 6)));
+  return {
+    ...props,
+    visible: true,
+    v: z,
+    fill: evalPaletteBuiltin(tier, "sequential"),
+  };
+}
+
+function applyBarSummary(
+  props: Record<string, unknown>,
+  ctx: SummaryCtx,
+): Record<string, unknown> {
+  const dataName = String(props.__barData ?? "");
+  const scoped = selScope(props, ctx, dataName, [props.frame, props.__barFrame]);
+  if (!scoped) return props;
+  const catField = String(props.__barCatField ?? "");
+  const valueField = String(props.__barValueField ?? "");
+  const seriesField = String(props.__barSeriesField ?? "");
+  const key = props.__barKey;
+  const seriesKey = props.__barSeriesKey;
+  const rows = filterSummaryRows(scoped.rows, key, catField, [key], scoped.keys).filter((row) =>
+    seriesField && seriesKey != null && seriesKey !== ""
+      ? sameKey(row[seriesField], seriesKey)
+      : true,
+  );
+  const values = rows.map((row) => Number(row[valueField])).filter((v) => Number.isFinite(v));
+  if (!values.length) return { ...props, visible: false };
+  const total = values.reduce((a, b) => a + b, 0);
+  const orient = String(props.__barOrient ?? props.__chartBarOrient ?? "v").toLowerCase();
+  const next: Record<string, unknown> = { ...props, visible: true };
+  if (orient === "h" || orient === "horizontal") next.x = total;
+  else next.y = total;
+  return next;
+}
+
+function applyVectorSummary(
+  props: Record<string, unknown>,
+  ctx: SummaryCtx,
+): Record<string, unknown> {
+  const dataName = String(props.__vecData ?? "");
+  const scoped = selScope(props, ctx, dataName, [props.frame, props.__vecFrame]);
+  if (!scoped) return props;
+  const xField = String(props.__vecXField ?? "");
+  const yField = String(props.__vecYField ?? "");
+  const uField = String(props.__vecUField ?? "");
+  const vField = String(props.__vecVField ?? "");
+  const xVal = props.__vecXVal ?? props.x1 ?? props.x;
+  const yVal = props.__vecYVal ?? props.y1 ?? props.y;
+  const rows = filterSummaryRows(scoped.rows, xVal, xField, [xVal], scoped.keys).filter((row) =>
+    yField ? sameKey(row[yField], yVal) : true,
+  );
+  if (!rows.length) return { ...props, visible: false };
+  const u = meanOf(rows.map((row) => Number(row[uField])).filter((v) => Number.isFinite(v)));
+  const v = meanOf(rows.map((row) => Number(row[vField])).filter((n) => Number.isFinite(n)));
+  const scale = Number(props.__vecScale ?? 1);
+  const x = Number(xVal);
+  const y = Number(yVal);
+  if (![x, y, u, v, scale].every(Number.isFinite)) return { ...props, visible: true };
+  const x2 = x + u * scale;
+  const y2 = y + v * scale;
+  const next: Record<string, unknown> = { ...props, visible: true, x2, y2 };
+  if (props.x1 !== undefined) next.x1 = x;
+  if (props.y1 !== undefined) next.y1 = y;
+  if (props.x !== undefined && props.x1 === undefined) next.x = x2;
+  if (props.y !== undefined && props.y1 === undefined) next.y = y2;
   return next;
 }

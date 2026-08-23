@@ -107,7 +107,14 @@ export function samplePathEase(
 }
 
 export function isSummaryMark(props: Record<string, unknown>): boolean {
-  return Boolean(props.__boxData || props.__violinData || props.__lineData);
+  return Boolean(
+    props.__boxData ||
+      props.__violinData ||
+      props.__lineData ||
+      props.__heatData ||
+      props.__barData ||
+      props.__vecData,
+  );
 }
 
 export function pickGeom(props: Record<string, unknown>): Record<string, number> {

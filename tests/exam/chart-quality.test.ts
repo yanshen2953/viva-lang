@@ -125,17 +125,13 @@ describe("chart quality: axis titles, error bars, hover, heatmap", () => {
     const result = compileSource(HEAT, "h.viva", { handbookIds: ["print-nature"] });
     expect(result.error).toBeNull();
     const marks = result.ir!.scene.layers.find((l) => l.name.endsWith("_marks"))!;
-    const loop = marks.items.find((i) => i.kind === "for");
-    expect(loop?.kind).toBe("for");
-    if (loop?.kind === "for") {
-      const cell = loop.body[0];
-      expect(cell?.kind).toBe("node");
-      if (cell?.kind === "node") {
-        expect(cell.name).toBe("heatCell");
-        expect(cell.props.__chartHeat).toBeDefined();
-        expect(cell.props.visible).toBeDefined();
-        expect(JSON.stringify(cell.props.visible)).toContain("__sel");
-      }
+    const cell = marks.items.find((i) => i.kind === "node" && i.name === "heatCell");
+    expect(cell?.kind).toBe("node");
+    if (cell?.kind === "node") {
+      expect(cell.props.__chartHeat).toBeDefined();
+      expect(cell.props.__heatData).toBeDefined();
+      expect(cell.props.visible).toBeDefined();
+      expect(JSON.stringify(cell.props.visible)).toContain("__sel");
     }
     const axes = result.ir!.scene.layers.find((l) => l.name.endsWith("_axes"))!;
     const names = axes.items.filter((i) => i.kind === "node").map((i) => (i.kind === "node" ? i.name : ""));

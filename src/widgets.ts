@@ -770,13 +770,21 @@ function expandChart(
           ...interactOpacity,
           ...interactVisible,
           ...markHighlightMotion(props, seriesField, span),
+          __barData: literal(dataName),
+          __barCatField: literal(catField),
+          __barValueField: literal(valueField),
+          __barKey: ident(`row.${catField}`),
+          ...(seriesField
+            ? { __barSeriesField: literal(seriesField), __barSeriesKey: ident(`row.${seriesField}`) }
+            : {}),
+          ...(horizontal ? { __barOrient: literal("h") } : { __barOrient: literal("v") }),
         }),
         ...expandErrorBars(props, frameName, markXField, markYField, span, seriesField),
       ],
     });
   } else if (kind === "chart.heatmap") {
     marks.push(
-      ...expandHeatCells(props, dataName, frameName, markXField, markYField, span, {
+      ...expandHeatCells(artifact, props, dataName, frameName, markXField, markYField, span, {
         ...interactOpacity,
         ...interactVisible,
       }),
@@ -807,6 +815,14 @@ function expandChart(
           strokeLinecap: literal("round"),
           ...interactOpacity,
           ...interactVisible,
+          __vecData: literal(dataName),
+          __vecXField: literal(markXField),
+          __vecYField: literal(markYField),
+          __vecUField: literal(uField),
+          __vecVField: literal(vField),
+          __vecScale: literal(vScale),
+          __vecXVal: ident(`row.${markXField}`),
+          __vecYVal: ident(`row.${markYField}`),
         }),
         node("head", {
           role: literal("mark"),
@@ -820,6 +836,14 @@ function expandChart(
           ...interactOpacity,
           ...interactVisible,
           ...markHighlightMotion(props, seriesField, span),
+          __vecData: literal(dataName),
+          __vecXField: literal(markXField),
+          __vecYField: literal(markYField),
+          __vecUField: literal(uField),
+          __vecVField: literal(vField),
+          __vecScale: literal(vScale),
+          __vecXVal: ident(`row.${markXField}`),
+          __vecYVal: ident(`row.${markYField}`),
         }),
       ],
     });
@@ -3463,7 +3487,23 @@ function zlimPair(props: Record<string, Expr>): [number, number] {
   return pair ?? [0, 1];
 }
 
+function heatTierExpr(value: Expr, z0: number, z1: number, span: { line: number; column: number }): Expr {
+  const range = binary("-", literal(z1), literal(z0), span);
+  const norm = binary("/", binary("-", value, literal(z0), span), range, span);
+  return {
+    kind: "call",
+    callee: "clamp",
+    args: [
+      { kind: "call", callee: "round", args: [binary("*", norm, literal(6), span)], span },
+      literal(0),
+      literal(6),
+    ],
+    span,
+  };
+}
+
 function expandHeatCells(
+  artifact: Artifact,
   props: Record<string, Expr>,
   dataName: string,
   frameName: string,
@@ -3476,28 +3516,58 @@ function expandHeatCells(
   const [z0, z1] = zlimPair(props);
   const cellW = props.cellW?.kind === "number" ? props.cellW.value : 1;
   const cellH = props.cellH?.kind === "number" ? props.cellH.value : 1;
-  const range = binary("-", literal(z1), literal(z0), span);
-  const norm = binary(
-    "/",
-    binary("-", ident(`row.${vField}`), literal(z0), span),
-    range,
-    span,
-  );
-  const tier = {
+  const heatFill = (value: Expr) => ({
     kind: "call" as const,
-    callee: "clamp",
-    args: [
-      {
-        kind: "call" as const,
-        callee: "round",
-        args: [binary("*", norm, literal(6), span)],
-        span,
-      },
-      literal(0),
-      literal(6),
-    ],
+    callee: "palette",
+    args: [heatTierExpr(value, z0, z1, span), { kind: "string" as const, value: "sequential", span }],
     span,
+  });
+  const heatMeta = {
+    __chartHeat: literal(true),
+    __heatData: literal(dataName),
+    __heatXField: literal(xField),
+    __heatYField: literal(yField),
+    __heatVField: literal(vField),
+    __heatZ0: literal(z0),
+    __heatZ1: literal(z1),
   };
+  const decl = artifact.data.find((d) => d.name === dataName);
+  const groups = new Map<string, { x: string | number; y: string | number; values: number[] }>();
+  if (decl?.value.kind === "array") {
+    for (const row of decl.value.items) {
+      if (row.kind !== "object") continue;
+      const vv = objectField(row, vField);
+      if (vv?.kind !== "number") continue;
+      const xk = rowGroupKey(row, xField);
+      const yk = rowGroupKey(row, yField);
+      const xv = objectField(row, xField);
+      const yv = objectField(row, yField);
+      const x = xv?.kind === "number" ? xv.value : xk;
+      const y = yv?.kind === "number" ? yv.value : yk;
+      const g = groups.get(`${xk}\t${yk}`) ?? { x, y, values: [] };
+      g.values.push(vv.value);
+      groups.set(`${xk}\t${yk}`, g);
+    }
+  }
+  if (groups.size) {
+    return [...groups.values()].map((g) =>
+      node("heatCell", {
+        role: literal("mark-area"),
+        frame: literal(frameName),
+        x: literal(g.x),
+        y: literal(g.y),
+        w: literal(cellW),
+        h: literal(cellH),
+        fill: heatFill(literal(meanOf(g.values))),
+        stroke: literal("#ffffff"),
+        strokeWidth: literal(0.6),
+        ...heatMeta,
+        __heatXVal: literal(g.x),
+        __heatYVal: literal(g.y),
+        ...markSelKeysVisible([String(g.x), String(g.y)], frameName, span),
+      }),
+    );
+  }
   return [
     {
       kind: "for",
@@ -3512,20 +3582,21 @@ function expandHeatCells(
           y: ident(`row.${yField}`),
           w: literal(cellW),
           h: literal(cellH),
-          fill: {
-            kind: "call",
-            callee: "palette",
-            args: [tier, { kind: "string", value: "sequential", span }],
-            span,
-          },
+          fill: heatFill(ident(`row.${vField}`)),
           stroke: literal("#ffffff"),
           strokeWidth: literal(0.6),
-          __chartHeat: literal(true),
+          ...heatMeta,
+          __heatXVal: ident(`row.${xField}`),
+          __heatYVal: ident(`row.${yField}`),
           ...interact,
         }),
       ],
     },
   ];
+}
+
+function meanOf(values: number[]): number {
+  return values.reduce((a, b) => a + b, 0) / Math.max(1, values.length);
 }
 
 function expandColorbar(

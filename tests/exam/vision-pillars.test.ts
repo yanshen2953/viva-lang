@@ -170,6 +170,7 @@ widget chart.scatter
       "paper-linked-pages.viva",
       "paper-board-linked.viva",
       "paper-storyboard.viva",
+      "paper-linked-marks.viva",
     ]) {
       expect(readFileSync(`examples/${file}`, "utf8")).not.toMatch(/interactive:\s*false/);
     }
@@ -673,6 +674,92 @@ widget chart.scatter
     expect(visit.y).toBe(12);
     const svg = renderSvgFromIr(result.ir!);
     expect(svg).not.toMatch(/placebo, 12/);
+  });
+
+  it("recomputes heatmap mean, funnel sum, and vector head from visit keys", () => {
+    const src = readFileSync("examples/paper-linked-marks.viva", "utf8");
+    expect(src).not.toMatch(/interactive:\s*false|areaX|areaY/);
+    const result = compileSource(src, "paper-linked-marks.viva", { handbookIds: ["print-nature"] });
+    expect(result.error).toBeNull();
+    expect(result.ir!.events.some((e) => e.type === "hover" && e.target === "mark")).toBe(true);
+    expect(result.ir!.events.some((e) => e.type === "hover" && e.target === "heatCell")).toBe(true);
+    const heatCells = result.ir!.scene.layers
+      .find((l) => l.name === "__b_marks")!
+      .items.filter((i) => i.kind === "node" && i.name === "heatCell");
+    expect(heatCells.length).toBe(3);
+    const data = result.ir!.data as Record<string, unknown>;
+    const heat = applySelSummary(
+      {
+        __heatData: "rows",
+        __heatXField: "arm",
+        __heatYField: "lane",
+        __heatVField: "score",
+        __heatXVal: "placebo",
+        __heatYVal: 0,
+        __heatZ0: 6,
+        __heatZ1: 28,
+        frame: "b",
+        v: 14,
+      },
+      { data, state: { __sel: { n: 1, keys: [1] }, __brush: { frame: "a" } } },
+    );
+    expect(heat.visible).toBe(true);
+    expect(heat.v).toBe(8);
+    const bar = applySelSummary(
+      {
+        __barData: "rows",
+        __barCatField: "arm",
+        __barValueField: "score",
+        __barKey: "placebo",
+        __barOrient: "h",
+        __chartBar: true,
+        frame: "c",
+        x: 42,
+      },
+      { data, state: { __sel: { n: 1, keys: [1] }, __brush: { frame: "a" } } },
+    );
+    expect(bar.visible).toBe(true);
+    expect(bar.x).toBe(8);
+    const vec = applySelSummary(
+      {
+        __vecData: "rows",
+        __vecXField: "t",
+        __vecYField: "score",
+        __vecUField: "ux",
+        __vecVField: "uy",
+        __vecXVal: 1,
+        __vecYVal: 8,
+        __vecScale: 1,
+        x1: 1,
+        y1: 8,
+        x2: 1.2,
+        y2: 8.8,
+        frame: "d",
+      },
+      { data, state: { __sel: { n: 1, keys: ["drug-A"] }, __brush: { frame: "a" } } },
+    );
+    expect(vec.visible).toBe(false);
+    const keep = applySelSummary(
+      {
+        __vecData: "rows",
+        __vecXField: "t",
+        __vecYField: "score",
+        __vecUField: "ux",
+        __vecVField: "uy",
+        __vecXVal: 1,
+        __vecYVal: 8,
+        __vecScale: 1,
+        x1: 1,
+        y1: 8,
+        x2: 1.2,
+        y2: 8.8,
+        frame: "d",
+      },
+      { data, state: { __sel: { n: 1, keys: [1] }, __brush: { frame: "a" } } },
+    );
+    expect(keep.visible).toBe(true);
+    expect(keep.x2).toBeCloseTo(1.2);
+    expect(keep.y2).toBeCloseTo(8.8);
   });
 
   it("hides box and violin summaries that are outside __sel keys", () => {
