@@ -1,5 +1,7 @@
 export {
   applyRepairs,
+  foldBadFrameTitle,
+  foldMissingPropColons,
   foldOrphanSceneProps,
   planRepairs,
   repairSource,

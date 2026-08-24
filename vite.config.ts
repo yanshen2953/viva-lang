@@ -3,11 +3,11 @@ import { defineConfig } from "vite";
 
 const nodeExportStubs = [
   {
-    find: /(?:^|\/)export\/vector-pdf(?:\.js)?$/,
+    find: /(?:^|\/)export\/vector-pdf(?:\.(?:js|ts))?$/,
     replacement: path.resolve(__dirname, "src/export/vector-pdf.browser.ts"),
   },
   {
-    find: /(?:^|\/)export\/pdf-font(?:\.js)?$/,
+    find: /(?:^|\/)export\/pdf-font(?:\.(?:js|ts))?$/,
     replacement: path.resolve(__dirname, "src/export/pdf-font.browser.ts"),
   },
 ];

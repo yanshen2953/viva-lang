@@ -41,6 +41,21 @@ widget chart.line
     expect(axis.source).toMatch(/yLabel: y/);
   });
 
+  it("inserts colons on widget props and rewrites a titled frame", () => {
+    const src = `artifact Fold
+scene
+  unit: mm
+widget layout.board
+  title 到站件
+frame 到站件 · 双栏
+`;
+    const next = repairSource(src, [{ message: "expected COLON" }]);
+    expect(next.source).toMatch(/title: 到站件/);
+    expect(next.source).toMatch(/widget layout\.board/);
+    expect(next.source).toMatch(/title: "到站件 · 双栏"/);
+    expect(next.source).not.toMatch(/^frame 到站件/m);
+  });
+
   it("folds top-level unit/column/page under scene", () => {
     const src = `artifact Fold
 data rows = [{ x: 1, y: 2 }]

@@ -180,7 +180,7 @@ export function repairSource(
   source: string,
   diagnostics: Array<{ code?: string; message?: string; hint?: string }> = [],
 ): { source: string; plan: RepairPlan; changed: boolean } {
-  const folded = foldOrphanSceneProps(source);
+  const folded = foldBadFrameTitle(foldMissingPropColons(foldOrphanSceneProps(source)));
   const plan = planRepairs(folded, diagnostics);
   if (folded !== source) {
     plan.patches.unshift({
@@ -193,6 +193,36 @@ export function repairSource(
   }
   const applied = applyRepairs(folded, plan);
   return { source: applied.source, plan, changed: applied.source !== source };
+}
+
+const KNOWN_PROP =
+  /^(title|subtitle|caption|body|beats|play|panel|span|data|xField|yField|xlim|ylim|xLabel|yLabel|cols|rows|group|playFps|guides|column|unit|page|height|background|size|bind|controls)$/;
+
+/** `title 到站件` → `title: 到站件` — models drop the colon on widget props. */
+export function foldMissingPropColons(source: string): string {
+  return source
+    .split(/\r?\n/)
+    .map((line) => {
+      const m = line.match(/^(\s+)([A-Za-z][\w.]*)\s+(?![:\s=/])(.+)$/);
+      if (!m || !KNOWN_PROP.test(m[2]!)) return line;
+      return `${m[1]}${m[2]}: ${m[3]}`;
+    })
+    .join("\n");
+}
+
+/** `frame 到站件 · 双栏` is not a frame name — it is a board title. */
+export function foldBadFrameTitle(source: string): string {
+  return source
+    .split(/\r?\n/)
+    .map((line) => {
+      const m = line.match(/^(\s*)frame\s+(.+)$/);
+      if (!m) return line;
+      const name = m[2]!.trim();
+      if (/^[A-Za-z_][\w.]*$/.test(name)) return line;
+      const title = name.replace(/^["']|["']$/g, "");
+      return `${m[1]}widget layout.board\n${m[1]}  title: ${JSON.stringify(title)}`;
+    })
+    .join("\n");
 }
 
 /** `unit:` / `column:` / `page:` at indent 0 are not declarations — tuck them under `scene`. */
