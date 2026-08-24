@@ -101,13 +101,13 @@ tick bind if for
 
 | 类型 | 含义 | 实现状态 |
 | --- | --- | --- |
-| `click` | 指针按下选择 | ✅ |
+| `click` | 世界物体轻点在松手；图刷仍按下即拖 | ✅ |
 | `hover` | 指针移动经过 | ✅ |
-| `dragstart` / `drag` / `dragend` | 指针捕获拖拽 | ✅ |
-| `collide` | 固体接触进入 | ✅ |
-| `key` | 键盘（目标 `scene`/`world`） | ✅ |
+| `dragstart` / `drag` / `dragend` | 指针捕获拖拽；世界过 slop 才起拖 | ✅ |
+| `collide` | 固体接触进入（含正拖的固体；stay 不连打） | ✅ |
+| `key` | 键盘：先手里的单位，再 hover，再 `scene`/`world` | ✅ |
 
-`__event` 载荷：`x y px py t dx dy key code other otherGroup`（场景坐标经 CTM 反变换）。
+`__event` 载荷：`x y px py t dx dy key code other otherGroup phase nx ny`（场景坐标经 CTM 反变换）。
 
 ### 4.3 图层
 

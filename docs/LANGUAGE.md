@@ -222,7 +222,7 @@ layer cards
 
 ## `__event` 载荷
 
-`x y px py t dx dy key code other otherGroup`
+`x y px py t dx dy key code other otherGroup phase nx ny`
 
 ## 节点如何变成图形
 
