@@ -77,6 +77,9 @@ describe("arrival 1 — print-nature compile", () => {
     expect(src).not.toMatch(/(^|\n)\s*(areaX|areaY|insetL|plotPad)\s*:/);
     expect(ir.name).toBe("Arrival");
     expect(ir.timeline?.beats).toBe(4);
+    expect(ir.frames.map((f) => f.name)).not.toEqual(expect.arrayContaining(["beat0", "beat1"]));
+    const play = ir.scene.layers.find((l) => l.name === "__board_play");
+    expect(play?.items.length).toBe(1);
     expect(ir.events.some((e) => e.type === "drag" && e.target === "tokens")).toBe(true);
     expect(renderSvgFromIr(ir)).toMatch(/时间|心率|到站/);
   });

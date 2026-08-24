@@ -1871,8 +1871,15 @@ function expandLayoutBoard(
   }
 
   const beats = Math.max(0, Math.floor(numProp(props, "beats", 0) || numProp(props, "shots", 0)));
+  // Board beats own Clock + veil. When a figure claims panel: body, it owns
+  // the drawing slot — do not slice beat0… columns over the same body.
+  const figureOwnsBody = artifact.widgets.some((widget) => {
+    if (widget.name !== "layout.figure") return false;
+    const slot = stringProp(widget.props, ["panel", "frame"]);
+    return slot === "body";
+  });
   const beatRects: { x0: number; x1: number; y0: number; y1: number }[] = [];
-  if (beats >= 2) {
+  if (beats >= 2 && !figureOwnsBody) {
     const gutter = numProp(props, "beatGutter", toScene(16));
     const bodyW = safeX1 - safeX0;
     const cellW = (bodyW - gutter * (beats - 1)) / beats;
@@ -1931,7 +1938,7 @@ function expandLayoutBoard(
             }),
           ]),
     ];
-    if (beats >= 2) {
+    if (beats >= 2 && !figureOwnsBody) {
       const gutter = numProp(props, "beatGutter", toScene(16));
       const bodyW = safeX1 - safeX0;
       const cellW = (bodyW - gutter * (beats - 1)) / beats;
@@ -2212,7 +2219,7 @@ function expandLayoutBoard(
   }
 
   const play = boolProp(props, "play", false) || boolProp(props, "playing", false);
-  if (play && beatRects.length >= 2) {
+  if (play && beats >= 2) {
     const playFps = Math.max(0, numProp(props, "playFps", 0));
     const easeSec = Math.max(0, numProp(props, "ease", numProp(props, "playEase", 0.22)));
     const holdDefault = playFps > 0 ? Math.max(0.2, 1 / playFps - easeSec) : 1.2;
@@ -2224,7 +2231,6 @@ function expandLayoutBoard(
     const cuts = numListProp(props, "cuts");
     const tracks = numListProp(props, "tracks");
     const fps = Math.max(1, numProp(props, "fps", 12));
-    const beats = beatRects.length;
     if (!artifact.states.some((s) => s.name === "__beat")) {
       artifact.states.push({ name: "__beat", value: literal(0), span });
     }
@@ -2270,17 +2276,29 @@ function expandLayoutBoard(
         artifact.states.push({ name, value: literal(i === 0 ? 0 : 1), span });
       }
     }
-    const veilItems: SceneItem[] = beatRects.map((rect, i) =>
-      node(`${id}_veil_${i}`, {
-        role: literal("chrome"),
-        x: literal(rect.x0),
-        y: literal(rect.y0),
-        w: literal(rect.x1 - rect.x0),
-        h: literal(rect.y1 - rect.y0),
-        fill: literal("#000000"),
-        opacity: binary("*", ident(`__veil${i}`), literal(0.55), span),
-      }),
-    );
+    const veilItems: SceneItem[] = figureOwnsBody
+      ? [
+          node(`${id}_veil_0`, {
+            role: literal("chrome"),
+            x: literal(safeX0),
+            y: literal(titleY1),
+            w: literal(safeX1 - safeX0),
+            h: literal(Math.max(1, lowerY0 - titleY1)),
+            fill: literal("#000000"),
+            opacity: binary("*", ident("__veil0"), literal(0.55), span),
+          }),
+        ]
+      : beatRects.map((rect, i) =>
+          node(`${id}_veil_${i}`, {
+            role: literal("chrome"),
+            x: literal(rect.x0),
+            y: literal(rect.y0),
+            w: literal(rect.x1 - rect.x0),
+            h: literal(rect.y1 - rect.y0),
+            fill: literal("#000000"),
+            opacity: binary("*", ident(`__veil${i}`), literal(0.55), span),
+          }),
+        );
     artifact.scene?.layers.push({
       name: `__${id}_play`,
       span,
@@ -2295,7 +2313,7 @@ function expandLayoutBoard(
       text: binary(
         "+",
         binary("+", binary("+", ident("__beat"), literal(1), span), literal(" / "), span),
-        literal(beatRects.length),
+        literal(beats),
         span,
       ),
     });

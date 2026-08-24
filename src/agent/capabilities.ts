@@ -16,7 +16,13 @@ export function vivaCapabilities(): VivaCapabilities {
     compileHooks: listCompileHooks(),
     handbooks: listStylePresets().map((p) => p.id),
     events: ["click", "hover", "dragstart", "drag", "dragend", "collide", "key"],
-    scene: ["unit: mm", "column: single|double", "page: a4|letter", "span: 1|2"],
+    scene: [
+      "under scene only — never top-level",
+      "unit: mm",
+      "column: single|double",
+      "page: a4|letter",
+      "span: 1|2",
+    ],
   };
 }
 

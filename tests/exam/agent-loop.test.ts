@@ -44,6 +44,25 @@ describe("agent loop", () => {
     expect(result.ir?.timeline?.beats).toBe(4);
   });
 
+  it("repairs a top-level unit: into scene without a second generate", async () => {
+    const orphan = ARRIVAL.replace(/\nscene\n/, "\nunit: mm\nscene\n");
+    expect(orphan).toMatch(/^unit: mm$/m);
+    let n = 0;
+    const result = await runAgentLoop({
+      intent: "到站件",
+      compile: PRINT,
+      generate: async () => {
+        n += 1;
+        return orphan;
+      },
+    });
+    expect(n).toBe(1);
+    expect(result.ok, result.error ?? "").toBe(true);
+    expect(result.rounds[0]!.repaired).toBe(true);
+    expect(result.source).toMatch(/^  unit: mm$/m);
+    expect(result.source).not.toMatch(/^unit: mm$/m);
+  });
+
   it.skipIf(!process.env.DEEPSEEK_API_KEY)(
     "generates an arrival-class piece from a short intent without LANGUAGE.md",
     async () => {

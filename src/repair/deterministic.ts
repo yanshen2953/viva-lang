@@ -21,6 +21,8 @@ const MAGIC_LINE =
   /^\s*(areaX|areaY|insetL|insetR|insetT|insetB|inset\*|plotPadL|plotPadR|plotPadT|plotPadB)\s*:/i;
 const HAND_TICK =
   /^\s*(xTicks|yTicks|xticks|yticks|tickVals|xTickVals|yTickVals)\s*:/i;
+const ORPHAN_SCENE_PROP =
+  /^(unit|column|page|height|background|width|size)\s*:/i;
 
 export function planRepairs(
   source: string,
@@ -178,9 +180,53 @@ export function repairSource(
   source: string,
   diagnostics: Array<{ code?: string; message?: string; hint?: string }> = [],
 ): { source: string; plan: RepairPlan; changed: boolean } {
-  const plan = planRepairs(source, diagnostics);
-  const applied = applyRepairs(source, plan);
+  const folded = foldOrphanSceneProps(source);
+  const plan = planRepairs(folded, diagnostics);
+  if (folded !== source) {
+    plan.patches.unshift({
+      op: "hint",
+      reason: "fold top-level unit/column/page into scene",
+      code: "repair.foldSceneProp",
+      hint: "unit/column/page/height/background live only under scene.",
+    });
+    plan.notes.unshift("fold top-level unit/column/page into scene");
+  }
+  const applied = applyRepairs(folded, plan);
   return { source: applied.source, plan, changed: applied.source !== source };
+}
+
+/** `unit:` / `column:` / `page:` at indent 0 are not declarations — tuck them under `scene`. */
+export function foldOrphanSceneProps(source: string): string {
+  const lines = source.split(/\r?\n/);
+  const kept: string[] = [];
+  const orphans: string[] = [];
+  let inScene = false;
+  let sceneIdx = -1;
+  for (const raw of lines) {
+    const trimmed = raw.trim();
+    const indent = raw.match(/^(\s*)/)?.[1].length ?? 0;
+    if (trimmed && !trimmed.startsWith("#") && indent === 0 && /^scene\b/.test(trimmed)) {
+      inScene = true;
+      sceneIdx = kept.length;
+      kept.push(raw);
+      continue;
+    }
+    if (inScene && trimmed && !trimmed.startsWith("#") && indent === 0) inScene = false;
+    if (!inScene && trimmed && indent === 0 && ORPHAN_SCENE_PROP.test(trimmed)) {
+      orphans.push(`  ${trimmed}`);
+      continue;
+    }
+    kept.push(raw);
+  }
+  if (!orphans.length) return source;
+  if (sceneIdx < 0) {
+    const art = kept.findIndex((line) => /^\s*artifact\b/.test(line));
+    const at = art >= 0 ? art + 1 : 0;
+    kept.splice(at, 0, "scene", ...orphans);
+  } else {
+    kept.splice(sceneIdx + 1, 0, ...orphans);
+  }
+  return kept.join("\n");
 }
 
 function fieldOf(lines: string[], key: string): string | null {

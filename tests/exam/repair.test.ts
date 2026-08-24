@@ -41,6 +41,27 @@ widget chart.line
     expect(axis.source).toMatch(/yLabel: y/);
   });
 
+  it("folds top-level unit/column/page under scene", () => {
+    const src = `artifact Fold
+data rows = [{ x: 1, y: 2 }]
+unit: mm
+column: double
+scene
+  page: a4
+widget chart.scatter
+  data: rows
+  xField: x
+  yField: y
+`;
+    const next = repairSource(src, [{ message: "expected declaration, got 'unit'" }]);
+    expect(next.changed).toBe(true);
+    expect(next.source).not.toMatch(/^unit:/m);
+    expect(next.source).toMatch(/^scene$/m);
+    expect(next.source).toMatch(/^  unit: mm$/m);
+    expect(next.source).toMatch(/^  column: double$/m);
+    expect(next.source).toMatch(/^  page: a4$/m);
+  });
+
   it("session compile applies the patch and keeps IR success", () => {
     const host = createVivaAgentHost();
     const session = host.createSession({ mount: null });

@@ -1,5 +1,6 @@
 export {
   applyRepairs,
+  foldOrphanSceneProps,
   planRepairs,
   repairSource,
   type RepairOp,

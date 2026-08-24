@@ -45,8 +45,12 @@ export async function runAgentLoop(opts: {
     source = await opts.generate({ intent: opts.intent, system, prior });
     let compiled = compileSource(source, `agent-round-${i}.viva`, opts.compile);
     let repaired = false;
-    if (compiled.ir && compiled.diagnostics?.length) {
-      const next = repairSource(source, compiled.diagnostics);
+    const notes = [
+      ...(compiled.diagnostics ?? []),
+      ...(compiled.error ? [{ message: compiled.error }] : []),
+    ];
+    if (notes.length || !compiled.ir) {
+      const next = repairSource(source, notes);
       if (next.changed) {
         source = next.source;
         compiled = compileSource(source, `agent-round-${i}-repair.viva`, opts.compile);
