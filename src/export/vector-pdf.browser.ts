@@ -13,3 +13,10 @@ export async function renderVectorPdfFromIr(
 ): Promise<Uint8Array> {
   throw new Error("vector PDF export requires the Node runtime");
 }
+
+export async function renderVectorPdfPackageFromIr(
+  ir: VisualIR,
+  opts: VectorPdfOptions = {},
+): Promise<{ bytes: Uint8Array; sidecar: [] }> {
+  return { bytes: await renderVectorPdfFromIr(ir, opts), sidecar: [] };
+}
