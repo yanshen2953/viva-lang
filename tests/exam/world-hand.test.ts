@@ -9,6 +9,8 @@ import {
   pairKey,
   penetration,
   selectClick,
+  lassoRect,
+  sharedShift,
   slideOut,
   sweepTime,
 } from "../../src/runtime/hand.js";
@@ -76,9 +78,36 @@ describe("world hand", () => {
     expect(penetration({ ...proposed, x: got.x, y: got.y }, wall)).toBeLessThanOrEqual(1e-6);
   });
 
+  it("keeps the tangent when a drag glances a post", () => {
+    const from = { kind: "circle" as const, x: 80, y: 80, r: 20 };
+    const proposed = { kind: "circle" as const, x: 160, y: 150, r: 20 };
+    const wall = { kind: "circle" as const, x: 140, y: 80, r: 20 };
+    const got = constrainAgainst(proposed, [wall], from);
+    expect(got.blocked).toBe(true);
+    expect(got.y).toBeGreaterThan(from.y + 30);
+    expect(got.x).toBeLessThan(proposed.x);
+    expect(penetration({ ...proposed, x: got.x, y: got.y }, wall)).toBeLessThanOrEqual(1e-6);
+  });
+
+  it("keeps a squad on one shared step", () => {
+    const a = { kind: "circle" as const, x: 80, y: 80, r: 20 };
+    const b = { kind: "circle" as const, x: 80, y: 160, r: 20 };
+    const wall = { kind: "circle" as const, x: 200, y: 80, r: 20 };
+    const step = sharedShift([a, b], 150, 0, [wall]);
+    expect(step.dx).toBeLessThan(150);
+    expect(step.dx).toBeGreaterThan(0);
+    expect(step.dy).toBe(0);
+    const a2 = { ...a, x: a.x + step.dx, y: a.y + step.dy };
+    const b2 = { ...b, x: b.x + step.dx, y: b.y + step.dy };
+    expect(b2.x - a2.x).toBeCloseTo(0);
+    expect(b2.y - a2.y).toBeCloseTo(80);
+    expect(penetration(a2, wall)).toBeLessThanOrEqual(1e-6);
+  });
+
   it("lasso-tests a body center against a scene rect", () => {
     const ball = { kind: "circle" as const, x: 80, y: 80, r: 20 };
     expect(centerInRect(ball, { x0: 60, y0: 60, x1: 120, y1: 120 })).toBe(true);
     expect(centerInRect(ball, { x0: 200, y0: 200, x1: 240, y1: 240 })).toBe(false);
+    expect(lassoRect(120, 40, 20, 100)).toEqual({ x: 20, y: 40, w: 100, h: 60 });
   });
 });

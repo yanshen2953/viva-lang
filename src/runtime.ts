@@ -41,13 +41,14 @@ import { nodeIgnoresPointer } from "./runtime/pointer.js";
 import {
   centerInRect,
   classifyContacts,
-  constrainAgainst,
   contactNormal,
+  lassoRect,
   movedPastSlop,
   pairKey,
   penetration,
   readHand,
   selectClick,
+  sharedShift,
   writeHand,
 } from "./runtime/hand.js";
 import { applyTimelineState, holdOf, startOfBeat } from "./timeline/clock.js";
@@ -123,6 +124,7 @@ export class Runtime {
   private time = 0;
   private drag: DragState | null = null;
   private press: PressState | null = null;
+  private lasso: { x0: number; y0: number; x1: number; y1: number } | null = null;
   private activeCollisions = new Set<string>();
   private keyHandler: ((event: KeyboardEvent) => void) | null = null;
   private lastNodes: RenderNode[] = [];
@@ -485,6 +487,7 @@ export class Runtime {
       const id = group.getAttribute("data-viva-layer-id");
       if (id && !usedLayers.has(id)) group.remove();
     }
+    this.paintHandOverlays();
   }
 
   private createElement(node: RenderNode): SVGElement {
@@ -663,6 +666,16 @@ export class Runtime {
           }
           if (!node) this.press.lasso = true;
         }
+        if (this.press.lasso) {
+          this.lasso = {
+            x0: this.press.startX,
+            y0: this.press.startY,
+            x1: scene.x,
+            y1: scene.y,
+          };
+          this.applyWorldLasso(this.lasso.x0, this.lasso.y0, this.lasso.x1, this.lasso.y1, this.press.shift);
+          return;
+        }
       }
       const target = this.targetOf(event);
       this.hoverId = target?.id ?? null;
@@ -675,7 +688,8 @@ export class Runtime {
     });
 
     this.svg.addEventListener("pointerdown", (event) => {
-      const target = this.targetOf(event);
+      const raw = this.targetOf(event);
+      const target = raw && this.isHandSubject(raw) ? raw : null;
       this.svg?.setPointerCapture(event.pointerId);
       const scene = this.pointerToScene(event);
       this.press = {
@@ -705,6 +719,7 @@ export class Runtime {
       if (!this.press || event.pointerId !== this.press.pointerId) return;
       const scene = this.pointerToScene(event);
       if (this.press.lasso) {
+        this.lasso = null;
         this.applyWorldLasso(this.press.startX, this.press.startY, scene.x, scene.y, this.press.shift);
       } else if (this.press.node) {
         this.fire("click", this.press.node, event);
@@ -726,6 +741,7 @@ export class Runtime {
           this.render();
         }
       }
+      this.lasso = null;
       this.press = null;
       try {
         this.svg?.releasePointerCapture(event.pointerId);
@@ -743,7 +759,13 @@ export class Runtime {
     const anchor = this.sceneAnchorOf(target);
     const hand = readHand(this.state);
     const squad =
-      world && hand.ids.includes(target.id) && hand.ids.length > 1 ? [...hand.ids] : [target.id];
+      world && hand.ids.includes(target.id) && hand.ids.length > 1
+        ? hand.ids.filter((id) => {
+            if (id === target.id) return true;
+            const mate = this.refreshNode(id);
+            return Boolean(mate && this.isDraggable(mate));
+          })
+        : [target.id];
     this.drag = {
       node: target,
       pointerId: event.pointerId,
@@ -883,28 +905,15 @@ export class Runtime {
     const target = this.refreshNode(this.drag.node.id) ?? this.drag.node;
     const fromX = this.drag.lastX;
     const fromY = this.drag.lastY;
-    const posed = this.poseDrag(event);
+    const origins = this.squadOrigins(this.drag.squad, target, fromX, fromY);
+    const posed = this.poseDrag(event, origins);
     const dx = posed.x - this.drag.originX;
     const dy = posed.y - this.drag.originY;
     if (Math.hypot(dx, dy) > 2) this.drag.moved = true;
 
     const stepX = posed.x - fromX;
     const stepY = posed.y - fromY;
-    this.writeWorldPose(target, posed.x, posed.y);
-    if (this.drag.world && this.drag.squad.length > 1) {
-      for (const id of this.drag.squad) {
-        if (id === target.id) continue;
-        const mate = this.refreshNode(id);
-        if (!mate || !isRecord(mate.item)) continue;
-        const ox = num(mate.item.x, num(mate.props.x, 0));
-        const oy = num(mate.item.y, num(mate.props.y, 0));
-        const held = this.constrainWorldPose(mate, ox + stepX, oy + stepY, this.drag.squad, {
-          x: ox,
-          y: oy,
-        });
-        this.writeWorldPose(mate, held.x, held.y);
-      }
-    }
+    this.writeSquadPoses(origins, stepX, stepY);
 
     this.fire("drag", target, event, {
       x: posed.x,
@@ -917,16 +926,12 @@ export class Runtime {
     });
     if (this.drag.world) {
       const after = this.refreshNode(target.id) ?? target;
-      const held = this.constrainWorldPose(
-        after,
-        num(isRecord(after.item) ? after.item.x : after.props.x, posed.x),
-        num(isRecord(after.item) ? after.item.y : after.props.y, posed.y),
-        this.drag.squad,
-        { x: fromX, y: fromY },
-      );
-      this.writeWorldPose(after, held.x, held.y);
-      this.drag.lastX = held.x;
-      this.drag.lastY = held.y;
+      const wantX = num(isRecord(after.item) ? after.item.x : after.props.x, posed.x);
+      const wantY = num(isRecord(after.item) ? after.item.y : after.props.y, posed.y);
+      const held = this.sharedWorldStep(origins, wantX - fromX, wantY - fromY, this.drag.squad);
+      this.writeSquadPoses(origins, held.dx, held.dy);
+      this.drag.lastX = fromX + held.dx;
+      this.drag.lastY = fromY + held.dy;
       this.resolveCollisions();
     } else {
       this.drag.lastX = posed.x;
@@ -934,21 +939,75 @@ export class Runtime {
     }
   }
 
-  private poseDrag(event: PointerEvent): PointerScene & { x: number; y: number } {
+  private poseDrag(
+    event: PointerEvent,
+    origins?: { id: string; node: RenderNode; x: number; y: number }[],
+  ): PointerScene & { x: number; y: number } {
     const scene = this.pointerToScene(event);
     if (!this.drag) return { ...scene, x: scene.x, y: scene.y };
     const target = this.refreshNode(this.drag.node.id) ?? this.drag.node;
     let x = scene.x - this.drag.grabDx;
     let y = scene.y - this.drag.grabDy;
     if (this.drag.world) {
-      const held = this.constrainWorldPose(target, x, y, this.drag.squad, {
-        x: this.drag.lastX,
-        y: this.drag.lastY,
-      });
-      x = held.x;
-      y = held.y;
+      const members = origins ?? this.squadOrigins(this.drag.squad, target, this.drag.lastX, this.drag.lastY);
+      const held = this.sharedWorldStep(members, x - this.drag.lastX, y - this.drag.lastY, this.drag.squad);
+      x = this.drag.lastX + held.dx;
+      y = this.drag.lastY + held.dy;
     }
     return { ...scene, x, y };
+  }
+
+  private squadOrigins(
+    squad: string[],
+    primary: RenderNode,
+    primaryX: number,
+    primaryY: number,
+  ): { id: string; node: RenderNode; x: number; y: number }[] {
+    const ids = squad.length ? squad : [primary.id];
+    return ids.flatMap((id) => {
+      const node = id === primary.id ? primary : this.refreshNode(id);
+      if (!node) return [];
+      if (id === primary.id) return [{ id, node, x: primaryX, y: primaryY }];
+      const pose = this.poseOf(node);
+      return [{ id, node, x: pose.x, y: pose.y }];
+    });
+  }
+
+  private writeSquadPoses(
+    origins: { id: string; node: RenderNode; x: number; y: number }[],
+    dx: number,
+    dy: number,
+  ): void {
+    for (const origin of origins) {
+      const node = this.refreshNode(origin.id) ?? origin.node;
+      this.writeWorldPose(node, origin.x + dx, origin.y + dy);
+    }
+  }
+
+  private sharedWorldStep(
+    origins: { id: string; node: RenderNode; x: number; y: number }[],
+    dx: number,
+    dy: number,
+    ignore: string[],
+  ): { dx: number; dy: number } {
+    const walls = this.obstacleShapes(ignore);
+    const members = origins.map((origin) =>
+      this.shapeOf({ ...origin.node, props: { ...origin.node.props, x: origin.x, y: origin.y } }),
+    );
+    return sharedShift(members, dx, dy, walls);
+  }
+
+  private poseOf(node: RenderNode): { x: number; y: number } {
+    if (isRecord(node.item)) {
+      return { x: num(node.item.x, num(node.props.x, 0)), y: num(node.item.y, num(node.props.y, 0)) };
+    }
+    return { x: num(node.props.x, 0), y: num(node.props.y, 0) };
+  }
+
+  private obstacleShapes(ignore: string[]): ReturnType<Runtime["shapeOf"]>[] {
+    return this.worldSolids()
+      .filter((other) => !ignore.includes(other.id))
+      .map((other) => this.shapeOf(other));
   }
 
   private writeWorldPose(node: RenderNode, x: number, y: number): void {
@@ -958,28 +1017,11 @@ export class Runtime {
     }
   }
 
-  private constrainWorldPose(
-    node: RenderNode,
-    x: number,
-    y: number,
-    ignore: string[] = [node.id],
-    from?: { x: number; y: number },
-  ): { x: number; y: number } {
-    const self = this.shapeOf({ ...node, props: { ...node.props, x, y } });
-    const origin = from
-      ? this.shapeOf({ ...node, props: { ...node.props, x: from.x, y: from.y } })
-      : this.shapeOf(node);
-    const walls = this.worldSolids()
-      .filter((other) => !ignore.includes(other.id) && other.id !== node.id)
-      .map((other) => this.shapeOf(other));
-    const got = constrainAgainst(self, walls, origin);
-    return { x: got.x, y: got.y };
-  }
-
   private applyWorldLasso(x0: number, y0: number, x1: number, y1: number, additive: boolean): void {
-    const box = { x0, y0, x1, y1 };
+    const scale = this.sceneScale();
+    const box = { x0: x0 * scale, y0: y0 * scale, x1: x1 * scale, y1: y1 * scale };
     const hits = this.worldSolids()
-      .filter((node) => centerInRect(this.shapeOf(node), box))
+      .filter((node) => this.isDraggable(node) && centerInRect(this.shapeOf(node), box))
       .map((node) => node.id);
     const hand = readHand(this.state);
     const ids = additive ? [...new Set([...hand.ids, ...hits])] : hits;
@@ -1201,6 +1243,77 @@ export class Runtime {
     if (nodeIgnoresPointer(node.name, node.props.role)) return false;
     if (this.isChartGrip(node)) return false;
     return this.isDraggable(node) || this.isSolid(node);
+  }
+
+  private isHandSubject(node: RenderNode): boolean {
+    if (nodeIgnoresPointer(node.name, node.props.role)) return false;
+    if (this.isChartGrip(node) || this.isWorldGrip(node) || this.isDraggable(node)) return true;
+    return (
+      this.hasHandler("click", node) ||
+      this.hasHandler("hover", node) ||
+      this.hasHandler("drag", node) ||
+      this.hasHandler("dragstart", node) ||
+      this.hasHandler("dragend", node)
+    );
+  }
+
+  private paintHandOverlays(): void {
+    if (!this.svg) return;
+    let layer = this.svg.querySelector(':scope > g[data-viva-hand="layer"]') as SVGGElement | null;
+    const hand = readHand(this.state);
+    if (!this.lasso && !hand.ids.length) {
+      layer?.remove();
+      return;
+    }
+    if (!layer) {
+      layer = document.createElementNS("http://www.w3.org/2000/svg", "g");
+      layer.setAttribute("data-viva-hand", "layer");
+      layer.style.pointerEvents = "none";
+      this.svg.appendChild(layer);
+    }
+    layer.replaceChildren();
+    const scale = this.sceneScale();
+    if (this.lasso) {
+      const box = lassoRect(this.lasso.x0, this.lasso.y0, this.lasso.x1, this.lasso.y1);
+      const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+      rect.setAttribute("data-viva-hand", "lasso");
+      rect.setAttribute("x", String(box.x * scale));
+      rect.setAttribute("y", String(box.y * scale));
+      rect.setAttribute("width", String(box.w * scale));
+      rect.setAttribute("height", String(box.h * scale));
+      rect.setAttribute("fill", "rgba(56,189,248,0.12)");
+      rect.setAttribute("stroke", "#38bdf8");
+      rect.setAttribute("stroke-width", "1.5");
+      rect.setAttribute("stroke-dasharray", "4 3");
+      layer.appendChild(rect);
+    }
+    for (const id of hand.ids) {
+      const node = this.lastNodes.find((item) => item.id === id);
+      if (!node) continue;
+      const shape = this.shapeOf(node);
+      if (shape.kind === "circle") {
+        const ring = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        ring.setAttribute("data-viva-hand", "grip");
+        ring.setAttribute("cx", String(shape.x));
+        ring.setAttribute("cy", String(shape.y));
+        ring.setAttribute("r", String(shape.r + 4));
+        ring.setAttribute("fill", "none");
+        ring.setAttribute("stroke", "#38bdf8");
+        ring.setAttribute("stroke-width", "2");
+        layer.appendChild(ring);
+      } else {
+        const ring = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        ring.setAttribute("data-viva-hand", "grip");
+        ring.setAttribute("x", String(shape.x - 3));
+        ring.setAttribute("y", String(shape.y - 3));
+        ring.setAttribute("width", String(shape.w + 6));
+        ring.setAttribute("height", String(shape.h + 6));
+        ring.setAttribute("fill", "none");
+        ring.setAttribute("stroke", "#38bdf8");
+        ring.setAttribute("stroke-width", "2");
+        layer.appendChild(ring);
+      }
+    }
   }
 
   private worldSolids(): RenderNode[] {

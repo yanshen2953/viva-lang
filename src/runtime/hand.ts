@@ -130,31 +130,25 @@ export function sweepTime(from: HandShape, to: HandShape, wall: HandShape): numb
   return sweepAabb(asRect(from), asRect(to), asRect(wall));
 }
 
-export function constrainAgainst(
-  self: HandShape,
+function firstHit(
+  from: HandShape,
+  to: HandShape,
   obstacles: HandShape[],
-  from?: HandShape,
-): { x: number; y: number; blocked: boolean } {
-  let next: HandShape = { ...self };
-  let blocked = false;
-  if (from) {
-    let best = 1;
-    let hit = false;
-    for (const wall of obstacles) {
-      const t = sweepTime(from, self, wall);
-      if (t == null || t > best) continue;
-      best = t;
-      hit = true;
-    }
-    if (hit) {
-      next = {
-        ...self,
-        x: from.x + (self.x - from.x) * best,
-        y: from.y + (self.y - from.y) * best,
-      };
-      blocked = true;
-    }
+): { t: number; wall: HandShape } | null {
+  let best = 1;
+  let wall: HandShape | null = null;
+  for (const other of obstacles) {
+    const t = sweepTime(from, to, other);
+    if (t == null || t > best) continue;
+    best = t;
+    wall = other;
   }
+  return wall ? { t: best, wall } : null;
+}
+
+function settle(shape: HandShape, obstacles: HandShape[]): { next: HandShape; blocked: boolean } {
+  let next: HandShape = { ...shape };
+  let blocked = false;
   for (let i = 0; i < 4; i++) {
     let hit = false;
     for (const wall of obstacles) {
@@ -167,7 +161,83 @@ export function constrainAgainst(
     }
     if (!hit) break;
   }
-  return { x: next.x, y: next.y, blocked };
+  return { next, blocked };
+}
+
+function atTime(from: HandShape, to: HandShape, t: number): HandShape {
+  return {
+    ...to,
+    x: from.x + (to.x - from.x) * t,
+    y: from.y + (to.y - from.y) * t,
+  };
+}
+
+export function constrainAgainst(
+  self: HandShape,
+  obstacles: HandShape[],
+  from?: HandShape,
+): { x: number; y: number; blocked: boolean } {
+  let next: HandShape = { ...self };
+  let blocked = false;
+  if (from) {
+    const hit = firstHit(from, self, obstacles);
+    if (hit) {
+      const placed = atTime(from, self, hit.t);
+      const seated = settle(placed, obstacles);
+      next = seated.next;
+      blocked = true;
+      const { nx, ny } = contactNormal(next, hit.wall);
+      const remx = self.x - next.x;
+      const remy = self.y - next.y;
+      const dot = remx * nx + remy * ny;
+      const slid: HandShape = { ...next, x: next.x + remx - nx * dot, y: next.y + remy - ny * dot };
+      const hit2 = firstHit(next, slid, obstacles);
+      next = hit2 ? atTime(next, slid, hit2.t) : slid;
+    }
+  }
+  const seated = settle(next, obstacles);
+  return { x: seated.next.x, y: seated.next.y, blocked: blocked || seated.blocked };
+}
+
+/** Keep a squad on one shared step: the tightest axis any member is allowed. */
+export function sharedShift(
+  members: HandShape[],
+  dx: number,
+  dy: number,
+  walls: HandShape[],
+): { dx: number; dy: number } {
+  let outDx = dx;
+  let outDy = dy;
+  const tighten = (origins: HandShape[], sx: number, sy: number): { dx: number; dy: number } => {
+    let nx = sx;
+    let ny = sy;
+    for (const member of origins) {
+      const got = constrainAgainst({ ...member, x: member.x + sx, y: member.y + sy }, walls, member);
+      nx = sameDirMin(nx, got.x - member.x);
+      ny = sameDirMin(ny, got.y - member.y);
+    }
+    return { dx: nx, dy: ny };
+  };
+  ({ dx: outDx, dy: outDy } = tighten(members, outDx, outDy));
+  ({ dx: outDx, dy: outDy } = tighten(members, outDx, outDy));
+  return { dx: outDx, dy: outDy };
+}
+
+function sameDirMin(desired: number, allowed: number): number {
+  if (desired > 0) return Math.max(0, Math.min(desired, allowed));
+  if (desired < 0) return Math.min(0, Math.max(desired, allowed));
+  return 0;
+}
+
+export function lassoRect(
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+): { x: number; y: number; w: number; h: number } {
+  const x = Math.min(x0, x1);
+  const y = Math.min(y0, y1);
+  return { x, y, w: Math.abs(x1 - x0), h: Math.abs(y1 - y0) };
 }
 
 export function centerInRect(
