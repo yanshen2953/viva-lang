@@ -7,6 +7,24 @@ Two tracks:
 | **Deterministic** | `npm test` | Corpus / IR / layers / Host API (no LLM) |
 | **Agent exam** | Pi + DeepSeek as **SUT** | NL→Viva / repair / patch; graded by `VivaAgentHost` |
 
+## Four gates (arrival exam)
+
+`tests/exam/four-gates.test.ts` is how we know we have **not** arrived.
+
+The bar (user): one small source through **eyes / hand / export / agent**.
+A green `npm test` is the measurable **floor**, not print / film / live-agent arrival.
+
+| Door | Floor this file locks | Still not arrival |
+| --- | --- | --- |
+| Eyes | paper-column 89 mm + paper-cjk 89 mm + paper-storyboard 183 mm; SVG viewBox and vector PDF page the same size; CJK PDF `missingGlyphs` empty | Atlas is still 1360 px; “spacing like print” is unmeasured; no screen/PDF pair visual |
+| Hand | those sources stay live; paper-cjk brush `__sel`; storyboard beat jump keeps `__sel`; play veils ignore pointer | Headless `simulate`, not one Runtime pointer session; page-jump lives on `paper-pages`, not the four named files |
+| Export | `data-viva-id` = flatten = Runtime id scheme; storyboard `--beats` length = Clock holds, not `__beat++` in tick | gif/mp4 is a slideshow |
+| Agent | MCP `viva_compile` + default slim prompt (not LANGUAGE.md); deterministic `repairSource` | No short-intent LLM → playable card |
+
+```bash
+npx vitest run tests/exam/four-gates.test.ts
+```
+
 ## Deterministic
 
 ```bash

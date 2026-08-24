@@ -76,6 +76,19 @@
 8. `typeGrid` 与 figure 共用栏宽度量，仍不是跨页报纸成品
 9. 世界手能握、能顶、能多选、能看见套索，仍不是 Unity 级物理 / 输入栈
 
+## 到站考试（四道门）
+
+怎么知道自己到了，而不是又「接口齐」：同一份极小源码过眼睛 / 手 / 导出 / agent。地板在 `tests/exam/four-gates.test.ts`。
+
+| 门 | 地板（CI 锁住） | 到站？ |
+| --- | --- | --- |
+| 眼睛 | 89 / 183 mm 的 SVG 与矢量 PDF 同宽；paper-cjk 缺字表空 | **否**。Atlas 仍是 1360 px 工作室。间距像印的没有度量。没有屏幕和 PDF 并排视觉 |
+| 手 | 四件默认可刷；翻拍后 `__sel` 还在；暗拍遮罩不抢指针 | **否**。是 `simulate`，不是 Runtime 指针连打四件。跳页在 `paper-pages` |
+| 导出 | `data-viva-id` 对 flatten；成片帧数跟 Clock hold | **否**。gif/mp4 仍是拍幻灯 |
+| agent | MCP 编译 + slim prompt + 确定性 repair | **否**。没有短意图 LLM → 卡上可玩 |
+
+world-hand 那一轮只跑了几何单测，**没有**过这四道门。
+
 ## 下一刀（质量，不再铺接口）
 
 1. 栏宽 compose 的视觉密度（标题/图/文的投稿级间距）——不要再修图核 inset
