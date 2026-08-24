@@ -3,7 +3,7 @@
 > **用途：** 新开 Cloud Agent / 新 chat 时，先读本文 + `AGENTS.md`，再把文末「复制块」贴进首条消息。  
 > **仓库：** https://github.com/yanshen2953/viva-lang  
 > **真源分支：** `cursor/style-handbook-hook-a8c1`  
-> **主 PR：** https://github.com/yanshen2953/viva-lang/pull/9（用户已要求：该 merge 就 merge）  
+> **主 PR：** https://github.com/yanshen2953/viva-lang/pull/9（**已 merge**，`3614e50`，2026-08-24）  
 > **对照：** `docs/VISION.md`（愿景 vs 现状）· `docs/GAPS.md`（诚实缺口）· `docs/DESIGN.md` / `docs/PLAN.md`（设计真源；PLAN §1 里「1–3 已齐」**过满**，以 GAPS 为准）
 
 ---
@@ -66,7 +66,7 @@
 | 矢量 | 场景三角箭头 + 绘图区比例尺 | 不是带单位换算的 quiver |
 | 排版 | chrome inset + 位姿同一残差循环；手册 typography 驱动折行/字号；色条有脊线；figure 与正文同一栏宽 compose | 不是 Adobe InDesign / Nature 成品 |
 | 交互 | play 是 hold+ease 剪辑轨（`holds`/`ins`/`outs`/`order`/`cuts`/`tracks`）；`__view` 有 hover/drag/play/pause/page；导出可读 `__easeU` 采 220ms | 不是桌面 NLE / Unity |
-| Agent 面 | overflow / 空栏 / 轴确定性 repair；内联 + domain browser visual；visual 错误失败 success；`attachDragParamLoop`；离线 exam 种子编译率在 CI | LLM 生成率用 key 实测 |
+| Agent 面 | overflow / 空栏 / 轴确定性 repair；内联 + domain browser visual；visual 错误失败 success；`attachDragParamLoop`；离线 exam 种子编译率在 CI | LLM hard 7/8（H05 缺 data 键） |
 
 最近相关提交（新 → 旧，便于 `git log`）：
 
@@ -109,7 +109,7 @@ ab659f7  色条刻在 zlim，不是三段色块端
 - visual QA **错误失败 compile success**（IR 仍返回以便 repair）
 - 内联卡跑 IR 级 browser visual（不引 resvg）
 - session 对 overflow / 空栏绑 data / 补 xLabel·yLabel / 删手写 tick 做确定性 repair
-- 离线 `examples/exam/*.viva` 编译率在 CI；`test:agent-exam` 用 key 测生成率
+- 离线 `examples/exam/*.viva` 编译率在 CI；`test:agent-exam` hard：**7/8**（`deepseek-v4-flash-vision-exp`；H05 编译过但 `dataKeys=0`）
 - `attachDragParamLoop` 是宿主胶水，不是语言关键字
 - 包内默认 `assets/fonts/VivaSansCJK.ttf` 全库
 
@@ -121,7 +121,7 @@ ab659f7  色条刻在 zlim，不是三段色块端
 - visual 错误**会**失败 IR success；IR 仍返回。不要把误报重新改回「只警告」
 - **不要**加关键字：`figure` / `panel` / `colorbar` / `safe` / `lowerThird`
 - **不要**把 play 遮罩写成 `role: hud`
-- 用户已要求 merge PR #9；CI 绿后合并
+- PR #9 已 merge 进 `main`（`3614e50`）
 - `src/embed/web.ts` **不能** import `agent/index`（会把 resvg/sharp 打进浏览器）
 - Handbook 在 widget 之后；`print-nature` 的 `.*Title$` → `title` **不覆盖**节点上已写的 `role`
 - 共享 bbox：`src/layout/node-bbox.ts`；审查必须先 `scaleSceneGeom`；frame 映射过的属性不要再 scale

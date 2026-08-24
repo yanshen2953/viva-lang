@@ -12,7 +12,7 @@
 | --- | --- | --- |
 | 1 内联活世界 | 齐 | **接口齐 / 产品未齐**：Runtime 能拖点 tick；图表默认有数据域 brush/高亮；`__view` 覆盖 hover/drag/brush/play/pause/page；内联卡有 browser visual。仍不是 Unity 级游戏引擎 |
 | 2 度量科学图 | 齐 | **骨架齐 / 出版未齐**：linear/log/band + chart.*（含 vector/funnel）能出图；手册 typography 驱动 chrome 折行；色条有脊线；figure 与正文走同一栏宽 compose。仍不是 Nature 投稿成品 |
-| 3 通用 Agent 接口 | 齐 | **接入齐 / 闭环加严**：CLI/MCP/HTTP 能编能导；确定性 repair 进 session；visual 错误失败 compile success；离线 exam 种子编译率在 CI。LLM 生成率用 key 实测 |
+| 3 通用 Agent 接口 | 齐 | **接入齐 / 闭环加严**：CLI/MCP/HTTP 能编能导；确定性 repair 进 session；visual 错误失败 compile success；离线 exam 种子编译率在 CI。LLM hard exam **7/8（87.5%）**，`deepseek-v4-flash-vision-exp`，H05 因 `ir.minDataKeys` 失败 |
 | 4 流水线 | 部分 | 仍部分：Port + webhook + `attachDragParamLoop`（`watch("param")` → pipeline）。无自动 watch 宿主默认开 |
 | 5 领域视图 | 部分 | 仍部分：槽位在，重领域插件刻意不做 |
 | 6 可追溯 | 部分 | 仍部分：bundle 能导出，宿主未填 promptDigest |
@@ -69,7 +69,7 @@
 2. 手册 typography 驱动 chrome 字号/折行；色条有脊线。观感仍粗，不是投稿成品
 3. 正文与 figure 同一栏宽 compose（snap / page-fit / hop+repack）。不是 Adobe InDesign
 4. play 可写 `holds` / `ins` / `outs` / `order` / `cuts` / `tracks` 剪辑轨；`__view` 有 hover/drag/pause。不是桌面 NLE
-5. session 会修 overflow / 空栏绑 data / 补轴题；visual 错误失败 success。LLM 生成率用 key 实测
+5. session 会修 overflow / 空栏绑 data / 补轴题；visual 错误失败 success。LLM hard exam 7/8（H05 collide arena 没写 data 键）
 6. `attachDragParamLoop` 要把 `watch("param")` 接到 pipeline；宿主须自己挂
 7. 小栏宽 mm 图跟手 `__tip`。inset 触底后仍可能省略或收回格内
 8. `typeGrid` 与 figure 共用栏宽度量，仍不是跨页报纸成品
