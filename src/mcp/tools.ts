@@ -20,6 +20,15 @@ export function textResult(text: string, isError = false) {
   };
 }
 
+/** Hint when IR compiled but has no `data` tables — agents often put entities only in state. */
+export function compileDataHints(ir: { data?: Record<string, unknown> } | null | undefined): string[] {
+  if (!ir) return [];
+  if (Object.keys(ir.data ?? {}).length === 0) {
+    return ["IR has no data tables. Entities should be data-backed (data NAME = [...])."];
+  }
+  return [];
+}
+
 export async function handleMcpTool(
   name: string,
   args: Record<string, unknown>,
@@ -62,7 +71,8 @@ async function toolCompile(args: Record<string, unknown>) {
     source,
   });
   const failed = !attached.ir || attached.success === false || attached.visualOk === false;
-  return textResult(JSON.stringify(attached, null, 2), failed);
+  const hints = compileDataHints(attached.ir);
+  return textResult(JSON.stringify({ ...attached, hints }, null, 2), failed);
 }
 
 async function toolCheck(args: Record<string, unknown>) {
@@ -83,11 +93,13 @@ async function toolCheck(args: Record<string, unknown>) {
     rasterWidth: width,
   });
   const ok = checks.ok && (compiled.checkOk ?? true);
+  const hints = compileDataHints(compiled.ir);
   return textResult(
     JSON.stringify({
       artifact: compiled.ir.name,
       ...checks,
       ok,
+      hints,
     }),
     !ok,
   );
