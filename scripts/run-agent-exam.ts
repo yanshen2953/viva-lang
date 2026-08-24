@@ -372,15 +372,8 @@ function buildSystem(scenario: Scenario): string {
   const parts: string[] = [];
   if (mode === "slim") {
     parts.push(SYSTEM_PROMPT_SLIM);
-    // Hard track gets LANGUAGE.md like an agent with repo docs open — not per-task coaching.
-    try {
-      parts.push(
-        "# Language reference\n\n" +
-          readFileSync(path.join(root, "docs/LANGUAGE.md"), "utf8"),
-      );
-    } catch {
-      /* optional */
-    }
+    // Language reference is on-demand via MCP viva_prompt { includeLanguage: true }.
+    // Inlining LANGUAGE.md + tools made DeepSeek tool loops hang past 15 minutes.
   } else {
     parts.push(SYSTEM_PROMPT);
   }

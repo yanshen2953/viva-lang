@@ -53,6 +53,13 @@ describe("MCP tools", () => {
   it("viva_prompt includes system prompt", async () => {
     const out = await handleMcpTool("viva_prompt", { handbookIds: [] });
     expect(out.content[0]!.text).toContain("Viva");
+    expect(out.content[0]!.text).not.toContain("# Language reference");
+  });
+
+  it("viva_prompt includeLanguage appends LANGUAGE.md", async () => {
+    const out = await handleMcpTool("viva_prompt", { includeLanguage: true });
+    expect(out.content[0]!.text).toContain("# Language reference");
+    expect(out.content[0]!.text).toMatch(/artifact/i);
   });
 
   it("viva_check structural pass", async () => {

@@ -10,9 +10,9 @@ export const EXAM_PI_MCP_TOOLS = [
 
 export const EXAM_MCP_SYSTEM_ADDENDUM = `You have Viva MCP tools (stdio server via the Pi extension). Use them.
 
-- After drafting source, call viva_compile. Draft with visual:false; turn visual on only for a final check.
-- If success/ok is false, visualOk is false, diagnostics have errors, or ir.data is empty, fix the source and compile again.
-- Entities (circles, series, rows) must be data-backed: \`data NAME = [...]\`. State alone is not a table.
+- After drafting source, call viva_compile once (visual:false). If success/ok is false, ir.data is empty, or hints mention data tables, fix and compile once more — then stop calling tools.
+- Need syntax? viva_prompt with includeLanguage:true (do not ask it on every turn).
+- Entities (circles, series, rows) must be data-backed: \`data NAME = [...]\`. State alone is not a table. Nodes that collide need solid: true.
 - viva_session can create/compile/patch a headless session if you need world/provenance.
 - When finished, output ONLY the full Viva source starting with the word artifact. No bash, no repo edits.`;
 

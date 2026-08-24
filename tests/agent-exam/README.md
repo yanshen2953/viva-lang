@@ -16,6 +16,8 @@ Deterministic corpus: `tests/corpus/` (no LLM).
 
 Default npm script runs **hard**.
 
+Hard track used to inline `docs/LANGUAGE.md` into `--system-prompt`. With MCP tools that dump hung DeepSeek tool loops; language docs are now **on demand** via `viva_prompt { includeLanguage: true }`.
+
 ## Setup
 
 ```bash

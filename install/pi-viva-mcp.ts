@@ -126,9 +126,11 @@ export default function (pi: ExtensionAPI) {
     defineTool({
       name: "viva_prompt",
       label: "Viva prompt",
-      description: "MCP viva_prompt: system prompt + optional handbooks.",
+      description: "MCP viva_prompt: system prompt + optional handbooks. includeLanguage appends LANGUAGE.md.",
       parameters: Type.Object({
         handbookIds,
+        includeLanguage: Type.Optional(Type.Boolean()),
+        variant: Type.Optional(Type.String()),
       }),
       execute: execute("viva_prompt"),
     }),

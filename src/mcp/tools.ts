@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { z } from "zod";
 import { compileSource } from "../pipeline.js";
 import { attachHotPathVisual, runArtifactChecks } from "../check/index.js";
@@ -183,6 +185,11 @@ async function toolExport(args: Record<string, unknown>) {
   );
 }
 
+function loadLanguageDoc(): string {
+  const root = process.env.VIVA_ROOT ?? process.cwd();
+  return readFileSync(path.join(root, "docs/LANGUAGE.md"), "utf8");
+}
+
 function toolPrompt(args: Record<string, unknown>) {
   const handbookIds = (args.handbookIds as string[] | undefined) ?? [];
   const variant = String(args.variant ?? "slim");
@@ -190,6 +197,9 @@ function toolPrompt(args: Record<string, unknown>) {
   const parts = [variant === "full" ? SYSTEM_PROMPT : SYSTEM_PROMPT_SLIM];
   for (const id of handbookIds) {
     parts.push(prompt.loadHandbook(id));
+  }
+  if (args.includeLanguage) {
+    parts.push("# Language reference\n\n" + loadLanguageDoc());
   }
   return textResult(parts.join("\n\n---\n\n"));
 }
@@ -356,11 +366,14 @@ export const MCP_TOOL_DEFINITIONS = [
   },
   {
     name: "viva_prompt",
-    description: "System prompt + optional style handbooks for LLM generation.",
+    description:
+      "System prompt + optional style handbooks. includeLanguage:true appends docs/LANGUAGE.md.",
     inputSchema: {
       type: "object",
       properties: {
         handbookIds: { type: "array", items: { type: "string" } },
+        includeLanguage: { type: "boolean", description: "Append docs/LANGUAGE.md" },
+        variant: { type: "string", enum: ["slim", "full"] },
       },
     },
   },
@@ -462,6 +475,8 @@ export const mcpToolSchemas = {
   },
   viva_prompt: {
     handbookIds: handbookIdsSchema,
+    includeLanguage: z.boolean().optional(),
+    variant: z.enum(["slim", "full"]).optional(),
   },
   viva_models: {
     configPath: z.string().optional(),
