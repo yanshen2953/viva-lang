@@ -340,7 +340,8 @@ export function createSession(
       let pdf: Uint8Array | undefined;
       if (opts.pdf !== false && ir) {
         try {
-          const { renderVectorPdfFromIr } = await import("../export/vector-pdf.js");
+          const pdfMod = "../export/vector-pdf.js";
+          const { renderVectorPdfFromIr } = await import(/* @vite-ignore */ pdfMod);
           pdf = await renderVectorPdfFromIr(ir);
         } catch {
           pdf = undefined;
