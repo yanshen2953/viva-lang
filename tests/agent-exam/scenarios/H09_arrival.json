@@ -1,0 +1,19 @@
+{
+  "id": "H09",
+  "title": "short intent arrival piece, product slim prompt",
+  "track": "hard",
+  "kind": "generate",
+  "system": "slim",
+  "handbooks": ["print-nature"],
+  "prompt": "写一份 A4 双栏到站件：print-nature，89mm span:1 与 183mm span:2，CJK 标题，可拖 World tokens，brush，四拍 play，跨页。不要手写 inset/areaX。",
+  "assertions": {
+    "compiles": true,
+    "mustMatch": ["unit:\\s*mm", "page:\\s*a4", "column:\\s*double", "span:\\s*2", "beats:\\s*4", "widget layout.board", "widget layout.figure"],
+    "forbidMatch": ["areaX:", "areaY:", "LANGUAGE.md"],
+    "ir": {
+      "minFrames": 4,
+      "hasEventTypes": ["drag"],
+      "minStateKeys": 4
+    }
+  }
+}

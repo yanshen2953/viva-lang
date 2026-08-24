@@ -21,8 +21,8 @@ describe("runtime scene units", () => {
     expect(penetration({ ...a, x: a.x + step.dx, y: a.y + step.dy }, wall)).toBeLessThanOrEqual(1e-6);
   });
 
-  it("ignores page jump / chapter chrome", () => {
-    expect(nodeIgnoresPointer("__page_jump_2")).toBe(true);
+  it("ignores folio / chapter chrome but keeps page jump clickable", () => {
+    expect(nodeIgnoresPointer("__page_jump_2")).toBe(false);
     expect(nodeIgnoresPointer("__page_chapter_1")).toBe(true);
     expect(nodeIgnoresPointer("__page_folio_1")).toBe(true);
     expect(nodeIgnoresPointer("plotA_plotBg")).toBe(false);

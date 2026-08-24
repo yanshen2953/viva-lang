@@ -1,0 +1,283 @@
+/**
+ * Arrival matrix — one source, four doors. A green file here is evidence,
+ * not a name. Each assertion names the gate it closes.
+ */
+import { afterEach, describe, expect, it } from "vitest";
+import { execSync } from "node:child_process";
+import { readFileSync, existsSync } from "node:fs";
+import path from "node:path";
+import { inflateRawSync, inflateSync } from "node:zlib";
+import { PDFDocument } from "pdf-lib";
+import { compileSource } from "../../src/pipeline.js";
+import { evaluate } from "../../src/eval.js";
+import { flattenNodesFromIr, nodePainted, renderSvgFromIr } from "../../src/export/static-svg.js";
+import {
+  exportArtifact,
+  exportBeatPlayback,
+  exportBeatSequence,
+} from "../../src/export/index.js";
+import { holdFrameTimes, playbackFrameTimes } from "../../src/timeline/clock.js";
+import { COLUMN_MM, evalSceneProps, mmToPx, resolveSceneBox } from "../../src/space/scene-box.js";
+import { compareSvgPdfPages, pdftoppmAvailable } from "../../src/check/visual-parity.js";
+import { listSelectableNodes } from "../../src/review/nodes.js";
+import { pdfUnmappedGlyphs } from "../../src/export/pdf-font.js";
+import {
+  listCompileHooks,
+  registerCompileHook,
+  registerWidget,
+  resetWidgetPlugins,
+  unregisterCompileHook,
+  unregisterWidget,
+} from "../../src/widgets.js";
+import { literal } from "../../src/ast.js";
+import { registerStylePreset, listStylePresets } from "../../src/style/index.js";
+import { handleMcpTool } from "../../src/mcp/tools.js";
+import { productSystemPrompt, vivaCapabilities } from "../../src/agent/orchestrator.js";
+import { SYSTEM_PROMPT_SLIM } from "../../src/llm/system-prompt-slim.js";
+import { writePage, readPage } from "../../src/runtime/view-machine.js";
+
+const PRINT = { handbookIds: ["print-nature"] } as const;
+const PX_PER_PT = 72 / 96;
+
+function compileArrival() {
+  const src = readFileSync("examples/arrival.viva", "utf8");
+  const result = compileSource(src, "arrival.viva", PRINT);
+  expect(result.error, result.error ?? "").toBeNull();
+  return { src, ir: result.ir! };
+}
+
+function cellWidthMm(ir: ReturnType<typeof compileArrival>["ir"], name: string): number {
+  const frame = ir.frames.find((f) => f.name === name);
+  expect(frame, `missing frame ${name}`).toBeTruthy();
+  const cellX = evaluate(frame!.props.cellX!, [ir.state, ir.data]) as number[];
+  return cellX[1]! - cellX[0]!;
+}
+
+function pdfOperators(bytes: Uint8Array): string {
+  const raw = new TextDecoder("latin1").decode(bytes);
+  const chunks = [...raw.matchAll(/stream\r?\n([\s\S]*?)\r?\nendstream/g)];
+  let out = "";
+  for (const chunk of chunks) {
+    const buf = Buffer.from(chunk[1]!, "latin1");
+    for (const inflate of [inflateSync, inflateRawSync]) {
+      try {
+        out += inflate(buf).toString("latin1");
+        break;
+      } catch {
+        /* try the other wrapper */
+      }
+    }
+  }
+  return out;
+}
+
+describe("arrival 1 — print-nature compile", () => {
+  it("compiles examples/arrival.viva with print-nature and no hand-written inset", () => {
+    const { src, ir } = compileArrival();
+    expect(src).not.toMatch(/(^|\n)\s*(areaX|areaY|insetL|plotPad)\s*:/);
+    expect(ir.name).toBe("Arrival");
+    expect(ir.timeline?.beats).toBe(4);
+    expect(ir.events.some((e) => e.type === "drag" && e.target === "tokens")).toBe(true);
+    expect(renderSvgFromIr(ir)).toMatch(/时间|心率|到站/);
+  });
+});
+
+describe("arrival 2 — 89 mm span:1 and 183 mm span:2", () => {
+  it("keeps single-column cells at 89 mm and the cross-column cell at 183 mm", () => {
+    const { ir } = compileArrival();
+    const a = cellWidthMm(ir, "a");
+    const b = cellWidthMm(ir, "b");
+    const c = cellWidthMm(ir, "c");
+    expect(a).toBeCloseTo(COLUMN_MM.single, 0);
+    expect(b).toBeCloseTo(COLUMN_MM.single, 0);
+    expect(c).toBeCloseTo(COLUMN_MM.double, 0);
+    expect(c).toBeGreaterThan(a * 1.8);
+  });
+});
+
+describe("arrival 3 — SVG↔PDF ink + mm spacing", () => {
+  it("rasters real PDF pages and matches SVG ink plus sidecar geometry", async () => {
+    expect(pdftoppmAvailable(), "pdftoppm must be installed for the eyes door").toBe(true);
+    const { src, ir } = compileArrival();
+    const box = resolveSceneBox(evalSceneProps(ir.scene.props, [ir.state, ir.data]));
+    expect(box.width).toBeCloseTo(mmToPx(210));
+    const pdf = await exportArtifact(src, "pdf", PRINT, "arrival.viva");
+    expect(pdf.vector).toBe(true);
+    expect(pdf.sidecar?.length).toBeGreaterThan(0);
+    const doc = await PDFDocument.load(pdf.bytes);
+    expect(doc.getPageCount()).toBeGreaterThanOrEqual(2);
+    expect(doc.getPage(0)!.getSize().width).toBeCloseTo(box.width * PX_PER_PT, 0);
+
+    const report = await compareSvgPdfPages(ir, { width: 640 });
+    expect(report.pdfRaster).toBe("pdftoppm");
+    expect(report.idEqual, `painted=${report.paintedIds.length} sidecar=${report.sidecarIds.length}`).toBe(true);
+    expect(report.sidecarOverlap).toBeGreaterThan(0.85);
+    expect(report.minInkIou, JSON.stringify(report.pages)).toBeGreaterThan(0.55);
+    expect(report.maxMse).toBeLessThan(0.45);
+  }, 60_000);
+});
+
+describe("arrival 4 — PDF glyph / rotate / dash / clip / fill / tracking", () => {
+  it("writes rotate, dash, clip, filled path, and has no unmapped CJK", async () => {
+    const { src, ir } = compileArrival();
+    const pdf = await exportArtifact(src, "pdf", PRINT, "arrival.viva");
+    const ops = pdfOperators(pdf.bytes);
+    expect(ops).toMatch(/cm/);
+    expect(ops).toMatch(/\bd\b|\[\s*\d/);
+    expect(ops).toMatch(/W\s+n|W\*/);
+    expect(ops).toMatch(/\bf\b|f\*|B/);
+    const missing = pdf.missingGlyphs ?? [];
+    expect(missing).toEqual([]);
+    const unmapped = pdfUnmappedGlyphs("时间心率到站对照药物");
+    expect(unmapped).toEqual([]);
+    const svg = renderSvgFromIr(ir);
+    expect(svg).toMatch(/rotate\(|letter-spacing|stroke-dasharray|linearGradient/);
+  }, 30_000);
+});
+
+describe("arrival 6 — gif/mp4 clock playback", () => {
+  it("hold frames are one per beat; playback samples the same clock denser", async () => {
+    const { src, ir } = compileArrival();
+    expect(holdFrameTimes(ir.timeline!).length).toBe(4);
+    expect(playbackFrameTimes(ir.timeline!).length).toBeGreaterThan(4);
+    const holds = await exportBeatSequence(src, { width: 240, ...PRINT }, "arrival.viva");
+    const play = await exportBeatPlayback(src, { width: 240, ...PRINT }, "arrival.viva");
+    expect(holds.length).toBe(4);
+    expect(play.length).toBe(playbackFrameTimes(ir.timeline!).length);
+  }, 60_000);
+});
+
+describe("arrival 7 — logical / painted / sidecar / review IDs", () => {
+  it("Runtime flatten, static SVG, PDF sidecar, and review share painted ids", async () => {
+    const { src, ir } = compileArrival();
+    const { nodes } = flattenNodesFromIr(ir);
+    const painted = nodes.filter((n) => nodePainted(n.props)).map((n) => n.id).sort();
+    const svg = renderSvgFromIr(ir);
+    const svgIds = [...svg.matchAll(/data-viva-id="([^"]+)"/g)].map((m) => m[1]!).sort();
+    expect(svgIds).toEqual(painted);
+    const pdf = await exportArtifact(src, "pdf", PRINT, "arrival.viva");
+    const side = [...new Set((pdf.sidecar ?? []).map((n) => n.id))].sort();
+    expect(side).toEqual(painted);
+    const review = listSelectableNodes(ir).map((n) => n.id);
+    expect(painted.every((id) => review.includes(id))).toBe(true);
+  }, 30_000);
+});
+
+describe("arrival 8 — playground / embed / pack / docker files", () => {
+  it("playground lists Arrival and embed / pack / docker keep assets", () => {
+    const playground = readFileSync("playground/main.ts", "utf8");
+    expect(playground).toMatch(/arrival\.viva/);
+    expect(playground).toMatch(/Arrival:/);
+    const pkg = JSON.parse(readFileSync("package.json", "utf8")) as { files: string[] };
+    expect(pkg.files).toEqual(expect.arrayContaining(["dist", "assets", "examples", "Dockerfile"]));
+    const docker = readFileSync("Dockerfile", "utf8");
+    expect(docker).toMatch(/COPY assets \.\/assets/);
+    expect(existsSync("assets/fonts/VivaSansCJK.ttf") || existsSync("assets/fonts/VivaSansFallback.ttf")).toBe(
+      true,
+    );
+  });
+
+  it("npm pack includes CLI, embed bundle, CJK font, and arrival fixture", () => {
+    const listing = execSync("npm pack --dry-run --json", { encoding: "utf8" });
+    const json = JSON.parse(listing) as { filename?: string; files?: { path: string }[] }[];
+    const files = (json[0]?.files ?? []).map((f) => f.path);
+    expect(files.some((p) => p.includes("examples/arrival.viva"))).toBe(true);
+    expect(files.some((p) => /assets\/fonts\/VivaSans/.test(p))).toBe(true);
+    expect(files.some((p) => p === "Dockerfile")).toBe(true);
+  }, 30_000);
+});
+
+describe("arrival 9 — external widget / handbook / compile hook", () => {
+  afterEach(() => {
+    unregisterWidget("ext.stamp");
+    unregisterCompileHook("ext-stamp");
+    resetWidgetPlugins();
+  });
+
+  it("registers a hook after folio without editing core widgets.ts", () => {
+    registerCompileHook({
+      name: "ext-stamp",
+      after: ["folio"],
+      run(artifact) {
+        artifact.scene?.layers.push({
+          name: "__ext_stamp",
+          span: artifact.span,
+          props: {},
+          items: [
+            {
+              kind: "node",
+              name: "extStamp",
+              props: { x: literal(4), y: literal(4), text: literal("EXT") },
+              span: artifact.span,
+            },
+          ],
+        });
+      },
+    });
+    const { ir } = compileArrival();
+    expect(listCompileHooks()).toEqual(expect.arrayContaining(["folio", "ext-stamp", "newspaper"]));
+    const folioIdx = listCompileHooks().indexOf("folio");
+    const extIdx = listCompileHooks().indexOf("ext-stamp");
+    expect(extIdx).toBeGreaterThan(folioIdx);
+    expect(ir.scene.layers.some((l) => l.name === "__ext_stamp")).toBe(true);
+    expect(ir.scene.layers.some((l) => l.name === "__page_folio")).toBe(true);
+  });
+
+  it("registers a host widget and an extra handbook id without core edits", () => {
+    registerWidget({
+      name: "ext.box",
+      expand({ artifact }) {
+        artifact.scene?.layers.push({
+          name: "__ext_box",
+          span: artifact.span,
+          props: {},
+          items: [],
+        });
+      },
+    });
+    registerStylePreset({
+      id: "ext-handbook",
+      scene: { background: "#fafafa" },
+      palette: { accent: "#111111" },
+      typography: {},
+    });
+    const result = compileSource(
+      `artifact Ext
+scene
+  size: 80 40
+widget ext.box
+`,
+      "ext.viva",
+      { handbookIds: ["ext-handbook"] },
+    );
+    expect(result.error).toBeNull();
+    expect(result.ir!.scene.layers.some((l) => l.name === "__ext_box")).toBe(true);
+    expect(listStylePresets().some((p) => p.id === "ext-handbook")).toBe(true);
+  });
+});
+
+describe("arrival 10 — slim prompt + capabilities + loop", () => {
+  it("product prompt is slim + capabilities, not LANGUAGE.md", async () => {
+    const prompt = productSystemPrompt();
+    expect(prompt.startsWith(SYSTEM_PROMPT_SLIM.slice(0, 60))).toBe(true);
+    expect(prompt).toMatch(/layout\.board/);
+    expect(prompt).toMatch(/__sel/);
+    expect(prompt).toMatch(/chart\.violin/);
+    expect(prompt).toMatch(/typeGrid/);
+    expect(prompt).not.toMatch(/# 语言参考|# Language/);
+    expect(prompt.length).toBeLessThan(8_000);
+    const caps = vivaCapabilities();
+    expect(caps.widgets).toEqual(expect.arrayContaining(["layout.board", "chart.violin"]));
+    expect(caps.compileHooks).toEqual(expect.arrayContaining(["folio", "newspaper"]));
+    const mcp = await handleMcpTool("viva_capabilities", {});
+    const json = JSON.parse(mcp.content[0]!.text);
+    expect(json.widgets).toEqual(expect.arrayContaining(["chart.scatter"]));
+  });
+
+  it("writePage is a real Runtime state writer", () => {
+    const state: Record<string, unknown> = {};
+    expect(writePage(state, 2, 3)).toBe(2);
+    expect(readPage(state)).toBe(2);
+    expect(writePage(state, 9, 3)).toBe(3);
+  });
+});

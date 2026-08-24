@@ -14,6 +14,7 @@ import scatter from "../examples/scatter.viva?raw";
 import figureAtlas from "../examples/figure-atlas.viva?raw";
 import scienceStudio from "../examples/science-studio.viva?raw";
 import twin from "../examples/twin.viva?raw";
+import arrival from "../examples/arrival.viva?raw";
 import printNature from "../docs/handbooks/print-nature.md?raw";
 import dashboardHandbook from "../docs/handbooks/dashboard.md?raw";
 import "./style.css";
@@ -31,6 +32,7 @@ const examples: Record<string, string> = {
   Atelier: atelier,
   Studio: scienceStudio,
   Atlas: figureAtlas,
+  Arrival: arrival,
 };
 
 /** Suggested handbook when opening an example (default preset: print-nature). */
@@ -38,6 +40,7 @@ const handbookSuggestions: Record<string, string> = {
   Atlas: "print-nature",
   Studio: "print-nature",
   Paper: "print-nature",
+  Arrival: "print-nature",
 };
 
 const DEFAULT_HANDBOOK = "print-nature";
@@ -68,6 +71,7 @@ let session: VivaSession = host.createSession({
   statePolicy: "preserve-data",
   handbooks: [],
 });
+(window as Window & { __viva?: { session: VivaSession } }).__viva = { session };
 
 let timer: number | null = null;
 let current = "Hello";

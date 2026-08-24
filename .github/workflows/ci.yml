@@ -17,8 +17,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
-      - name: Install ffmpeg
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
+      - name: Install ffmpeg and poppler
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg poppler-utils
       - run: npm test
       - name: Visual check (Figure Atlas)
         run: node dist/cli.js check examples/figure-atlas.viva --visual --handbook print-nature

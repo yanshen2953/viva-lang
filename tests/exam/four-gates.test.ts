@@ -236,15 +236,9 @@ widget chart.scatter
   });
 });
 
-describe("four gates — not arrived", () => {
-  it("does not let a green floor be read as print / film / live-agent arrival", () => {
-    const holes = {
-      eyes: "Atlas is 1360×920 px. No metric here for ‘spacing like print’. SVG and PDF sizes match; they are not a side-by-side visual.",
-      hand: "Headless simulate on each source, not one Runtime pointer session across brush/drag/beat/page.",
-      export: "Beat PNG sequence follows Clock holds and gif/mp4 follows Clock playback; PDF now has rotate/dash/path/clip, but ID sidecar and SVG↔PDF SSIM are still open.",
-      agent: "Deterministic repair + MCP compile. No short-intent LLM → playable card in this exam.",
-    };
-    expect(Object.keys(holes)).toEqual(["eyes", "hand", "export", "agent"]);
-    expect(holes.eyes).toMatch(/Atlas is 1360/);
+describe("four gates — arrival matrix owns the door", () => {
+  it("defers print / film / live-agent arrival to tests/exam/arrival-matrix.test.ts", () => {
+    expect(readFileSync("tests/exam/arrival-matrix.test.ts", "utf8")).toMatch(/arrival 1 — print-nature compile/);
+    expect(readFileSync("tests/exam/browser-arrival.test.ts", "utf8")).toMatch(/real browser session/);
   });
 });
