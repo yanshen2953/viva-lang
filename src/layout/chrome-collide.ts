@@ -419,9 +419,9 @@ export function placePaperChrome(
       const n = yTitleLines.length;
       rects.push({
         id: "yTitle",
-        x: yTitleX - toScene(AXIS_FONT * 0.5) - (n - 1) * axisLineH,
+        x: yTitleX - toScene(AXIS_FONT * 0.85) - (n - 1) * axisLineH,
         y: (box.py0 + box.py1) / 2 - tw / 2,
-        w: toScene(AXIS_FONT) + (n - 1) * axisLineH,
+        w: toScene(AXIS_FONT * 1.4) + (n - 1) * axisLineH,
         h: tw,
       });
     }
@@ -537,7 +537,7 @@ export function placePaperChrome(
       extras.legendAt === "bottom"
         ? legendStep - toScene(14) - toScene(6)
         : cell
-          ? cell.x1 - legendX - toScene(14) - toScene(6)
+          ? cell.x1 - legendX - toScene(14)
           : toScene(compact ? 52 : 72);
     const maxW = Math.max(TICK_FONT * 5, toPx(leftover));
     legendLines = keys.map((key) => {
@@ -674,6 +674,17 @@ export function placePaperChrome(
   };
 }
 
+function pairSide(a: ChromeRect, b: ChromeRect): "l" | "r" | "t" | "b" | null {
+  const ids = [a.id, b.id];
+  const has = (re: RegExp) => ids.some((id) => re.test(id));
+  if (has(/^yTitle$/)) return "l";
+  if (has(/^cbar/) || has(/^legend-/)) return "r";
+  if (has(/^title$/) || has(/^panel-label$/)) return "t";
+  if (has(/^xTitle$/) || has(/^xtick-/)) return "b";
+  return null;
+}
+
+/** Grow by cell overflow, plus same-side chrome overlap (not title-vs-ytick width). */
 export function growInsetsForChrome(
   rects: ChromeRect[],
   cell: CellBox,
@@ -692,17 +703,14 @@ export function growInsetsForChrome(
       const a = rects[i]!;
       const b = rects[j]!;
       if (!rectsOverlap(a, b, pad)) continue;
-      const pair = `${a.id} ${b.id}`;
-      const leftish = /yTitle|ytick|panel-label/.test(pair);
-      const rightish = /cbar|cbar-title|legend-/.test(pair);
-      const topish = /title|panel-label/.test(pair);
-      const botish = /xTitle|xtick|legend-/.test(pair);
+      const side = pairSide(a, b);
+      if (!side) continue;
       const overlapW = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x) + pad;
       const overlapH = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y) + pad;
-      if (leftish) out.l = Math.max(out.l, overlapW);
-      if (rightish) out.r = Math.max(out.r, overlapW);
-      if (topish) out.t = Math.max(out.t, overlapH);
-      if (botish) out.b = Math.max(out.b, overlapH);
+      if (side === "l") out.l = Math.max(out.l, overlapW);
+      if (side === "r") out.r = Math.max(out.r, overlapW);
+      if (side === "t") out.t = Math.max(out.t, overlapH);
+      if (side === "b") out.b = Math.max(out.b, overlapH);
     }
   }
   return out;
@@ -732,15 +740,17 @@ function squeezePair(
   floorA: number,
   floorB: number,
   budget: number,
+  prefer: "a" | "b",
 ): [number, number] {
   const extra = a + b - budget;
   if (extra <= 1e-6) return [a, b];
   const slackA = Math.max(0, a - floorA);
   const slackB = Math.max(0, b - floorB);
-  const slack = slackA + slackB;
-  if (slack <= 1e-6) return [a, b];
-  const take = Math.min(extra, slack);
-  return [a - take * (slackA / slack), b - take * (slackB / slack)];
+  const first = prefer === "b" ? slackB : slackA;
+  const takeFirst = Math.min(extra, first);
+  const takeSecond = Math.min(extra - takeFirst, prefer === "b" ? slackA : slackB);
+  if (prefer === "b") return [a - takeSecond, b - takeFirst];
+  return [a - takeFirst, b - takeSecond];
 }
 
 export function clampChartInsets(
@@ -758,8 +768,8 @@ export function clampChartInsets(
   let r = Math.max(floor.r, insets.r);
   let t = Math.max(floor.t, insets.t);
   let b = Math.max(floor.b, insets.b);
-  [l, r] = squeezePair(l, r, floor.l, floor.r, Math.max(minScene, cellW - minPlotW));
-  [t, b] = squeezePair(t, b, floor.t, floor.b, Math.max(minScene, cellH - minPlotH));
+  [l, r] = squeezePair(l, r, floor.l, floor.r, Math.max(minScene, cellW - minPlotW), "b");
+  [t, b] = squeezePair(t, b, floor.t, floor.b, Math.max(minScene, cellH - minPlotH), "a");
   return { l, r, t, b };
 }
 
