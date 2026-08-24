@@ -2,10 +2,15 @@ import { describe, expect, it } from "vitest";
 import { compileSource } from "../../src/pipeline.js";
 import { evaluate } from "../../src/eval.js";
 import {
+  clampChartInsets,
   ellipsizeToWidth,
   estimateTextWidthPx,
   fitShift,
+  growInsetsForChrome,
   growInsetsForNeighbors,
+  INSET_CAP_FIT,
+  INSET_CAP_SOFT,
+  MIN_PLOT_FRAC,
   minWidthForLines,
   placePaperChrome,
   rectsOverlap,
@@ -613,6 +618,43 @@ widget chart.line
     }
   });
 
+  it("clamps insets to a plot floor, not a 38% / 50% side cap", () => {
+    const floor = { l: 8, r: 8, t: 8, b: 8 };
+    const pastSoft = clampChartInsets({ l: 8, r: 90, t: 8, b: 8 }, 200, 160, floor);
+    expect(pastSoft.r).toBeGreaterThan(200 * INSET_CAP_SOFT.r);
+    expect(pastSoft.r).toBe(90);
+    const pastFit = clampChartInsets({ l: 8, r: 120, t: 8, b: 8 }, 200, 160, floor);
+    expect(pastFit.r).toBeGreaterThan(200 * INSET_CAP_FIT.r);
+    expect(pastFit.r).toBe(120);
+    const squeezed = clampChartInsets({ l: 80, r: 120, t: 8, b: 8 }, 200, 160, floor);
+    expect(squeezed.l + squeezed.r).toBeLessThanOrEqual(200 * (1 - MIN_PLOT_FRAC) + 0.01);
+    expect(200 - squeezed.l - squeezed.r).toBeGreaterThanOrEqual(200 * MIN_PLOT_FRAC - 0.01);
+  });
+
+  it("grows neighbor overflow by the full overlap, not a half-notch", () => {
+    const grow = growInsetsForNeighbors(
+      [{ id: "legend-0", x: 168, y: 20, w: 40, h: 12 }],
+      { x0: 0, y0: 0, x1: 180, y1: 120 },
+      [
+        {
+          cell: { x0: 188, y0: 0, x1: 360, y1: 120 },
+          rects: [{ id: "yTitle", x: 186, y: 30, w: 10, h: 60 }],
+        },
+      ],
+      2,
+    );
+    expect(grow.r).toBeGreaterThan(20);
+  });
+
+  it("grows cell overflow by the full delta", () => {
+    const grow = growInsetsForChrome(
+      [{ id: "legend-0", x: 170, y: 20, w: 50, h: 12 }],
+      { x0: 0, y0: 0, x1: 200, y1: 120 },
+      4,
+    );
+    expect(grow.r).toBeCloseTo(24, 5);
+  });
+
   it("grows past the soft inset cap so a cramped right legend stays in the cell", () => {
     const result = compileSource(
       `artifact Cram
@@ -651,9 +693,60 @@ widget chart.line
     const texts = labels.map((node) =>
       node.kind === "node" ? String(evaluate(node.props.text, env)) : "",
     );
-    const grew = rightInset > 220 * 0.38 + 1;
-    const clipped = texts.some((t) => /\.\.\.$/.test(t));
-    expect(grew || clipped).toBe(true);
+    expect(rightInset).toBeGreaterThan(220 * INSET_CAP_SOFT.r + 1);
+    expect(texts.some((t) => /\.\.\.$/.test(t))).toBe(false);
+    expect(texts.join(" ")).toMatch(/placebo/);
+    expect(texts.join(" ")).toMatch(/active/);
+    for (const node of labels) {
+      if (node.kind !== "node") continue;
+      const x = evaluate(node.props.x, env) as number;
+      const text = String(evaluate(node.props.text, env));
+      expect(x + estimateTextWidthPx(text, 8, 0.1)).toBeLessThanOrEqual(cellX[1]! + 2);
+    }
+  });
+
+  it("grows a right legend past the old 50% fit cap instead of ellipsizing", () => {
+    const result = compileSource(
+      `artifact TightFit
+data rows = [
+  { x: 1, y: 2, grp: "placebo-control-arm" }
+  { x: 2, y: 4, grp: "active-treatment-arm" }
+]
+scene
+  size: 180 140
+  background: #ffffff
+widget chart.line
+  data: rows
+  xField: x
+  yField: y
+  group: grp
+  xlim: 0 3
+  ylim: 0 5
+  yLabel: "Score"
+  legend: right
+  interactive: false
+`,
+      "tight-fit.viva",
+      { handbookIds: ["print-nature"] },
+    );
+    expect(result.error).toBeNull();
+    const ir = result.ir!;
+    const env = [ir.state, ir.data];
+    const frame = ir.frames[0]!;
+    const cellX = evaluate(frame.props.cellX!, env) as number[];
+    const plotX = evaluate(frame.props.x, env) as number[];
+    const rightInset = cellX[1]! - plotX[1]!;
+    const labels = ir.scene.layers
+      .flatMap((l) => l.items)
+      .filter((i) => i.kind === "node" && /legLbl_/.test(i.name));
+    const texts = labels.map((node) =>
+      node.kind === "node" ? String(evaluate(node.props.text, env)) : "",
+    );
+    expect(rightInset).toBeGreaterThan(180 * INSET_CAP_FIT.r);
+    expect(texts.some((t) => /\.\.\.$/.test(t))).toBe(false);
+    expect(texts.join(" ")).toMatch(/placebo/);
+    expect(texts.join(" ")).toMatch(/control/);
+    expect(plotX[1]! - plotX[0]!).toBeGreaterThanOrEqual(180 * MIN_PLOT_FRAC - 1);
     for (const node of labels) {
       if (node.kind !== "node") continue;
       const x = evaluate(node.props.x, env) as number;

@@ -38,8 +38,6 @@ import {
   growInsetsForNeighbors,
   ellipsizeToWidth,
   wrapTextLines,
-  INSET_CAP_FIT,
-  INSET_CAP_SOFT,
   placePaperChrome,
   thinXTicks,
   thinYTicks,
@@ -1286,15 +1284,8 @@ function expandLayoutFigure(
   const toScene = (px: number) => px / Math.max(scale, 1e-6);
   const pad = toScene(3);
   const floor = { l: toScene(10), r: toScene(8), t: toScene(8), b: toScene(10) };
-  const clampInset = (
-    l: number,
-    r: number,
-    t: number,
-    b: number,
-    width: number,
-    height: number,
-    cap = INSET_CAP_SOFT,
-  ) => clampChartInsets({ l, r, t, b }, width, height, floor, cap);
+  const clampInset = (l: number, r: number, t: number, b: number, width: number, height: number) =>
+    clampChartInsets({ l, r, t, b }, width, height, floor);
 
   type CellPlan = {
     name: string;
@@ -1393,7 +1384,6 @@ function expandLayoutFigure(
           plan.b + grow.b,
           plan.cellW,
           plan.cellH,
-          iter >= 3 ? INSET_CAP_FIT : INSET_CAP_SOFT,
         );
         if (
           next.l - plan.l > 0.4 ||
@@ -3139,9 +3129,8 @@ function fitChartInsets(
   let r = floor.r;
   let t = floor.t;
   let b = floor.b;
-  let cap = INSET_CAP_SOFT;
   const clamp = () => {
-    const next = clampChartInsets({ l, r, t, b }, cellW, cellH, floor, cap);
+    const next = clampChartInsets({ l, r, t, b }, cellW, cellH, floor);
     l = next.l;
     r = next.r;
     t = next.t;
@@ -3165,7 +3154,6 @@ function fitChartInsets(
       y1: cellY0 + cellH,
     }, pad);
     if (grow.l <= 0.5 && grow.r <= 0.5 && grow.t <= 0.5 && grow.b <= 0.5) break;
-    if (iter >= 7) cap = INSET_CAP_FIT;
     l += grow.l;
     r += grow.r;
     t += grow.t;

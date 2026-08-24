@@ -699,10 +699,10 @@ export function growInsetsForChrome(
       const botish = /xTitle|xtick|legend-/.test(pair);
       const overlapW = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x) + pad;
       const overlapH = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y) + pad;
-      if (leftish) out.l = Math.max(out.l, overlapW * 0.5);
-      if (rightish) out.r = Math.max(out.r, overlapW * 0.5);
-      if (topish) out.t = Math.max(out.t, overlapH * 0.5);
-      if (botish) out.b = Math.max(out.b, overlapH * 0.5);
+      if (leftish) out.l = Math.max(out.l, overlapW);
+      if (rightish) out.r = Math.max(out.r, overlapW);
+      if (topish) out.t = Math.max(out.t, overlapH);
+      if (botish) out.b = Math.max(out.b, overlapH);
     }
   }
   return out;
@@ -710,24 +710,57 @@ export function growInsetsForChrome(
 
 export type InsetBox = { l: number; r: number; t: number; b: number };
 
-/** First-pass plot budget. Paper chrome may still overflow. */
+export type PlotFloor = {
+  /** Smallest plot / cell fraction on each axis. */
+  minFrac?: number;
+  /** Absolute scene-unit floor for the plot span. */
+  minScene?: number;
+};
+
+/** Historical per-side fractions. Solver no longer clamps to these. */
 export const INSET_CAP_SOFT = { l: 0.38, r: 0.38, t: 0.28, b: 0.32 };
-/** Second pass: shrink the plot so wrapped chrome can stay in the cell. */
+/** Historical second-pass fractions. Solver no longer clamps to these. */
 export const INSET_CAP_FIT = { l: 0.5, r: 0.5, t: 0.4, b: 0.42 };
+
+/** Keep a usable plot; chrome may take the leftover (past 38% / 50%). */
+export const MIN_PLOT_FRAC = 0.22;
+export const MIN_PLOT_SCENE = 8;
+
+function squeezePair(
+  a: number,
+  b: number,
+  floorA: number,
+  floorB: number,
+  budget: number,
+): [number, number] {
+  const extra = a + b - budget;
+  if (extra <= 1e-6) return [a, b];
+  const slackA = Math.max(0, a - floorA);
+  const slackB = Math.max(0, b - floorB);
+  const slack = slackA + slackB;
+  if (slack <= 1e-6) return [a, b];
+  const take = Math.min(extra, slack);
+  return [a - take * (slackA / slack), b - take * (slackB / slack)];
+}
 
 export function clampChartInsets(
   insets: InsetBox,
   cellW: number,
   cellH: number,
   floor: InsetBox,
-  cap: { l: number; r: number; t: number; b: number } = INSET_CAP_SOFT,
+  plotFloor: PlotFloor = {},
 ): InsetBox {
-  return {
-    l: Math.min(Math.max(floor.l, insets.l), cellW * cap.l),
-    r: Math.min(Math.max(floor.r, insets.r), cellW * cap.r),
-    t: Math.min(Math.max(floor.t, insets.t), cellH * cap.t),
-    b: Math.min(Math.max(floor.b, insets.b), cellH * cap.b),
-  };
+  const minFrac = plotFloor.minFrac ?? MIN_PLOT_FRAC;
+  const minScene = plotFloor.minScene ?? MIN_PLOT_SCENE;
+  const minPlotW = Math.max(minScene, cellW * minFrac);
+  const minPlotH = Math.max(minScene, cellH * minFrac);
+  let l = Math.max(floor.l, insets.l);
+  let r = Math.max(floor.r, insets.r);
+  let t = Math.max(floor.t, insets.t);
+  let b = Math.max(floor.b, insets.b);
+  [l, r] = squeezePair(l, r, floor.l, floor.r, Math.max(minScene, cellW - minPlotW));
+  [t, b] = squeezePair(t, b, floor.t, floor.b, Math.max(minScene, cellH - minPlotH));
+  return { l, r, t, b };
 }
 
 export type NeighborChrome = {
@@ -762,11 +795,11 @@ export function growInsetsForNeighbors(
         const overlapW = Math.min(rect.x + rect.w, other.x + other.w) - Math.max(rect.x, other.x) + pad;
         const overlapH = Math.min(rect.y + rect.h, other.y + other.h) - Math.max(rect.y, other.y) + pad;
         if (horizontal) {
-          if (dx > 0) out.r = Math.max(out.r, overlapW * 0.5);
-          else out.l = Math.max(out.l, overlapW * 0.5);
+          if (dx > 0) out.r = Math.max(out.r, overlapW);
+          else out.l = Math.max(out.l, overlapW);
         } else {
-          if (dy > 0) out.b = Math.max(out.b, overlapH * 0.5);
-          else out.t = Math.max(out.t, overlapH * 0.5);
+          if (dy > 0) out.b = Math.max(out.b, overlapH);
+          else out.t = Math.max(out.t, overlapH);
         }
       }
     }
