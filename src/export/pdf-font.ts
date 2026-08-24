@@ -3,6 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { PDFDocument, StandardFonts, type PDFFont } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
+import { missingGlyphsInFont } from "../metrics/glyphs.js";
 
 const BUNDLED_FULL = "VivaSansCJK.ttf";
 const BUNDLED_SUBSET = "VivaSansFallback.ttf";
@@ -118,4 +119,12 @@ export function pdfMissingGlyphs(font: PDFFont, text: string): string[] {
     }
   }
   return missing;
+}
+
+/**
+ * CJK / non-Latin coverage via fontkit cmap, not widthOfTextAtSize.
+ * `.notdef` glyphs that still return a width are reported missing.
+ */
+export function pdfUnmappedGlyphs(text: string, opts?: CjkFontResolveOpts): string[] {
+  return missingGlyphsInFont(resolveCjkFontPath(opts), text);
 }
