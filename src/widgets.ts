@@ -3274,7 +3274,10 @@ function resolveLayoutBox(
     const slot = frameBoxOf(artifact, bound);
     if (slot) {
       const measure = sceneColumnMeasure(artifact);
-      if (measure && (bound === "body" || bound === "left" || bound === "right")) {
+      if (
+        measure &&
+        (bound === "body" || bound === "left" || bound === "right" || /_(body|left|right)$/.test(bound))
+      ) {
         return { x: measure.x, y: slot.y, w: measure.w, h: slot.h };
       }
       return slot;

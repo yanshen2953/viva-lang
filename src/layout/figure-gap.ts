@@ -8,8 +8,11 @@ export function figureGapDefaults(opts: {
   cols: number;
 }): { gutter: number; margin: number } {
   if (opts.unit === "mm" || opts.unit === "pt") {
-    if (opts.cols >= 2 && Math.abs(opts.width - COLUMN_MM.double) < 0.6) {
-      return { gutter: COLUMN_MM.double - COLUMN_MM.single * 2, margin: 0 };
+    if (Math.abs(opts.width - COLUMN_MM.double) < 4) {
+      return {
+        gutter: opts.cols >= 2 ? COLUMN_MM.double - COLUMN_MM.single * 2 : 0,
+        margin: 0,
+      };
     }
     return {
       gutter: opts.cols >= 2 ? 2.4 : 3,

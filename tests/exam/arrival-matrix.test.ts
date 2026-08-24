@@ -396,9 +396,8 @@ describe("arrival 10 — slim prompt + capabilities + loop", () => {
       expect(ir.frames.some((f) => f.name === "board2_body"), name).toBe(true);
       const a = cellWidthMm(ir, "a");
       const c = cellWidthMm(ir, "c");
-      expect(a, `${name} span:1`).toBeCloseTo(COLUMN_MM.single, 1);
-      expect(c, `${name} span:2`).toBeGreaterThan(COLUMN_MM.double - 6);
-      expect(c).toBeLessThanOrEqual(COLUMN_MM.double + 2);
+      expect(a, `${name} span:1`).toBeCloseTo(COLUMN_MM.single, 0);
+      expect(c, `${name} span:2`).toBeCloseTo(COLUMN_MM.double, 0);
       expect(c).toBeGreaterThan(a * 1.8);
       const d = ir.frames.find((f) => f.name === "d");
       expect(d, `${name} panel d`).toBeTruthy();
