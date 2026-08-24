@@ -42,7 +42,7 @@
 | SVG 导出 | `font-family` / `font-weight` / `letter-spacing` / `stroke-dasharray` / 旋转轴标题 |
 | 动态 widget 插件 | `registerWidget()` / `listWidgets()` |
 | `layout.figure` | `cols/rows/gutter/margin`；图表 `span: 2` 跨栏；不写 `inset*` / `x/y/w/h` 时按绑定 chart 估留白并铺满；相邻格再长 inset；`title`/`subtitle`/`caption`/`plate` 由编译器画。仍不是跨页 |
-| `layout.board` | `safe`/`title`/`body`/`lower`/`hud`；题注 + `controls`/`bind` 芯片（选中亮、不另画绑定值）；不写 `w/h` 铺满场景；不写 `safe`/`titleH`/`lowerH` 时按题注折行和芯片估条带；`splits` / `beats` / `bleed` / `typeGrid`；`--beats` 出 PNG 序列，可选 ffmpeg 拼 GIF/MP4 幻灯 |
+| `layout.board` | `safe`/`title`/`body`/`lower`/`hud`；题注 + `controls`/`bind` 芯片（选中亮、不另画绑定值）；不写 `w/h` 铺满场景；不写 `safe`/`titleH`/`lowerH` 时按题注折行和芯片估条带；`splits` / `beats` / `bleed` / `typeGrid`；`--beats` 出 hold 中点 PNG；GIF/MP4 按 timeline fps 采完整 Clock hold+ease |
 | 图表对位 | `panel: a` 吃已有 frame |
 | 投稿尺寸 | `unit: mm` + `column: single\|double` |
 | Agent 热路径 | slim prompt 默认；MCP/HTTP compile 与 session compile/patch 附 raster visual QA（错误失败 success，IR 仍返回） |
@@ -78,13 +78,13 @@
 
 ## 到站考试（四道门）
 
-怎么知道自己到了，而不是又「接口齐」：同一份极小源码过眼睛 / 手 / 导出 / agent。地板在 `tests/exam/four-gates.test.ts`。
+怎么知道自己到了，而不是又「接口齐」：同一份极小源码过眼睛 / 手 / 导出 / agent。系统审计与退出条件见 [`ARRIVAL_AUDIT.md`](./ARRIVAL_AUDIT.md)；地板在 `tests/exam/four-gates.test.ts`。
 
 | 门 | 地板（CI 锁住） | 到站？ |
 | --- | --- | --- |
 | 眼睛 | 89 / 183 mm 的 SVG 与矢量 PDF 同宽；paper-cjk 缺字表空 | **否**。Atlas 仍是 1360 px 工作室。间距像印的没有度量。没有屏幕和 PDF 并排视觉 |
-| 手 | 四件默认可刷；翻拍后 `__sel` 还在；暗拍遮罩不抢指针 | **否**。是 `simulate`，不是 Runtime 指针连打四件。跳页在 `paper-pages` |
-| 导出 | `data-viva-id` 对 flatten；成片帧数跟 Clock hold | **否**。gif/mp4 仍是拍幻灯 |
+| 手 | 四件默认可刷；翻拍后 `__sel` 还在；暗拍遮罩不抢指针 | **否**。是 `simulate`，不是 Runtime 指针连打四件；分页只有静态 folio / PDF 切片，没有 Runtime 跳页 |
+| 导出 | painted `data-viva-id` 对 flatten；beat PNG 取 hold 中点；gif/mp4 跟完整 Clock playback | **否**。PDF 仍丢 rotate / gradient / dash / letterSpacing / 复杂 path；隐藏节点 ID 契约未定 |
 | agent | MCP 编译 + slim prompt + 确定性 repair | **否**。没有短意图 LLM → 卡上可玩 |
 
 world-hand 那一轮只跑了几何单测，**没有**过这四道门。

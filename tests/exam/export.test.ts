@@ -65,7 +65,7 @@ describe("static SVG + raster/pdf export", () => {
     expect(beat0Left).toBeGreaterThan(beat1Left + 15);
   }, 30_000);
 
-  it("stitches __beat rasters into a gif/mp4 slideshow via ffmpeg", async ({ skip }) => {
+  it("encodes Clock playback rasters into gif/mp4 via ffmpeg", async ({ skip }) => {
     if (!(await ffmpegAvailable())) skip();
     const src = readFileSync(path.resolve("examples/storyboard.viva"), "utf8");
     const gif = await exportBeatAnimation(src, "gif", { width: 320, handbookIds: ["print-nature"] }, "storyboard.viva");

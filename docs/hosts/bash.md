@@ -14,7 +14,7 @@ viva export examples/charts.viva -f jpg --width 1600 -o charts.jpg
 viva export examples/charts.viva -f pdf -o charts.pdf      # vector PDF (geometry 1:1, default)
 viva export examples/charts.viva -f pdf-raster -o r.pdf   # PNG-in-PDF fallback
 viva export examples/storyboard.viva --beats              # PNG sequence from __beat
-viva export examples/storyboard.viva --beats -f gif -o story.gif  # ffmpeg slideshow
+viva export examples/storyboard.viva --beats -f gif -o story.gif  # Clock hold+ease playback, ffmpeg encoded
 viva simulate examples/exam/P1_param_lab.viva --ticks 10
 viva check examples/figure-atlas.viva --visual --handbook print-nature
 viva provenance examples/hello.viva

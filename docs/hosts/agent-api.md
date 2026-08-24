@@ -59,7 +59,7 @@ Response: `compileSource()` fields plus raster `visual` / `visualOk`. Visual fin
 
 Returns binary body (`application/pdf`, etc.).
 
-`beats: true` returns JSON: PNG frames from `layout.board` `__beat`. With `format: "gif"` or `"mp4"`, the same frames are stitched by ffmpeg into one slideshow (not a timeline).
+`beats: true` returns JSON with one PNG at each `layout.board` Clock hold midpoint. With `format: "gif"` or `"mp4"` and a timeline, export samples the complete hold+ease cycle at `timeline.fps` and encodes those playback frames with ffmpeg. It shares Runtime Clock semantics, but it is not a desktop NLE with audio/editing tracks.
 
 ### Session / Pipeline / Provenance
 

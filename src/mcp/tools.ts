@@ -327,7 +327,7 @@ export const MCP_TOOL_DEFINITIONS = [
   {
     name: "viva_export",
     description:
-      "Export artifact to svg|png|jpg|pdf. beats:true writes one PNG per layout.board __beat. format gif|mp4 stitches those frames with ffmpeg (slideshow, not a timeline).",
+      "Export artifact to svg|png|jpg|pdf. beats:true writes one PNG per Clock hold. With a timeline, gif|mp4 samples the complete hold+ease playback at timeline.fps and encodes it with ffmpeg.",
     inputSchema: {
       type: "object",
       properties: {
@@ -337,7 +337,7 @@ export const MCP_TOOL_DEFINITIONS = [
         width: { type: "number" },
         cjkFontPath: { type: "string", description: "Host TTF/OTF for vector PDF CJK (also VIVA_PDF_CJK_FONT)" },
         outputPath: { type: "string", description: "Optional file path to write bytes" },
-        beats: { type: "boolean", description: "PNG sequence from layout.board __beat; gif|mp4 is a ffmpeg slideshow" },
+        beats: { type: "boolean", description: "Clock hold PNGs; gif|mp4 samples timeline hold+ease playback" },
       },
       required: ["source", "format"],
     },

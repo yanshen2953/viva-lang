@@ -1,6 +1,6 @@
 # 架构（实现要点）
 
-完整设计真源：**[`DESIGN.md`](./DESIGN.md)**。本文只记流水线与当前实现挂钩。
+完整设计真源：**[`DESIGN.md`](./DESIGN.md)**。本文只记流水线与当前实现挂钩。当前质量缺口、证据和到站退出条件见 **[`ARRIVAL_AUDIT.md`](./ARRIVAL_AUDIT.md)**。
 
 ```
 LLM (+ optional handbooks) → Viva DSL → Parser → Compiler → Visual IR → Runtime → SVG
@@ -19,8 +19,8 @@ LLM (+ optional handbooks) → Viva DSL → Parser → Compiler → Visual IR �
 
 | 模块 | 职责 |
 | --- | --- |
-| `src/export/static-svg.ts` | 无浏览器 SVG；`data-viva-id` 与 Runtime 对齐 |
-| `src/export/vector-pdf.ts` | 真矢量 PDF（非 PNG 嵌入） |
+| `src/export/static-svg.ts` | 无浏览器 SVG；painted `data-viva-id` 与 Runtime 使用同一生成规则 |
+| `src/export/vector-pdf.ts` | 真矢量 PDF（非 PNG 嵌入），但 paint 仍是 SVG 子集：缺 rotate / gradient / dash / letterSpacing / 完整 path |
 | `src/review/` | 圈选工具 + 富反馈 → `agentBrief`；Session `createReview` |
 
 Host 文档：`docs/hosts/`（含 [`review.md`](./hosts/review.md)）。

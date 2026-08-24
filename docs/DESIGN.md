@@ -185,7 +185,7 @@ layer marks
 | `chart.heat` / `chart.heatmap` | 热力 + 色条 | ✅ MVP |
 | `chart.vector` / `chart.funnel` / `chart.box` / `chart.violin` | 箭头 / 漏斗 / 箱线 / 密度 | ✅ 插件 |
 | `layout.figure` 多面板 | 网格 + `(a)(b)` + 题注/甲板；不写 `inset*` 时按 chrome 估留白；可铺满场景或 `panel: body` | ✅ 插件（不是关键字） |
-| `layout.board` | 安全框 / 字幕条 / splits / beats / bleed / typeGrid；省略 safe/titleH/lowerH 时按题注估；`--beats` PNG 序列，可选 ffmpeg 幻灯 | ✅ 插件 |
+| `layout.board` | 安全框 / 字幕条 / splits / beats / bleed / typeGrid；省略 safe/titleH/lowerH 时按题注估；beat PNG 取 Clock hold 中点，GIF/MP4 按 timeline fps 采 hold+ease | ✅ 插件 |
 
 规则：**结构展开 = widget；审美纪律 = handbook。**
 
@@ -240,7 +240,7 @@ compile({ handbookIds })   # 同一 id 加载 preset hook（见 handbooks/HOOK.m
 | chart.* widgets | ✅ | `widgets.ts` + `plugins/registry.ts` |
 | widget 动态注册 | ✅ | `registerWidget()`；未知名编译失败 |
 | layout.figure | ✅ | 网格 frame + `(a)(b)` + 题注；图表 `panel:`；可铺满场景或 board 槽 |
-| layout.board | ✅ | safe/title/body/lower + 题注属性；省略条带数字时按题注/芯片估；`--beats` 是 PNG 序列，gif/mp4 是 ffmpeg 幻灯不是成片 |
+| layout.board | ✅ | safe/title/body/lower + 题注属性；省略条带数字时按题注/芯片估；beat PNG 与 gif/mp4 共用 Runtime Clock（后者采完整 playback），仍不是桌面 NLE |
 | safe math + array concat | ✅ | `eval.ts` |
 | headless simulate | ✅ | `simulate.ts` / `session.simulate` |
 | export package (source+svg+prov) | ✅ | `session.exportPackage` |

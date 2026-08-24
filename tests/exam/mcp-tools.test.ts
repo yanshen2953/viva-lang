@@ -109,7 +109,7 @@ widget chart.line
     expect(json.frames[0].base64).not.toBe(json.frames[1].base64);
   }, 30_000);
 
-  it("viva_export beats+gif stitches a ffmpeg slideshow", async ({ skip }) => {
+  it("viva_export beats+gif encodes Clock playback with ffmpeg", async ({ skip }) => {
     if (!(await ffmpegAvailable())) skip();
     const src = `artifact "BeatsGif"
 data a = [{ x: 0, y: 2 }, { x: 1, y: 4 }]

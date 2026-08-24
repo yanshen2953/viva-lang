@@ -20,8 +20,8 @@
 | 柱 | 愿景里的样子 | 今天实际 | 差在哪 |
 | --- | --- | --- | --- |
 | 交互 | 汇报件本身就是活世界：点、刷、拖、联动、时间，和游戏同一套原语 | Runtime 有 click/hover/drag/collide/key/tick；世界手：点/拖 slop、`__hand` 握持、扫掠顶住、切向滑墙、编组共享一步、套索橡皮筋；图表默认跟手 `__tip`（`__tipX`/`__tipY` 为作者场景单位） / `__hover` / `__brush`（数据域） / `__highlightGrp`；挂了 `frame:` 的 World 点走同一套（投影坐标不绑 brush） | 手仍不是 Unity 输入栈；刷选还不是完整 linked selection；无动画过渡；内联卡上的检查/修复壳仍弱 |
-| 图表 | 轴、误差、分组、色标、投稿可读，由编译器长出来 | `chart.scatter/line/bar/heatmap/vector/funnel/box/violin` + 线性/log/band/time；轴标题在场景坐标；violin 为 KDE 轮廓；`print-nature` 接管刻度/轴标题字号与字距；PDF 默认 CJK 子集，宿主可挂全库 | 小栏宽间距仍粗；默认子集不是全库；不是投稿成品 |
-| 排版 | 作者只说「2×2 图、单栏 89 mm、安全框」；格子、出血、字幕条、对位由编译器算 | `layout.figure` 网格（不写 `inset*` 时按绑定 chart 估留白）；`layout.board` 安全框 + `splits` / `beats` / `bleed` / `typeGrid`（不写 `safe`/`titleH`/`lowerH` 时按题注和芯片估条带）；`unit: mm` + 单/双栏；`page: a4` PDF 切片 + `n / N` 页戳；figure 格子避开页缝；`--beats` 出 PNG 序列，可选 ffmpeg 拼 GIF/MP4 幻灯 | 页装箱不是栏宽重排；估 inset ≠ 碰撞求解；`play` 仍是拍遮罩，不是成片时间轴 |
+| 图表 | 轴、误差、分组、色标、投稿可读，由编译器长出来 | `chart.scatter/line/bar/heatmap/vector/funnel/box/violin` + 线性/log/band/time；轴标题在场景坐标；violin 为 KDE 轮廓；`print-nature` 接管刻度/轴标题字号与字距；PDF 优先随包 CJK 全库，宿主可覆盖 | 布局仍用 `0.58 × font` 假字宽；SVG/PDF 字体和 paint 能力不一致；不是投稿成品 |
+| 排版 | 作者只说「2×2 图、单栏 89 mm、安全框」；格子、出血、字幕条、对位由编译器算 | `layout.figure` 网格（不写 `inset*` 时按绑定 chart 估留白）；`layout.board` 安全框 + `splits` / `beats` / `bleed` / `typeGrid`（不写 `safe`/`titleH`/`lowerH` 时按题注和芯片估条带）；`unit: mm` + 单/双栏；`page: a4` PDF 切片 + `n / N` 页戳；figure 格子避开页缝；beat PNG 取 Clock hold 中点，GIF/MP4 按 timeline fps 采完整 hold+ease | 页装箱不是栏宽重排；估 inset ≠ 真实字体约束；PDF 丢 rotate/gradient/dash 等；Runtime 没有页面导航 |
 | 语法 | 原语极小，新能力只加插件名 | 核还算小；widget 走 `registerWidget()` | 语言表面没涨关键字。不要为图种/槽位加关键字 |
 | 编译器 | 度量、避让、对齐、交互默认、导出保真全在编译/运行时 | band/log/linear + handbook 涂颜料/接管字号字距 + 图核默认交互 | handbook **仍不**执行图语法（避让、对齐、栏宽文法）；导出保真仍有缺口 |
 | 插件 | 宿主运行时注册：图种、排版、领域视图，agent 可发现 | 手册 / 领域视图 / 结构宏都可注册 | 还不是热加载 / 沙箱包；未知 widget 编译失败并列出已注册名 |
@@ -76,8 +76,8 @@
 
 ### 3.3 图像 / 视频级排版
 
-有：`layout.figure` 网格 + `(a)(b)` + 格子甲板；图表 `span: 2` 跨栏（插件属性，不是关键字）；不写 `inset*` 时编译器按该格 chart 的刻度/标题/图例/色条迭代估留白；不写 `x/y/w/h` 时铺满场景，或 `panel: body` 吃 board 槽；`title`/`subtitle`/`caption` 由编译器画；两张以上未绑 panel 的 chart 自动成网格并停在剩余空位；`layout.board` 的 `safe` / `title` / `body` / `lower` + 题注属性（`body:`/`prose` 折进 `left` 或 `body`；`caption:` ident 保持绑定）+ `splits` / `beats` / `bleed` / `typeGrid`；不写 `safe`/`titleH`/`lowerH` 时按题注折行和芯片宽度估条带，空题注不再占 72/96；board / storyboard 例子用 title/caption，不再手摆字幕条；`unit: mm` + 栏宽；`page: a4` 的 PDF 切片盖 `n / N`（续页可带 figure `(continued)`）；会被页刀切开的 figure 行整行进下一页，场景拉高；CLI/MCP/HTTP `--beats` 按 `__beat` 导出 PNG 序列，`-f gif|mp4` 用 ffmpeg 把这些栅格拼成幻灯（2 fps，不是时间轴 / 成片）。  
-没有：栏宽文法、剪辑时间轴、真正的碰撞求解。`page: a4` 让 PDF 按页高切片，并在每页盖 `n / N`；续页顶栏重复 figure `(continued)` 或 board 题注。figure 格子避开页缝；`layout.board` 的 `body:` 在有 `page` 时按栏宽折行并避开页刀续到下一页。SVG/PNG 仍是一张长画布。这是页装箱 + 对页页戳（recto 右 / verso 左）+ 续页题注，仍不是章节标排版器。`typeGrid` 仍画安全框上的基线与 `type0`… 栏；`body:` / `prose` 会按可读栏宽（12 导轨合成 2–3 栏）灌进这些槽，从上到下再从左到右，仍不是 InDesign。这些必须继续是**插件**，不能变成语法。`play` 仍是拍遮罩。
+有：`layout.figure` 网格 + `(a)(b)` + 格子甲板；图表 `span: 2` 跨栏（插件属性，不是关键字）；不写 `inset*` 时编译器按该格 chart 的刻度/标题/图例/色条迭代估留白；不写 `x/y/w/h` 时铺满场景，或 `panel: body` 吃 board 槽；`title`/`subtitle`/`caption` 由编译器画；两张以上未绑 panel 的 chart 自动成网格并停在剩余空位；`layout.board` 的 `safe` / `title` / `body` / `lower` + 题注属性（`body:`/`prose` 折进 `left` 或 `body`；`caption:` ident 保持绑定）+ `splits` / `beats` / `bleed` / `typeGrid`；不写 `safe`/`titleH`/`lowerH` 时按题注折行和芯片宽度估条带，空题注不再占 72/96；board / storyboard 例子用 title/caption，不再手摆字幕条；`unit: mm` + 栏宽；`page: a4` 的 PDF 切片盖 `n / N`（续页可带 figure `(continued)`）；会被页刀切开的 figure 行整行进下一页，场景拉高；beat PNG 按 hold 中点导出，GIF/MP4 用同一 Clock 在 timeline fps 上采完整 hold+ease。
+没有：真实字体约束排版、Runtime 页面导航、桌面 NLE、通用碰撞求解。`page: a4` 让 PDF 按页高切片，并在每页盖 `n / N`；续页顶栏重复 figure `(continued)` 或 board 题注。figure 格子避开页缝；`layout.board` 的 `body:` 在有 `page` 时按栏宽折行并避开页刀续到下一页。SVG/PNG 仍是一张长画布。这是页装箱 + 对页页戳（recto 右 / verso 左）+ 续页题注，不是可跳转的 Runtime 页面状态机，也不是章节标排版器。`typeGrid` 仍画安全框上的基线与 `type0`… 栏；`body:` / `prose` 会按可读栏宽（12 导轨合成 2–3 栏）灌进这些槽，从上到下再从左到右，仍不是 InDesign。这些必须继续是**插件**，不能变成语法。`play` 的视觉仍由拍遮罩合成。
 
 ---
 
@@ -97,10 +97,10 @@
 
 ## 5. 下一刀（只服务三柱，不铺路由）
 
-1. 跨页 / 栏宽文法（`page: a4` 已切 PDF 页并盖 `n / N`；`column` 在有 `page` 时是图的 89/183 mm 栏宽，不再把纸页收成 89 mm；figure 格子会避开页缝并拉高场景，仍不重排正文；`layout.figure` 省略 gutter/margin/titleH 时按 mm/像素估缝和题注带；图/轴标题、图例键和色条标签已按栏宽折行，封顶后尾行省略，重叠刻度会抽稀，相邻格按溢出整量让 inset；inset 封顶是绘图区下限而不是 38%/50% 侧帽，还不是通用排版器）
-2. `__sel` 已是共享 key 集并藏行；box / violin / 折线按选中行重算或重连；高亮、play 遮罩、box/折线几何和同骨架 violin `d` 走 220ms 缓动，仍缺时间轴
-3. 随包 CJK 子集已按当前 examples + 论文词表重建；仍不是全库。宿主已能挂全库。未覆盖的字仍可能 `?`
-4. `layout.board play` / `typeGrid` 已在；`typeGrid` 的 `body:` 按可读栏宽灌槽；省略 `safe`/`titleH`/`lowerH` 时按题注估条带；`--beats` 默认 PNG 序列，`-f gif|mp4` 只是 ffmpeg 幻灯，不是成片时间轴
-5. 例子与 exam 种子编译已进 CI；MCP/HTTP compile 已附 raster visual QA，仍不挡 IR 成功。LLM 生成成功率仍未测。不要把 visual 误报成「已经闭环」
+1. 真实字体度量：layout / structural / SVG / PDF 统一字体和 metrics；当前假字宽会把 `iiiiiiii` 高估 161%，把 `WWWWWWWW` 低估 39%
+2. PDF paint 保真：补 rotate / letterSpacing / gradient / dash / radius / 完整 path，并对同一件做 SVG↔PDF 栅格叠差
+3. 一份规范到站件：同一短源码含 89 / 183 mm、CJK、World drag、brush、Clock play 和跨页
+4. 真实 Runtime 浏览器考试 + 页面状态机：一次 session 连打刷、拖、翻拍、跳页、暗拍刷；分页目前只有导出，没有 `__page` 写入者
+5. 关闭 Agent 环：产品与 exam 用同一真 slim prompt；多轮 compile/check/repair/re-prompt；最终判 PDF、行为和内联卡。完整退出条件见 [`ARRIVAL_AUDIT.md`](./ARRIVAL_AUDIT.md)
 
 发现插件：`viva widgets` 或 `listWidgets()`。

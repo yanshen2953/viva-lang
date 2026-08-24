@@ -220,7 +220,7 @@ describe("four gates — not arrived", () => {
     const holes = {
       eyes: "Atlas is 1360×920 px. No metric here for ‘spacing like print’. SVG and PDF sizes match; they are not a side-by-side visual.",
       hand: "Headless simulate on each source, not one Runtime pointer session across brush/drag/beat/page.",
-      export: "Beat PNG sequence follows Clock holds. gif/mp4 is still a slideshow, not a finished film.",
+      export: "Beat PNG sequence follows Clock holds and gif/mp4 follows Clock playback; PDF paint/ID parity is still incomplete.",
       agent: "Deterministic repair + MCP compile. No short-intent LLM → playable card in this exam.",
     };
     expect(Object.keys(holes)).toEqual(["eyes", "hand", "export", "agent"]);

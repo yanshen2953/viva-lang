@@ -9,7 +9,8 @@ Two tracks:
 
 ## Four gates (arrival exam)
 
-`tests/exam/four-gates.test.ts` is how we know we have **not** arrived.
+System audit and executable exit criteria: [`ARRIVAL_AUDIT.md`](./ARRIVAL_AUDIT.md).
+`tests/exam/four-gates.test.ts` currently locks only the measurable floor and explicitly records why we have **not** arrived.
 
 The bar (user): one small source through **eyes / hand / export / agent**.
 A green `npm test` is the measurable **floor**, not print / film / live-agent arrival.
@@ -17,8 +18,8 @@ A green `npm test` is the measurable **floor**, not print / film / live-agent ar
 | Door | Floor this file locks | Still not arrival |
 | --- | --- | --- |
 | Eyes | paper-column 89 mm + paper-cjk 89 mm + paper-storyboard 183 mm; SVG viewBox and vector PDF page the same size; CJK PDF `missingGlyphs` empty | Atlas is still 1360 px; “spacing like print” is unmeasured; no screen/PDF pair visual |
-| Hand | those sources stay live; paper-cjk brush `__sel`; storyboard beat jump keeps `__sel`; play veils ignore pointer | Headless `simulate`, not one Runtime pointer session; page-jump lives on `paper-pages`, not the four named files |
-| Export | `data-viva-id` = flatten = Runtime id scheme; storyboard `--beats` length = Clock holds, not `__beat++` in tick | gif/mp4 is a slideshow |
+| Hand | those sources stay live; paper-cjk brush `__sel`; storyboard beat jump keeps `__sel`; play veils ignore pointer | Headless `simulate`, not one Runtime pointer session; paged examples have static folio/export slices but **no Runtime page jump** |
+| Export | painted `data-viva-id` = flatten = Runtime id scheme; beat PNGs sample Clock holds; gif/mp4 sample full Clock playback at timeline fps | vector PDF still drops rotate/gradient/dash/letterSpacing/complex paths; hidden-node ID contract is unresolved |
 | Agent | MCP `viva_compile` + default slim prompt (not LANGUAGE.md); deterministic `repairSource` | No short-intent LLM → playable card |
 
 ```bash

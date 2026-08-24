@@ -532,7 +532,7 @@ function openApiSpec(): Record<string, unknown> {
       "/api/export": {
         post: {
           summary:
-            "Export svg|png|jpg|pdf. beats:true returns PNG frames from layout.board __beat. format gif|mp4 stitches those frames with ffmpeg (slideshow, not a timeline).",
+            "Export svg|png|jpg|pdf. beats:true returns Clock hold PNGs. With a timeline, gif|mp4 samples the complete hold+ease playback at timeline.fps and encodes it with ffmpeg.",
           requestBody: {
             content: {
               "application/json": {

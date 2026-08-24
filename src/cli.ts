@@ -331,7 +331,7 @@ Commands:
   export <file> -f <fmt>           Export svg|png|jpg|pdf (repeat --handbook for style)
   export <file> -f pdf --cjk-font  Host TTF/OTF for PDF CJK (also VIVA_PDF_CJK_FONT)
   export <file> --beats            PNG sequence from layout.board __beat
-  export <file> --beats -f gif|mp4 slideshow via ffmpeg (not a timeline / edited film)
+  export <file> --beats -f gif|mp4 Clock hold+ease playback via ffmpeg
   simulate <file> [--ticks N] Headless world JSON
   provenance <file> [-o out.json]  Compile via session and export provenance bundle
   prompt [--handbook id]      Print system prompt (+ handbooks)
