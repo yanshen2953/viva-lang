@@ -2,8 +2,8 @@
 
 > **用途：** 新开 Cloud Agent / 新 chat 时，先读本文 + `AGENTS.md`，再把文末「复制块」贴进首条消息。  
 > **仓库：** https://github.com/yanshen2953/viva-lang  
-> **真源分支：** `cursor/style-handbook-hook-a8c1`  
-> **主 PR：** https://github.com/yanshen2953/viva-lang/pull/9（用户已要求：该 merge 就 merge）  
+> **真源分支：** `cursor/mcp-pi-exam-f1b5`  
+> **主 PR：** https://github.com/yanshen2953/viva-lang/pull/9（已 merge）· 本轮 https://github.com/yanshen2953/viva-lang/pull/10  
 > **对照：** `docs/VISION.md`（愿景 vs 现状）· `docs/GAPS.md`（诚实缺口）· `docs/DESIGN.md` / `docs/PLAN.md`（设计真源；PLAN §1 里「1–3 已齐」**过满**，以 GAPS 为准）
 
 ---
@@ -109,7 +109,7 @@ ab659f7  色条刻在 zlim，不是三段色块端
 - visual QA **错误失败 compile success**（IR 仍返回以便 repair）
 - 内联卡跑 IR 级 browser visual（不引 resvg）
 - session 对 overflow / 空栏绑 data / 补 xLabel·yLabel / 删手写 tick 做确定性 repair
-- 离线 `examples/exam/*.viva` 编译率在 CI；`test:agent-exam` 用 key 测生成率
+- 离线 `examples/exam/*.viva` 编译率在 CI；`test:agent-exam` hard：**8/8**（Pi + MCP `viva mcp`；`deepseek-v4-flash-vision-exp`；H05 `dataKeys=1`）
 - `attachDragParamLoop` 是宿主胶水，不是语言关键字
 - 包内默认 `assets/fonts/VivaSansCJK.ttf` 全库
 
