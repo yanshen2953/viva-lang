@@ -21,10 +21,18 @@ import {
   writeFileSync,
 } from "node:fs";
 import path from "node:path";
+import {
+  EXAM_MCP_SYSTEM_ADDENDUM,
+  EXAM_PI_MCP_TOOLS,
+  SYSTEM_PROMPT_EXAM_MCP,
+  extractVivaSource,
+  formatFailedChecks,
+  redactSecrets,
+  shouldRepair,
+} from "../src/agent/exam-helpers.ts";
 import { createVivaAgentHost } from "../src/agent/index.ts";
 import { createNodePromptService } from "../src/agent/prompt.node.ts";
 import { SYSTEM_PROMPT } from "../src/llm/system-prompt.ts";
-import { SYSTEM_PROMPT_SLIM } from "../src/llm/system-prompt-slim.ts";
 import { compileSource } from "../src/pipeline.ts";
 import type { SceneNodeIR, VisualIR } from "../src/ir.ts";
 
@@ -111,17 +119,6 @@ function loadScenarios(track: Track, only?: string): Scenario[] {
   return list.filter((s) => s.id.includes(only) || s.id.startsWith(only));
 }
 
-function extractVivaSource(text: string): string {
-  let src = text.trim();
-  const idx = src.search(/^artifact\b/m);
-  if (idx >= 0) src = src.slice(idx);
-  const fence = /^```(?:viva)?\s*([\s\S]*?)```/im.exec(src);
-  if (fence) src = fence[1]!.trim();
-  const m = /^(artifact[\s\S]*?)(?:\n{2,}(?:Note|Explanation|Here|I |The |Hope)|$)/i.exec(src);
-  if (m) src = m[1]!.trim();
-  return src.trim();
-}
-
 function callPi(opts: {
   model: string;
   system: string;
@@ -132,6 +129,10 @@ function callPi(opts: {
     return { ok: false, text: "", raw: "DEEPSEEK_API_KEY is not set" };
   }
   const piBin = process.env.PI_BIN ?? "pi";
+  const extension = path.join(root, "install/pi-viva-mcp.ts");
+  const homeBin = path.join(process.env.HOME ?? "", ".npm-global/bin");
+  const pathEnv = `${homeBin}:${process.env.PATH ?? ""}`;
+  const timeoutMs = Number(process.env.VIVA_EXAM_TIMEOUT_MS ?? 240_000);
   const args = [
     "-p",
     "--provider",
@@ -141,10 +142,14 @@ function callPi(opts: {
     "--api-key",
     key,
     "--thinking",
-    "low",
-    "--no-tools",
+    process.env.VIVA_EXAM_THINKING ?? "off",
     "--no-session",
     "--no-extensions",
+    "--extension",
+    extension,
+    "--no-builtin-tools",
+    "--tools",
+    EXAM_PI_MCP_TOOLS.join(","),
     "--no-skills",
     "--no-prompt-templates",
     "--no-context-files",
@@ -153,18 +158,26 @@ function callPi(opts: {
     opts.system,
     opts.user,
   ];
+  const started = Date.now();
+  process.stderr.write(`  pi spawn (${timeoutMs}ms budget)\n`);
   const res = spawnSync(piBin, args, {
     encoding: "utf8",
     cwd: root,
-    env: { ...process.env, DEEPSEEK_API_KEY: key, PATH: process.env.PATH },
-    maxBuffer: 8 * 1024 * 1024,
-    timeout: 180_000,
+    env: {
+      ...process.env,
+      DEEPSEEK_API_KEY: key,
+      PATH: pathEnv,
+      VIVA_ROOT: root,
+    },
+    maxBuffer: 16 * 1024 * 1024,
+    timeout: timeoutMs,
   });
-  const raw = `${res.stdout ?? ""}\n${res.stderr ?? ""}`.trim();
-  if (res.error) return { ok: false, text: "", raw: String(res.error) };
-  if (res.status !== 0 && !raw.includes("artifact")) {
-    return { ok: false, text: raw, raw };
-  }
+  process.stderr.write(`  pi done in ${((Date.now() - started) / 1000).toFixed(1)}s status=${res.status ?? "err"}\n`);
+  const raw = redactSecrets(`${res.stdout ?? ""}\n${res.stderr ?? ""}`.trim(), [key]);
+  // spawnSync timeout still keeps stdout — do not drop a finished artifact.
+  if (raw.includes("artifact")) return { ok: true, text: raw, raw };
+  if (res.error) return { ok: false, text: raw, raw: String(res.error) };
+  if (res.status !== 0) return { ok: false, text: raw, raw };
   return { ok: true, text: raw, raw };
 }
 
@@ -358,16 +371,8 @@ function buildSystem(scenario: Scenario): string {
   const mode = scenario.system ?? (inferTrack(scenario) === "hard" ? "slim" : "full");
   const parts: string[] = [];
   if (mode === "slim") {
-    parts.push(SYSTEM_PROMPT_SLIM);
-    // Hard track gets LANGUAGE.md like an agent with repo docs open — not per-task coaching.
-    try {
-      parts.push(
-        "# Language reference\n\n" +
-          readFileSync(path.join(root, "docs/LANGUAGE.md"), "utf8"),
-      );
-    } catch {
-      /* optional */
-    }
+    // Short core only. Full slim + LANGUAGE.md + tools hung DeepSeek for 15m.
+    parts.push(SYSTEM_PROMPT_EXAM_MCP);
   } else {
     parts.push(SYSTEM_PROMPT);
   }
@@ -380,6 +385,7 @@ function buildSystem(scenario: Scenario): string {
       /* ignore missing handbook */
     }
   }
+  parts.push(EXAM_MCP_SYSTEM_ADDENDUM);
   return parts.join("\n\n---\n\n");
 }
 
@@ -402,9 +408,9 @@ Syntax reminders:
     : `
 Fix using diagnostics and valid Viva. Output ONLY full corrected source starting with artifact.
 `;
-  return `The following Viva source failed to compile.${crib}
+  return `The following Viva source failed exam checks (compile and/or IR asserts).${crib}
 
-Diagnostics:
+Failed checks:
 ${detail}
 
 Broken source:
@@ -446,10 +452,9 @@ function maybeRepair(
   let curChecks = checks;
   let repairs = 0;
   while (repairs < max) {
-    const compilePass = curChecks.find((c) => c.name === "compiles")?.pass;
-    if (compilePass !== false) break;
+    if (!shouldRepair(curChecks)) break;
     repairs += 1;
-    const detail = curChecks.find((c) => c.name === "compiles")?.detail ?? "error";
+    const detail = formatFailedChecks(curChecks) || "error";
     const got = tryExtract(model, system, repairUserPrompt(scenario, cur, detail), counter);
     if (got.source?.startsWith("artifact")) {
       cur = got.source;

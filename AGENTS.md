@@ -36,7 +36,7 @@ Dependency refresh on pod start is `npm install` (see environment update script)
 ### Two test tracks
 
 1. **Deterministic** (`tests/corpus`, `tests/exam`, `examples/exam`) — layers L1–L6, events E1–E5, space/charts, negatives, Host policies. See `docs/TESTING.md`.
-2. **Agent exam** (`tests/agent-exam`) — **Pi + DeepSeek** is the SUT. Default `npm run test:agent-exam` runs **hard** track H01–H08 (slim system, no template crib). Smoke A01–A12 via `test:agent-exam:smoke`. Model `deepseek-v4-flash-vision-exp`. Never commit API keys.
+2. **Agent exam** (`tests/agent-exam`) — **Pi + DeepSeek** is the SUT. Default `npm run test:agent-exam` runs **hard** track H01–H08 (slim system, no template crib). Pi loads `install/pi-viva-mcp.ts` and calls Viva **MCP** tools (not `--no-tools`). Smoke A01–A12 via `test:agent-exam:smoke`. Model `deepseek-v4-flash-vision-exp`. Never commit API keys.
 
 ### Architecture notes for agents
 

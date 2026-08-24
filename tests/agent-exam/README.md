@@ -1,7 +1,9 @@
 # Agent exam (Pi = system under test)
 
 Coding agent under test: **Pi** + DeepSeek (`deepseek-v4-flash-vision-exp`).
+Pi talks to Viva through **MCP** (`install/pi-viva-mcp.ts` → `viva mcp` stdio). Exam allowlists `viva_compile` + `viva_prompt` only; builtin bash/edit/write stay off.
 Grader: **`VivaAgentHost`** (compile / patch / provenance) + structural IR asserts.
+Failed IR asserts (not only compile errors) trigger one repair turn.
 
 Deterministic corpus: `tests/corpus/` (no LLM).
 
@@ -13,6 +15,8 @@ Deterministic corpus: `tests/corpus/` (no LLM).
 | **hard** | H01–H08 | **slim + `docs/LANGUAGE.md`** (no toy template) | **no** syntax crib by default | Cursor/Codex-aligned (docs open, task uncoached) |
 
 Default npm script runs **hard**.
+
+Hard track used to inline `docs/LANGUAGE.md` into `--system-prompt`. With MCP tools that dump hung DeepSeek tool loops; language docs are now **on demand** via `viva_prompt { includeLanguage: true }`.
 
 ## Setup
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { handleMcpTool } from "../../src/mcp/tools.js";
+import { compileDataHints, handleMcpTool } from "../../src/mcp/tools.js";
 import { ffmpegAvailable } from "../../src/export/index.js";
 
 const HELLO = `artifact "MCP"
@@ -53,6 +53,13 @@ describe("MCP tools", () => {
   it("viva_prompt includes system prompt", async () => {
     const out = await handleMcpTool("viva_prompt", { handbookIds: [] });
     expect(out.content[0]!.text).toContain("Viva");
+    expect(out.content[0]!.text).not.toContain("# Language reference");
+  });
+
+  it("viva_prompt includeLanguage appends LANGUAGE.md", async () => {
+    const out = await handleMcpTool("viva_prompt", { includeLanguage: true });
+    expect(out.content[0]!.text).toContain("# Language reference");
+    expect(out.content[0]!.text).toMatch(/artifact/i);
   });
 
   it("viva_check structural pass", async () => {
@@ -157,4 +164,26 @@ widget chart.line
     const raw = Buffer.from(json.base64, "base64");
     expect(raw.subarray(0, 6).toString("ascii")).toBe("GIF89a");
   }, 45_000);
+
+  it("viva_compile hints when IR has no data tables", async () => {
+    expect(compileDataHints({ data: {} })).toEqual([
+      "IR has no data tables. Entities should be data-backed (data NAME = [...]).",
+    ]);
+    expect(compileDataHints({ data: { balls: [] } })).toEqual([]);
+    const src = `artifact "StateOnly"
+state x0 = 10
+scene
+  layer a
+    node t
+      x: 10
+      y: 10
+      w: 20
+      h: 20
+      fill: #111111
+`;
+    const out = await handleMcpTool("viva_compile", { source: src, visual: false });
+    const json = JSON.parse(out.content[0]!.text);
+    expect(json.ir?.name).toBe("StateOnly");
+    expect(json.hints?.[0]).toMatch(/no data tables/);
+  });
 });
