@@ -77,6 +77,12 @@ export type StylePolicies = {
   maxBlur?: number;
   maxShadowOpacity?: number;
   forbidBlendModes?: string[];
+  /** Major ticks the compiler aims for. Handbook grammar, not a keyword. */
+  maxMajorTicks?: number;
+  /** Plot / cell floor used by the chrome solver. */
+  plotFloor?: number;
+  /** Emit log/linear/time minor ticks. Default true. */
+  minorTicks?: boolean;
 };
 
 export type StylePalette = {

@@ -1,4 +1,5 @@
 import { compileSource } from "../pipeline.js";
+import { repairSource } from "../repair/index.js";
 import { Runtime } from "../runtime.js";
 import { simulate } from "../simulate.js";
 import type { VisualIR } from "../ir.js";
@@ -171,11 +172,37 @@ export function createSession(
       runtime?.getWorld() ??
       (ir ? { state: ir.state, data: ir.data } : undefined);
     const activeHandbooks = resolveSessionHandbooks(meta, handbooks);
-    const result = compileSource(nextSource, `${id}.viva`, {
+    let usedSource = nextSource;
+    let result = compileSource(usedSource, `${id}.viva`, {
       handbookIds: activeHandbooks.length ? activeHandbooks : undefined,
       check: { structural: true },
     });
-    const nextHash = fingerprint(nextSource);
+    if (result.ir) {
+      const repaired = repairSource(usedSource, [
+        ...result.diagnostics,
+        ...(result.checkDiagnostics ?? []),
+      ]);
+      if (repaired.changed) {
+        const again = compileSource(repaired.source, `${id}.viva`, {
+          handbookIds: activeHandbooks.length ? activeHandbooks : undefined,
+          check: { structural: true },
+        });
+        if (again.ir) {
+          usedSource = repaired.source;
+          result = again;
+          result.diagnostics = [
+            ...result.diagnostics,
+            {
+              message: `applied ${repaired.plan.patches.length} deterministic repair(s)`,
+              code: "repair.applied",
+              span: { line: 1, column: 1 },
+              hint: repaired.plan.notes.join("; "),
+            },
+          ];
+        }
+      }
+    }
+    const nextHash = fingerprint(usedSource);
     const diagnostics: Diagnostic[] = result.diagnostics.length
       ? result.diagnostics
       : result.error
@@ -205,7 +232,7 @@ export function createSession(
       };
     }
 
-    source = nextSource;
+    source = usedSource;
     sourceHash = nextHash;
     irHash = fingerprint(result.ir);
     mountRuntime(result.ir, kind === "patch" ? prevWorld : undefined);

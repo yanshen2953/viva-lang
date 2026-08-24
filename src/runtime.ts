@@ -38,6 +38,8 @@ import {
   type PathTween,
 } from "./runtime/mark-ease.js";
 import { nodeIgnoresPointer } from "./runtime/pointer.js";
+import { applyTimelineState } from "./timeline/clock.js";
+import { applyViewState } from "./runtime/view-machine.js";
 
 export { nodeIgnoresPointer };
 
@@ -90,6 +92,7 @@ export class Runtime {
   private svg: SVGSVGElement | null = null;
   private animFrame = 0;
   private lastTick = 0;
+  private lastClock = 0;
   private running = false;
   private hoverId: string | null = null;
   private time = 0;
@@ -112,6 +115,7 @@ export class Runtime {
 
   start(): void {
     this.stop();
+    this.lastClock = 0;
     if (this.ir.meta) {
       setStyleContext({ meta: this.ir.meta });
       resetPaletteSeries(this.ir.meta);
@@ -255,6 +259,13 @@ export class Runtime {
   private loop = (now: number): void => {
     if (!this.running) return;
     this.time = now;
+    const spec = this.ir.timeline;
+    if (spec) {
+      const dt = this.lastClock ? (now - this.lastClock) / 1000 : 0;
+      this.lastClock = now;
+      const t = Number(this.state.__t ?? 0) + dt;
+      applyTimelineState(this.state, spec, t);
+    }
     for (const tick of this.ir.ticks) {
       const interval = 1000 / Math.max(tick.fps, 1);
       if (now - this.lastTick >= interval) {
@@ -264,6 +275,7 @@ export class Runtime {
     }
     this.applyBinds();
     this.applyRules();
+    applyViewState(this.state, { playing: Boolean(spec) });
     this.render();
     this.resolveCollisions();
     this.animFrame = requestAnimationFrame(this.loop);
@@ -682,6 +694,21 @@ export class Runtime {
 
   private bindKeys(): void {
     this.keyHandler = (event: KeyboardEvent) => {
+      if (this.ir.timeline && (event.key === "n" || event.key === "N" || event.key === "ArrowRight" || event.key === "ArrowLeft")) {
+        const spec = this.ir.timeline;
+        const period = spec.holdSec + spec.easeSec;
+        const cur = Number(this.state.__t ?? 0);
+        const sample = applyTimelineState(this.state, spec, cur);
+        const dir = event.key === "N" || event.key === "ArrowLeft" ? -1 : 1;
+        const nextBeat = (sample.beat + dir + spec.beats) % spec.beats;
+        applyTimelineState(this.state, spec, nextBeat * period + spec.holdSec * 0.05);
+        event.preventDefault();
+        this.applyBinds();
+        this.applyRules();
+        applyViewState(this.state, { playing: true });
+        this.render();
+        return;
+      }
       if (!this.running) return;
       const sceneNode: RenderNode = {
         id: "scene",

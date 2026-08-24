@@ -7,11 +7,14 @@ import fontkit from "@pdf-lib/fontkit";
 const BUNDLED_NAME = "VivaSansFallback.ttf";
 
 const SYSTEM_CJK_CANDIDATES = [
+  "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+  "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
+  "/usr/share/fonts/opentype/noto/NotoSansCJKsc-Regular.otf",
+  "/usr/share/fonts/truetype/noto/NotoSansSC-Regular.otf",
+  "/usr/share/fonts/opentype/source-han-sans/SourceHanSansSC-Regular.otf",
   "/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf",
   "/usr/share/fonts/truetype/droid/DroidSansFallback.ttf",
   "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc",
-  "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
-  "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
 ];
 
 export type CjkFontResolveOpts = {
@@ -44,8 +47,8 @@ export function resolveCjkFontPath(opts?: CjkFontResolveOpts): string | null {
   const candidates = [
     opts?.fontPath,
     process.env.VIVA_PDF_CJK_FONT,
-    ...bundledCjkCandidates(),
     ...SYSTEM_CJK_CANDIDATES,
+    ...bundledCjkCandidates(),
   ];
   for (const path of candidates) {
     if (path && existsSync(path)) return path;

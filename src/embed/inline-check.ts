@@ -1,4 +1,4 @@
-/** Read-only check strip for inline cards. Not a repair loop. Not visual/raster. */
+/** Read-only check strip for inline cards. Browser visual notes are appended by inline.ts. */
 
 export type InlineCheckNote = {
   message?: string;

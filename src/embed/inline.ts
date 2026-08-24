@@ -9,6 +9,7 @@ import {
   inlineCheckStripOf,
   paintInlineCheckStrip,
 } from "./inline-check.js";
+import { runBrowserVisual } from "../check/browser-visual.js";
 
 export {
   INLINE_DEFAULT_HANDBOOKS,
@@ -48,8 +49,16 @@ export function createVivaInlineEmbed(opts: VivaInlineEmbedOptions) {
       const result = post(cmd);
       if (strip && (cmd.type === "viva:compile" || cmd.type === "viva:patch")) {
         const rec = result && typeof result === "object" ? (result as Record<string, unknown>) : {};
-        const diagnostics = Array.isArray(rec.diagnostics) ? rec.diagnostics : [];
+        const diagnostics = Array.isArray(rec.diagnostics) ? [...rec.diagnostics] : [];
         const error = typeof rec.error === "string" ? rec.error : null;
+        const ir = rec.ir && typeof rec.ir === "object" ? rec.ir : embed.session.getIR();
+        if (ir) {
+          try {
+            diagnostics.push(...runBrowserVisual(ir as import("../ir.js").VisualIR));
+          } catch {
+            /* browser visual is warn-only */
+          }
+        }
         paintInlineCheckStrip(strip, inlineCheckLines(diagnostics, error));
       }
       return result;

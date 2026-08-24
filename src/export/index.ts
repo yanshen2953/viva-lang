@@ -9,6 +9,7 @@ import { compileSource } from "../pipeline.js";
 import type { VisualIR } from "../ir.js";
 import { flattenNodesFromIr, renderSvgFromIr } from "./static-svg.js";
 import { renderVectorPdfFromIr } from "./vector-pdf.js";
+import { applyTimelineState, holdFrameTimes, playbackFrameTimes, timelineFromState } from "../timeline/clock.js";
 
 export type ExportFormat = "svg" | "png" | "jpg" | "jpeg" | "pdf" | "pdf-raster" | "gif" | "mp4";
 export type BeatAnimFormat = "gif" | "mp4";
@@ -81,7 +82,7 @@ export async function exportArtifact(
   const fmt = format === "jpeg" ? "jpg" : format;
 
   if (fmt === "gif" || fmt === "mp4") {
-    throw new Error(`${fmt} is a ffmpeg slideshow of layout.board __beat rasters — pass beats:true / --beats`);
+    throw new Error(`${fmt} is a clocked layout.board play export — pass beats:true / --beats`);
   }
 
   if (fmt === "svg") {
@@ -141,7 +142,7 @@ export function beatCountFromIr(ir: VisualIR): number {
   return ir.frames.filter((f) => /(?:^|_)beat\d+$/.test(f.name)).length;
 }
 
-/** Raster one PNG per board beat by writing `__beat` (still not a video file). */
+/** Raster one PNG per board beat at the hold midpoint (same clock as Runtime). */
 export async function exportBeatSequence(
   source: string,
   opts: ExportOptions = {},
@@ -149,12 +150,37 @@ export async function exportBeatSequence(
 ): Promise<BeatFrame[]> {
   const result = compileSource(source, filename, { handbookIds: opts.handbookIds });
   if (!result.ir) throw new Error(result.error ?? "compile failed");
-  const n = Math.max(1, beatCountFromIr(result.ir));
+  const spec = result.ir.timeline ?? timelineFromState(result.ir.state);
+  const times = spec ? holdFrameTimes(spec) : Array.from({ length: Math.max(1, beatCountFromIr(result.ir)) }, (_, i) => i);
   const sceneBg = flattenNodesFromIr(result.ir).scene.background;
   const frames: BeatFrame[] = [];
-  for (let i = 0; i < n; i++) {
+  for (let i = 0; i < times.length; i++) {
     const ir = structuredClone(result.ir);
-    ir.state.__beat = i;
+    if (spec) applyTimelineState(ir.state as Record<string, unknown>, spec, times[i]!);
+    else ir.state.__beat = i;
+    const svg = renderSvgFromIr(ir);
+    const bytes = await rasterize(svg, { ...opts, background: opts.background ?? sceneBg });
+    frames.push({ index: i, bytes, mime: "image/png", svg });
+  }
+  return frames;
+}
+
+/** Interpolated play frames at timeline.fps (includes ease, not just holds). */
+export async function exportBeatPlayback(
+  source: string,
+  opts: ExportOptions = {},
+  filename = "<input>",
+): Promise<BeatFrame[]> {
+  const result = compileSource(source, filename, { handbookIds: opts.handbookIds });
+  if (!result.ir) throw new Error(result.error ?? "compile failed");
+  const spec = result.ir.timeline ?? timelineFromState(result.ir.state);
+  if (!spec) return exportBeatSequence(source, opts, filename);
+  const times = playbackFrameTimes(spec);
+  const sceneBg = flattenNodesFromIr(result.ir).scene.background;
+  const frames: BeatFrame[] = [];
+  for (let i = 0; i < times.length; i++) {
+    const ir = structuredClone(result.ir);
+    applyTimelineState(ir.state as Record<string, unknown>, spec, times[i]!);
     const svg = renderSvgFromIr(ir);
     const bytes = await rasterize(svg, { ...opts, background: opts.background ?? sceneBg });
     frames.push({ index: i, bytes, mime: "image/png", svg });
@@ -193,7 +219,7 @@ function spawnOnce(cmd: string, args: string[], timeoutMs = 30_000): Promise<{ o
   });
 }
 
-/** Assemble beat PNGs with ffmpeg. Still a slideshow, not an edited video. */
+/** Assemble clocked play frames with ffmpeg at timeline.fps. */
 export async function exportBeatAnimation(
   source: string,
   kind: BeatAnimFormat,
@@ -203,7 +229,12 @@ export async function exportBeatAnimation(
   if (!(await ffmpegAvailable())) {
     throw new Error("ffmpeg not found — export --beats PNG frames, or install ffmpeg to stitch gif/mp4");
   }
-  const frames = await exportBeatSequence(source, opts, filename);
+  const compiled = compileSource(source, filename, { handbookIds: opts.handbookIds });
+  const spec = compiled.ir?.timeline ?? (compiled.ir ? timelineFromState(compiled.ir.state) : null);
+  const fps = String(Math.max(1, Math.round(spec?.fps ?? 12)));
+  const frames = spec
+    ? await exportBeatPlayback(source, opts, filename)
+    : await exportBeatSequence(source, opts, filename);
   const dir = await mkdtemp(join(tmpdir(), "viva-beats-"));
   try {
     for (const frame of frames) {
@@ -213,14 +244,14 @@ export async function exportBeatAnimation(
     const input = join(dir, "frame-%d.png");
     const args =
       kind === "gif"
-        ? ["-y", "-hide_banner", "-loglevel", "error", "-framerate", "2", "-start_number", "0", "-i", input, "-loop", "0", out]
+        ? ["-y", "-hide_banner", "-loglevel", "error", "-framerate", fps, "-start_number", "0", "-i", input, "-loop", "0", out]
         : [
             "-y",
             "-hide_banner",
             "-loglevel",
             "error",
             "-framerate",
-            "2",
+            fps,
             "-start_number",
             "0",
             "-i",

@@ -2,7 +2,9 @@ import type { Artifact, SceneItem } from "./ast.js";
 import { evaluate } from "./eval.js";
 import type { LayerIR, SceneNodeIR, VisualIR } from "./ir.js";
 import { applyHandbookHook } from "./style/hook.js";
+import { resolveStylePresets } from "./style/registry.js";
 import type { HandbookHookOptions } from "./style/types.js";
+import { timelineFromState } from "./timeline/clock.js";
 import { expandWidgets } from "./widgets.js";
 
 export type CompileOptions = HandbookHookOptions;
@@ -16,7 +18,10 @@ function id(prefix: string): string {
 
 export function compile(artifact: Artifact, options?: CompileOptions): VisualIR {
   nextId = 1;
-  const expanded = expandWidgets(artifact);
+  const handbookIds = options?.handbookIds ?? [];
+  const preset =
+    options?.preset ?? (handbookIds.length ? resolveStylePresets(handbookIds) : null);
+  const expanded = expandWidgets(artifact, { policies: preset?.policies });
   const hooked = applyHandbookHook(expanded, options ?? {});
   const expandedStyled = hooked.artifact;
   const state: Record<string, unknown> = {};
@@ -68,6 +73,7 @@ export function compile(artifact: Artifact, options?: CompileOptions): VisualIR 
       ),
     })),
     meta: hooked.meta.handbookIds.length ? hooked.meta : undefined,
+    timeline: timelineFromState(state) ?? undefined,
   };
 }
 

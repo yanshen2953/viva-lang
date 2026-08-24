@@ -23,6 +23,16 @@ import { estimateBoardBands, measureChipWidth } from "./layout/board-chrome.js";
 import { figureCopyDefaults, figureCopyPlace, figureGapDefaults } from "./layout/figure-gap.js";
 import { packCopyLinesToColumns, packCopyLinesToPages, readableTypeColCount } from "./layout/copy-flow.js";
 import { figurePageReserves, packFigureCellsToPages } from "./layout/figure-page.js";
+import { punchColumnsAroundFigures } from "./layout/newspaper.js";
+import {
+  linearMinorTicks,
+  logMajorTicks,
+  logMinorTicks,
+  niceScaleNumber,
+  timeMinorTicks,
+} from "./layout/axis-ticks.js";
+import { solveChartInsets, solveFigureInsets } from "./layout/chrome-solve.js";
+import type { StylePolicies } from "./style/types.js";
 import {
   chartHostBox,
   fillAuthorSlotNodes,
@@ -34,15 +44,13 @@ import { boxStats, quantile } from "./layout/summary-stats.js";
 import { gaussianKDE, violinPathD } from "./layout/violin-density.js";
 import {
   clampChartInsets,
-  growInsetsForChrome,
-  growInsetsForNeighbors,
   ellipsizeToWidth,
   wrapTextLines,
   placePaperChrome,
   thinXTicks,
   thinYTicks,
+  MIN_PLOT_FRAC,
   type ChromeRect,
-  type NeighborChrome,
   type PaperChrome,
 } from "./layout/chrome-collide.js";
 
@@ -79,7 +87,22 @@ setWidgetBuiltinSeed(() => {
   });
 });
 
-export function expandWidgets(artifact: Artifact): Artifact {
+let activePolicies: StylePolicies = {};
+
+function policyMaxMajorTicks(): number {
+  return Math.max(3, Math.floor(activePolicies.maxMajorTicks ?? 6));
+}
+
+function policyWantMinors(): boolean {
+  return activePolicies.minorTicks !== false;
+}
+
+function policyPlotFloor(): { minFrac: number } {
+  return { minFrac: activePolicies.plotFloor ?? MIN_PLOT_FRAC };
+}
+
+export function expandWidgets(artifact: Artifact, opts?: { policies?: StylePolicies }): Artifact {
+  activePolicies = opts?.policies ?? {};
   ensureBuiltinPlugins();
   const next = structuredClone(artifact);
   if (!next.scene) {
@@ -145,15 +168,13 @@ export function expandWidgets(artifact: Artifact): Artifact {
   fillAuthorSlotNodes(next);
   bindFramedWorldInteract(next);
   paintPlotFrameChrome(next);
+  reflowNewspaper(next);
   return next;
 }
 
 /**
- * Folio n/N plus a later-slice running head. Figure titles keep
- * `(continued)`; board titles repeat as-is. Same caption primitive.
- * Odd slices (recto) put folio and the head on the right; even
- * slices (verso) put them on the left. One page, or no `page` prop,
- * paints nothing. Not a section-mark typesetter — no jump folio.
+ * Folio + chapter running head from subtitle + jump marks.
+ * Still plugin layout — not a safe/lowerThird keyword.
  */
 function paintPageFolio(artifact: Artifact): void {
   const scene = artifact.scene;
@@ -171,6 +192,9 @@ function paintPageFolio(artifact: Artifact): void {
   const board = artifact.widgets.find((w) => w.name === "layout.board");
   const figureTitle = figure ? stringProp(figure.props, ["title"]) : null;
   const boardTitle = board ? stringProp(board.props, ["title"]) : null;
+  const chapter =
+    (figure ? stringProp(figure.props, ["subtitle"]) : null) ??
+    (board ? stringProp(board.props, ["subtitle"]) : null);
   const title = figureTitle ?? boardTitle;
   const markContinued = Boolean(figureTitle);
   const { pad } = figurePageReserves(unit);
@@ -183,7 +207,9 @@ function paintPageFolio(artifact: Artifact): void {
     const top = i * pageH;
     const bottom = Math.min((i + 1) * pageH, extent.h);
     const outerX = verso ? pad : extent.w - pad;
+    const innerX = verso ? extent.w - pad : pad;
     const outerAlign = verso ? "start" : "right";
+    const innerAlign = verso ? "right" : "start";
     items.push(
       node(`__page_folio_${n}`, {
         role: literal("caption"),
@@ -193,6 +219,29 @@ function paintPageFolio(artifact: Artifact): void {
         align: literal(outerAlign),
       }),
     );
+    if (chapter) {
+      items.push(
+        node(`__page_chapter_${n}`, {
+          role: literal("subtitle"),
+          text: literal(ellipsizeToWidth(chapter, wrapW * 0.55, 8, 0.1)),
+          x: literal(innerX),
+          y: literal(top + pad * 1.2),
+          w: literal(Math.max(8, extent.w - pad * 2)),
+          align: literal(innerAlign),
+        }),
+      );
+    }
+    if (i < pages - 1) {
+      items.push(
+        node(`__page_jump_${n}`, {
+          role: literal("caption"),
+          text: literal(`→ ${n + 1}`),
+          x: literal(innerX),
+          y: literal(bottom - pad * 0.85),
+          align: literal(innerAlign),
+        }),
+      );
+    }
     if (i > 0 && title) {
       const raw = markContinued ? `${title} (continued)` : title;
       items.push(
@@ -213,6 +262,88 @@ function paintPageFolio(artifact: Artifact): void {
     props: {},
     items,
   });
+}
+
+/** After figure cells exist, send board body around them. Plugin layout only. */
+function reflowNewspaper(artifact: Artifact): void {
+  const scene = artifact.scene;
+  if (!scene) return;
+  const page = parsePage(stringProp(scene.props, ["page"]));
+  if (!page) return;
+  const unit = sceneUnitOf(artifact);
+  const pageH = unit === "mm" || unit === "pt" ? page.h : mmToPx(page.h);
+  if (!(pageH > 0)) return;
+  const figures: { x0: number; y0: number; x1: number; y1: number }[] = [];
+  for (const fr of artifact.frames) {
+    const cx = numericPair(fr.props.cellX, [0, 0]);
+    const cy = numericPair(fr.props.cellY, [0, 0]);
+    if (!cx || !cy || cy[1] - cy[0] < 8 || cx[1] - cx[0] < 8) continue;
+    if (/^(safe|title|body|lower|hud|left|right|type\d+|beat\d+)$/.test(fr.name)) continue;
+    figures.push({ x0: cx[0], y0: cy[0], x1: cx[1], y1: cy[1] });
+  }
+  if (!figures.length) return;
+  type BodyNode = Extract<SceneItem, { kind: "node" }>;
+  const bodies: BodyNode[] = [];
+  for (const layer of scene.layers) {
+    for (const item of layer.items) {
+      if (item.kind === "node" && /_docBody/.test(item.name)) bodies.push(item);
+    }
+  }
+  if (bodies.length < 2) return;
+  const lines = bodies
+    .map((n) => (n.props.text?.kind === "string" ? n.props.text.value : ""))
+    .filter(Boolean);
+  if (lines.length < 2) return;
+  const xs = [
+    ...new Set(
+      bodies.map((n) => (n.props.x?.kind === "number" ? n.props.x.value : NaN)).filter(Number.isFinite),
+    ),
+  ].sort((a, b) => a - b);
+  const ys = bodies
+    .map((n) => (n.props.y?.kind === "number" ? n.props.y.value : NaN))
+    .filter(Number.isFinite)
+    .sort((a, b) => a - b);
+  if (xs.length < 1 || ys.length < 2) return;
+  const lineH = Math.max(2, ys[1]! - ys[0]!);
+  const w = bodies[0]!.props.w?.kind === "number" ? bodies[0]!.props.w.value : 40;
+  const extent = sceneExtentOf(artifact);
+  const columns = xs.map((x) => ({
+    x,
+    y0: Math.min(...ys),
+    y1: extent.h,
+    w,
+  }));
+  const reserves = figurePageReserves(unit);
+  const punched = punchColumnsAroundFigures(columns, figures, reserves.pad);
+  const packed = packCopyLinesToColumns(lines, punched.length ? punched : columns, {
+    lineH,
+    pageH,
+    topReserve: reserves.top,
+    bottomReserve: reserves.bottom,
+  });
+  for (let i = 0; i < bodies.length; i++) {
+    const place = packed.places[i];
+    if (!place) continue;
+    bodies[i]!.props.x = literal(place.x);
+    bodies[i]!.props.y = literal(place.y);
+  }
+  if (packed.places.length > bodies.length) {
+    const layer = scene.layers.find((l) => l.items.some((it) => it.kind === "node" && /_docBody/.test(it.name)));
+    const last = bodies[bodies.length - 1]!;
+    for (let i = bodies.length; i < packed.places.length; i++) {
+      const place = packed.places[i]!;
+      layer?.items.push(
+        node(`${last.name}_flow${i}`, {
+          role: last.props.role ?? literal("label"),
+          x: literal(place.x),
+          y: literal(place.y),
+          w: last.props.w ?? literal(w),
+          text: literal(place.text),
+        }),
+      );
+    }
+  }
+  if (packed.bottom > extent.h) growSceneHeight(artifact, packed.bottom + reserves.bottom);
 }
 
 function isUnboundChart(widget: Artifact["widgets"][number]): boolean {
@@ -776,6 +907,7 @@ function expandChart(
       barW,
       props,
       span,
+      kind === "chart.funnel",
     );
     if (aggregated) {
       marks.push(...aggregated);
@@ -819,6 +951,7 @@ function expandChart(
             : {}),
           ...(props.barRadius ? { radius: props.barRadius } : {}),
           __chartBar: literal(true),
+          ...(kind === "chart.funnel" ? { __chartFunnel: literal(true) } : {}),
           ...(horizontal ? { __chartBarOrient: literal("h") } : {}),
           ...(props.hoverFill ? { hoverFill: props.hoverFill } : { hoverFill: literal("#E69F00") }),
           ...interactOpacity,
@@ -908,6 +1041,7 @@ function expandChart(
         }),
       ],
     });
+    marks.push(...expandVectorScale(artifact, dataName, frameName, uField, vField, vScale, geom, span));
   } else if (kind === "chart.box") {
     marks.push(
         ...expandBoxMarks(
@@ -1351,54 +1485,43 @@ function expandLayoutFigure(
 
   const explicitAny = explicitL || explicitR || explicitT || explicitB;
   if (!explicitAny) {
-    for (let iter = 0; iter < 4; iter++) {
-      const layouts = plans.map((plan) => ({
+    const solved = solveFigureInsets(
+      plans.map((plan) => ({
         cell: {
           x0: plan.cellX0,
           y0: plan.cellY0,
           x1: plan.cellX0 + plan.cellW,
           y1: plan.cellY0 + plan.cellH,
         },
-        rects: chromeRectsForPanel(
-          artifact,
-          plan.name,
-          plan.cellX0,
-          plan.cellY0,
-          plan.cellW,
-          plan.cellH,
-          plan,
-        ),
-      }));
-      let grew = false;
-      for (let i = 0; i < plans.length; i++) {
-        const plan = plans[i]!;
-        const neighbors: NeighborChrome[] = layouts
-          .filter((_, j) => j !== i)
-          .map((layout) => ({ cell: layout.cell, rects: layout.rects }));
-        const grow = growInsetsForNeighbors(layouts[i]!.rects, layouts[i]!.cell, neighbors, pad);
-        if (grow.l <= 0.5 && grow.r <= 0.5 && grow.t <= 0.5 && grow.b <= 0.5) continue;
-        const next = clampInset(
-          plan.l + grow.l,
-          plan.r + grow.r,
-          plan.t + grow.t,
-          plan.b + grow.b,
-          plan.cellW,
-          plan.cellH,
+        insets: { l: plan.l, r: plan.r, t: plan.t, b: plan.b },
+        floor,
+        plotFloor: policyPlotFloor(),
+      })),
+      (plan) => {
+        const src = plans.find(
+          (p) =>
+            Math.abs(p.cellX0 - plan.cell.x0) < 1e-6 && Math.abs(p.cellY0 - plan.cell.y0) < 1e-6,
         );
-        if (
-          next.l - plan.l > 0.4 ||
-          next.r - plan.r > 0.4 ||
-          next.t - plan.t > 0.4 ||
-          next.b - plan.b > 0.4
-        ) {
-          plan.l = next.l;
-          plan.r = next.r;
-          plan.t = next.t;
-          plan.b = next.b;
-          grew = true;
-        }
-      }
-      if (!grew) break;
+        if (!src) return [];
+        return chromeRectsForPanel(
+          artifact,
+          src.name,
+          src.cellX0,
+          src.cellY0,
+          src.cellW,
+          src.cellH,
+          plan.insets,
+        );
+      },
+      pad,
+    );
+    for (let i = 0; i < plans.length; i++) {
+      const plan = plans[i]!;
+      const next = solved[i]!.insets;
+      plan.l = next.l;
+      plan.r = next.r;
+      plan.t = next.t;
+      plan.b = next.b;
     }
   }
 
@@ -1981,20 +2104,39 @@ function expandLayoutBoard(
 
   const play = boolProp(props, "play", false) || boolProp(props, "playing", false);
   if (play && beatRects.length >= 2) {
+    const playFps = Math.max(0, numProp(props, "playFps", 0));
+    const easeSec = Math.max(0, numProp(props, "ease", numProp(props, "playEase", 0.22)));
+    const holdDefault = playFps > 0 ? Math.max(0.2, 1 / playFps - easeSec) : 1.2;
+    const holdSec = Math.max(0.05, numProp(props, "hold", numProp(props, "playHold", holdDefault)));
+    const fps = Math.max(1, numProp(props, "fps", 12));
+    const beats = beatRects.length;
     if (!artifact.states.some((s) => s.name === "__beat")) {
       artifact.states.push({ name: "__beat", value: literal(0), span });
     }
-    const fps = Math.max(0.25, numProp(props, "playFps", 1));
-    artifact.ticks.push({
-      fps,
-      body: [
-        assign(
-          ["__beat"],
-          binary("%", binary("+", ident("__beat"), literal(1), span), literal(beatRects.length), span),
+    if (!artifact.states.some((s) => s.name === "__t")) {
+      artifact.states.push({ name: "__t", value: literal(0), span });
+    }
+    if (!artifact.states.some((s) => s.name === "__timeline")) {
+      artifact.states.push({
+        name: "__timeline",
+        value: objectExpr(
+          [
+            { key: "beats", value: literal(beats) },
+            { key: "holdSec", value: literal(holdSec) },
+            { key: "easeSec", value: literal(easeSec) },
+            { key: "fps", value: literal(fps) },
+          ],
+          span,
         ),
-      ],
-      span,
-    });
+        span,
+      });
+    }
+    for (let i = 0; i < beats; i++) {
+      const name = `__veil${i}`;
+      if (!artifact.states.some((s) => s.name === name)) {
+        artifact.states.push({ name, value: literal(i === 0 ? 0 : 1), span });
+      }
+    }
     const veilItems: SceneItem[] = beatRects.map((rect, i) =>
       node(`${id}_veil_${i}`, {
         role: literal("chrome"),
@@ -2003,8 +2145,7 @@ function expandLayoutBoard(
         w: literal(rect.x1 - rect.x0),
         h: literal(rect.y1 - rect.y0),
         fill: literal("#000000"),
-        opacity: literal(0.55),
-        visible: binary("!=", ident("__beat"), literal(i), span),
+        opacity: binary("*", ident(`__veil${i}`), literal(0.55), span),
       }),
     );
     artifact.scene?.layers.push({
@@ -2419,20 +2560,7 @@ function timeTicks(min: number, max: number): { value: number; label: string }[]
 }
 
 function logTicks(min: number, max: number): number[] {
-  const lo = Math.max(min, 1e-12);
-  const hi = Math.max(max, lo);
-  const e0 = Math.ceil(Math.log10(lo) - 1e-9);
-  const e1 = Math.floor(Math.log10(hi) + 1e-9);
-  const ticks: number[] = [];
-  for (let e = e0; e <= e1; e++) {
-    const v = 10 ** e;
-    if (v >= lo * 0.999 && v <= hi * 1.001) ticks.push(v);
-  }
-  if (!ticks.length) {
-    ticks.push(lo);
-    if (hi > lo * 1.01) ticks.push(hi);
-  }
-  return ticks;
+  return logMajorTicks(min, max);
 }
 
 function axisTicks(
@@ -2679,7 +2807,7 @@ function numericPair(
   return fallback ? fallback : null;
 }
 
-function niceTicks(min: number, max: number, maxTicks = 6): number[] {
+function niceTicks(min: number, max: number, maxTicks = policyMaxMajorTicks()): number[] {
   if (!Number.isFinite(min) || !Number.isFinite(max)) return [];
   if (min === max) return [min];
   const span = max - min;
@@ -3125,42 +3253,28 @@ function fitChartInsets(
   const pad = toScene(3);
   const extras = chartChromeExtras(artifact, chart);
   const floor = { l: toScene(10), r: toScene(8), t: toScene(8), b: toScene(10) };
-  let l = floor.l;
-  let r = floor.r;
-  let t = floor.t;
-  let b = floor.b;
-  const clamp = () => {
-    const next = clampChartInsets({ l, r, t, b }, cellW, cellH, floor);
-    l = next.l;
-    r = next.r;
-    t = next.t;
-    b = next.b;
-  };
-  clamp();
-  for (let iter = 0; iter < 12; iter++) {
-    const geom: Record<string, Expr> = {
-      ...chart.props,
-      areaX: literal([cellX0 + l, Math.max(cellX0 + l + 8, cellX0 + cellW - r)]),
-      areaY: literal([cellY0 + t, Math.max(cellY0 + t + 8, cellY0 + cellH - b)]),
-      cellX: literal([cellX0, cellX0 + cellW]),
-      cellY: literal([cellY0, cellY0 + cellH]),
-    };
-    const layout = chromeLayoutOf(geom, artifact, extras);
-    if (!layout) break;
-    const grow = growInsetsForChrome(layout.rects, {
-      x0: cellX0,
-      y0: cellY0,
-      x1: cellX0 + cellW,
-      y1: cellY0 + cellH,
-    }, pad);
-    if (grow.l <= 0.5 && grow.r <= 0.5 && grow.t <= 0.5 && grow.b <= 0.5) break;
-    l += grow.l;
-    r += grow.r;
-    t += grow.t;
-    b += grow.b;
-    clamp();
-  }
-  return { l, r, t, b };
+  return solveChartInsets({
+    cell: { x0: cellX0, y0: cellY0, x1: cellX0 + cellW, y1: cellY0 + cellH },
+    floor,
+    pad,
+    plotFloor: policyPlotFloor(),
+    place: (insets) => {
+      const geom: Record<string, Expr> = {
+        ...chart.props,
+        areaX: literal([
+          cellX0 + insets.l,
+          Math.max(cellX0 + insets.l + 8, cellX0 + cellW - insets.r),
+        ]),
+        areaY: literal([
+          cellY0 + insets.t,
+          Math.max(cellY0 + insets.t + 8, cellY0 + cellH - insets.b),
+        ]),
+        cellX: literal([cellX0, cellX0 + cellW]),
+        cellY: literal([cellY0, cellY0 + cellH]),
+      };
+      return chromeLayoutOf(geom, artifact, extras);
+    },
+  });
 }
 
 function plotBoxOf(props: Record<string, Expr>): {
@@ -3355,6 +3469,52 @@ function expandAxisTicks(
           x2: binary("+", xlimLow(props), dataTickLen, span),
           y2: literal(tick.value),
           strokeWidth: literal(1),
+        }),
+      );
+    }
+  }
+
+  if (box && policyWantMinors()) {
+    const xKind = scaleKindFromExpr(props.xScale) ?? "linear";
+    const yKind = scaleKindFromExpr(props.yScale) ?? "linear";
+    const minorLen = sceneTick * 0.55;
+    const xMinors =
+      xKind === "log"
+        ? logMinorTicks(xlim[0], xlim[1])
+        : xKind === "time"
+          ? timeMinorTicks(xTicks, xlim[0], xlim[1])
+          : linearMinorTicks(xTicks.map((t) => t.value), xlim[0], xlim[1]);
+    const yMinors =
+      yKind === "log"
+        ? logMinorTicks(ylim[0], ylim[1])
+        : yKind === "time"
+          ? timeMinorTicks(yTicks, ylim[0], ylim[1])
+          : linearMinorTicks(yTicks.map((t) => t.value), ylim[0], ylim[1]);
+    for (const [i, value] of xMinors.entries()) {
+      const sx = domainMap(value, [box.xmin, box.xmax], [box.px0, box.px1], false, box.xScale);
+      items.push(
+        node(`${frameName}_xmin_${i}`, {
+          role: literal("axis"),
+          x1: literal(sx),
+          y1: literal(box.py1),
+          x2: literal(sx),
+          y2: literal(box.py1 + minorLen),
+          strokeWidth: literal(compact ? 0.5 : 0.7),
+          opacity: literal(0.7),
+        }),
+      );
+    }
+    for (const [i, value] of yMinors.entries()) {
+      const sy = domainMap(value, [box.ymin, box.ymax], [box.py0, box.py1], box.invertY, box.yScale);
+      items.push(
+        node(`${frameName}_ymin_${i}`, {
+          role: literal("axis"),
+          x1: literal(box.px0),
+          y1: literal(sy),
+          x2: literal(box.px0 + minorLen),
+          y2: literal(sy),
+          strokeWidth: literal(compact ? 0.5 : 0.7),
+          opacity: literal(0.7),
         }),
       );
     }
@@ -3701,6 +3861,7 @@ function expandAggregatedBars(
   barW: number,
   props: Record<string, Expr>,
   span: { line: number; column: number },
+  funnel = false,
 ): SceneItem[] | null {
   const decl = artifact.data.find((d) => d.name === dataName);
   if (!decl || decl.value.kind !== "array") return null;
@@ -3723,7 +3884,8 @@ function expandAggregatedBars(
     groups.set(id, g);
   }
   if (!groups.size || groups.size >= rows) return null;
-  return [...groups.values()].map((g) => {
+  const list = [...groups.values()].sort((a, b) => a.cat - b.cat);
+  return list.map((g, gi) => {
     const total = g.values.reduce((a, b) => a + b, 0);
     const fill = seriesField
       ? {
@@ -3747,6 +3909,12 @@ function expandAggregatedBars(
       hoverFill: literal("#E69F00"),
       ...(props.barRadius ? { radius: props.barRadius } : {}),
       __chartBar: literal(true),
+      ...(funnel
+        ? {
+            __chartFunnel: literal(true),
+            __funnelNext: literal(list[gi + 1]?.values.reduce((a, b) => a + b, 0) ?? g.values.reduce((a, b) => a + b, 0)),
+          }
+        : {}),
       ...(horizontal ? { __chartBarOrient: literal("h"), __barOrient: literal("h") } : { __barOrient: literal("v") }),
       __barData: literal(dataName),
       __barCatField: literal(sourceCat),
@@ -3958,6 +4126,24 @@ function expandColorbar(
       );
     }
   }
+  if (policyWantMinors()) {
+    const zMinors = linearMinorTicks(zTicks, z0, z1);
+    const minorLen = toScene(2.5);
+    for (const [i, value] of zMinors.entries()) {
+      const t = z1 === z0 ? 0 : (value - z0) / (z1 - z0);
+      items.push(
+        node(`${frameName}_cbarMinor_${i}`, {
+          role: literal("axis"),
+          x1: literal(barX + barW),
+          y1: literal(bot - t * h),
+          x2: literal(barX + barW + minorLen),
+          y2: literal(bot - t * h),
+          strokeWidth: literal(0.7),
+          opacity: literal(0.65),
+        }),
+      );
+    }
+  }
   if (chrome?.cbarTitleLines?.length) {
     const n = chrome.cbarTitleLines.length;
     for (const [i, line] of chrome.cbarTitleLines.entries()) {
@@ -3994,6 +4180,55 @@ function rowGroupX(
   return Number.isFinite(n) ? n : fallback;
 }
 
+function expandVectorScale(
+  artifact: Artifact,
+  dataName: string,
+  frameName: string,
+  uField: string,
+  vField: string,
+  vScale: number,
+  geom: Record<string, Expr>,
+  span: { line: number; column: number },
+): SceneItem[] {
+  const decl = artifact.data.find((d) => d.name === dataName);
+  if (!decl || decl.value.kind !== "array") return [];
+  let maxLen = 0;
+  for (const row of decl.value.items) {
+    if (row.kind !== "object") continue;
+    const u = objectField(row, uField);
+    const v = objectField(row, vField);
+    if (u?.kind !== "number" || v?.kind !== "number") continue;
+    maxLen = Math.max(maxLen, Math.hypot(u.value * vScale, v.value * vScale));
+  }
+  if (!(maxLen > 0)) return [];
+  const nice = niceScaleNumber(maxLen * 0.5);
+  const box = plotBoxOf(geom);
+  if (!box) return [];
+  const x0 = box.px0 + (box.px1 - box.px0) * 0.06;
+  const y0 = box.py1 - (box.py1 - box.py0) * 0.08;
+  const x1 = x0 + Math.abs(
+    domainMap(box.xmin + nice, [box.xmin, box.xmax], [box.px0, box.px1], false, box.xScale) -
+      domainMap(box.xmin, [box.xmin, box.xmax], [box.px0, box.px1], false, box.xScale),
+  );
+  return [
+    node(`${frameName}_vecScale`, {
+      role: literal("axis"),
+      x1: literal(x0),
+      y1: literal(y0),
+      x2: literal(x1),
+      y2: literal(y0),
+      strokeWidth: literal(1.25),
+    }),
+    node(`${frameName}_vecScaleLbl`, {
+      role: literal("label"),
+      x: literal((x0 + x1) / 2),
+      y: literal(y0 - (box.py1 - box.py0) * 0.03),
+      text: literal(String(nice)),
+      align: literal("center"),
+    }),
+  ];
+}
+
 function expandBoxMarks(
   artifact: Artifact,
   dataName: string,
@@ -4026,6 +4261,13 @@ function expandBoxMarks(
     const stats = boxStats(values);
     if (!stats) continue;
     const { q1, med, q3, whiskLo, whiskHi } = stats;
+    const xs = [...groups.values()].map((g) => g.x).sort((a, b) => a - b);
+    let gap = 1;
+    for (let gi = 0; gi < xs.length - 1; gi++) {
+      const d = xs[gi + 1]! - xs[gi]!;
+      if (d > 1e-6) gap = Math.min(gap, d);
+    }
+    const band = Math.min(0.72, Math.max(0.28, gap * 0.62));
     const iqr = q3 - q1;
     const loFence = q1 - 1.5 * iqr;
     const hiFence = q3 + 1.5 * iqr;
@@ -4071,7 +4313,7 @@ function expandBoxMarks(
         x: literal(x),
         y: literal(q3),
         q1: literal(q1),
-        w: literal(0.45),
+        w: literal(band),
         __chartBox: literal(true),
         ...(fill ? { fill } : {}),
         hoverFill: literal("#E69F00"),
@@ -4082,9 +4324,9 @@ function expandBoxMarks(
         ...selVis,
         ...boxMeta,
         __boxPart: literal("med"),
-        x1: literal(x - 0.22),
+        x1: literal(x - band / 2),
         y1: literal(med),
-        x2: literal(x + 0.22),
+        x2: literal(x + band / 2),
         y2: literal(med),
         strokeWidth: literal(1.6),
       }),
@@ -4301,7 +4543,44 @@ function expandViolinMarks(
         );
       }
     }
-    const med = quantile([...values].sort((a, b) => a - b), 0.5);
+    const stats = boxStats(values);
+    const xs = [...groups.values()].map((g) => g.x).sort((a, b) => a - b);
+    let gap = 1;
+    for (let k = 0; k < xs.length - 1; k++) {
+      const d = xs[k + 1]! - xs[k]!;
+      if (d > 1e-6) gap = Math.min(gap, d);
+    }
+    const band = Math.min(0.72, Math.max(0.28, gap * 0.62));
+    const inner = band * 0.28;
+    const med = stats?.med ?? quantile([...values].sort((a, b) => a - b), 0.5);
+    if (stats) {
+      items.push(
+        node(`violinBox_${gi}`, {
+          role: literal("mark"),
+          frame: literal(frameName),
+          ...selVis,
+          ...violinMeta,
+          __violinPart: literal("box"),
+          __chartBox: literal(true),
+          x: literal(x),
+          y: literal(stats.q3),
+          q1: literal(stats.q1),
+          w: literal(inner),
+        }),
+        node(`violinWhisk_${gi}`, {
+          role: literal("mark-line"),
+          frame: literal(frameName),
+          ...selVis,
+          ...violinMeta,
+          __violinPart: literal("whisk"),
+          x1: literal(x),
+          y1: literal(stats.whiskLo),
+          x2: literal(x),
+          y2: literal(stats.whiskHi),
+          strokeWidth: literal(1),
+        }),
+      );
+    }
     items.push(
       node(`violinMed_${gi}`, {
         role: literal("mark-line"),
@@ -4309,9 +4588,9 @@ function expandViolinMarks(
         ...selVis,
         ...violinMeta,
         __violinPart: literal("med"),
-        x1: literal(x - 0.16),
+        x1: literal(x - inner),
         y1: literal(med),
-        x2: literal(x + 0.16),
+        x2: literal(x + inner),
         y2: literal(med),
         strokeWidth: literal(2),
       }),

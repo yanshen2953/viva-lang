@@ -51,4 +51,6 @@ export type VisualIR = {
   ticks: { fps: number; body: Statement[] }[];
   animates: { name: string; props: Record<string, unknown> }[];
   meta?: import("./style/types.js").StyleMeta;
+  /** layout.board play clock. Plugin property, not a keyword. */
+  timeline?: import("./timeline/clock.js").TimelineSpec;
 };

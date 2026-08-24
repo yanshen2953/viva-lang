@@ -1,5 +1,7 @@
 import { cloneValue, evaluate, execute, truthy, type Scope } from "./eval.js";
 import type { VisualIR } from "./ir.js";
+import { applyTimelineState } from "./timeline/clock.js";
+import { applyViewState } from "./runtime/view-machine.js";
 
 export type SimWorld = {
   state: Record<string, unknown>;
@@ -53,11 +55,16 @@ export function simulate(ir: VisualIR, opts: SimulateOptions = {}): SimWorld {
 
   const n = opts.ticks ?? 0;
   for (let i = 0; i < n; i++) {
+    if (ir.timeline) {
+      const period = ir.timeline.holdSec + ir.timeline.easeSec;
+      applyTimelineState(world.state, ir.timeline, (i + 1) * period);
+    }
     for (const tick of ir.ticks) {
       execute(tick.body, scopes());
     }
     applyBinds();
     applyRules();
+    applyViewState(world.state, { playing: Boolean(ir.timeline) });
   }
 
   for (const fire of opts.events ?? []) {

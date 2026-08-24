@@ -12,6 +12,7 @@ import {
 } from "../space.js";
 import { evalSceneProps, resolveSceneBox, scaleSceneGeom, sceneScaleOf } from "../space/scene-box.js";
 import { cssId, gradientSpec } from "../paint.js";
+import { applyTimelineState, timelineFromState } from "../timeline/clock.js";
 
 export type FlatNode = {
   id: string;
@@ -44,8 +45,15 @@ export function flattenNodesFromIr(ir: VisualIR): { scene: SceneBox; nodes: Flat
   return withIrStyleContext(ir, () => flattenNodesFromIrInner(ir));
 }
 
+function syncClock(ir: VisualIR, state: Record<string, unknown>): void {
+  const spec = ir.timeline ?? timelineFromState(state);
+  if (!spec) return;
+  applyTimelineState(state, spec, Number(state.__t ?? 0));
+}
+
 function flattenNodesFromIrInner(ir: VisualIR): { scene: SceneBox; nodes: FlatNode[] } {
   const state = { ...(ir.state as Record<string, unknown>) };
+  syncClock(ir, state);
   const data = { ...(ir.data as Record<string, unknown>) };
   const scopes = (): Scope[] => [state, data];
   const sceneProps = evalSceneProps(ir.scene.props, scopes());
@@ -76,6 +84,7 @@ function buildSvgParts(ir: VisualIR): {
   defsXml: string[];
 } {
   const state = { ...(ir.state as Record<string, unknown>) };
+  syncClock(ir, state);
   const data = { ...(ir.data as Record<string, unknown>) };
   const scopes = (): Scope[] => [state, data];
   const sceneProps = evalSceneProps(ir.scene.props, scopes());
@@ -162,7 +171,10 @@ function flattenItems(
 }
 
 export function nodePainted(props: Record<string, unknown>): boolean {
-  return props.visible === undefined ? true : Boolean(props.visible);
+  if (props.visible !== undefined && !Boolean(props.visible)) return false;
+  const opacity = props.opacity === undefined ? 1 : Number(props.opacity);
+  if (Number.isFinite(opacity) && opacity < 0.01) return false;
+  return true;
 }
 
 function nodeToSvg(node: FlatNode, defsXml: string[] = []): string {

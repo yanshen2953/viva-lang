@@ -304,12 +304,24 @@ export function layoutChartBar(
       false,
       frame.xScale,
     );
-    return {
+    const laid = {
       ...props,
       x: Math.min(baseline, right),
       y: cy - sceneH / 2,
       w: Math.max(0, Math.abs(right - baseline)),
       h: sceneH,
+    };
+    if (!props.__chartFunnel) return laid;
+    const nextData = typeof props.__funnelNext === "number" ? props.__funnelNext : undefined;
+    const nextRight =
+      nextData === undefined
+        ? right
+        : domainMap(nextData, [frame.xmin, frame.xmax], [frame.x0, frame.x1], false, frame.xScale);
+    const y0 = laid.y;
+    const y1 = laid.y + laid.h;
+    return {
+      ...laid,
+      d: `M ${baseline} ${y0} L ${right} ${y0} L ${nextRight} ${y1} L ${baseline} ${y1} Z`,
     };
   }
 

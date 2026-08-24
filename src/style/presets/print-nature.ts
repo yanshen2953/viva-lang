@@ -97,5 +97,8 @@ export const printNaturePreset: StylePreset = {
     allowShadow: false,
     allowAtmosphereBlend: false,
     forbidBlendModes: ["screen", "overlay", "soft-light", "multiply"],
+    maxMajorTicks: 6,
+    plotFloor: 0.22,
+    minorTicks: true,
   },
 };
