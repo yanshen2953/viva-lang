@@ -38,6 +38,18 @@ import {
   type PathTween,
 } from "./runtime/mark-ease.js";
 import { nodeIgnoresPointer } from "./runtime/pointer.js";
+import {
+  centerInRect,
+  classifyContacts,
+  constrainAgainst,
+  contactNormal,
+  movedPastSlop,
+  pairKey,
+  penetration,
+  readHand,
+  selectClick,
+  writeHand,
+} from "./runtime/hand.js";
 import { applyTimelineState, holdOf, startOfBeat } from "./timeline/clock.js";
 import { applyViewState } from "./runtime/view-machine.js";
 
@@ -74,6 +86,19 @@ type DragState = {
   moved: boolean;
   originX: number;
   originY: number;
+  lastX: number;
+  lastY: number;
+  world: boolean;
+  squad: string[];
+};
+
+type PressState = {
+  pointerId: number;
+  node: RenderNode | null;
+  startX: number;
+  startY: number;
+  shift: boolean;
+  lasso: boolean;
 };
 
 type HitShape =
@@ -97,6 +122,7 @@ export class Runtime {
   private hoverId: string | null = null;
   private time = 0;
   private drag: DragState | null = null;
+  private press: PressState | null = null;
   private activeCollisions = new Set<string>();
   private keyHandler: ((event: KeyboardEvent) => void) | null = null;
   private lastNodes: RenderNode[] = [];
@@ -151,6 +177,7 @@ export class Runtime {
       this.keyHandler = null;
     }
     this.drag = null;
+    this.press = null;
     this.activeCollisions.clear();
     for (const id of this.hideTimers.values()) window.clearTimeout(id);
     this.hideTimers.clear();
@@ -625,6 +652,18 @@ export class Runtime {
         this.onDragMove(event);
         return;
       }
+      if (this.press && event.pointerId === this.press.pointerId && !this.drag) {
+        const scene = this.pointerToScene(event);
+        if (movedPastSlop(scene.x - this.press.startX, scene.y - this.press.startY)) {
+          const node = this.press.node;
+          if (node && (this.isDraggable(node) || this.hasHandler("drag", node) || this.hasHandler("dragend", node))) {
+            this.beginDrag(node, event, this.isWorldGrip(node));
+            this.onDragMove(event);
+            return;
+          }
+          if (!node) this.press.lasso = true;
+        }
+      }
       const target = this.targetOf(event);
       this.hoverId = target?.id ?? null;
       if (target) this.fire("hover", target, event);
@@ -637,55 +676,57 @@ export class Runtime {
 
     this.svg.addEventListener("pointerdown", (event) => {
       const target = this.targetOf(event);
-      if (!target) return;
       this.svg?.setPointerCapture(event.pointerId);
-      this.fire("click", target, event);
-
-      if (this.isDraggable(target) || this.hasHandler("drag", target) || this.hasHandler("dragend", target)) {
-        const scene = this.pointerToScene(event);
-        const anchor = this.sceneAnchorOf(target);
-        this.drag = {
-          node: target,
-          pointerId: event.pointerId,
-          grabDx: scene.x - anchor.x,
-          grabDy: scene.y - anchor.y,
-          moved: false,
-          originX: anchor.x,
-          originY: anchor.y,
-        };
-        this.fire("dragstart", target, event, {
-          x: anchor.x,
-          y: anchor.y,
-          px: scene.px,
-          py: scene.py,
-          t: scene.t,
-          dx: 0,
-          dy: 0,
-        });
+      const scene = this.pointerToScene(event);
+      this.press = {
+        pointerId: event.pointerId,
+        node: target,
+        startX: scene.x,
+        startY: scene.y,
+        shift: event.shiftKey,
+        lasso: false,
+      };
+      // Chart brush keeps the old down→dragstart so a stroke does not lose the first pixels.
+      if (
+        target &&
+        this.isChartGrip(target) &&
+        (this.isDraggable(target) || this.hasHandler("drag", target) || this.hasHandler("dragend", target))
+      ) {
+        this.beginDrag(target, event, false);
       }
     });
 
-    const endDrag = (event: PointerEvent) => {
-      if (!this.drag || event.pointerId !== this.drag.pointerId) return;
-      const target = this.refreshNode(this.drag.node.id) ?? this.drag.node;
-      const scene = this.pointerToScene(event);
-      const x = scene.x - this.drag.grabDx;
-      const y = scene.y - this.drag.grabDy;
-      this.fire("dragend", target, event, {
-        x,
-        y,
-        px: scene.px,
-        py: scene.py,
-        t: scene.t,
-        dx: x - this.drag.originX,
-        dy: y - this.drag.originY,
-        moved: this.drag.moved,
-      });
-      // Allow a fresh collide enter after the grab ends.
-      for (const key of [...this.activeCollisions]) {
-        if (key.includes(target.id)) this.activeCollisions.delete(key);
+    const endPointer = (event: PointerEvent) => {
+      if (this.drag && event.pointerId === this.drag.pointerId) {
+        this.endDrag(event);
+        this.press = null;
+        return;
       }
-      this.drag = null;
+      if (!this.press || event.pointerId !== this.press.pointerId) return;
+      const scene = this.pointerToScene(event);
+      if (this.press.lasso) {
+        this.applyWorldLasso(this.press.startX, this.press.startY, scene.x, scene.y, this.press.shift);
+      } else if (this.press.node) {
+        this.fire("click", this.press.node, event);
+        if (this.isWorldGrip(this.press.node)) {
+          const hand = readHand(this.state);
+          writeHand(this.state, {
+            ...hand,
+            ids: selectClick(hand.ids, this.press.node.id, this.press.shift),
+            held: this.press.node.id,
+            phase: "",
+          });
+        }
+      } else if (!this.press.shift) {
+        const hand = readHand(this.state);
+        if (hand.ids.length || hand.held) {
+          writeHand(this.state, { ids: [], held: "", n: 0, phase: "" });
+          this.applyBinds();
+          this.applyRules();
+          this.render();
+        }
+      }
+      this.press = null;
       try {
         this.svg?.releasePointerCapture(event.pointerId);
       } catch {
@@ -693,8 +734,73 @@ export class Runtime {
       }
     };
 
-    this.svg.addEventListener("pointerup", endDrag);
-    this.svg.addEventListener("pointercancel", endDrag);
+    this.svg.addEventListener("pointerup", endPointer);
+    this.svg.addEventListener("pointercancel", endPointer);
+  }
+
+  private beginDrag(target: RenderNode, event: PointerEvent, world: boolean): void {
+    const scene = this.pointerToScene(event);
+    const anchor = this.sceneAnchorOf(target);
+    const hand = readHand(this.state);
+    const squad =
+      world && hand.ids.includes(target.id) && hand.ids.length > 1 ? [...hand.ids] : [target.id];
+    this.drag = {
+      node: target,
+      pointerId: event.pointerId,
+      grabDx: scene.x - anchor.x,
+      grabDy: scene.y - anchor.y,
+      moved: false,
+      originX: anchor.x,
+      originY: anchor.y,
+      lastX: anchor.x,
+      lastY: anchor.y,
+      world,
+      squad,
+    };
+    if (world) {
+      writeHand(this.state, {
+        ids: squad,
+        held: target.id,
+        n: squad.length,
+        phase: "",
+      });
+    }
+    this.fire("dragstart", target, event, {
+      x: anchor.x,
+      y: anchor.y,
+      px: scene.px,
+      py: scene.py,
+      t: scene.t,
+      dx: 0,
+      dy: 0,
+    });
+  }
+
+  private endDrag(event: PointerEvent): void {
+    if (!this.drag) return;
+    const target = this.refreshNode(this.drag.node.id) ?? this.drag.node;
+    const posed = this.poseDrag(event);
+    const tap = !this.drag.moved && this.isChartGrip(target);
+    this.fire("dragend", target, event, {
+      x: posed.x,
+      y: posed.y,
+      px: posed.px,
+      py: posed.py,
+      t: posed.t,
+      dx: posed.x - this.drag.originX,
+      dy: posed.y - this.drag.originY,
+      moved: this.drag.moved,
+    });
+    if (tap) this.fire("click", target, event);
+    this.resolveCollisions();
+    this.drag = null;
+    const hand = readHand(this.state);
+    writeHand(this.state, { ...hand, held: "", phase: hand.phase });
+    try {
+      this.svg?.releasePointerCapture(event.pointerId);
+    } catch {
+      /* already released */
+    }
   }
 
   private bindKeys(): void {
@@ -737,21 +843,30 @@ export class Runtime {
         },
       };
       let handled = false;
+      const hand = readHand(this.state);
+      const heldNodes = this.lastNodes.filter(
+        (n) => n.id === hand.held || hand.ids.includes(n.id) || this.drag?.node.id === n.id,
+      );
+      const hover = this.lastNodes.find((n) => n.id === this.hoverId);
+      const foci = [...heldNodes];
+      if (hover && !foci.some((n) => n.id === hover.id)) foci.push(hover);
+      const seen = new Set<string>();
+      for (const focus of foci) {
+        for (const handler of this.ir.events) {
+          if (handler.type !== "key") continue;
+          if (handler.target !== focus.name && handler.target !== focus.group) continue;
+          const sig = `${handler.target}:${focus.id}`;
+          if (seen.has(sig)) continue;
+          seen.add(sig);
+          execute(handler.body, this.scopes({ ...extra, [focus.name]: focus.item }));
+          handled = true;
+        }
+      }
       for (const handler of this.ir.events) {
         if (handler.type !== "key") continue;
         if (handler.target !== "scene" && handler.target !== "world") continue;
         execute(handler.body, this.scopes(extra));
         handled = true;
-      }
-      // Also allow key handlers on currently dragged / hovered node names.
-      const focus = this.drag?.node ?? this.lastNodes.find((n) => n.id === this.hoverId);
-      if (focus) {
-        for (const handler of this.ir.events) {
-          if (handler.type !== "key") continue;
-          if (handler.target !== focus.name && handler.target !== focus.group) continue;
-          execute(handler.body, this.scopes({ ...extra, [focus.name]: focus.item }));
-          handled = true;
-        }
       }
       if (handled) {
         event.preventDefault();
@@ -766,59 +881,188 @@ export class Runtime {
   private onDragMove(event: PointerEvent): void {
     if (!this.drag) return;
     const target = this.refreshNode(this.drag.node.id) ?? this.drag.node;
-    const scene = this.pointerToScene(event);
-    const x = scene.x - this.drag.grabDx;
-    const y = scene.y - this.drag.grabDy;
-    const dx = x - this.drag.originX;
-    const dy = y - this.drag.originY;
+    const fromX = this.drag.lastX;
+    const fromY = this.drag.lastY;
+    const posed = this.poseDrag(event);
+    const dx = posed.x - this.drag.originX;
+    const dy = posed.y - this.drag.originY;
     if (Math.hypot(dx, dy) > 2) this.drag.moved = true;
 
-    if (this.isDraggable(target) && isRecord(target.item)) {
-      target.item.x = x;
-      target.item.y = y;
+    const stepX = posed.x - fromX;
+    const stepY = posed.y - fromY;
+    this.writeWorldPose(target, posed.x, posed.y);
+    if (this.drag.world && this.drag.squad.length > 1) {
+      for (const id of this.drag.squad) {
+        if (id === target.id) continue;
+        const mate = this.refreshNode(id);
+        if (!mate || !isRecord(mate.item)) continue;
+        const ox = num(mate.item.x, num(mate.props.x, 0));
+        const oy = num(mate.item.y, num(mate.props.y, 0));
+        const held = this.constrainWorldPose(mate, ox + stepX, oy + stepY, this.drag.squad, {
+          x: ox,
+          y: oy,
+        });
+        this.writeWorldPose(mate, held.x, held.y);
+      }
     }
 
     this.fire("drag", target, event, {
-      x,
-      y,
-      px: scene.px,
-      py: scene.py,
-      t: scene.t,
+      x: posed.x,
+      y: posed.y,
+      px: posed.px,
+      py: posed.py,
+      t: posed.t,
       dx,
       dy,
     });
+    if (this.drag.world) {
+      const after = this.refreshNode(target.id) ?? target;
+      const held = this.constrainWorldPose(
+        after,
+        num(isRecord(after.item) ? after.item.x : after.props.x, posed.x),
+        num(isRecord(after.item) ? after.item.y : after.props.y, posed.y),
+        this.drag.squad,
+        { x: fromX, y: fromY },
+      );
+      this.writeWorldPose(after, held.x, held.y);
+      this.drag.lastX = held.x;
+      this.drag.lastY = held.y;
+      this.resolveCollisions();
+    } else {
+      this.drag.lastX = posed.x;
+      this.drag.lastY = posed.y;
+    }
+  }
+
+  private poseDrag(event: PointerEvent): PointerScene & { x: number; y: number } {
+    const scene = this.pointerToScene(event);
+    if (!this.drag) return { ...scene, x: scene.x, y: scene.y };
+    const target = this.refreshNode(this.drag.node.id) ?? this.drag.node;
+    let x = scene.x - this.drag.grabDx;
+    let y = scene.y - this.drag.grabDy;
+    if (this.drag.world) {
+      const held = this.constrainWorldPose(target, x, y, this.drag.squad, {
+        x: this.drag.lastX,
+        y: this.drag.lastY,
+      });
+      x = held.x;
+      y = held.y;
+    }
+    return { ...scene, x, y };
+  }
+
+  private writeWorldPose(node: RenderNode, x: number, y: number): void {
+    if (this.isDraggable(node) && isRecord(node.item)) {
+      node.item.x = x;
+      node.item.y = y;
+    }
+  }
+
+  private constrainWorldPose(
+    node: RenderNode,
+    x: number,
+    y: number,
+    ignore: string[] = [node.id],
+    from?: { x: number; y: number },
+  ): { x: number; y: number } {
+    const self = this.shapeOf({ ...node, props: { ...node.props, x, y } });
+    const origin = from
+      ? this.shapeOf({ ...node, props: { ...node.props, x: from.x, y: from.y } })
+      : this.shapeOf(node);
+    const walls = this.worldSolids()
+      .filter((other) => !ignore.includes(other.id) && other.id !== node.id)
+      .map((other) => this.shapeOf(other));
+    const got = constrainAgainst(self, walls, origin);
+    return { x: got.x, y: got.y };
+  }
+
+  private applyWorldLasso(x0: number, y0: number, x1: number, y1: number, additive: boolean): void {
+    const box = { x0, y0, x1, y1 };
+    const hits = this.worldSolids()
+      .filter((node) => centerInRect(this.shapeOf(node), box))
+      .map((node) => node.id);
+    const hand = readHand(this.state);
+    const ids = additive ? [...new Set([...hand.ids, ...hits])] : hits;
+    writeHand(this.state, { ids, held: ids[0] ?? "", n: ids.length, phase: "" });
+    this.applyBinds();
+    this.applyRules();
+    this.render();
   }
 
   private resolveCollisions(): void {
-    // Godot-like: the actively dragged body does not generate new contacts mid-grab.
-    const dragId = this.drag?.node.id;
-    const solids = this.lastNodes.filter(
-      (node) => this.isSolid(node) && node.id !== dragId,
-    );
+    const solids = this.worldSolids();
     const next = new Set<string>();
+    const byId = new Map(solids.map((n) => [n.id, n]));
 
     for (let i = 0; i < solids.length; i++) {
       for (let j = i + 1; j < solids.length; j++) {
         const a = solids[i]!;
         const b = solids[j]!;
-        if (!overlaps(this.shapeOf(a), this.shapeOf(b))) continue;
-        const key = a.id < b.id ? `${a.id}|${b.id}` : `${b.id}|${a.id}`;
-        next.add(key);
-        if (!this.activeCollisions.has(key)) {
-          this.fireCollision(a, b);
-          this.fireCollision(b, a);
+        if (penetration(this.shapeOf(a), this.shapeOf(b)) <= -0.75) continue;
+        next.add(pairKey(a.id, b.id));
+      }
+    }
+
+    const phases = classifyContacts(this.activeCollisions, next);
+    const held = this.drag?.node.id;
+    for (const key of phases.enter) {
+      const [idA, idB] = key.split("|") as [string, string];
+      const a = byId.get(idA);
+      const b = byId.get(idB);
+      if (!a || !b) continue;
+      this.fireCollision(a, b, "enter");
+      this.fireCollision(b, a, "enter");
+    }
+    if (phases.leave.length) {
+      const hand = readHand(this.state);
+      writeHand(this.state, { ...hand, phase: "leave" });
+    } else if (phases.enter.length) {
+      const hand = readHand(this.state);
+      writeHand(this.state, { ...hand, held: held ?? hand.held, phase: "enter" });
+    } else if (phases.stay.length) {
+      const hand = readHand(this.state);
+      writeHand(this.state, { ...hand, held: held ?? hand.held, phase: "stay" });
+    }
+
+    for (const key of next) {
+      const [idA, idB] = key.split("|") as [string, string];
+      const a = byId.get(idA);
+      const b = byId.get(idB);
+      if (!a || !b) continue;
+      if (penetration(this.shapeOf(a), this.shapeOf(b)) <= 0.5) continue;
+      const { nx, ny } = contactNormal(this.shapeOf(a), this.shapeOf(b));
+      const depth = penetration(this.shapeOf(a), this.shapeOf(b));
+      if (held === a.id && isRecord(b.item)) {
+        b.item.x = num(b.item.x, num(b.props.x, 0)) - nx * depth;
+        b.item.y = num(b.item.y, num(b.props.y, 0)) - ny * depth;
+      } else if (held === b.id && isRecord(a.item)) {
+        a.item.x = num(a.item.x, num(a.props.x, 0)) + nx * depth;
+        a.item.y = num(a.item.y, num(a.props.y, 0)) + ny * depth;
+      } else {
+        const half = depth / 2;
+        if (isRecord(a.item)) {
+          a.item.x = num(a.item.x, num(a.props.x, 0)) + nx * half;
+          a.item.y = num(a.item.y, num(a.props.y, 0)) + ny * half;
+        }
+        if (isRecord(b.item)) {
+          b.item.x = num(b.item.x, num(b.props.x, 0)) - nx * half;
+          b.item.y = num(b.item.y, num(b.props.y, 0)) - ny * half;
         }
       }
     }
     this.activeCollisions = next;
   }
 
-  private fireCollision(node: RenderNode, other: RenderNode): void {
+  private fireCollision(node: RenderNode, other: RenderNode, phase: "enter" | "stay" | "leave"): void {
+    const n = contactNormal(this.shapeOf(node), this.shapeOf(other));
     const extra: Scope = {
       __event: {
         x: num(node.props.x, 0),
         y: num(node.props.y, 0),
         t: 0,
+        phase,
+        nx: n.nx,
+        ny: n.ny,
         other: other.item ?? { name: other.name, id: other.id },
         otherName: other.name,
         otherGroup: other.group ?? null,
@@ -943,6 +1187,32 @@ export class Runtime {
     return Boolean(node.props.solid ?? node.props.collide ?? this.hasHandler("collide", node));
   }
 
+  private isChartGrip(node: RenderNode): boolean {
+    const role = node.props.role;
+    return (
+      Boolean(node.props.__chartBrush) ||
+      String(node.name).includes("plotBg") ||
+      role === "plot" ||
+      role === "panel"
+    );
+  }
+
+  private isWorldGrip(node: RenderNode): boolean {
+    if (nodeIgnoresPointer(node.name, node.props.role)) return false;
+    if (this.isChartGrip(node)) return false;
+    return this.isDraggable(node) || this.isSolid(node);
+  }
+
+  private worldSolids(): RenderNode[] {
+    const nodes = this.lastNodes.length ? this.lastNodes : this.flatten();
+    return nodes.filter(
+      (node) =>
+        this.isSolid(node) &&
+        !this.isChartGrip(node) &&
+        !nodeIgnoresPointer(node.name, node.props.role),
+    );
+  }
+
   private anchorOf(node: RenderNode): { x: number; y: number } {
     return { x: num(node.props.x, 0), y: num(node.props.y, 0) };
   }
@@ -984,19 +1254,6 @@ export class Runtime {
       }
     }
   }
-}
-
-function overlaps(a: HitShape, b: HitShape): boolean {
-  if (a.kind === "circle" && b.kind === "circle") {
-    return Math.hypot(a.x - b.x, a.y - b.y) <= a.r + b.r;
-  }
-  const ar = a.kind === "rect" ? a : circleToRect(a);
-  const br = b.kind === "rect" ? b : circleToRect(b);
-  return ar.x < br.x + br.w && ar.x + ar.w > br.x && ar.y < br.y + br.h && ar.y + ar.h > br.y;
-}
-
-function circleToRect(c: Extract<HitShape, { kind: "circle" }>): Extract<HitShape, { kind: "rect" }> {
-  return { kind: "rect", x: c.x - c.r, y: c.y - c.r, w: c.r * 2, h: c.r * 2 };
 }
 
 function evalProps(props: Record<string, Expr>, scopes: Scope[]): Record<string, unknown> {
