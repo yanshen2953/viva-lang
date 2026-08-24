@@ -6,9 +6,9 @@ HTTP (`viva serve`) and MCP solve the same problems; pick one per host:
 
 | Surface | Best for |
 | --- | --- |
-| **MCP** | Cursor, Claude Desktop, MCP-aware CLI agents |
+| **MCP** | Cursor, Claude Desktop, Pi (via `install/pi-viva-mcp.ts` extension) |
 | **HTTP** | Remote services, polyglot clients, Docker |
-| **CLI** | Shell scripts, Pi subprocess |
+| **CLI** | Shell scripts, Pi subprocess without tools |
 | **SDK** | Same-process Node integration |
 
 ## Tools
@@ -78,5 +78,20 @@ npx @modelcontextprotocol/inspector viva mcp
 import { runVivaMcpServer } from "viva-lang/mcp";
 await runVivaMcpServer();
 ```
+
+## Pi (no built-in MCP)
+
+Pi 0.73 does **not** speak MCP. Load the repo extension; it spawns `viva mcp` over stdio with the official SDK and forwards the same tools:
+
+```bash
+export PATH="$HOME/.npm-global/bin:$PATH"
+pi --no-extensions -e install/pi-viva-mcp.ts --no-builtin-tools \
+  --tools viva_compile,viva_check,viva_session,viva_prompt \
+  -p "Write a Viva scatter and compile it."
+```
+
+`npm run test:agent-exam` uses this path (not `--no-tools`). Agent exam still grades with `VivaAgentHost`; MCP is how Pi compiles/checks while generating.
+
+`compile` / `check` JSON includes `hints` when `ir.data` is empty (entities must be data-backed).
 
 See also [`DEPLOY.md`](../DEPLOY.md), [`agent-api.md`](./agent-api.md).

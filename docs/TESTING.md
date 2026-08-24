@@ -29,6 +29,7 @@ Coverage (see `tests/corpus/README.md`):
 ## Agent exam (Pi = system under test)
 
 Pi is **not** the author of the suite — it is the agent under test.
+Hard/smoke runs load `install/pi-viva-mcp.ts` so Pi can call `viva_compile` / `viva_check` / `viva_session` / `viva_prompt` over **MCP stdio** (Pi has no built-in MCP). Builtin tools stay disabled. Repair runs when **any** grade check fails (e.g. `ir.minDataKeys`), not only when compile fails.
 
 ```bash
 export PATH="$HOME/.npm-global/bin:$PATH"
