@@ -12,6 +12,7 @@ import {
 } from "../space.js";
 import { evalSceneProps, resolveSceneBox, scaleSceneGeom, sceneScaleOf } from "../space/scene-box.js";
 import { cssId, gradientSpec } from "../paint.js";
+import { LATIN_FONT_STACK } from "../metrics/text.js";
 import { applyTimelineState, timelineFromState } from "../timeline/clock.js";
 import { isSummaryMark, pickGeom, sampleGeomEase, samplePathEase, MARK_EASE_MS } from "../runtime/mark-ease.js";
 
@@ -197,7 +198,7 @@ function nodeToSvg(node: FlatNode, defsXml: string[] = []): string {
     const text = esc(str(p.text ?? p.label ?? node.name, ""));
     const fill = esc(str(p.fill ?? p.color, "#e2e8f0"));
     const size = num(p.font ?? p.fontSize, 14);
-    const family = esc(str(p.fontFamily, "IBM Plex Sans, Helvetica, Arial, sans-serif"));
+    const family = esc(str(p.fontFamily, LATIN_FONT_STACK));
     const weight = p.fontWeight !== undefined ? ` font-weight="${esc(String(p.fontWeight))}"` : "";
     const tracking =
       p.letterSpacing !== undefined ? ` letter-spacing="${esc(String(p.letterSpacing))}"` : "";

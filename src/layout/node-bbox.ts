@@ -1,6 +1,7 @@
 /** Scene-node boxes for review, Runtime hit tests, and structural QA. */
 
 import { estimateTextWidthPx } from "./chrome-collide.js";
+import { pathBBox } from "../paint/path.js";
 
 export type NodeBBox = { x: number; y: number; w: number; h: number };
 
@@ -73,6 +74,10 @@ export function propsToBBox(p: Record<string, unknown>): NodeBBox {
       w: Math.abs(x2 - x1) || 1,
       h: Math.abs(y2 - y1) || 1,
     };
+  }
+  if (typeof p.d === "string" || typeof p.path === "string") {
+    const box = pathBBox(String(p.d ?? p.path ?? ""));
+    if (box) return box;
   }
   if (p.text !== undefined || p.label !== undefined || p.font !== undefined || p.fontSize !== undefined) {
     const text = String(p.text ?? p.label ?? "");

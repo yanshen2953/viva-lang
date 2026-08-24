@@ -194,7 +194,7 @@ describe("paper chrome collision", () => {
       {
         colorbar: true,
         cbarLabels: ["1.2e-4", "very-long-tick"],
-        zCaption: "normalized-expression score",
+        zCaption: "normalized-expression score across donors and timepoints",
         yTicks: [{ label: "0", y: 150 }],
         xTicks: [{ label: "1", x: 80 }],
       },

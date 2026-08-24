@@ -65,7 +65,9 @@ export {
   newspaperMeasure,
   snapFigureToMeasure,
 } from "./layout/newspaper.js";
-export { pdfMissingGlyphs, bundledCjkFontPath, resolveCjkFontPath } from "./export/pdf-font.js";
+export { pdfMissingGlyphs, pdfUnmappedGlyphs, bundledCjkFontPath, resolveCjkFontPath } from "./export/pdf-font.js";
+export { measureText, LATIN_FONT_STACK } from "./metrics/text.js";
+export { propsToSceneShape } from "./runtime/units.js";
 export {
   runArtifactChecks,
   runStructuralChecks,

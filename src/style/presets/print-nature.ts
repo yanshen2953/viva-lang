@@ -6,7 +6,7 @@ export const printNaturePreset: StylePreset = {
   id: "print-nature",
   scene: {
     background: "#ffffff",
-    fontFamily: "IBM Plex Sans, Helvetica, Arial, sans-serif",
+    fontFamily: "Helvetica, Arial, sans-serif",
   },
   palette: {
     /** Wong / Nature Methods colorblind-safe categorical (default). */

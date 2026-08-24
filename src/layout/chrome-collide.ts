@@ -1,5 +1,7 @@
 /** Box-based paper chrome: measure, detect overlap, nudge, grow insets. */
 
+import { measureText } from "../metrics/text.js";
+
 export type PlotBox = {
   px0: number;
   px1: number;
@@ -290,12 +292,7 @@ export function wrapTextLines(
 }
 
 export function estimateTextWidthPx(text: string, font: number, tracking = 0): number {
-  let w = 0;
-  for (const ch of text) {
-    w += ch.charCodeAt(0) >= 0x3000 ? font : font * 0.58;
-    w += tracking;
-  }
-  return Math.max(font * 0.4, w);
+  return measureText(text, font, tracking);
 }
 
 export function rectsOverlap(a: ChromeRect, b: ChromeRect, gap = 2): boolean {
