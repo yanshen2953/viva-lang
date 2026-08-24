@@ -3,10 +3,13 @@ import { describe, expect, it } from "vitest";
 import { compileSource } from "../../src/pipeline.js";
 import { evaluate } from "../../src/eval.js";
 import { propsToBBox } from "../../src/layout/node-bbox.js";
+import { evalSceneProps, scaleSceneGeom, sceneScaleOf } from "../../src/space/scene-box.js";
 import type { VisualIR } from "../../src/ir.js";
 
 function expectChromeInsideCells(ir: VisualIR): void {
   const env = [ir.state, ir.data];
+  const scale = sceneScaleOf(evalSceneProps(ir.scene.props, env));
+  const pad = 2;
   const nodes = ir.scene.layers.flatMap((l) => l.items.filter((i) => i.kind === "node"));
   for (const frame of ir.frames) {
     if (!frame.props.cellX || !frame.props.cellY) continue;
@@ -18,6 +21,12 @@ function expectChromeInsideCells(ir: VisualIR): void {
     expect(plotX[1]).toBeLessThan(cellX[1]!);
     expect(plotY[0]).toBeGreaterThan(cellY[0]!);
     expect(plotY[1]).toBeLessThan(cellY[1]!);
+    const cellPx = {
+      x0: cellX[0]! * scale,
+      x1: cellX[1]! * scale,
+      y0: cellY[0]! * scale,
+      y1: cellY[1]! * scale,
+    };
     for (const node of nodes) {
       if (node.kind !== "node" || !node.name.startsWith(`${frame.name}_`)) continue;
       if (!/_(title(_\d+)?|xTitle(_\d+)?|yTitle(_\d+)?|ytick_\d+|xtick_\d+|legLbl_\d+(_\d+)?|cbarLbl_\d+(_\d+)?|cbarTitle(_\d+)?)$/.test(node.name)) {
@@ -39,11 +48,13 @@ function expectChromeInsideCells(ir: VisualIR): void {
       const font = node.props.font?.kind === "number" ? node.props.font.value : 8;
       const tracking =
         node.props.letterSpacing?.kind === "number" ? node.props.letterSpacing.value : 0.08;
-      const box = propsToBBox({ x, y, text: label, align, rotate, font, letterSpacing: tracking });
-      expect(box.x).toBeGreaterThanOrEqual(cellX[0]! - 1);
-      expect(box.x + box.w).toBeLessThanOrEqual(cellX[1]! + 1);
-      expect(box.y).toBeGreaterThanOrEqual(cellY[0]! - 1);
-      expect(box.y + box.h).toBeLessThanOrEqual(cellY[1]! + 1);
+      const box = propsToBBox(
+        scaleSceneGeom({ x, y, text: label, align, rotate, font, letterSpacing: tracking }, scale),
+      );
+      expect(box.x).toBeGreaterThanOrEqual(cellPx.x0 - pad);
+      expect(box.x + box.w).toBeLessThanOrEqual(cellPx.x1 + pad);
+      expect(box.y).toBeGreaterThanOrEqual(cellPx.y0 - pad);
+      expect(box.y + box.h).toBeLessThanOrEqual(cellPx.y1 + pad);
     }
   }
 }

@@ -41,9 +41,9 @@
 | 项 | 值 |
 | --- | --- |
 | 分支 | `cursor/style-handbook-hook-a8c1` |
-| HEAD | `dba0a84` — *Let print-nature square bars; dashboard keeps rounded marks.* |
-| 工作树 | 写本文件前 clean，与 origin 同步 |
-| 测试 | 上一轮本机 `npm test`：**278 passed** |
+| HEAD | plot-floor chrome insets on `cursor/style-handbook-hook-a8c1`（接续 `dba0a84`） |
+| 工作树 | 本轮求解已落地，见 §3 / §4.1 |
+| 测试 | 本轮本机 `npm test`：**282 passed** |
 | `build:lib` | 通过 |
 | CI | `.github/workflows/ci.yml`：`npm ci` / `build:lib` / `npm test` / Atlas `--visual`。`dba0a84` 当时绿 |
 | `npm run build` | playground/runtime 严格 tsc 仍可能失败；日常用 `vite-node` + vitest |
