@@ -132,7 +132,7 @@ function callPi(opts: {
   const extension = path.join(root, "install/pi-viva-mcp.ts");
   const homeBin = path.join(process.env.HOME ?? "", ".npm-global/bin");
   const pathEnv = `${homeBin}:${process.env.PATH ?? ""}`;
-  const timeoutMs = Number(process.env.VIVA_EXAM_TIMEOUT_MS ?? 900_000);
+  const timeoutMs = Number(process.env.VIVA_EXAM_TIMEOUT_MS ?? 240_000);
   const args = [
     "-p",
     "--provider",
@@ -142,7 +142,7 @@ function callPi(opts: {
     "--api-key",
     key,
     "--thinking",
-    "low",
+    process.env.VIVA_EXAM_THINKING ?? "off",
     "--no-session",
     "--no-extensions",
     "--extension",
@@ -174,10 +174,10 @@ function callPi(opts: {
   });
   process.stderr.write(`  pi done in ${((Date.now() - started) / 1000).toFixed(1)}s status=${res.status ?? "err"}\n`);
   const raw = redactSecrets(`${res.stdout ?? ""}\n${res.stderr ?? ""}`.trim(), [key]);
-  if (res.error) return { ok: false, text: "", raw: String(res.error) };
-  if (res.status !== 0 && !raw.includes("artifact")) {
-    return { ok: false, text: raw, raw };
-  }
+  // spawnSync timeout still keeps stdout — do not drop a finished artifact.
+  if (raw.includes("artifact")) return { ok: true, text: raw, raw };
+  if (res.error) return { ok: false, text: raw, raw: String(res.error) };
+  if (res.status !== 0) return { ok: false, text: raw, raw };
   return { ok: true, text: raw, raw };
 }
 

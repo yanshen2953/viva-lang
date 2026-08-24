@@ -1,7 +1,7 @@
 # Agent exam (Pi = system under test)
 
 Coding agent under test: **Pi** + DeepSeek (`deepseek-v4-flash-vision-exp`).
-Pi talks to Viva through **MCP** (`install/pi-viva-mcp.ts` → `viva mcp` stdio). Built-in bash/edit/write stay off.
+Pi talks to Viva through **MCP** (`install/pi-viva-mcp.ts` → `viva mcp` stdio). Exam allowlists `viva_compile` + `viva_prompt` only; builtin bash/edit/write stay off.
 Grader: **`VivaAgentHost`** (compile / patch / provenance) + structural IR asserts.
 Failed IR asserts (not only compile errors) trigger one repair turn.
 

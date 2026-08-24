@@ -3,8 +3,6 @@ export type ExamCheck = { name: string; pass: boolean; detail?: string };
 /** Pi has no built-in MCP; exam loads `install/pi-viva-mcp.ts` and allowlists these. */
 export const EXAM_PI_MCP_TOOLS = [
   "viva_compile",
-  "viva_check",
-  "viva_session",
   "viva_prompt",
 ] as const;
 
