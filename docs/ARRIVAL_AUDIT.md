@@ -4,6 +4,18 @@
 
 北极星：一门极小、内联、服务 coding agent 的汇报语言；同一套 World / Space / Paint 原语同时覆盖活世界交互、论文图和影像排版。复杂度在编译器 / Runtime / 插件里，不靠增加语言关键字。
 
+## 施工进度（2026-08-24 P0）
+
+已落地、可回归：
+
+- **P0-A** layout / chrome / bbox 走 `measureText`（Helvetica AFM + CJK 1 em），不再用 `0.58 * font` 做发布尺。
+- **P0-B** vector PDF 补 rotate、letterSpacing、dash、rx、渐变条带、M/L/C/Q/Z fill、每页 clip；CJK 用 fontkit cmap，不再把测宽不抛错当覆盖。
+- **P0-C** `examples/arrival.viva`：A4 双栏、span 1/2、CJK、World、brush、四拍、跨页；四道门测试先吃这份源码。
+- **P0-D** 碰撞 / `__event.x/y` 统一作者 scene units；mark 上可落到 plot brush；folio jump/chapter 不抢指针；`event collide` 带 `phase`，作者须判断 `enter` 才计数。
+- **P0-E** `src/agent` 不再静态导出 HTTP/sharp；session 动态加载 vector PDF；Vite alias 掉 Node font；Docker 复制 `assets`；CI 跑完整 `npm run build`。
+
+仍未到站：浏览器 getBBox 对尺、SVG↔PDF SSIM、Runtime 指针连打、`__page` 写入者、agent 闭环、ID sidecar。
+
 ## 结论
 
 **尚未到站。**

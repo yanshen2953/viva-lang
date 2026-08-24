@@ -1,0 +1,94 @@
+artifact "Arrival"
+
+data rows = [
+  { t: 1, score: 12, arm: "对照" }
+  { t: 2, score: 14, arm: "对照" }
+  { t: 3, score: 11, arm: "对照" }
+  { t: 1, score: 20, arm: "药物" }
+  { t: 2, score: 22, arm: "药物" }
+  { t: 3, score: 24, arm: "药物" }
+]
+
+data tokens = [
+  { id: "p1", x: 24, y: 36 }
+  { id: "p2", x: 32, y: 44 }
+]
+
+scene
+  unit: mm
+  page: a4
+  column: double
+  height: 400
+  background: #ffffff
+
+  layer world
+    for token in tokens
+      node token as tokens
+        x: token.x
+        y: token.y
+        r: 3.2
+        fill: #0072B2
+        stroke: #1a1a1a
+        strokeWidth: 0.35
+        drag: true
+        solid: true
+
+widget layout.board
+  title: "到站件 · Arrival"
+  subtitle: "89 mm panel · 183 mm copy · CJK · World · brush · four beats"
+  body: "同一份极小源码同时走过眼睛、手、导出和 agent。scene.column 是全局值，因此 89 mm 与 183 mm 只通过 span:1 / span:2 出现，不假装同一 scene 有两套栏宽。board beats 只负责 Clock 与 veil；layout.figure panel: body 拥有绘图槽。跨页后页刀切开，PDF 不得把第一页底板画到第二页。"
+  caption: "n/N 翻拍 · 暗拍可刷 · 不手写 inset"
+  beats: 4
+  play: true
+  playFps: 2
+  guides: false
+
+widget layout.figure
+  panel: body
+  cols: 2
+  rows: 2
+  title: "同一栏度量上的单栏与跨栏"
+  caption: "span 1 = 89 mm · span 2 = 183 mm"
+
+widget chart.scatter
+  panel: a
+  data: rows
+  xField: t
+  yField: score
+  group: arm
+  xlim: 0 4
+  ylim: 8 28
+  xLabel: "时间"
+  yLabel: "心率"
+  title: "单栏 89 mm"
+
+widget chart.line
+  panel: b
+  data: rows
+  xField: t
+  yField: score
+  group: arm
+  xlim: 0 4
+  ylim: 8 28
+  xLabel: Visit
+  yLabel: Score
+  title: "Paired 89 mm"
+
+widget chart.violin
+  panel: c
+  span: 2
+  data: rows
+  xField: arm
+  yField: score
+  ylim: 8 28
+  xLabel: Arm
+  yLabel: Score
+  title: "Cross-column 183 mm"
+
+event drag on tokens
+  token.x = __event.x
+  token.y = __event.y
+
+event collide on tokens
+  if __event.phase == "enter"
+    token.x = token.x

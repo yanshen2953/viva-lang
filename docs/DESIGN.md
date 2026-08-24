@@ -104,7 +104,7 @@ tick bind if for
 | `click` | 世界物体轻点在松手；图刷仍按下即拖 | ✅ |
 | `hover` | 指针移动经过 | ✅ |
 | `dragstart` / `drag` / `dragend` | 指针捕获拖拽；世界过 slop 才起拖 | ✅ |
-| `collide` | 固体接触进入（含正拖的固体；stay 不连打） | ✅ |
+| `collide` | 固体接触；`__event.phase` 为 enter/stay/leave，作者须判断 enter 才计数 | ✅ |
 | `key` | 键盘：先手里的单位，再 hover，再 `scene`/`world` | ✅ |
 
 `__event` 载荷：`x y px py t dx dy key code other otherGroup phase nx ny`（场景坐标经 CTM 反变换）。
@@ -245,7 +245,7 @@ compile({ handbookIds })   # 同一 id 加载 preset hook（见 handbooks/HOOK.m
 | headless simulate | ✅ | `simulate.ts` / `session.simulate` |
 | export package (source+svg+prov) | ✅ | `session.exportPackage` |
 | PDF/JPG/PNG 导出 | ✅ | `src/export` + `viva export` |
-| PDF/mm 单位规范排版 | ⚠️ | 尺寸 / 分页骨架在；真实字宽、PDF rotate/gradient/path/page clip 未齐 |
+| PDF/mm 单位规范排版 | ⚠️ | Helvetica AFM + CJK em 共用尺；PDF 有 rotate/dash/path/clip；仍无 SVG↔PDF SSIM |
 | `handbook 运行时装载 API` | ✅ | `PromptService` + `docs/handbooks` |
 | **handbook 编译期 preset hook** | ✅ | `src/style/` + `compile({ handbookIds })` |
 | Host Session / provenance MVP | ✅ | `src/agent/` |

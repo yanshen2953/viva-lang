@@ -50,6 +50,27 @@ async function pdfPageSize(src: string, file: string) {
   return { pdf, size: doc.getPage(0)!.getSize() };
 }
 
+describe("four gates — arrival fixture", () => {
+  it("one source carries 89 / 183 mm, CJK, World, brush, four beats, and two pages", async () => {
+    const { src, ir } = compile("arrival.viva");
+    expect(src).not.toMatch(/(^|\n)\s*(areaX|areaY|insetL|plotPad)\s*:/);
+    const box = sceneBox(ir);
+    expect(box.page?.name).toBe("a4");
+    expect(box.column).toBe("double");
+    expect(box.width).toBeCloseTo(mmToPx(210));
+    expect(box.height).toBeGreaterThan(mmToPx(297));
+    const svg = renderSvgFromIr(ir);
+    expect(svg).toMatch(/时间|心率|到站/);
+    expect(ir.timeline?.beats).toBe(4);
+    expect(ir.events.some((e) => e.type === "drag" && e.target === "tokens")).toBe(true);
+    const { pdf, size } = await pdfPageSize(src, "arrival.viva");
+    expect(size.width).toBeCloseTo(box.width * PX_PER_PT, 0);
+    const doc = await PDFDocument.load(pdf.bytes);
+    expect(doc.getPageCount()).toBeGreaterThanOrEqual(2);
+    expect(pdf.missingGlyphs ?? []).toEqual([]);
+  });
+});
+
 describe("four gates — eyes", () => {
   it("paper-column is 89 mm on SVG and vector PDF", async () => {
     const { src, ir } = compile("paper-column.viva");
@@ -220,7 +241,7 @@ describe("four gates — not arrived", () => {
     const holes = {
       eyes: "Atlas is 1360×920 px. No metric here for ‘spacing like print’. SVG and PDF sizes match; they are not a side-by-side visual.",
       hand: "Headless simulate on each source, not one Runtime pointer session across brush/drag/beat/page.",
-      export: "Beat PNG sequence follows Clock holds and gif/mp4 follows Clock playback; PDF paint/ID parity is still incomplete.",
+      export: "Beat PNG sequence follows Clock holds and gif/mp4 follows Clock playback; PDF now has rotate/dash/path/clip, but ID sidecar and SVG↔PDF SSIM are still open.",
       agent: "Deterministic repair + MCP compile. No short-intent LLM → playable card in this exam.",
     };
     expect(Object.keys(holes)).toEqual(["eyes", "hand", "export", "agent"]);

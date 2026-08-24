@@ -224,6 +224,8 @@ layer cards
 
 `x y px py t dx dy key code other otherGroup phase nx ny`
 
+`x/y` 是作者场景单位（`unit: mm` 时是 mm）。`event collide` 在 enter / stay / leave 都会跑，`phase` 区分；E5 一次计数必须写 `if __event.phase == "enter"`。
+
 ## 节点如何变成图形
 
 | 属性 | 图形 |
