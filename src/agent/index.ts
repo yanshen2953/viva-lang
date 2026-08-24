@@ -23,8 +23,6 @@ export {
   resetRemoteAgentHost,
   attachBuiltinPipelines,
 } from "./remote-host.js";
-export { createSessionFacade } from "./session-api.js";
-export type { SessionFacade, PipelineInfo, CompileSummary } from "./session-api.js";
 // Node-only adapter: import from `./pipeline/adapters/local-command.js` (not bundled into playground).
 export {
   createDomainViewRegistry,

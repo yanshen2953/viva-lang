@@ -1,6 +1,17 @@
 import path from "node:path";
 import { defineConfig } from "vite";
 
+const nodeExportStubs = [
+  {
+    find: /(?:^|\/)export\/vector-pdf(?:\.js)?$/,
+    replacement: path.resolve(__dirname, "src/export/vector-pdf.browser.ts"),
+  },
+  {
+    find: /(?:^|\/)export\/pdf-font(?:\.js)?$/,
+    replacement: path.resolve(__dirname, "src/export/pdf-font.browser.ts"),
+  },
+];
+
 /** Browser IIFE bundle for iframe / script-tag agent embeds. */
 export default defineConfig({
   build: {
@@ -13,21 +24,10 @@ export default defineConfig({
     outDir: path.resolve(__dirname, "dist/embed"),
     emptyOutDir: true,
     rollupOptions: {
-      // Bundle agent host + runtime into the embed (no Node export/sharp).
       external: [],
     },
   },
   resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "src"),
-      [path.resolve(__dirname, "src/export/vector-pdf.ts")]: path.resolve(
-        __dirname,
-        "src/export/vector-pdf.browser.ts",
-      ),
-      [path.resolve(__dirname, "src/export/pdf-font.ts")]: path.resolve(
-        __dirname,
-        "src/export/pdf-font.browser.ts",
-      ),
-    },
+    alias: [{ find: "@", replacement: path.resolve(__dirname, "src") }, ...nodeExportStubs],
   },
 });
