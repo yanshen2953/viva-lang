@@ -378,7 +378,7 @@ describe("arrival 10 — slim prompt + capabilities + loop", () => {
     expect(writePage(state, 9, 3)).toBe(3);
   });
 
-  it("slim skeleton and live generated cards stack the second board off page 1", () => {
+  it("slim skeleton and live generated cards close print / span / id / clock doors", async () => {
     const start = SYSTEM_PROMPT_SLIM.indexOf('\nartifact "Name"');
     const end = SYSTEM_PROMPT_SLIM.indexOf("\n\nUse the Capabilities");
     const skeleton = SYSTEM_PROMPT_SLIM.slice(start, end).trim();
@@ -387,19 +387,50 @@ describe("arrival 10 — slim prompt + capabilities + loop", () => {
       "/opt/cursor/artifacts/agent-loop-live.viva",
       "/opt/cursor/artifacts/h09-arrival.viva",
     ].filter((p) => existsSync(p));
-    const sources = [skeleton, ...generated.map((p) => readFileSync(p, "utf8"))];
+    const sources = [{ name: "slim-skeleton", src: skeleton }, ...generated.map((p) => ({ name: p, src: readFileSync(p, "utf8") }))];
     expect(sources.length).toBeGreaterThan(0);
-    for (const src of sources) {
-      const compiled = compileSource(src, "slim-card.viva", PRINT);
-      expect(compiled.error, compiled.error ?? "").toBeNull();
+    for (const { name, src } of sources) {
+      const compiled = compileSource(src, `${name}.viva`, PRINT);
+      expect(compiled.error, `${name}: ${compiled.error ?? ""}`).toBeNull();
       const ir = compiled.ir!;
-      expect(ir.frames.some((f) => f.name === "board2_body")).toBe(true);
+      expect(ir.frames.some((f) => f.name === "board2_body"), name).toBe(true);
+      const a = cellWidthMm(ir, "a");
+      const c = cellWidthMm(ir, "c");
+      expect(a, `${name} span:1`).toBeCloseTo(COLUMN_MM.single, 0);
+      expect(c, `${name} span:2`).toBeCloseTo(COLUMN_MM.double, 0);
       const d = ir.frames.find((f) => f.name === "d");
-      expect(d, "generated/slim panel d").toBeTruthy();
+      expect(d, `${name} panel d`).toBeTruthy();
       const y = evaluate(d!.props.y!, [ir.state, ir.data]) as number[];
       expect(y[0]!).toBeGreaterThan(200);
       const cellX = evaluate(d!.props.cellX!, [ir.state, ir.data]) as number[];
       expect(cellX[1]! - cellX[0]!).toBeLessThanOrEqual(COLUMN_MM.double + 2);
+      expect(ir.timeline?.beats).toBe(4);
+      expect(holdFrameTimes(ir.timeline!).length).toBe(4);
+      expect(playbackFrameTimes(ir.timeline!).length).toBeGreaterThan(4);
+      const { nodes } = flattenNodesFromIr(ir);
+      const painted = nodes.filter((n) => nodePainted(n.props)).map((n) => n.id).sort();
+      const svg = renderSvgFromIr(ir);
+      const svgIds = [...svg.matchAll(/data-viva-id="([^"]+)"/g)].map((m) => m[1]!).sort();
+      expect(svgIds, name).toEqual(painted);
+      const review = listSelectableNodes(ir).map((n) => n.id);
+      expect(painted.every((id) => review.includes(id)), name).toBe(true);
+      const pdf = await exportArtifact(src, "pdf", PRINT, `${name}.viva`);
+      expect(pdf.vector, name).toBe(true);
+      expect(pdf.missingGlyphs ?? []).toEqual([]);
+      const side = [...new Set((pdf.sidecar ?? []).map((n) => n.id))].sort();
+      expect(side, name).toEqual(painted);
+      const ops = pdfOperators(pdf.bytes);
+      expect(ops).toMatch(/W\s+n|W\*/);
+      expect(ops).toMatch(/\bf\b|f\*|B/);
+      expect(pdfUnmappedGlyphs("到站件对照处理时间得分")).toEqual([]);
+      if (pdftoppmAvailable()) {
+        const report = await compareSvgPdfPages(ir, { width: 640 });
+        expect(report.pdfRaster, name).toBe("pdftoppm");
+        expect(report.idEqual, name).toBe(true);
+        expect(report.sidecarOverlap, name).toBeGreaterThan(0.85);
+        expect(report.minInkIou, `${name} ${JSON.stringify(report.pages)}`).toBeGreaterThan(0.55);
+        expect(report.maxMse, name).toBeLessThan(0.45);
+      }
     }
-  });
+  }, 60_000);
 });
