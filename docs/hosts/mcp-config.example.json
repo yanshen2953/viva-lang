@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "viva": {
+      "command": "viva",
+      "args": ["mcp"],
+      "env": {
+        "VIVA_MODELS_CONFIG": "/path/to/viva.models.json"
+      }
+    }
+  }
+}

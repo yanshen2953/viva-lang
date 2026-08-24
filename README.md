@@ -20,10 +20,26 @@ npm run dev
 
 浏览器打开 [http://localhost:5173](http://localhost:5173)，左侧改 `.viva` 源码，右侧立即渲染。
 
+### 安装 CLI（Win / Mac / Linux）
+
 ```bash
-npm run build
-node dist/cli.js compile examples/hello.viva
+npm install -g .
+# 或一键: bash install/one-click.sh
+# Docker: docker compose up -d --build
 ```
+
+部署与其它 Agent 接入：[`docs/DEPLOY.md`](docs/DEPLOY.md)
+
+```bash
+viva version
+viva export examples/charts.viva -f pdf -o charts.pdf   # 矢量 PDF（几何 1:1）
+viva export examples/hello.viva -f pdf-raster -o r.pdf # 栅格 PDF 回退
+viva serve --port 8765           # agent HTTP 内嵌桥
+```
+
+网页 Agent 内嵌：`import { createVivaWebEmbed } from "viva-lang/embed"` — 见 [`docs/hosts/web-embed.md`](docs/hosts/web-embed.md)。  
+Bash 接口：[`docs/hosts/bash.md`](docs/hosts/bash.md)。  
+**审查圈选 → agent 修图**：Playground「审查模式」或 [`docs/hosts/review.md`](docs/hosts/review.md)。
 
 ## 最小例子
 
@@ -61,11 +77,24 @@ event click on counter
 ## 仓库结构
 
 ```
-src/          词法、语法、IR、编译器、运行时
+src/          词法、语法、IR、编译器、运行时、agent、review、export
 examples/     可运行的 .viva 示例
-playground/   本地交互演练场
-docs/         语言与架构说明
+playground/   本地交互演练场（含审查模式）
+docs/         语言、架构、Host 集成（hosts/）、测试说明
+tests/        确定性 corpus + agent-exam
+scripts/      CLI 演示与 UI 检查脚本
+install/      Win/Mac/Linux 安装脚本
 ```
+
+### Host 集成文档
+
+| 文档 | 用途 |
+| --- | --- |
+| [`docs/hosts/minimal-host.md`](docs/hosts/minimal-host.md) | Session / Host 最小接入 |
+| [`docs/DEPLOY.md`](docs/DEPLOY.md) | 一键部署 + HTTP/CLI/SDK 接入 |
+| [`docs/hosts/web-embed.md`](docs/hosts/web-embed.md) | iframe / postMessage |
+| [`docs/hosts/bash.md`](docs/hosts/bash.md) | `viva` CLI |
+| [`docs/hosts/review.md`](docs/hosts/review.md) | 圈选标注 → `agentBrief` |
 
 ## 许可
 

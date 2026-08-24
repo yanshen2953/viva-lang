@@ -1,0 +1,56 @@
+artifact "Param Lab"
+
+state param = 0.5
+state t = 0
+
+data knob = { x: 220, y: 60 }
+data series = [
+  { t: 0, v: 0.5 }
+]
+
+scene
+  size: 720 400
+  background: #0b1220
+
+  layer ui
+    node track
+      x: 40
+      y: 55
+      w: 360
+      h: 10
+      fill: #334155
+
+    node handle as knob
+      x: knob.x
+      y: knob.y
+      r: 12
+      fill: #38bdf8
+      drag: true
+
+    node label
+      x: 40
+      y: 30
+      text: param
+      font: 14
+      fill: #e2e8f0
+
+event drag on knob
+  knob.x = clamp(__event.x, 40, 400)
+  param = (knob.x - 40) / 360
+
+tick 20
+  t = t + 1
+  series = series + [{ t: t, v: param * sin(t * 0.15) + (1 - param) * cos(t * 0.08) }]
+
+rule when t > 120
+  t = 0
+  series = [{ t: 0, v: param }]
+
+widget chart.line
+  data: series
+  xField: t
+  yField: v
+  xlim: 0 120
+  ylim: -1.5 1.5
+  title: "PARAM"
+  color: #34d399

@@ -1,0 +1,46 @@
+import type { StylePreset } from "../types.js";
+
+export const dashboardPreset: StylePreset = {
+  id: "dashboard",
+  extends: "print-nature",
+  scene: {
+    background: "#0b1220",
+    fontFamily: "IBM Plex Sans, system-ui, sans-serif",
+  },
+  palette: {
+    categorical: ["#38bdf8", "#a78bfa", "#34d399", "#fbbf24", "#fb7185", "#22d3ee"],
+    sequential: ["#0c1929", "#1e3a5f", "#2563eb", "#38bdf8", "#bae6fd"],
+    accent: "#38bdf8",
+    foreground: "#f1f5f9",
+    muted: "#94a3b8",
+    background: "#0b1220",
+  },
+  roles: {
+    panel: { fill: "#0f172a", stroke: "#334155", strokeWidth: 1.5, radius: 12 },
+    plot: { fill: "#020617", stroke: "#475569", strokeWidth: 1.5, radius: 6 },
+    axis: { stroke: "#cbd5e1", strokeWidth: 2 },
+    grid: { stroke: "#334155", dash: "4 5" },
+    title: { fill: "#f1f5f9", font: 15, fontWeight: 700 },
+    subtitle: { fill: "#94a3b8", font: 13 },
+    caption: { fill: "#64748b", font: 12 },
+    "legend-label": { fill: "#cbd5e1", font: 11 },
+    "panel-label": { fill: "#38bdf8", font: 12, fontWeight: 700 },
+    subpanel: { fill: "#0b1220", stroke: "#475569", strokeWidth: 1.5, radius: 10 },
+    colorbar: { stroke: "#64748b", strokeWidth: 1 },
+    "mark-area": { opacity: 0.92, strokeWidth: 0.5 },
+    mark: { stroke: "#0f172a", strokeWidth: 1.25, radius: 3 },
+    "mark-line": { strokeWidth: 2 },
+    chrome: { fill: "#1e293b", stroke: "#94a3b8", strokeWidth: 1.5 },
+    atmosphere: { opacity: 0.35 },
+  },
+  policies: {
+    allowGlow: true,
+    allowBlur: true,
+    allowShadow: true,
+    allowAtmosphereBlend: true,
+    maxGlow: 16,
+    maxBlur: 48,
+    maxShadowOpacity: 0.5,
+    forbidBlendModes: [],
+  },
+};

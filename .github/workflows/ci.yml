@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [main, "cursor/**"]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      - run: npm run build:lib
+      - name: Install ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
+      - run: npm test
+      - name: Visual check (Figure Atlas)
+        run: node dist/cli.js check examples/figure-atlas.viva --visual --handbook print-nature
+      - name: Visual check (paper examples)
+        run: |
+          node dist/cli.js check examples/box.viva --visual --handbook print-nature
+          node dist/cli.js check examples/violin.viva --visual --handbook print-nature
+          node dist/cli.js check examples/paper-column.viva --visual --handbook print-nature
+          node dist/cli.js check examples/linked-filter.viva --visual --handbook print-nature
+          node dist/cli.js check examples/paper-cjk.viva --visual --handbook print-nature
+          node dist/cli.js check examples/board-typegrid.viva --visual --handbook print-nature
+      - name: Slim prompt smoke
+        run: node dist/cli.js prompt | grep -E "layout.board|__sel|chart.violin|typeGrid"
+      - name: MCP tools smoke
+        run: node dist/cli.js prompt --handbook print-nature | head -c 200

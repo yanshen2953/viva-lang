@@ -1,0 +1,36 @@
+artifact "P1 param lab"
+
+state param = 0.5
+state t = 0
+
+data knob = { x: 100, y: 40 }
+data series = [
+  { t: 0, v: 0.5 }
+]
+
+scene
+  size: 480 280
+  background: #0b1220
+
+  layer ui
+    node handle as knob
+      x: knob.x
+      y: knob.y
+      r: 8
+      fill: #38bdf8
+      drag: true
+
+event drag on knob
+  knob.x = clamp(__event.x, 40, 200)
+  param = (knob.x - 40) / 160
+
+tick 30
+  t = t + 1
+  series = series + [{ t: t, v: param * sin(t * 0.2) }]
+
+widget chart.line
+  data: series
+  xField: t
+  yField: v
+  xlim: 0 40
+  ylim: -1 1

@@ -10,10 +10,10 @@ export function renderStandaloneHtml(ir: VisualIR, source = ""): string {
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>${escapeHtml(ir.name)} · Viva</title>
   <style>
-    html, body { margin: 0; height: 100%; background: #070b14; color: #e2e8f0; font-family: "IBM Plex Sans", sans-serif; }
-    .wrap { height: 100%; display: grid; place-items: center; }
+    html, body { margin: 0; height: 100%; background: #ffffff; color: #1e293b; font-family: "IBM Plex Sans", sans-serif; }
+    .wrap { height: 100%; display: grid; place-items: center; background: #ffffff; }
     .stage { width: min(960px, 100%); height: min(560px, 100%); }
-    svg { display: block; border-radius: 16px; box-shadow: 0 24px 80px rgb(0 0 0 / 0.35); }
+    svg { display: block; border-radius: 4px; box-shadow: 0 1px 3px rgb(15 23 42 / 0.08); }
   </style>
 </head>
 <body>

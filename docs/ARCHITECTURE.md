@@ -1,17 +1,39 @@
-# 架构
+# 架构（实现要点）
+
+完整设计真源：**[`DESIGN.md`](./DESIGN.md)**。本文只记流水线与当前实现挂钩。
 
 ```
-LLM → Viva DSL → Parser → Semantic Compiler → Visual IR → Runtime → SVG
+LLM (+ optional handbooks) → Viva DSL → Parser → Compiler → Visual IR → Runtime → SVG
+                                                              ↘ static export → SVG / vector PDF
 ```
 
-Visual IR 拆成五块：
+## 三层
 
-- Scene IR：layer / node / 相机与尺寸
-- State IR：世界状态
-- Behavior IR：event / rule / bind
-- Time IR：tick 与 animate
-- Data IR：静态或可变数据集
+| 层 | 职责 | 状态 |
+| --- | --- | --- |
+| World | state / event / tick / drag / collide / key | ✅ |
+| Space | frame / scale / chart widgets | ✅ `src/space.ts` |
+| Paint | layer 合成 + 节点样式；风格手册插件 | ✅ 基础；手册见 `handbooks/` |
 
-Widget 不是语言核心，而是编译期宏。例如 `timeline` 会展开成轨道、填充条、标签和点击赋值。
+## Export & review
 
-运行时保持表达式，不在编译期把 `for` 完全拍平，这样数据变化时场景可以重新实例化。
+| 模块 | 职责 |
+| --- | --- |
+| `src/export/static-svg.ts` | 无浏览器 SVG；`data-viva-id` 与 Runtime 对齐 |
+| `src/export/vector-pdf.ts` | 真矢量 PDF（非 PNG 嵌入） |
+| `src/review/` | 圈选工具 + 富反馈 → `agentBrief`；Session `createReview` |
+
+Host 文档：`docs/hosts/`（含 [`review.md`](./hosts/review.md)）。
+
+## Runtime 要点
+
+- 拖拽：pointer capture；`drag: true` 写回 `item.x/y`；CTM 场景坐标
+- 碰撞：`solid` / `event collide`；拖拽中物体不参与
+- 图层：每层 `<g>`，声明序 = z-order
+- 视觉：`src/paint.ts`（gradient / glow / shadow / type / transform）
+
+Widget（如 `timeline`）是编译期宏，不是语言核。
+
+## LLM
+
+`core prompt`（`src/llm/system-prompt.ts`）+ 可选 `docs/handbooks/<id>.md` 按次注入。

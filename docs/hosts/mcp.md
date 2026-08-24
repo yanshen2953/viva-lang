@@ -1,0 +1,82 @@
+# MCP server (Cursor / Claude Desktop)
+
+For **IDE-native agents**, MCP is the most convenient surface: the host spawns `viva mcp` over **stdio** and exposes tools without custom HTTP wiring.
+
+HTTP (`viva serve`) and MCP solve the same problems; pick one per host:
+
+| Surface | Best for |
+| --- | --- |
+| **MCP** | Cursor, Claude Desktop, MCP-aware CLI agents |
+| **HTTP** | Remote services, polyglot clients, Docker |
+| **CLI** | Shell scripts, Pi subprocess |
+| **SDK** | Same-process Node integration |
+
+## Tools
+
+| Tool | Purpose |
+| --- | --- |
+| `viva_compile` | Source → IR JSON；默认附 structural + raster visual QA（`visual:false` 可关）。visual 错误会失败 compile success，IR 仍返回以便 repair |
+| `viva_check` | Structural / raster visual（默认开）/ `--vision` QA |
+| `viva_export` | svg/png/jpg/pdf (base64 or `outputPath`)；`cjkFontPath` 挂宿主 TTF 做 PDF CJK（也认 `VIVA_PDF_CJK_FONT`）；`beats:true` 出 `__beat` PNG 序列；`format` gif\|mp4 用 ffmpeg 拼幻灯（不是时间轴） |
+| `viva_prompt` | System prompt + handbooks |
+| `viva_models` | Resolved base/vision model slots |
+| `viva_session` | Headless session: `create` / `compile` / `patch` / `world` / `set` / `simulate` / `provenance` / `bundle` / `dispose` |
+| `viva_pipeline` | `run` / `list` / `register` (`inline` or `http-webhook`) / `cancel` |
+
+**Prompt:** `viva_generate` — template for “write a new artifact” turns.
+
+## Cursor configuration
+
+After `npm install -g viva-lang` (or local `npm link`):
+
+```json
+{
+  "mcpServers": {
+    "viva": {
+      "command": "viva",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+
+Example file: [`mcp-config.example.json`](./mcp-config.example.json)
+
+From a git checkout without global install:
+
+```json
+{
+  "mcpServers": {
+    "viva": {
+      "command": "npx",
+      "args": ["vite-node", "src/cli.ts", "mcp"],
+      "cwd": "/path/to/viva-lang"
+    }
+  }
+}
+```
+
+## Run manually
+
+```bash
+viva mcp
+# or
+viva-mcp
+```
+
+Logs must go to **stderr** (stdio is the protocol channel).
+
+## Test with MCP Inspector
+
+```bash
+npx @modelcontextprotocol/inspector viva mcp
+```
+
+## Node API
+
+```ts
+import { runVivaMcpServer } from "viva-lang/mcp";
+await runVivaMcpServer();
+```
+
+See also [`DEPLOY.md`](../DEPLOY.md), [`agent-api.md`](./agent-api.md).

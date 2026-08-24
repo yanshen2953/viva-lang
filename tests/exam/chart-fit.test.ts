@@ -1,0 +1,333 @@
+import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { compileSource } from "../../src/pipeline.js";
+import { evaluate } from "../../src/eval.js";
+import { largestEmptyRect } from "../../src/layout/chart-fit.js";
+import { flattenNodesFromIr } from "../../src/export/static-svg.js";
+
+describe("chart host leftover", () => {
+  it("picks the slab below a top knob", () => {
+    const host = largestEmptyRect(
+      { x: 0, y: 0, w: 480, h: 280 },
+      [{ x: 92, y: 32, w: 16, h: 16 }],
+      { pad: 10, minW: 64, minH: 64 },
+    );
+    expect(host.y).toBeGreaterThanOrEqual(48);
+    expect(host.y + host.h).toBeCloseTo(280);
+    expect(host.w).toBeCloseTo(480);
+  });
+
+  it("parks a chart to the right of an author frame", () => {
+    const host = largestEmptyRect(
+      { x: 0, y: 0, w: 640, h: 360 },
+      [{ x: 40, y: 40, w: 360, h: 260 }],
+      { pad: 10, minW: 64, minH: 64 },
+    );
+    expect(host.x).toBeGreaterThanOrEqual(400);
+    expect(host.w).toBeGreaterThan(64);
+    expect(host.h).toBeGreaterThan(200);
+  });
+
+  it("fills the scene when nothing is in the way", () => {
+    const host = largestEmptyRect({ x: 0, y: 0, w: 480, h: 280 }, [], { pad: 10 });
+    expect(host).toEqual({ x: 0, y: 0, w: 480, h: 280 });
+  });
+
+  it("drops exam C2/C3 area boxes and still expands marks", () => {
+    for (const file of ["C2_chart_line.viva", "C3_chart_bar.viva"] as const) {
+      const src = readFileSync(`examples/exam/${file}`, "utf8");
+      expect(src).not.toMatch(/areaX|areaY/);
+      const result = compileSource(src, file);
+      expect(result.error).toBeNull();
+      expect(result.ir!.scene.layers.some((l) => l.name.endsWith("_marks"))).toBe(true);
+    }
+  });
+
+  it("parks the param-lab chart below the dragged knob", () => {
+    const src = readFileSync("examples/exam/P1_param_lab.viva", "utf8");
+    expect(src).not.toMatch(/areaX|areaY/);
+    const result = compileSource(src, "P1.viva");
+    expect(result.error).toBeNull();
+    const frame = result.ir!.frames[0]!;
+    const cellY = evaluate(frame.props.cellY!, [result.ir!.state, result.ir!.data]) as [
+      number,
+      number,
+    ];
+    expect(cellY[0]).toBeGreaterThan(48);
+    expect(cellY[1]).toBeCloseTo(280);
+    const plotY = evaluate(frame.props.y, [result.ir!.state, result.ir!.data]) as [number, number];
+    expect(plotY[0]).toBeGreaterThan(cellY[0] - 1);
+  });
+
+  it("promotes a role: panel node so a figure can bind without areaX", () => {
+    const src = `artifact Deck
+data rows = [{ x: 1, y: 2 }, { x: 2, y: 4 }]
+scene
+  size: 400 240
+  layer ui
+    node chartDeck
+      role: panel
+      x: 40
+      y: 20
+      w: 320
+      h: 200
+widget layout.figure
+  panel: chartDeck
+  cols: 1
+  rows: 1
+  plate: false
+widget chart.line
+  panel: a
+  data: rows
+  xField: x
+  yField: y
+  xlim: 0 3
+  ylim: 0 5
+  interactive: false
+`;
+    const result = compileSource(src, "deck.viva");
+    expect(result.error).toBeNull();
+    const scopes = [result.ir!.state, result.ir!.data];
+    const deck = result.ir!.frames.find((f) => f.name === "chartDeck");
+    expect(deck).toBeTruthy();
+    const cell = evaluate(result.ir!.frames.find((f) => f.name === "a")!.props.cellX!, scopes) as [
+      number,
+      number,
+    ];
+    expect(cell[0]).toBeGreaterThanOrEqual(40);
+    expect(cell[1]).toBeLessThanOrEqual(360);
+  });
+
+  it("parks science-studio copy and decks on board slots", () => {
+    const src = readFileSync("examples/science-studio.viva", "utf8");
+    expect(src).not.toMatch(/areaX|areaY|frame quiver/);
+    expect(src).toMatch(/widget layout\.board/);
+    expect(src).toMatch(/widget chart\.vector/);
+    expect(src).toMatch(/panel:\s*right/);
+    expect(src).toMatch(/panel:\s*d/);
+    expect(src).not.toMatch(/node chartDeck|node vecDeck|node pcaDeck/);
+    expect(src).not.toMatch(/x:\s*488|x:\s*816|x:\s*48\b/);
+    const result = compileSource(src, "science-studio.viva");
+    expect(result.error).toBeNull();
+    const scopes = [result.ir!.state, result.ir!.data];
+    const names = result.ir!.frames.map((f) => f.name);
+    expect(names).toEqual(expect.arrayContaining(["left", "right", "a", "b", "c", "d", "pcaPlotBg"]));
+    const left = evaluate(result.ir!.frames.find((f) => f.name === "left")!.props.x, scopes) as [
+      number,
+      number,
+    ];
+    const right = evaluate(result.ir!.frames.find((f) => f.name === "right")!.props.x, scopes) as [
+      number,
+      number,
+    ];
+    expect(right[0]).toBeGreaterThan(left[1]!);
+    for (const name of ["a", "b", "c"] as const) {
+      const cellX = evaluate(result.ir!.frames.find((f) => f.name === name)!.props.cellX!, scopes) as [
+        number,
+        number,
+      ];
+      expect(cellX[0]).toBeGreaterThanOrEqual(right[0]! - 1);
+      expect(cellX[1]).toBeLessThanOrEqual(right[1]! + 1);
+    }
+    expect(result.ir!.scene.layers.some((l) => l.name === "__c_marks")).toBe(true);
+    const shaft = result.ir!.scene.layers
+      .flatMap((l) => l.items)
+      .some((item) => item.kind === "for" && item.body.some((n) => n.kind === "node" && n.name === "shaft"));
+    expect(shaft).toBe(true);
+    const copy = result.ir!.scene.layers.find((l) => l.name === "__board_copy");
+    expect(copy?.items.some((item) => item.kind === "node" && item.name.startsWith("board_docBody"))).toBe(
+      true,
+    );
+    const layerNames = result.ir!.scene.layers.map((l) => l.name);
+    expect(layerNames.indexOf("pca")).toBeGreaterThan(layerNames.indexOf("__fig_decks"));
+    expect(
+      result.ir!.scene.layers
+        .find((l) => l.name === "__fig_decks")
+        ?.items.some((item) => item.kind === "node" && item.name.endsWith("_deck_d")),
+    ).toBe(false);
+  });
+
+  it("maps science-studio PCA marks through the promoted plot frame", () => {
+    const src = readFileSync("examples/science-studio.viva", "utf8");
+    expect(src).not.toMatch(/980 \+| \* 78/);
+    expect(src).toMatch(/frame: pcaPlotBg/);
+    const result = compileSource(src, "science-studio.viva");
+    expect(result.error).toBeNull();
+    const scopes = [result.ir!.state, result.ir!.data];
+    const plot = result.ir!.frames.find((f) => f.name === "pcaPlotBg")!;
+    const cell = result.ir!.frames.find((f) => f.name === "d")!;
+    const xlim = evaluate(plot.props.xlim!, scopes) as [number, number];
+    expect(xlim[0]).toBeCloseTo(-2.5);
+    expect(xlim[1]).toBeCloseTo(2.5);
+    const box = evaluate(plot.props.x, scopes) as [number, number];
+    const boxY = evaluate(plot.props.y, scopes) as [number, number];
+    const cellX = evaluate(cell.props.cellX!, scopes) as [number, number];
+    const cellY = evaluate(cell.props.cellY!, scopes) as [number, number];
+    expect(box[0]).toBeGreaterThanOrEqual(cellX[0]!);
+    expect(box[1]).toBeLessThanOrEqual(cellX[1]!);
+    expect(boxY[0]).toBeGreaterThanOrEqual(cellY[0]!);
+    expect(boxY[1]).toBeLessThanOrEqual(cellY[1]!);
+    expect(box[1]! - box[0]!).toBeGreaterThan((cellX[1]! - cellX[0]!) * 0.7);
+    const pts = flattenNodesFromIr(result.ir!).nodes.filter((n) => n.name === "pcaPt");
+    expect(pts.length).toBeGreaterThan(0);
+    for (const pt of pts) {
+      expect(Number(pt.props.x)).toBeGreaterThanOrEqual(box[0]!);
+      expect(Number(pt.props.x)).toBeLessThanOrEqual(box[1]!);
+      expect(Number(pt.props.y)).toBeGreaterThanOrEqual(boxY[0]!);
+      expect(Number(pt.props.y)).toBeLessThanOrEqual(boxY[1]!);
+    }
+  });
+
+  it("fills an author plot into a figure cell without x/y/w/h", () => {
+    const result = compileSource(
+      `artifact SlotPlot
+scene
+  size: 640 360
+  layer ui
+    node plotA
+      role: plot
+      panel: a
+      xlim: 0 1
+      ylim: 0 1
+    node orbit
+      role: chrome
+      panel: plotA
+      drag: true
+widget layout.board
+  title: "Board"
+  splits: 2
+  guides: false
+widget layout.figure
+  panel: right
+  cols: 1
+  rows: 1
+  plate: false
+  labels: false
+`,
+      "slot-plot.viva",
+    );
+    expect(result.error).toBeNull();
+    const scopes = [result.ir!.state, result.ir!.data];
+    const cell = evaluate(result.ir!.frames.find((f) => f.name === "a")!.props.cellX!, scopes) as [
+      number,
+      number,
+    ];
+    const cellY = evaluate(result.ir!.frames.find((f) => f.name === "a")!.props.cellY!, scopes) as [
+      number,
+      number,
+    ];
+    const plot = evaluate(result.ir!.frames.find((f) => f.name === "plotA")!.props.x, scopes) as [
+      number,
+      number,
+    ];
+    const plotY = evaluate(result.ir!.frames.find((f) => f.name === "plotA")!.props.y, scopes) as [
+      number,
+      number,
+    ];
+    expect(plot[0]).toBeGreaterThan(cell[0]!);
+    expect(plot[1]).toBeLessThan(cell[1]!);
+    expect(plotY[0]).toBeGreaterThan(cellY[0]!);
+    expect(plotY[1]).toBeLessThan(cellY[1]!);
+    const nodes = flattenNodesFromIr(result.ir!).nodes;
+    const orbit = nodes.find((n) => n.name === "orbit");
+    expect(orbit).toBeTruthy();
+    expect(Number(orbit!.props.x)).toBeCloseTo(plot[0]!);
+    expect(Number(orbit!.props.w)).toBeCloseTo(plot[1]! - plot[0]!);
+  });
+
+  it("promotes a role: plot node into a bindable frame", () => {
+    const result = compileSource(
+      `artifact PlotSlot
+data rows = [{ x: 1, y: 2, ux: 0.4, uy: 0.2 }]
+scene
+  size: 320 200
+  layer ui
+    node plotA
+      role: plot
+      x: 20
+      y: 10
+      w: 280
+      h: 180
+widget chart.vector
+  panel: plotA
+  data: rows
+  xField: x
+  yField: y
+  uField: ux
+  vField: uy
+  xlim: 0 2
+  ylim: 0 3
+  interactive: false
+`,
+      "plot-slot.viva",
+    );
+    expect(result.error).toBeNull();
+    const x = evaluate(result.ir!.frames.find((f) => f.name === "plotA")!.props.x, [
+      result.ir!.state,
+      result.ir!.data,
+    ]) as [number, number];
+    expect(x[0]).toBeCloseTo(20);
+    expect(x[1]).toBeCloseTo(300);
+  });
+
+  it("ignores a full-bleed atmosphere wash when parking a chart", () => {
+    const result = compileSource(
+      `artifact Wash
+data rows = [{ x: 1, y: 2 }, { x: 2, y: 4 }]
+scene
+  size: 400 240
+  layer bg
+    node wash
+      role: atmosphere
+      x: 0
+      y: 0
+      w: 400
+      h: 240
+widget chart.line
+  data: rows
+  xField: x
+  yField: y
+  xlim: 0 3
+  ylim: 0 5
+  interactive: false
+`,
+      "wash.viva",
+    );
+    expect(result.error).toBeNull();
+    const cell = evaluate(result.ir!.frames[0]!.props.cellX!, [
+      result.ir!.state,
+      result.ir!.data,
+    ]) as [number, number];
+    expect(cell[0]).toBeCloseTo(0);
+    expect(cell[1]).toBeCloseTo(400);
+  });
+
+  it("tiles unbound charts above a caption instead of covering it", () => {
+    const src = readFileSync("examples/charts.viva", "utf8");
+    expect(src).not.toMatch(/areaX|areaY|layout\.figure/);
+    const result = compileSource(src, "charts.viva");
+    expect(result.error).toBeNull();
+    const scopes = [result.ir!.state, result.ir!.data];
+    const bottoms = result.ir!.frames
+      .filter((f) => ["a", "b", "c"].includes(f.name))
+      .map((f) => {
+        const cellY = evaluate(f.props.cellY!, scopes) as [number, number];
+        return cellY[1];
+      });
+    expect(bottoms.length).toBe(3);
+    expect(Math.max(...bottoms)).toBeLessThan(490);
+  });
+
+  it("keeps the param-lab example chart off the slider track", () => {
+    const src = readFileSync("examples/param-lab.viva", "utf8");
+    expect(src).not.toMatch(/areaX|areaY/);
+    const result = compileSource(src, "param-lab.viva");
+    expect(result.error).toBeNull();
+    const cellY = evaluate(result.ir!.frames[0]!.props.cellY!, [
+      result.ir!.state,
+      result.ir!.data,
+    ]) as [number, number];
+    expect(cellY[0]).toBeGreaterThan(72);
+    expect(cellY[1]).toBeCloseTo(400);
+  });
+});

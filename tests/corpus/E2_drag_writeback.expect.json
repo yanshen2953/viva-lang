@@ -1,0 +1,10 @@
+{
+  "case": "E2_drag_writeback",
+  "input": "examples/exam/E2_drag_writeback.viva",
+  "expect": {
+    "layers": ["stage"],
+    "events": [{ "type": "drag", "target": "items" }],
+    "data": ["items"],
+    "hasDragProp": true
+  }
+}

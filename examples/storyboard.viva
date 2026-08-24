@@ -1,0 +1,50 @@
+artifact "Storyboard"
+
+data a = [{ x: 0, y: 8 }, { x: 1, y: 12 }, { x: 2, y: 10 }]
+data b = [{ x: 0, y: 4 }, { x: 1, y: 9 }, { x: 2, y: 14 }]
+data c = [{ x: 0, y: 16 }, { x: 1, y: 11 }, { x: 2, y: 7 }]
+data d = [{ x: 0, y: 6 }, { x: 1, y: 6 }, { x: 2, y: 18 }]
+
+scene
+  size: 1280 720
+  background: #0b1220
+
+widget layout.board
+  title: "16:9 storyboard · four beats"
+  caption: "beats play · current shot is live · no new keywords"
+  beats: 4
+  play: true
+  playFps: 1
+  guides: true
+
+widget chart.line
+  panel: beat0
+  data: a
+  xField: x
+  yField: y
+  xlim: 0 2
+  ylim: 0 20
+
+widget chart.line
+  panel: beat1
+  data: b
+  xField: x
+  yField: y
+  xlim: 0 2
+  ylim: 0 20
+
+widget chart.line
+  panel: beat2
+  data: c
+  xField: x
+  yField: y
+  xlim: 0 2
+  ylim: 0 20
+
+widget chart.line
+  panel: beat3
+  data: d
+  xField: x
+  yField: y
+  xlim: 0 2
+  ylim: 0 20

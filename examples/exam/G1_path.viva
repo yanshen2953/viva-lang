@@ -1,0 +1,12 @@
+artifact "G1 path geometry"
+
+scene
+  size: 280 160
+  background: #0b1220
+
+  layer ink
+    node curve
+      d: "M 40 120 C 80 20, 160 20, 220 120"
+      stroke: #38bdf8
+      strokeWidth: 3
+      fill: none

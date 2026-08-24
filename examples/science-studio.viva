@@ -1,0 +1,208 @@
+artifact "Science Studio"
+
+state yaw = 0.65
+state pitch = 0.35
+state zoom = 1.15
+state pcaMark = none
+state hint = "role/colorBy · 选手册加载风格"
+
+data bars = [
+  { cat: 1, val: 42, grp: "A" }
+  { cat: 2, val: 68, grp: "A" }
+  { cat: 3, val: 55, grp: "B" }
+  { cat: 4, val: 91, grp: "B" }
+  { cat: 5, val: 73, grp: "C" }
+]
+
+data lineSeries = [
+  { t: 0, v: 12, grp: "trend" }
+  { t: 1, v: 18, grp: "trend" }
+  { t: 2, v: 15, grp: "trend" }
+  { t: 3, v: 28, grp: "trend" }
+  { t: 4, v: 22, grp: "trend" }
+  { t: 5, v: 35, grp: "trend" }
+  { t: 6, v: 30, grp: "trend" }
+]
+
+data field = [
+  { ox: 1, oy: 2, ux: 1.2, uy: 1.8, grp: "flow" }
+  { ox: 2.5, oy: 3, ux: -0.8, uy: 2.4, grp: "flow" }
+  { ox: 4, oy: 1.5, ux: 1.5, uy: -1.2, grp: "shear" }
+  { ox: 5.5, oy: 4, ux: -1.1, uy: -1.6, grp: "shear" }
+  { ox: 7, oy: 2.8, ux: 0.6, uy: 2.2, grp: "flow" }
+  { ox: 8.2, oy: 5, ux: 1.8, uy: 0.9, grp: "curl" }
+]
+
+data pca = [
+  { id: "A1", x: -1.4, y: 0.9, z: 0.4, grp: "A" }
+  { id: "A2", x: -1.1, y: 0.6, z: 0.2, grp: "A" }
+  { id: "A3", x: -0.9, y: 1.1, z: 0.5, grp: "A" }
+  { id: "B1", x: 0.2, y: -0.3, z: 1.1, grp: "B" }
+  { id: "B2", x: 0.5, y: -0.6, z: 0.9, grp: "B" }
+  { id: "B3", x: 0.8, y: -0.2, z: 1.3, grp: "B" }
+  { id: "C1", x: 1.2, y: 0.7, z: -0.8, grp: "C" }
+  { id: "C2", x: 1.5, y: 1.0, z: -1.0, grp: "C" }
+  { id: "C3", x: 1.0, y: 0.4, z: -0.6, grp: "C" }
+]
+
+scene
+  size: 1180 720
+
+  layer textureBackdrop
+    blend: multiply
+    node gridA
+      role: atmosphere
+      x: 0
+      y: 0
+      w: 1180
+      h: 720
+      gradient: #0a0f1a #0f172a #070b14
+      gradientDir: y
+
+  layer colorWash
+    blend: soft-light
+    node washL
+      role: atmosphere
+      x: 60
+      y: 140
+      r: 180
+      gradient: #1d4ed8 #0ea5e9
+      blur: 40
+      opacity: 0.35
+
+    node washR
+      role: atmosphere
+      x: 1020
+      y: 500
+      r: 200
+      gradient: #be123c #f59e0b
+      blur: 48
+      opacity: 0.28
+
+  layer pca
+    node pcaPlotBg
+      role: plot
+      panel: d
+      xlim: -2.5 2.5
+      ylim: -2.5 2.5
+      title: "PCA · 3D ORBIT"
+      controls: ["-", "+"]
+      bind: zoom
+      step: 0.12
+      min: 0.6
+      max: 2.2
+
+    node pcaOrbit
+      role: chrome
+      panel: pcaPlotBg
+      opacity: 0.03
+      drag: true
+
+    node pcaAxis
+      role: axis
+      frame: pcaPlotBg
+      x1: -2.2
+      y1: 0
+      x2: 2.2
+      y2: 0
+
+    node pcaAxisY
+      role: axis
+      frame: pcaPlotBg
+      x1: 0
+      y1: -2.2
+      x2: 0
+      y2: 2.2
+
+    for p in pca
+      node pcaPt as pcaPts
+        role: mark
+        frame: pcaPlotBg
+        x: (p.x * cos(yaw) - p.z * sin(yaw)) * zoom
+        y: (p.y * cos(pitch) - (p.x * sin(yaw) + p.z * cos(yaw)) * sin(pitch)) * zoom
+        r: 8
+        colorBy: grp
+        palette: categorical
+        glow: 8
+
+      if pcaMark == p.id
+        node pcaRing as pcaPts
+          role: annotation
+          frame: pcaPlotBg
+          x: (p.x * cos(yaw) - p.z * sin(yaw)) * zoom
+          y: (p.y * cos(pitch) - (p.x * sin(yaw) + p.z * cos(yaw)) * sin(pitch)) * zoom
+          r: 14
+          opacity: 0.12
+          strokeWidth: 2
+          dash: 5 4
+
+  layer screenGlow
+    blend: screen
+    node topGlow
+      role: atmosphere
+      x: 520
+      y: 0
+      w: 480
+      h: 100
+      gradient: #38bdf8 #0ea5e9
+      opacity: 0.18
+      blur: 36
+
+widget layout.board
+  title: "图文排版 · 科学图板"
+  subtitle: "handbook 驱动 · role / colorBy · 任意构图"
+  body: "数据只写 grp；色板/框线/网格由 dashboard 预设注入。图表吃 board right；PCA 投影走 plot frame，悬停/高亮与图表同一套 Runtime，拖轨道仍是 World。"
+  caption: hint
+  splits: 2
+
+widget layout.figure
+  panel: right
+  cols: 2
+  rows: 2
+  plate: false
+
+widget chart.bar
+  panel: a
+  data: bars
+  xField: cat
+  yField: val
+  group: grp
+  xlim: 0 6
+  ylim: 0 100
+  title: "BAR · by group"
+  barWidth: 0.52
+
+widget chart.line
+  panel: b
+  data: lineSeries
+  xField: t
+  yField: v
+  group: grp
+  xlim: 0 6
+  ylim: 0 40
+  title: "LINE · trend"
+
+widget chart.vector
+  panel: c
+  data: field
+  xField: ox
+  yField: oy
+  uField: ux
+  vField: uy
+  group: grp
+  xlim: 0 10
+  ylim: 0 7
+  title: "VECTOR FIELD"
+  xLabel: x
+  yLabel: y
+  legend: bottom
+
+event drag on pcaOrbit
+  yaw = yaw + __event.dx * 0.012
+  pitch = clamp(pitch - __event.dy * 0.012, -1.1, 1.1)
+
+event click on pcaPts
+  pcaMark = p.id
+
+rule when pcaMark != none
+  hint = pcaMark

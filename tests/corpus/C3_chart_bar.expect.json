@@ -1,0 +1,10 @@
+{
+  "case": "C3_chart_bar",
+  "input": "examples/exam/C3_chart_bar.viva",
+  "expect": {
+    "data": ["bars"],
+    "minFrames": 1,
+    "layerNameSuffixes": ["_axes", "_marks"],
+    "hasChartBar": true
+  }
+}

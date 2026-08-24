@@ -1,0 +1,14 @@
+artifact "L4 layer blend"
+
+scene
+  size: 400 300
+  background: #0b1220
+
+  layer glowLayer
+    blend: screen
+    node halo
+      x: 120
+      y: 90
+      w: 140
+      h: 60
+      fill: #38bdf8

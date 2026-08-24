@@ -1,0 +1,20 @@
+artifact "T1 timeline"
+
+state year = 2024
+
+scene
+  size: 520 200
+  background: #0b1220
+
+  layer hud
+    node label
+      x: 40
+      y: 40
+      text: year
+      font: 20
+      fill: #e2e8f0
+
+timeline
+  from: 2020
+  to: 2030
+  bind: year

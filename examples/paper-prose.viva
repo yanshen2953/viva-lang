@@ -1,0 +1,14 @@
+artifact "Paper Prose"
+
+scene
+  unit: mm
+  page: a4
+  column: single
+  background: #ffffff
+
+widget layout.board
+  title: "89 mm prose on an A4 sheet"
+  subtitle: "column is the measure · page is the knife"
+  body: "The author names a column and a page, not a y for every line. Viva wraps this paragraph to the 89 mm figure measure inside the 183 mm text block of A4, then hops any line that would sit on the folio or straddle 297 mm onto the next slice. 栏宽是度量，纸页是刀口：单栏正文按 89 mm 折行，触到页缝就进下一页，作者不必写魔法数坐标。This is still not a newspaper reflow or a running-header typesetter — SVG stays one tall canvas, PDF slices the same scene and stamps n / N. The compiler owns the hop so a coding agent can keep writing prose without magic numbers. 继续写到第二页：同一套 left/body 槽，x 仍落在单栏里，不把 A4 收成 89 mm 细条。Nature-grade type is not the claim; the claim is that body copy and figure cells now share the same page knife primitive. Repeat the measure so the second slice is not empty: column 89, page 210 by 297, folio top and bottom reserved, no keyword added for continuation. A coding agent keeps adding sentences and the compiler keeps wrapping them to the same 89 mm measure. 投稿栏宽里的中英混排也走这一套折行，不靠作者手摆每一行的 y。Once the first A4 slice is full the next line starts below the continued folio reserve, still in the single-column x range. 第一页写满之后，下一行从续页上边的页戳带下面起笔，横坐标不动。This paragraph exists only to fill the column so the knife has something to hop: measure, wrap, hop, grow the scene, stamp n / N. 这一段只为装满栏宽，好让页刀有行可跳：度量、折行、过页、拉高场景、盖页码。Keep going until the IR shows body nodes past 297 mm without any line parked on the folio band. 一直写到场景里出现 y 大于 297 的正文节点，且没有一行落在页缝上。The same primitive that moves a figure row off the knife now moves a prose line. 和格子整行避刀是同一套页缝原语，不是新关键字。If this still fits one slice, the compiler has not been given enough copy; keep the column honest and add more measure-and-hop sentences until the second page exists. 若仍只占一页，就继续按栏宽写，直到第二页出现。Agents should see that overflow is a compiler problem, not a request for a continue keyword. 溢出是编译器的事，不要为此加 continue 关键字。Last beat: wrap, hop, grow, stamp. 最后一拍：折行、过页、拉高、盖戳。Filler for the remaining millimetres of the first slice so the hop is forced: the 89 mm column, the 210 mm sheet, the 297 mm knife, the reserved folio bands, the same x on page two. 用这些毫米把第一页填满，逼出过页：89 栏、210 纸、297 刀、页戳留白、第二页同一个 x。"
+  caption: "folio n / N · board title on later slices"
+  guides: false

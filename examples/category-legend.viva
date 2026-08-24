@@ -1,0 +1,26 @@
+artifact "Category Legend"
+
+data arms = [
+  { arm: "placebo", resp: 38, grp: "week-4" }
+  { arm: "drug-A", resp: 61, grp: "week-4" }
+  { arm: "drug-B", resp: 58, grp: "week-4" }
+  { arm: "placebo", resp: 46, grp: "week-12" }
+  { arm: "drug-A", resp: 68, grp: "week-12" }
+  { arm: "drug-B", resp: 63, grp: "week-12" }
+]
+
+scene
+  size: 640 360
+  background: #ffffff
+
+widget chart.bar
+  data: arms
+  xField: arm
+  yField: resp
+  group: grp
+  ylim: 0 80
+  xLabel: Arm
+  yLabel: Response
+  yUnit: "%"
+  title: "Categorical x · legend outside"
+  legend: right

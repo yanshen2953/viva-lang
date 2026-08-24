@@ -1,0 +1,16 @@
+{
+  "id": "A06_generate_chart_line",
+  "title": "Agent uses widget chart.line",
+  "kind": "generate",
+  "handbooks": [],
+  "prompt": "Write a Viva artifact that uses a TOP-LEVEL `widget chart.line` declaration.\n\nCRITICAL SYNTAX:\n- Write `widget chart.line` at the same indentation as `scene` / `data` (NOT `widget: chart.line` inside scene/layer).\n- Widget body: `data:`, `xField:`, `yField:`, `xlim:`, `ylim:`. Omit `areaX`/`areaY` — the compiler fills the scene.\n\nInclude a data series of at least 4 {x,y} points.\nOutput ONLY valid Viva source starting with artifact.",
+  "assertions": {
+    "compiles": true,
+    "mustMatch": ["(?m)^widget\\s+chart\\.line", "data\\s+\\w+"],
+    "forbidMatch": ["(?m)^[ \\t]+widget", "widget:\\s*chart"],
+    "ir": {
+      "minFrames": 1,
+      "minLayers": 1
+    }
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "$schema": "./viva.models.schema.json",
+  "base": {
+    "provider": "openai-compatible",
+    "baseUrl": "https://api.deepseek.com",
+    "apiKeyEnv": "DEEPSEEK_API_KEY",
+    "model": "deepseek-chat",
+    "extra": { "temperature": 0.2 }
+  },
+  "vision": {
+    "provider": "openai-compatible",
+    "baseUrl": "https://api.deepseek.com",
+    "apiKeyEnv": "DEEPSEEK_API_KEY",
+    "model": "deepseek-v4-flash-vision-exp",
+    "extra": { "temperature": 0.2 }
+  }
+}

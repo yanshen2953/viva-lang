@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Viva model slots",
+  "type": "object",
+  "properties": {
+    "base": { "$ref": "#/$defs/endpoint" },
+    "vision": { "$ref": "#/$defs/endpoint" },
+    "multimodal": { "$ref": "#/$defs/endpoint" }
+  },
+  "$defs": {
+    "endpoint": {
+      "type": "object",
+      "required": ["provider", "model"],
+      "properties": {
+        "provider": {
+          "enum": ["openai-compatible", "pi", "http"]
+        },
+        "model": { "type": "string" },
+        "baseUrl": { "type": "string" },
+        "apiKeyEnv": { "type": "string" },
+        "httpUrl": { "type": "string" },
+        "piProvider": { "type": "string" },
+        "extra": { "type": "object" }
+      }
+    }
+  }
+}

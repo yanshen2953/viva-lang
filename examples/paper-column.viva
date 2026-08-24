@@ -1,0 +1,27 @@
+artifact "Paper Column"
+
+data series = [
+  { x: 1, y: 2.2 }
+  { x: 2, y: 3.1 }
+  { x: 4, y: 5.8 }
+  { x: 8, y: 11.4 }
+  { x: 16, y: 19.0 }
+]
+
+scene
+  unit: mm
+  column: single
+  width: 89
+  height: 68
+  background: #ffffff
+
+widget chart.scatter
+  data: series
+  xField: x
+  yField: y
+  xScale: log
+  xlim: 0.8 20
+  ylim: 0 22
+  xLabel: Dose
+  yLabel: Response
+  title: "Single-column 89 mm"

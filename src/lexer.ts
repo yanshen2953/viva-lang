@@ -63,6 +63,7 @@ const KEYWORDS = new Set([
   "in",
   "on",
   "widget",
+  "frame",
   "true",
   "false",
   "none",

@@ -1,0 +1,10 @@
+{
+  "case": "E3_tick_rule",
+  "input": "examples/exam/E3_tick_rule.viva",
+  "expect": {
+    "layers": ["hud"],
+    "ticks": 1,
+    "rules": 1,
+    "state": ["n", "alarm"]
+  }
+}

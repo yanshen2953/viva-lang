@@ -1,0 +1,46 @@
+artifact "Paper Pages"
+
+data lead = [
+  { x: 1, y: 12 }
+  { x: 2, y: 18 }
+  { x: 3, y: 16 }
+  { x: 4, y: 24 }
+]
+
+data arms = [
+  { arm: "placebo", y: 12 }
+  { arm: "placebo", y: 14 }
+  { arm: "drug-A", y: 20 }
+  { arm: "drug-A", y: 22 }
+]
+
+scene
+  unit: mm
+  page: a4
+  column: single
+  height: 400
+  background: #ffffff
+
+widget layout.figure
+  title: "Single-column 89 mm on A4, two slices"
+  cols: 1
+  rows: 2
+
+widget chart.line
+  panel: a
+  data: lead
+  xField: x
+  yField: y
+  xlim: 0 5
+  ylim: 0 30
+  xLabel: Visit
+  yLabel: Score
+
+widget chart.box
+  panel: b
+  data: arms
+  xField: arm
+  yField: y
+  ylim: 8 28
+  xLabel: Arm
+  yLabel: Score

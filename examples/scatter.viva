@@ -1,0 +1,91 @@
+artifact "Frame Scatter"
+
+state selected = none
+
+data series = [
+  { t: 1.2, p: 18 }
+  { t: 2.5, p: 42 }
+  { t: 3.8, p: 31 }
+  { t: 5.1, p: 67 }
+  { t: 6.4, p: 55 }
+  { t: 7.9, p: 88 }
+  { t: 9.2, p: 72 }
+]
+
+frame plot
+  x: 80 720
+  y: 70 400
+  xlim: 0 10
+  ylim: 0 100
+  xUnit: "s"
+  yUnit: "kPa"
+
+scene
+  size: 880 480
+  background: #070b14
+
+  layer chrome
+    node title
+      x: 80
+      y: 36
+      text: "Pressure vs time (frame scales — no magic numbers)"
+      font: 18
+      fill: #e2e8f0
+
+    node xlab
+      x: 360
+      y: 430
+      text: "t (s)"
+      font: 13
+      fill: #94a3b8
+
+    node ylab
+      x: 24
+      y: 240
+      text: "kPa"
+      font: 13
+      fill: #94a3b8
+      rotate: -90
+
+  layer axes
+    node xAxis
+      frame: plot
+      x1: 0
+      y1: 0
+      x2: 10
+      y2: 0
+      stroke: #475569
+      strokeWidth: 1.5
+
+    node yAxis
+      frame: plot
+      x1: 0
+      y1: 0
+      x2: 0
+      y2: 100
+      stroke: #475569
+      strokeWidth: 1.5
+
+  layer marks
+    for d in series
+      node pt as points
+        frame: plot
+        x: d.t
+        y: d.p
+        r: 5
+        fill: #38bdf8
+        hoverFill: #f59e0b
+        glow: 6
+        glowColor: #38bdf8
+
+  layer hud
+    if selected != none
+      node detail
+        x: 80
+        y: 458
+        text: selected.t
+        font: 14
+        fill: #f59e0b
+
+event click on points
+  selected = d

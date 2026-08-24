@@ -1,0 +1,40 @@
+artifact "Broken Lab"
+
+data series = [
+  { x: 0, y: 10 }
+  { x: 1, y: 14 }
+  { x: 2, y: 11 }
+]
+
+state gain = 1
+
+scene
+  size: 640 360
+  background: #0b1220
+
+  frame plot
+    x: 40 400
+    y: 40 300
+    xlim: 0 3
+    ylim: 0 30
+
+  layer marks
+    for row in series
+      node pt as points
+        frame: plot
+        x: row.x
+        y: row.y
+        r: 5
+        fill: #38bdf8
+
+  widget: chart.line
+    data: series
+    xField: x
+    yField: y
+    xlim: 0 3
+    ylim: 0 30
+    areaX: 420 620
+    areaY: 40 300
+
+event click on points
+  gain = gain +

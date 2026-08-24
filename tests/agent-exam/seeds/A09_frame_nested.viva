@@ -1,0 +1,25 @@
+artifact "Broken Frame Nesting"
+
+data pts = [
+  { x: 1, y: 2 }
+  { x: 3, y: 4 }
+]
+
+scene
+  size: 400 300
+  background: #ffffff
+
+  frame: plot
+    x: 40 360
+    y: 40 260
+    xlim: 0 5
+    ylim: 0 10
+
+  layer main
+    for p in pts
+      node m as marks
+        frame: plot
+        x: p.x
+        y: p.y
+        r: 4
+        fill: #333333

@@ -1,0 +1,27 @@
+artifact "Paper Cjk"
+
+data series = [
+  { x: 1, y: 12.0 }
+  { x: 2, y: 18.4 }
+  { x: 3, y: 15.1 }
+  { x: 4, y: 21.2 }
+]
+
+scene
+  unit: mm
+  column: single
+  width: 89
+  height: 68
+  background: #ffffff
+
+widget chart.scatter
+  data: series
+  xField: x
+  yField: y
+  xlim: 0 5
+  ylim: 0 24
+  xLabel: "时间"
+  xUnit: "周"
+  yLabel: "心率"
+  yUnit: "次每分"
+  title: "单栏投稿图"

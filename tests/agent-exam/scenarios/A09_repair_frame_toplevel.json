@@ -1,0 +1,16 @@
+{
+  "id": "A09_repair_frame_toplevel",
+  "title": "Agent repairs frame incorrectly nested inside scene",
+  "kind": "repair",
+  "handbooks": [],
+  "seedSource": "tests/agent-exam/seeds/A09_frame_nested.viva",
+  "prompt": "The following Viva source failed to compile because `frame` was nested inside `scene`. Fix it: declare `frame plot` as a TOP-LEVEL declaration (sibling of scene), keep node props `frame: plot`. Output ONLY the full corrected Viva source starting with artifact.\n\nDiagnostics:\n{{diagnostics}}\n\nBroken source:\n{{source}}",
+  "assertions": {
+    "compiles": true,
+    "mustMatch": ["(?m)^frame\\s+plot", "frame:\\s*plot"],
+    "forbidMatch": ["(?m)^[ \\t]{2,}frame\\s+plot"],
+    "ir": {
+      "minFrames": 1
+    }
+  }
+}

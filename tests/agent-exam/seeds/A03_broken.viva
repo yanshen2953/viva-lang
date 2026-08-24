@@ -1,0 +1,14 @@
+artifact "Broken Counter"
+
+state count = 0
+
+scene
+  size: 400 240
+  layer main
+    node counter
+      x: 40
+      y: 40
+      text: count
+
+event click on counter
+  count = count +

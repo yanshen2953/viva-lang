@@ -1,0 +1,7 @@
+{
+  "case": "L1_zorder",
+  "input": "examples/exam/L1_zorder.viva",
+  "expect": {
+    "layers": ["bottom", "top"]
+  }
+}

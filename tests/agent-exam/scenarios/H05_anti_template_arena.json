@@ -1,0 +1,30 @@
+{
+  "id": "H05_anti_template_arena",
+  "title": "Hard: collide+key arena that must not clone the system toy template",
+  "track": "hard",
+  "kind": "generate",
+  "system": "slim",
+  "handbooks": [],
+  "repair": { "maxAttempts": 1, "syntaxCrib": false },
+  "prompt": "Design a tiny physics toy: two solid circles that can collide (`event collide on <group>`), plus `event key on scene` that resets positions. Entities must be data-backed with drag or tick motion. Invent your own names — do not reuse the common counter/items demo vocabulary. Output ONLY Viva source starting with artifact.",
+  "assertions": {
+    "compiles": true,
+    "mustMatch": [
+      "solid:\\s*true",
+      "event\\s+collide\\s+on",
+      "event\\s+key\\s+on"
+    ],
+    "forbidMatch": [
+      "state\\s+count\\s*=",
+      "state\\s+selected\\s*=\\s*none",
+      "data\\s+items\\s*=",
+      "fill:\\s*#38bdf8",
+      "artifact\\s+\"Hello\""
+    ],
+    "ir": {
+      "minDataKeys": 1,
+      "hasEventTypes": ["collide", "key"],
+      "hasSolidProp": true
+    }
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "id": "H06_ops_mini_dashboard",
+  "title": "Hard: ops mini-dashboard with bar+line widgets and threshold state",
+  "track": "hard",
+  "kind": "generate",
+  "system": "slim",
+  "handbooks": ["dashboard"],
+  "repair": { "maxAttempts": 1, "syntaxCrib": false },
+  "prompt": "Ship a compact ops dashboard: regional metric bars and a trend line, both via chart widgets; include a numeric threshold state (name it threshold or thr) used somewhere in the scene (guide or label). Follow the dashboard handbook. Output ONLY Viva source starting with artifact.",
+  "assertions": {
+    "compiles": true,
+    "mustMatch": [
+      "(?m)^widget\\s+chart\\.bar",
+      "(?m)^widget\\s+chart\\.line"
+    ],
+    "forbidMatch": [
+      "widget:\\s*chart",
+      "(?m)^[ \\t]+widget\\s"
+    ],
+    "ir": {
+      "minFrames": 1,
+      "minDataKeys": 2,
+      "minStateKeys": 1,
+      "stateKeyMatch": ["^thr(eshold)?$"],
+      "minLayers": 2
+    }
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "case": "L5_blur_glow",
+  "input": "examples/exam/L5_blur_glow.viva",
+  "expect": {
+    "layers": ["soft"],
+    "layerProps": { "soft": { "blur": 4, "glow": 6, "glowColor": "#38bdf8" } }
+  }
+}

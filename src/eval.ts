@@ -37,6 +37,11 @@ export function evaluate(expr: Expr, scopes: Scope[]): Value {
     }
     case "binary":
       return applyBinary(expr.op, evaluate(expr.left, scopes), evaluate(expr.right, scopes));
+    case "call":
+      return applyCall(
+        expr.callee,
+        expr.args.map((a) => evaluate(a, scopes)),
+      );
   }
 }
 
@@ -111,6 +116,9 @@ function setPath(scope: Scope, path: string[], value: Value): void {
 function applyBinary(op: string, left: Value, right: Value): Value {
   switch (op) {
     case "+":
+      if (Array.isArray(left) && Array.isArray(right)) {
+        return [...left, ...right];
+      }
       if (typeof left === "string" || typeof right === "string") {
         return String(left ?? "") + String(right ?? "");
       }
@@ -144,6 +152,67 @@ function applyBinary(op: string, left: Value, right: Value): Value {
   }
 }
 
+import {
+  evalPaletteBuiltin,
+  evalPaletteStrokeBuiltin,
+  getStyleContext,
+} from "./style/context.js";
+
+/** Safe builtins for tick / rules (no user-defined functions at runtime yet). */
+const NUM_BUILTINS: Record<string, (...args: number[]) => number> = {
+  sin: (x) => Math.sin(x),
+  cos: (x) => Math.cos(x),
+  tan: (x) => Math.tan(x),
+  abs: (x) => Math.abs(x),
+  sqrt: (x) => (x < 0 ? 0 : Math.sqrt(x)),
+  floor: (x) => Math.floor(x),
+  ceil: (x) => Math.ceil(x),
+  round: (x) => Math.round(x),
+  min: (...xs) => Math.min(...xs),
+  max: (...xs) => Math.max(...xs),
+  clamp: (x, lo, hi) => Math.min(Math.max(x, lo), hi),
+  log: (x) => Math.log(Math.max(x, 1e-12)),
+  exp: (x) => Math.exp(x),
+};
+
+function applyCall(callee: string, args: Value[]): Value {
+  if (callee === "palette") {
+    return evalPaletteBuiltin(args[0], args[1]);
+  }
+  if (callee === "paletteStroke") {
+    return evalPaletteStrokeBuiltin(args[0], args[1]);
+  }
+  if (callee === "has") {
+    const hay = args[0];
+    const needle = args[1];
+    if (Array.isArray(hay)) return hay.some((item) => equals(item, needle));
+    if (typeof hay === "string") return hay.includes(String(needle ?? ""));
+    if (hay && typeof hay === "object") {
+      return needle !== null && needle !== undefined && String(needle) in hay;
+    }
+    return false;
+  }
+  if (callee === "inside") {
+    return pointInPolygon(num(args[0]), num(args[1]), args[2]);
+  }
+  if (callee === "pathd") {
+    return pointsToPath(args[0]);
+  }
+  const fn = NUM_BUILTINS[callee];
+  if (!fn) {
+    const allowed = [...Object.keys(NUM_BUILTINS), "palette", "paletteStroke", "has", "inside", "pathd"].join(
+      ", ",
+    );
+    throw new Error(`unknown function '${callee}' (allowed: ${allowed})`);
+  }
+  return fn(...args.map(num));
+}
+
+export function evaluateWithStyle(expr: Expr, scopes: Scope[]): Value {
+  if (!getStyleContext()) return evaluate(expr, scopes);
+  return evaluate(expr, scopes);
+}
+
 export function truthy(value: Value): boolean {
   if (value === null || value === false) return false;
   if (typeof value === "number") return value !== 0;
@@ -165,6 +234,39 @@ function equals(left: Value, right: Value): boolean {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function pointPair(value: Value): { x: number; y: number } | null {
+  if (Array.isArray(value) && value.length >= 2) return { x: num(value[0]), y: num(value[1]) };
+  if (isRecord(value)) return { x: num(value.x as Value), y: num(value.y as Value) };
+  return null;
+}
+
+function pointInPolygon(x: number, y: number, raw: Value): boolean {
+  if (!Array.isArray(raw) || raw.length < 3) return false;
+  const pts = raw.map(pointPair).filter((p): p is { x: number; y: number } => p !== null);
+  if (pts.length < 3) return false;
+  let inside = false;
+  for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+    const a = pts[i]!;
+    const b = pts[j]!;
+    const hit =
+      a.y > y !== b.y > y && x < ((b.x - a.x) * (y - a.y)) / (b.y - a.y || 1e-12) + a.x;
+    if (hit) inside = !inside;
+  }
+  return inside;
+}
+
+function pointsToPath(raw: Value): string {
+  if (!Array.isArray(raw) || !raw.length) return "";
+  const pts = raw.map(pointPair).filter((p): p is { x: number; y: number } => p !== null);
+  if (!pts.length) return "";
+  const head = pts[0]!;
+  const rest = pts
+    .slice(1)
+    .map((p) => `L ${p.x} ${p.y}`)
+    .join(" ");
+  return pts.length >= 3 ? `M ${head.x} ${head.y} ${rest} Z` : `M ${head.x} ${head.y} ${rest}`;
 }
 
 export function cloneValue<T>(value: T): T {

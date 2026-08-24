@@ -1,0 +1,21 @@
+{
+  "case": "S1_frame_scale",
+  "input": "examples/exam/S1_frame_scale.viva",
+  "expect": {
+    "layers": ["marks"],
+    "frames": ["plot"],
+    "frameProps": {
+      "plot": { "x": [80, 720], "y": [70, 400], "xlim": [0, 10], "ylim": [0, 100] }
+    },
+    "scale": {
+      "xValue": 5,
+      "expectedX": 400,
+      "xDomain": [0, 10],
+      "xRange": [80, 720],
+      "yValue": 50,
+      "expectedY": 235,
+      "yDomain": [0, 100],
+      "yRange": [70, 400]
+    }
+  }
+}

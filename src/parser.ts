@@ -9,7 +9,7 @@ import type {
 } from "./ast.js";
 import { emptyArtifact } from "./ast.js";
 import type { Diagnostic, Span } from "./diagnostics.js";
-import { VivaError } from "./diagnostics.js";
+import { VivaError, withSyntaxHint } from "./diagnostics.js";
 import type { Token, TokenType } from "./lexer.js";
 import { tokenize } from "./lexer.js";
 
@@ -77,6 +77,9 @@ class Parser {
       case "timeline":
         artifact.widgets.push(this.parseWidget());
         return;
+      case "frame":
+        artifact.frames.push(this.parseFrame());
+        return;
       case "function":
         artifact.functions.push(this.parseFunction());
         return;
@@ -125,7 +128,21 @@ class Parser {
     const start = this.expectKeyword("layer");
     const name = this.expectOneOf(["IDENT", "KEYWORD", "STRING"]).value;
     this.eat("NEWLINE");
-    return { name, items: this.parseSceneBlock(), span: start.span };
+    const props: Record<string, Expr> = {};
+    const items: SceneItem[] = [];
+    if (this.eat("INDENT")) {
+      while (!this.check("DEDENT") && !this.check("EOF")) {
+        this.skipNewlines();
+        if (this.check("DEDENT") || this.check("EOF")) break;
+        if (this.isKeyword("for") || this.isKeyword("if") || this.isKeyword("node")) {
+          items.push(this.parseSceneItem());
+        } else {
+          Object.assign(props, this.parsePropLine());
+        }
+      }
+      this.expect("DEDENT");
+    }
+    return { name, props, items, span: start.span };
   }
 
   private parseSceneBlock(): SceneItem[] {
@@ -175,6 +192,12 @@ class Parser {
   private parseEvent(): Artifact["events"][number] {
     const start = this.expectKeyword("event");
     const type = this.expectOneOf(["IDENT", "KEYWORD"]).value;
+    if (!this.isKeyword("on")) {
+      throw this.error(
+        `expected 'on' after event type '${type}'`,
+        this.peek().span,
+      );
+    }
     this.expectKeyword("on");
     const target = this.expectOneOf(["IDENT", "KEYWORD", "STRING"]).value;
     this.eat("NEWLINE");
@@ -218,13 +241,26 @@ class Parser {
     return { name, props: this.parsePropBlock(), span: start.span };
   }
 
+  private parseFrame(): Artifact["frames"][number] {
+    const start = this.expectKeyword("frame");
+    const name = this.expectOneOf(["IDENT", "KEYWORD", "STRING"]).value;
+    this.eat("NEWLINE");
+    return { name, props: this.parsePropBlock(), span: start.span };
+  }
+
   private parseWidget(): Artifact["widgets"][number] {
     if (this.isKeyword("timeline")) {
       const start = this.expectKeyword("timeline");
       this.eat("NEWLINE");
       return { name: "timeline", props: this.parsePropBlock(), span: start.span };
     }
-    return this.parseNamedBlock("widget");
+    const start = this.expectKeyword("widget");
+    const parts = [this.expectOneOf(["IDENT", "KEYWORD", "STRING"]).value];
+    while (this.eat("DOT")) {
+      parts.push(this.expectOneOf(["IDENT", "KEYWORD"]).value);
+    }
+    this.eat("NEWLINE");
+    return { name: parts.join("."), props: this.parsePropBlock(), span: start.span };
   }
 
   private parseFunction(): Artifact["functions"][number] {
@@ -304,9 +340,32 @@ class Parser {
     if (values.length === 0) {
       throw this.error(`missing value for '${key}'`, this.peek().span);
     }
-    if (values.length === 1) return { [key]: values[0]! };
+    // Style enums like blend: screen / gradientDir: y should be strings, not lookups.
+    const styleEnums = new Set([
+      "blend",
+      "blendMode",
+      "gradientDir",
+      "gradientAxis",
+      "strokeLinecap",
+      "baseline",
+      "fontStyle",
+      "align",
+      "frame",
+    ]);
+    const coerce = (expr: Expr): Expr => {
+      if (
+        styleEnums.has(key) &&
+        expr.kind === "ident" &&
+        expr.path.length === 1 &&
+        expr.path[0]
+      ) {
+        return { kind: "string", value: expr.path[0], span: expr.span };
+      }
+      return expr;
+    };
+    if (values.length === 1) return { [key]: coerce(values[0]!) };
     return {
-      [key]: { kind: "array", items: values, span: values[0]!.span },
+      [key]: { kind: "array", items: values.map(coerce), span: values[0]!.span },
     };
   }
 
@@ -429,7 +488,22 @@ class Parser {
       return { kind: "none", span: tok.span };
     }
     if (tok.type === "IDENT" || (tok.type === "KEYWORD" && !this.isExprKeyword(tok.value))) {
-      return { kind: "ident", path: this.parsePath(), span: tok.span };
+      const path = this.parsePath();
+      const span = tok.span;
+      if (path.length === 1 && this.eat("LPAREN")) {
+        const args: Expr[] = [];
+        this.skipNewlines();
+        if (!this.check("RPAREN")) {
+          args.push(this.parseExpr());
+          while (this.eat("COMMA")) {
+            this.skipNewlines();
+            args.push(this.parseExpr());
+          }
+        }
+        this.expect("RPAREN");
+        return { kind: "call", callee: path[0]!, args, span };
+      }
+      return { kind: "ident", path, span };
     }
     if (this.eat("LPAREN")) {
       const expr = this.parseExpr();
@@ -537,7 +611,15 @@ class Parser {
   }
 
   private error(message: string, span: Span): VivaError {
-    const diagnostic: Diagnostic = { message, span, source: this.filename };
+    const near = this.peek().value || this.peek().type;
+    const enriched = withSyntaxHint(message, near);
+    const diagnostic: Diagnostic = {
+      message: enriched.message,
+      span,
+      source: this.filename,
+      code: enriched.code,
+      hint: enriched.hint,
+    };
     return new VivaError([diagnostic]);
   }
 }

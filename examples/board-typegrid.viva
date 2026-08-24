@@ -1,0 +1,14 @@
+artifact "Board Type Grid"
+
+scene
+  size: 1280 400
+  background: #ffffff
+
+widget layout.board
+  title: "type grid · 3 readable measures"
+  caption: "12 guides · body fills 3 readable measures"
+  body: "The author turns on typeGrid and names how many guides to paint. The compiler keeps the 12-column skeleton for alignment, then pours this paragraph into three readable measures so a coding agent does not write a y for every line. 栏是度量，格子是参考：十二栏参考线仍在，正文按可读栏宽从 type0 流到下一栏，不靠作者手摆分栏坐标。This is still not InDesign — no running header, no jump folio, no optical kerning — but the same primitive that hops a page knife now fills type columns top to bottom, then left to right. Keep adding sentences until the first measure is full and the leftover lines start in the next column at the same baseline. 第一栏写满之后，下一行从第二栏顶格起笔，基线仍对准 typeGridStep。A 16:9 board has enough height that a short caption stays in column one; this copy exists so the second and third measures are not empty. 这段只为装满可读栏宽，好让第二、第三栏有行可接：度量、折行、换栏，作者仍只写 typeGridCols。Agents should see overflow as a compiler problem, not a request for a column keyword. 溢出是编译器的事，不要为此加 column 关键字。Repeat the measure: twelve guides, three prose widths, top to bottom, then left to right. 再写一轮：十二导轨、三栏正文、先上后下、先左后右。When the second measure fills, the third opens at the title band, still inside the safe frame. 第二栏满了就开第三栏，仍停在安全框里。Nature-grade type is not the claim; the claim is that board copy and type slots share one flow primitive. 不是宣称排印成品，只说题注和 type 槽走同一套灌文原语。Last beat: wrap, pour, snap to the baseline, stop at the lower third. 最后一拍：折行、灌栏、咬齐基线、停在字幕条上方。"
+  typeGrid: true
+  typeGridStep: 8
+  typeGridCols: 12
+  guides: true

@@ -1,0 +1,212 @@
+artifact "Figure Atlas"
+
+state selGene = "CD8A"
+state hint = "六联图 · 虚拟队列 n=248 · print-nature 默认"
+
+# ── 虚拟临床队列数据 ─────────────────────────────────────────
+
+data cohortBars = [
+  { visit: 1, pct: 38, grp: "placebo" }
+  { visit: 1, pct: 38, grp: "drug-A" }
+  { visit: 1, pct: 38, grp: "drug-B" }
+  { visit: 2, pct: 41, grp: "placebo" }
+  { visit: 2, pct: 52, grp: "drug-A" }
+  { visit: 2, pct: 48, grp: "drug-B" }
+  { visit: 3, pct: 44, grp: "placebo" }
+  { visit: 3, pct: 61, grp: "drug-A" }
+  { visit: 3, pct: 58, grp: "drug-B" }
+  { visit: 4, pct: 46, grp: "placebo" }
+  { visit: 4, pct: 68, grp: "drug-A" }
+  { visit: 4, pct: 63, grp: "drug-B" }
+  { visit: 5, pct: 48, grp: "placebo" }
+  { visit: 5, pct: 74, grp: "drug-A" }
+  { visit: 5, pct: 70, grp: "drug-B" }
+  { visit: 6, pct: 50, grp: "placebo" }
+  { visit: 6, pct: 79, grp: "drug-A" }
+  { visit: 6, pct: 76, grp: "drug-B" }
+]
+
+data vitals = [
+  { wk: 0, hr: 74, grp: "control" }
+  { wk: 2, hr: 73, grp: "control" }
+  { wk: 4, hr: 72, grp: "control" }
+  { wk: 6, hr: 71, grp: "control" }
+  { wk: 8, hr: 70, grp: "control" }
+  { wk: 10, hr: 69, grp: "control" }
+  { wk: 12, hr: 68, grp: "control" }
+  { wk: 0, hr: 74, grp: "treatment" }
+  { wk: 2, hr: 70, grp: "treatment" }
+  { wk: 4, hr: 66, grp: "treatment" }
+  { wk: 6, hr: 62, grp: "treatment" }
+  { wk: 8, hr: 60, grp: "treatment" }
+  { wk: 10, hr: 58, grp: "treatment" }
+  { wk: 12, hr: 56, grp: "treatment" }
+]
+
+data biomarkers = [
+  { il6: 1.2, crp: 8, grp: "low" }
+  { il6: 1.8, crp: 12, grp: "low" }
+  { il6: 2.1, crp: 15, grp: "low" }
+  { il6: 2.4, crp: 18, grp: "low" }
+  { il6: 2.8, crp: 22, grp: "low" }
+  { il6: 3.2, crp: 28, grp: "low" }
+  { il6: 3.5, crp: 32, grp: "mid" }
+  { il6: 4.1, crp: 38, grp: "mid" }
+  { il6: 4.8, crp: 45, grp: "mid" }
+  { il6: 5.2, crp: 52, grp: "mid" }
+  { il6: 5.8, crp: 58, grp: "mid" }
+  { il6: 6.4, crp: 65, grp: "high" }
+  { il6: 7.2, crp: 72, grp: "high" }
+  { il6: 8.1, crp: 82, grp: "high" }
+  { il6: 9.0, crp: 95, grp: "high" }
+  { il6: 10.2, crp: 108, grp: "high" }
+  { il6: 11.5, crp: 120, grp: "high" }
+  { il6: 2.6, crp: 20, grp: "low" }
+  { il6: 4.5, crp: 48, grp: "mid" }
+  { il6: 7.8, crp: 88, grp: "high" }
+]
+
+data heatScale = [
+  { i: 4 }
+  { i: 3 }
+  { i: 2 }
+  { i: 1 }
+  { i: 0 }
+]
+
+data heatCells = [
+  { col: 0, row: 0, tier: 0 } { col: 1, row: 0, tier: 1 } { col: 2, row: 0, tier: 2 }
+  { col: 3, row: 0, tier: 3 } { col: 4, row: 0, tier: 4 } { col: 5, row: 0, tier: 3 }
+  { col: 6, row: 0, tier: 2 } { col: 7, row: 0, tier: 1 }
+  { col: 0, row: 1, tier: 1 } { col: 1, row: 1, tier: 2 } { col: 2, row: 1, tier: 3 }
+  { col: 3, row: 1, tier: 4 } { col: 4, row: 1, tier: 4 } { col: 5, row: 1, tier: 3 }
+  { col: 6, row: 1, tier: 2 } { col: 7, row: 1, tier: 1 }
+  { col: 0, row: 2, tier: 2 } { col: 1, row: 2, tier: 3 } { col: 2, row: 2, tier: 4 }
+  { col: 3, row: 2, tier: 3 } { col: 4, row: 2, tier: 2 } { col: 5, row: 2, tier: 1 }
+  { col: 6, row: 2, tier: 2 } { col: 7, row: 2, tier: 3 }
+  { col: 0, row: 3, tier: 0 } { col: 1, row: 3, tier: 1 } { col: 2, row: 3, tier: 2 }
+  { col: 3, row: 3, tier: 3 } { col: 4, row: 3, tier: 2 } { col: 5, row: 3, tier: 1 }
+  { col: 6, row: 3, tier: 0 } { col: 7, row: 3, tier: 1 }
+  { col: 0, row: 4, tier: 1 } { col: 1, row: 4, tier: 2 } { col: 2, row: 4, tier: 1 }
+  { col: 3, row: 4, tier: 0 } { col: 4, row: 4, tier: 1 } { col: 5, row: 4, tier: 2 }
+  { col: 6, row: 4, tier: 3 } { col: 7, row: 4, tier: 2 }
+  { col: 0, row: 5, tier: 2 } { col: 1, row: 5, tier: 1 } { col: 2, row: 5, tier: 0 }
+  { col: 3, row: 5, tier: 1 } { col: 4, row: 5, tier: 2 } { col: 5, row: 5, tier: 3 }
+  { col: 6, row: 5, tier: 4 } { col: 7, row: 5, tier: 3 }
+]
+
+data flowV = [
+  { ox: 1, oy: 1, ux: 1.4, uy: 0.6, grp: "inflow" }
+  { ox: 2.5, oy: 2, ux: 0.8, uy: 1.2, grp: "inflow" }
+  { ox: 4, oy: 1.2, ux: -0.6, uy: 1.4, grp: "shear" }
+  { ox: 5.5, oy: 3, ux: -1.2, uy: -0.8, grp: "shear" }
+  { ox: 7, oy: 2.2, ux: 0.4, uy: 1.6, grp: "inflow" }
+  { ox: 8, oy: 4, ux: 1.6, uy: 0.2, grp: "vortex" }
+  { ox: 3, oy: 4.5, ux: -0.9, uy: -1.1, grp: "vortex" }
+  { ox: 6.2, oy: 0.8, ux: 1.1, uy: 0.9, grp: "inflow" }
+]
+
+data stageSplit = [
+  { i: 0, n: 124, grp: "arm-A", lane: 0 }
+  { i: 0, n: 124, grp: "arm-B", lane: 1 }
+  { i: 1, n: 94, grp: "arm-A", lane: 0 }
+  { i: 1, n: 92, grp: "arm-B", lane: 1 }
+  { i: 2, n: 82, grp: "arm-A", lane: 0 }
+  { i: 2, n: 80, grp: "arm-B", lane: 1 }
+  { i: 3, n: 76, grp: "arm-A", lane: 0 }
+  { i: 3, n: 72, grp: "arm-B", lane: 1 }
+  { i: 4, n: 68, grp: "arm-A", lane: 0 }
+  { i: 4, n: 63, grp: "arm-B", lane: 1 }
+]
+
+scene
+  size: 1360 920
+  background: #ffffff
+
+tick 40
+  hint = "print-nature 默认 · 可选手册 dashboard / 无"
+
+# 页面槽位 + 六联图：board 出题注和 HUD 芯片，figure 吃 body
+
+widget layout.board
+  title: "多面板综合图 · 虚拟临床队列"
+  subtitle: "Figure 2 · n=248 · IL-6 / CRP 生物标志物 · 六类子图组合"
+  caption: hint
+  controls: [CD8A, IL6]
+  bind: selGene
+  guides: false
+
+widget layout.figure
+  panel: body
+  cols: 3
+  rows: 2
+
+widget chart.bar
+  panel: a
+  data: cohortBars
+  xField: visit
+  yField: pct
+  group: grp
+  xlim: 0 7
+  ylim: 0 100
+  barWidth: 0.62
+  title: "RESPONSE BY VISIT"
+
+widget chart.line
+  panel: b
+  data: vitals
+  xField: wk
+  yField: hr
+  group: grp
+  xlim: 0 12
+  ylim: 50 80
+  title: "HEART RATE · 12 WEEKS"
+
+widget chart.scatter
+  panel: c
+  data: biomarkers
+  xField: il6
+  yField: crp
+  group: grp
+  xlim: 0 12
+  ylim: 5 130
+  title: "IL-6 vs CRP"
+  r: 5.5
+
+widget chart.heatmap
+  panel: d
+  data: heatCells
+  xField: col
+  yField: row
+  valueField: tier
+  xlim: -0.5 7.5
+  ylim: -0.5 5.5
+  zlim: 0 4
+  zLabel: "normalized module score"
+  title: "GENE MODULE"
+
+widget chart.vector
+  panel: e
+  data: flowV
+  xField: ox
+  yField: oy
+  uField: ux
+  vField: uy
+  group: grp
+  xlim: 0 10
+  ylim: 0 6
+  title: "MICROFLUIDIC FLOW"
+  xLabel: x
+  yLabel: y
+
+widget chart.funnel
+  panel: f
+  data: stageSplit
+  xField: n
+  yField: i
+  group: grp
+  yCats: ["Screen", "Enroll", "Week-4", "Week-12", "Complete"]
+  xlim: 0 140
+  title: "TRIAL FUNNEL"
+  xLabel: n
+  legend: right

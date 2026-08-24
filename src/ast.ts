@@ -9,7 +9,8 @@ export type Expr =
   | { kind: "array"; items: Expr[]; span: Span }
   | { kind: "object"; entries: { key: string; value: Expr }[]; span: Span }
   | { kind: "unary"; op: "not" | "-"; expr: Expr; span: Span }
-  | { kind: "binary"; op: BinaryOp; left: Expr; right: Expr; span: Span };
+  | { kind: "binary"; op: BinaryOp; left: Expr; right: Expr; span: Span }
+  | { kind: "call"; callee: string; args: Expr[]; span: Span };
 
 export type BinaryOp =
   | "+"
@@ -50,6 +51,7 @@ export type SceneItem =
 
 export type LayerDecl = {
   name: string;
+  props: Record<string, Expr>;
   items: SceneItem[];
   span: Span;
 };
@@ -60,11 +62,18 @@ export type SceneDecl = {
   span: Span;
 };
 
+export type FrameDecl = {
+  name: string;
+  props: Record<string, Expr>;
+  span: Span;
+};
+
 export type Artifact = {
   name: string;
   states: { name: string; value: Expr; span: Span }[];
   data: { name: string; value: Expr; span: Span }[];
   entities: { name: string; props: Record<string, Expr>; span: Span }[];
+  frames: FrameDecl[];
   scene: SceneDecl | null;
   events: {
     type: string;
@@ -118,6 +127,7 @@ export function emptyArtifact(name: string, span: Span): Artifact {
     states: [],
     data: [],
     entities: [],
+    frames: [],
     scene: null,
     events: [],
     rules: [],
@@ -128,4 +138,13 @@ export function emptyArtifact(name: string, span: Span): Artifact {
     functions: [],
     span,
   };
+}
+
+export function binary(
+  op: BinaryOp,
+  left: Expr,
+  right: Expr,
+  span: Span = { line: 1, column: 1 },
+): Expr {
+  return { kind: "binary", op, left, right, span };
 }

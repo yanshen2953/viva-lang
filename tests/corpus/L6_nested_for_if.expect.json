@@ -1,0 +1,9 @@
+{
+  "case": "L6_nested_for_if",
+  "input": "examples/exam/L6_nested_for_if.viva",
+  "expect": {
+    "layers": ["marks"],
+    "nestedFor": true,
+    "events": []
+  }
+}

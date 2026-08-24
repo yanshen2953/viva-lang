@@ -1,0 +1,9 @@
+{
+  "case": "E1_click_state",
+  "input": "examples/exam/E1_click_state.viva",
+  "expect": {
+    "layers": ["ui"],
+    "events": [{ "type": "click", "target": "counter" }],
+    "state": ["count"]
+  }
+}

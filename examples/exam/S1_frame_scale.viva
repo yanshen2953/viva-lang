@@ -1,0 +1,24 @@
+artifact "S1 frame scale"
+
+data pts = [
+  { x: 2, y: 20 }
+  { x: 8, y: 80 }
+]
+
+frame plot
+  x: 80 720
+  y: 70 400
+  xlim: 0 10
+  ylim: 0 100
+
+scene
+  size: 880 480
+  background: #0b1220
+
+  layer marks
+    for d in pts
+      node p
+        frame: plot
+        x: d.x
+        y: d.y
+        r: 4

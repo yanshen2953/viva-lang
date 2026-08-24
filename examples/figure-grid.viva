@@ -1,0 +1,82 @@
+artifact "Figure Grid"
+
+data scatter = [
+  { x: 1.2, y: 18 }
+  { x: 2.1, y: 24 }
+  { x: 3.0, y: 22 }
+  { x: 4.4, y: 36 }
+  { x: 5.8, y: 31 }
+  { x: 7.2, y: 44 }
+]
+
+data line = [
+  { x: 0, y: 12 }
+  { x: 2, y: 18 }
+  { x: 4, y: 16 }
+  { x: 6, y: 28 }
+  { x: 8, y: 24 }
+  { x: 10, y: 33 }
+]
+
+data bars = [
+  { x: 1, y: 40 }
+  { x: 2, y: 62 }
+  { x: 3, y: 51 }
+  { x: 4, y: 74 }
+]
+
+data heat = [
+  { x: 0, y: 0, v: 0.1 } { x: 1, y: 0, v: 0.3 } { x: 2, y: 0, v: 0.6 }
+  { x: 0, y: 1, v: 0.4 } { x: 1, y: 1, v: 0.8 } { x: 2, y: 1, v: 0.5 }
+  { x: 0, y: 2, v: 0.7 } { x: 1, y: 2, v: 0.2 } { x: 2, y: 2, v: 0.9 }
+]
+
+scene
+  size: 960 680
+  background: #ffffff
+
+widget layout.figure
+  title: "Figure 2. Survival and response by cohort"
+  cols: 2
+  rows: 2
+
+widget chart.scatter
+  panel: a
+  data: scatter
+  xField: x
+  yField: y
+  xlim: 0 8
+  ylim: 0 50
+  xLabel: Time
+  xUnit: week
+  yLabel: Score
+
+widget chart.line
+  panel: b
+  data: line
+  xField: x
+  yField: y
+  xlim: 0 10
+  ylim: 0 40
+  xLabel: Time
+  yLabel: Response
+
+widget chart.bar
+  panel: c
+  data: bars
+  xField: x
+  yField: y
+  xlim: 0 5
+  ylim: 0 80
+  xLabel: Visit
+  yLabel: Percent
+
+widget chart.heatmap
+  panel: d
+  data: heat
+  xField: x
+  yField: y
+  valueField: v
+  xlim: -0.5 2.5
+  ylim: -0.5 2.5
+  zlim: 0 1

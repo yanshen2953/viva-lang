@@ -1,0 +1,19 @@
+artifact "Magic Scatter"
+
+data pts = [
+  { t: 1, p: 20 }
+  { t: 2, p: 40 }
+  { t: 3, p: 35 }
+]
+
+scene
+  size: 400 300
+  background: #0b1220
+
+  layer marks
+    for d in pts
+      node pt as points
+        x: d.t * 80
+        y: 250 - d.p * 2
+        r: 5
+        fill: #38bdf8

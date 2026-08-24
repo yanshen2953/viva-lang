@@ -1,0 +1,25 @@
+artifact "Time Axis"
+
+data visits = [
+  { day: "2024-01-07", crp: 28 }
+  { day: "2024-02-04", crp: 22 }
+  { day: "2024-03-03", crp: 18 }
+  { day: "2024-04-07", crp: 14 }
+  { day: "2024-05-05", crp: 11 }
+  { day: "2024-06-02", crp: 9 }
+]
+
+scene
+  size: 640 320
+  background: #ffffff
+
+widget chart.line
+  data: visits
+  xField: day
+  yField: crp
+  xScale: time
+  xLabel: Visit
+  yLabel: CRP
+  yUnit: mg/L
+  ylim: 0 32
+  title: "ISO dates · xScale time"

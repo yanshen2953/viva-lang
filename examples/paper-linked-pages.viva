@@ -1,0 +1,45 @@
+artifact "Paper Linked Pages"
+
+data rows = [
+  { t: 1, score: 12, arm: "placebo" }
+  { t: 2, score: 14, arm: "placebo" }
+  { t: 3, score: 11, arm: "placebo" }
+  { t: 1, score: 20, arm: "drug-A" }
+  { t: 2, score: 22, arm: "drug-A" }
+  { t: 3, score: 24, arm: "drug-A" }
+  { t: 1, score: 16, arm: "drug-B" }
+  { t: 2, score: 17, arm: "drug-B" }
+  { t: 3, score: 15, arm: "drug-B" }
+]
+
+scene
+  unit: mm
+  page: a4
+  column: single
+  height: 400
+  background: #ffffff
+
+widget layout.figure
+  title: "Linked visits on A4 · one primitive stack"
+  cols: 1
+  rows: 2
+
+widget chart.scatter
+  panel: a
+  data: rows
+  xField: t
+  yField: score
+  group: arm
+  xlim: 0 4
+  ylim: 8 28
+  xLabel: Visit
+  yLabel: Score
+
+widget chart.box
+  panel: b
+  data: rows
+  xField: arm
+  yField: score
+  ylim: 8 28
+  xLabel: Arm
+  yLabel: Score

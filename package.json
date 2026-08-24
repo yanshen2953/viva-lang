@@ -4,19 +4,66 @@
   "description": "LLM-native interactive artifact language — small DSL, large runtime",
   "type": "module",
   "bin": {
-    "viva": "./dist/cli.js"
+    "viva": "./dist/cli.js",
+    "viva-mcp": "./dist/mcp-cli.js"
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./agent": {
+      "types": "./dist/agent/index.d.ts",
+      "import": "./dist/agent/index.js"
+    },
+    "./embed": {
+      "types": "./dist/embed/web.d.ts",
+      "import": "./dist/embed/web.js"
+    },
+    "./export": {
+      "types": "./dist/export/index.d.ts",
+      "import": "./dist/export/index.js"
+    },
+    "./review": {
+      "types": "./dist/review/index.d.ts",
+      "import": "./dist/review/index.js"
+    },
+    "./check": {
+      "types": "./dist/check/index.d.ts",
+      "import": "./dist/check/index.js"
+    },
+    "./mcp": {
+      "types": "./dist/mcp/index.d.ts",
+      "import": "./dist/mcp/index.js"
+    },
+    "./package.json": "./package.json"
+  },
   "files": [
     "dist",
+    "assets",
     "examples",
-    "docs"
+    "docs",
+    "install",
+    "docker-compose.yml",
+    "Dockerfile",
+    "viva.models.json.example",
+    "viva.models.schema.json",
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
     "dev": "vite",
-    "build": "tsc -p tsconfig.build.json && vite build",
+    "build": "tsc -p tsconfig.build.json && vite build && vite build --config vite.embed.config.ts",
+    "build:lib": "tsc -p tsconfig.build.json",
+    "pack:release": "bash install/pack-release.sh",
     "test": "vitest run",
+    "test:exam": "vitest run tests/exam tests/parser.test.ts",
+    "test:agent-exam": "vite-node scripts/run-agent-exam.ts --track hard",
+    "test:agent-exam:smoke": "vite-node scripts/run-agent-exam.ts --track smoke",
+    "test:agent-exam:all": "vite-node scripts/run-agent-exam.ts --track all",
+    "demo:review": "vite-node scripts/demo-review-brief.ts",
     "preview": "vite preview"
   },
   "keywords": [
@@ -25,14 +72,25 @@
     "visualization",
     "artifact",
     "compiler",
-    "runtime"
+    "runtime",
+    "embed",
+    "agent"
   ],
   "license": "MIT",
   "engines": {
     "node": ">=18"
   },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "@pdf-lib/fontkit": "^1.1.1",
+    "@resvg/resvg-js": "^2.6.2",
+    "pdf-lib": "^1.17.1",
+    "sharp": "^0.34.5"
+  },
   "devDependencies": {
     "@types/node": "^22.13.10",
+    "@types/sharp": "^0.32.0",
+    "puppeteer-core": "^24.43.1",
     "typescript": "^5.8.2",
     "vite": "^6.2.2",
     "vitest": "^3.0.9"

@@ -1,0 +1,9 @@
+{
+  "case": "C2_chart_line",
+  "input": "examples/exam/C2_chart_line.viva",
+  "expect": {
+    "data": ["series"],
+    "minFrames": 1,
+    "layerNameSuffixes": ["_axes", "_marks"]
+  }
+}

@@ -1,0 +1,807 @@
+import { describe, expect, it } from "vitest";
+import { compileSource } from "../../src/pipeline.js";
+import { evaluate } from "../../src/eval.js";
+import {
+  clampChartInsets,
+  ellipsizeToWidth,
+  estimateTextWidthPx,
+  fitShift,
+  growInsetsForChrome,
+  growInsetsForNeighbors,
+  INSET_CAP_FIT,
+  INSET_CAP_SOFT,
+  MIN_PLOT_FRAC,
+  minWidthForLines,
+  placePaperChrome,
+  rectsOverlap,
+  thinXTicks,
+  wrapTextLines,
+} from "../../src/layout/chrome-collide.js";
+
+describe("paper chrome collision", () => {
+  it("keeps an unhyphenated Latin legend key intact and grows leftover", () => {
+    const need = minWidthForLines("treatment", 8, 0.1, 2);
+    expect(need).toBeGreaterThanOrEqual(estimateTextWidthPx("treatment", 8, 0.1) - 0.5);
+    expect(wrapTextLines("treatment", need, 8, 0.1, 2).join("")).toBe("treatment");
+    const { chrome } = placePaperChrome(
+      { px0: 40, px1: 160, py0: 20, py1: 140 },
+      (px) => px,
+      false,
+      {
+        legendAt: "right",
+        legendKeys: ["control", "treatment"],
+        yTicks: [{ label: "0", y: 130 }],
+        xTicks: [{ label: "1", x: 80 }],
+      },
+      { x0: 0, y0: 0, x1: 260, y1: 160 },
+    );
+    const keys = chrome.legendLines.flat();
+    expect(keys.join(" ")).toMatch(/treatment/);
+    expect(keys.some((t) => t === "t" || t === "treatmen")).toBe(false);
+  });
+
+  it("breaks hyphenated legend keys before mid-word cuts", () => {
+    const lines = wrapTextLines("placebo-control", 48, 8, 0.1, 2);
+    expect(lines.length).toBeGreaterThan(1);
+    expect(lines[0]).toMatch(/placebo-/);
+    expect(lines.join("").replace(/\s/g, "")).toMatch(/control/);
+  });
+
+  it("breaks after CJK instead of splitting the next Latin word", () => {
+    const lines = wrapTextLines("作者不必写魔法数坐标。This is still not a newspaper", 80, 12, 0.12);
+    expect(lines.some((line) => /\bThis\b/.test(line))).toBe(true);
+    expect(lines.some((line) => /坐标/.test(line) && /This/.test(line))).toBe(false);
+    expect(lines.some((line) => /^T$/.test(line) || /坐标。T$/.test(line))).toBe(false);
+  });
+
+  it("measures mm-sheet wrap in px so a CJK title stays one line", () => {
+    const scale = 96 / 25.4;
+    const toScene = (px: number) => px / scale;
+    const { chrome } = placePaperChrome(
+      { px0: 18, px1: 80, py0: 14, py1: 56 },
+      toScene,
+      true,
+      {
+        title: "单栏投稿图",
+        xCaption: "时间 (周)",
+        yCaption: "心率 (次每分)",
+        yTicks: [
+          { label: "24", y: 14 },
+          { label: "0", y: 56 },
+        ],
+        xTicks: [
+          { label: "0", x: 18 },
+          { label: "5", x: 80 },
+        ],
+      },
+      { x0: 0, y0: 0, x1: 89, y1: 68 },
+    );
+    expect(chrome.titleLines).toEqual(["单栏投稿图"]);
+    expect(chrome.xTitleLines).toEqual(["时间 (周)"]);
+    expect(chrome.yTitleLines).toEqual(["心率 (次每分)"]);
+    expect(chrome.xTitleLines.join("")).not.toMatch(/^\)$/);
+    expect(chrome.titleY).toBeGreaterThan(2);
+    expect(chrome.titleY).toBeLessThan(14);
+    expect(chrome.yTitleX).toBeGreaterThan(1);
+    expect(chrome.yTitleX).toBeLessThan(chrome.yTickX);
+  });
+
+  it("wraps a long title on spaces before mid-word breaks", () => {
+    const lines = wrapTextLines("Survival and response by treatment cohort", 80, 12, 0.35);
+    expect(lines.length).toBeGreaterThan(1);
+    expect(lines.join(" ")).toMatch(/Survival/);
+    expect(lines.join(" ")).toMatch(/cohort/);
+    for (const line of lines) {
+      expect(estimateTextWidthPx(line, 12, 0.35)).toBeLessThanOrEqual(80 + 12);
+    }
+  });
+
+  it("measures the width a caption needs to avoid a capped ellipsis", () => {
+    const need = minWidthForLines("normalized expression (log2)", 9, 0.2, 2);
+    expect(need).toBeGreaterThan(40);
+    expect(wrapTextLines("normalized expression (log2)", need, 9, 0.2, 2).join("")).not.toMatch(
+      /\.\.\.$/,
+    );
+    expect(wrapTextLines("normalized expression (log2)", need, 9, 0.2, 0).length).toBeLessThanOrEqual(
+      2,
+    );
+  });
+
+  it("ellipsizes leftover words on the last line when capped", () => {
+    const lines = wrapTextLines(
+      "Serum concentration of inflammatory cytokine",
+      40,
+      9,
+      0.2,
+      3,
+    );
+    expect(lines.length).toBe(3);
+    expect(lines[2]).toMatch(/\.\.\.$/);
+    expect(estimateTextWidthPx(lines[2]!, 9, 0.2)).toBeLessThanOrEqual(40 + 0.01);
+    expect(ellipsizeToWidth("inflammatory cytokine", 40, 9, 0.2)).toMatch(/\.\.\.$/);
+  });
+
+  it("drops overlapping x-tick labels but keeps the ends", () => {
+    const kept = thinXTicks([
+      { label: "January", x: 10 },
+      { label: "February", x: 28 },
+      { label: "March", x: 46 },
+      { label: "April", x: 64 },
+    ]);
+    expect(kept[0]?.label).toBe("January");
+    expect(kept[kept.length - 1]?.label).toBe("April");
+    expect(kept.length).toBeLessThan(4);
+    for (let i = 1; i < kept.length; i++) {
+      const a = kept[i - 1]!;
+      const b = kept[i]!;
+      const aw = estimateTextWidthPx(a.label, 8, 0.08);
+      const bw = estimateTextWidthPx(b.label, 8, 0.08);
+      expect(a.x + aw / 2 + 3).toBeLessThanOrEqual(b.x - bw / 2 + 0.01);
+    }
+  });
+
+  it("nudges a rotated y-title left of measured y-tick boxes", () => {
+    const { chrome, rects } = placePaperChrome(
+      { px0: 80, px1: 360, py0: 40, py1: 220 },
+      (px) => px,
+      false,
+      {
+        yCaption: "Concentration (µM)",
+        yTicks: [
+          { label: "10000", y: 50 },
+          { label: "5000", y: 120 },
+          { label: "0", y: 210 },
+        ],
+        xTicks: [{ label: "0", x: 80 }, { label: "10", x: 360 }],
+      },
+    );
+    const yTitle = rects.find((r) => r.id === "yTitle")!;
+    const ticks = rects.filter((r) => r.id.startsWith("ytick-"));
+    expect(yTitle).toBeTruthy();
+    expect(ticks.length).toBe(3);
+    for (const tick of ticks) {
+      expect(rectsOverlap(yTitle, tick, 1)).toBe(false);
+    }
+    expect(chrome.yTitleX).toBeLessThan(chrome.yTickX);
+  });
+
+  it("shifts a chart title right of the (a) panel label", () => {
+    const { chrome, rects } = placePaperChrome(
+      { px0: 20, px1: 300, py0: 24, py1: 200 },
+      (px) => px,
+      false,
+      {
+        title: "RESPONSE BY VISIT",
+        panelLabel: "(a)",
+        yTicks: [{ label: "0", y: 190 }],
+        xTicks: [{ label: "1", x: 40 }],
+      },
+      { x0: 0, y0: 0, x1: 320, y1: 220 },
+    );
+    const title = rects.find((r) => r.id === "title")!;
+    const label = rects.find((r) => r.id === "panel-label")!;
+    expect(title).toBeTruthy();
+    expect(label).toBeTruthy();
+    expect(rectsOverlap(title, label, 1)).toBe(false);
+    expect(chrome.titleX).toBeGreaterThan(label.x + label.w);
+  });
+
+  it("wraps long colorbar labels and z titles to leftover width", () => {
+    const { chrome, rects } = placePaperChrome(
+      { px0: 40, px1: 140, py0: 30, py1: 160 },
+      (px) => px,
+      true,
+      {
+        colorbar: true,
+        cbarLabels: ["1.2e-4", "very-long-tick"],
+        zCaption: "normalized-expression score",
+        yTicks: [{ label: "0", y: 150 }],
+        xTicks: [{ label: "1", x: 80 }],
+      },
+      { x0: 0, y0: 0, x1: 200, y1: 180 },
+    );
+    expect(chrome.cbarLines.some((lines) => lines.length > 1)).toBe(true);
+    expect(chrome.cbarTitleLines.length).toBeGreaterThan(1);
+    expect(chrome.cbarTitleLines.join("").replace(/\s/g, "")).toMatch(/normalized/);
+    const plotH = 160 - 30;
+    for (const line of chrome.cbarTitleLines) {
+      expect(estimateTextWidthPx(line, 9, 0.2)).toBeLessThanOrEqual(plotH + 1);
+    }
+    const cbar = rects.find((r) => r.id === "cbar")!;
+    const zTitle = rects.find((r) => r.id === "cbar-title")!;
+    expect(cbar).toBeTruthy();
+    expect(zTitle).toBeTruthy();
+    expect(zTitle.h).toBeGreaterThan(zTitle.w);
+    expect(chrome.cbarTitleY).toBeGreaterThan(30);
+    expect(chrome.cbarTitleY).toBeLessThan(160);
+  });
+
+  it("keeps a right legend clear of the colorbar", () => {
+    const { rects } = placePaperChrome(
+      { px0: 40, px1: 220, py0: 30, py1: 200 },
+      (px) => px,
+      false,
+      {
+        colorbar: true,
+        cbarLabels: ["0.00", "4.00"],
+        legendAt: "right",
+        legendKeys: ["high", "mid", "low"],
+        yTicks: [{ label: "0", y: 190 }],
+        xTicks: [{ label: "1", x: 80 }],
+      },
+      { x0: 0, y0: 0, x1: 360, y1: 240 },
+    );
+    const cbar = rects.find((r) => r.id === "cbar")!;
+    const legends = rects.filter((r) => r.id.startsWith("legend-"));
+    expect(cbar).toBeTruthy();
+    expect(legends.length).toBe(3);
+    for (const legend of legends) {
+      expect(rectsOverlap(cbar, legend, 1)).toBe(false);
+    }
+  });
+
+  it("compiles a labeled panel so title and (a) boxes do not overlap", () => {
+    const result = compileSource(
+      `artifact Collide
+data series = [{ x: 1, y: 20 }, { x: 2, y: 40 }]
+scene
+  size: 480 280
+  background: #ffffff
+widget layout.figure
+  cols: 1
+  rows: 1
+  gutter: 8
+  margin: 8
+widget chart.line
+  panel: a
+  data: series
+  xField: x
+  yField: y
+  xlim: 0 3
+  ylim: 0 50
+  xLabel: Time
+  xUnit: week
+  yLabel: Score
+  title: "RESPONSE BY VISIT"
+  interactive: false
+`,
+      "collide.viva",
+      { handbookIds: ["print-nature"] },
+    );
+    expect(result.error).toBeNull();
+    const ir = result.ir!;
+    const env = [ir.state, ir.data];
+    const nodes = ir.scene.layers.flatMap((l) => l.items.filter((i) => i.kind === "node"));
+    const title = nodes.find((n) => n.kind === "node" && n.name === "a_title");
+    const label = nodes.find((n) => n.kind === "node" && /_lab_a$/.test(n.name));
+    expect(title?.kind).toBe("node");
+    expect(label?.kind).toBe("node");
+    if (title?.kind === "node" && label?.kind === "node") {
+      const tx = evaluate(title.props.x, env) as number;
+      const ty = evaluate(title.props.y, env) as number;
+      const lx = evaluate(label.props.x, env) as number;
+      const ly = evaluate(label.props.y, env) as number;
+      const titleText = evaluate(title.props.text, env) as string;
+      const labelText = evaluate(label.props.text, env) as string;
+      const titleBox = {
+        id: "t",
+        x: tx,
+        y: ty - 12 * 0.75,
+        w: estimateTextWidthPx(titleText, 12, 0.35),
+        h: 12,
+      };
+      const labelBox = {
+        id: "l",
+        x: lx,
+        y: ly - 11,
+        w: estimateTextWidthPx(labelText, 11, 0.15),
+        h: 13,
+      };
+      expect(rectsOverlap(titleBox, labelBox, 1)).toBe(false);
+    }
+  });
+
+  it("paints fewer x ticks when long category labels would collide", () => {
+    const result = compileSource(
+      `artifact Tight
+data rows = [
+  { x: 0, y: 4 }
+  { x: 1, y: 6 }
+  { x: 2, y: 3 }
+  { x: 3, y: 8 }
+]
+scene
+  size: 140 120
+  background: #ffffff
+widget chart.bar
+  data: rows
+  xField: x
+  yField: y
+  xlim: -0.5 3.5
+  ylim: 0 10
+  xCats: ["January", "February", "March", "April"]
+  interactive: false
+`,
+      "tight.viva",
+      { handbookIds: ["print-nature"] },
+    );
+    expect(result.error).toBeNull();
+    const axes = result.ir!.scene.layers.find((l) => l.name.endsWith("_axes"))!;
+    const labels = axes.items
+      .filter((i) => i.kind === "node" && /_xtick_\d+$/.test(i.name))
+      .map((i) => (i.kind === "node" ? evaluate(i.props.text, [{}, {}]) : ""));
+    expect(labels[0]).toBe("January");
+    expect(labels[labels.length - 1]).toBe("April");
+    expect(labels.length).toBeLessThan(4);
+  });
+
+  it("wraps a long x-axis caption to the plot width", () => {
+    const { chrome, rects } = placePaperChrome(
+      { px0: 40, px1: 160, py0: 20, py1: 140 },
+      (px) => px,
+      false,
+      {
+        xCaption: "Follow-up time since randomization",
+        yCaption: "Score",
+        yTicks: [{ label: "0", y: 130 }],
+        xTicks: [{ label: "0", x: 40 }, { label: "12", x: 160 }],
+      },
+    );
+    expect(chrome.xTitleLines.length).toBeGreaterThan(1);
+    expect(chrome.xTitleLines.join(" ")).toMatch(/Follow-up/);
+    expect(chrome.xTitleLines.join(" ")).toMatch(/randomization/);
+    const box = rects.find((r) => r.id === "xTitle")!;
+    expect(box.h).toBeGreaterThan(9);
+  });
+
+  it("wraps a long y-axis caption to the plot height", () => {
+    const { chrome, rects } = placePaperChrome(
+      { px0: 80, px1: 280, py0: 20, py1: 140 },
+      (px) => px,
+      false,
+      {
+        yCaption: "Serum concentration of inflammatory cytokine",
+        xCaption: "Week",
+        yTicks: [{ label: "0", y: 130 }],
+        xTicks: [{ label: "1", x: 80 }],
+      },
+    );
+    expect(chrome.yTitleLines.length).toBeGreaterThan(1);
+    expect(chrome.yTitleLines.join(" ")).toMatch(/Serum/);
+    expect(chrome.yTitleLines.join(" ")).toMatch(/cytokine/);
+    const box = rects.find((r) => r.id === "yTitle")!;
+    expect(box.w).toBeGreaterThan(9);
+  });
+
+  it("wraps a long right-legend key inside the cell", () => {
+    const { chrome, rects } = placePaperChrome(
+      { px0: 40, px1: 160, py0: 20, py1: 140 },
+      (px) => px,
+      false,
+      {
+        legendAt: "right",
+        legendKeys: ["placebo-control", "active-drug"],
+        yTicks: [{ label: "0", y: 130 }],
+        xTicks: [{ label: "1", x: 80 }],
+      },
+      { x0: 0, y0: 0, x1: 220, y1: 160 },
+    );
+    expect(chrome.legendLines[0]?.length).toBeGreaterThan(1);
+    expect(chrome.legendLines[0]?.join("").replace(/\s/g, "")).toMatch(/placebo/);
+    expect(chrome.legendLines[0]?.join("").replace(/\s/g, "")).toMatch(/control/);
+    const box = rects.find((r) => r.id === "legend-0")!;
+    const unwrapped = 14 + estimateTextWidthPx("placebo-control", 8, 0.1);
+    expect(box.w).toBeLessThan(unwrapped);
+  });
+
+  it("grows the right inset when chrome overlaps the neighbor cell", () => {
+    const grow = growInsetsForNeighbors(
+      [{ id: "legend-0", x: 168, y: 20, w: 40, h: 12 }],
+      { x0: 0, y0: 0, x1: 180, y1: 120 },
+      [
+        {
+          cell: { x0: 188, y0: 0, x1: 360, y1: 120 },
+          rects: [{ id: "yTitle", x: 186, y: 30, w: 10, h: 60 }],
+        },
+      ],
+      2,
+    );
+    expect(grow.r).toBeGreaterThan(0.5);
+  });
+
+  it("emits wrapped chart title lines on a narrow scene", () => {
+    const result = compileSource(
+      `artifact Wrap
+data rows = [{ x: 1, y: 2 }, { x: 2, y: 4 }]
+scene
+  size: 160 140
+  background: #ffffff
+widget chart.line
+  data: rows
+  xField: x
+  yField: y
+  xlim: 0 3
+  ylim: 0 5
+  title: "Survival and response by treatment cohort"
+  interactive: false
+`,
+      "wrap.viva",
+      { handbookIds: ["print-nature"] },
+    );
+    expect(result.error).toBeNull();
+    const axes = result.ir!.scene.layers.find((l) => l.name.endsWith("_axes"))!;
+    const titles = axes.items.filter((i) => i.kind === "node" && /_title(_\d+)?$/.test(i.name));
+    expect(titles.length).toBeGreaterThan(1);
+    const texts = titles.map((i) =>
+      i.kind === "node" ? String(evaluate(i.props.text, [{}, {}])) : "",
+    );
+    expect(texts.join(" ")).toMatch(/Survival/);
+    expect(texts.join(" ")).toMatch(/cohort/);
+  });
+
+  it("ellipsizes a capped chart title instead of overflowing the last line", () => {
+    const result = compileSource(
+      `artifact TitleCap
+data rows = [{ x: 1, y: 2 }, { x: 2, y: 4 }]
+scene
+  size: 160 140
+  background: #ffffff
+widget chart.line
+  data: rows
+  xField: x
+  yField: y
+  xlim: 0 3
+  ylim: 0 5
+  title: "Serum concentration of inflammatory cytokine in the virtual clinical cohort after randomization"
+  interactive: false
+`,
+      "title-cap.viva",
+      { handbookIds: ["print-nature"] },
+    );
+    expect(result.error).toBeNull();
+    const axes = result.ir!.scene.layers.find((l) => l.name.endsWith("_axes"))!;
+    const titles = axes.items.filter((i) => i.kind === "node" && /_title(_\d+)?$/.test(i.name));
+    expect(titles.length).toBe(3);
+    const last = titles[titles.length - 1];
+    expect(last?.kind).toBe("node");
+    if (last?.kind === "node") {
+      const text = String(evaluate(last.props.text, [{}, {}]));
+      expect(text).toMatch(/\.\.\.$/);
+    }
+  });
+
+  it("emits wrapped axis title lines on a short plot", () => {
+    const result = compileSource(
+      `artifact AxisWrap
+data rows = [{ x: 1, y: 2 }, { x: 2, y: 4 }]
+scene
+  size: 200 140
+  background: #ffffff
+widget chart.line
+  data: rows
+  xField: x
+  yField: y
+  xlim: 0 3
+  ylim: 0 5
+  xLabel: "Follow-up time since randomization"
+  yLabel: "Serum concentration of inflammatory cytokine"
+  interactive: false
+`,
+      "axis-wrap.viva",
+      { handbookIds: ["print-nature"] },
+    );
+    expect(result.error).toBeNull();
+    const axes = result.ir!.scene.layers.find((l) => l.name.endsWith("_axes"))!;
+    const xTitles = axes.items.filter((i) => i.kind === "node" && /_xTitle(_\d+)?$/.test(i.name));
+    const yTitles = axes.items.filter((i) => i.kind === "node" && /_yTitle(_\d+)?$/.test(i.name));
+    expect(xTitles.length + yTitles.length).toBeGreaterThan(2);
+    const texts = [...xTitles, ...yTitles].map((i) =>
+      i.kind === "node" ? String(evaluate(i.props.text, [{}, {}])) : "",
+    );
+    expect(texts.join(" ")).toMatch(/Follow-up|randomization|Serum|inflammatory|cytokine/);
+    const y0 = yTitles.find((i) => i.kind === "node" && i.name.endsWith("_yTitle"));
+    const y1 = yTitles.find((i) => i.kind === "node" && i.name.endsWith("_yTitle_1"));
+    if (y0?.kind === "node" && y1?.kind === "node") {
+      const x0 = evaluate(y0.props.x, [{}, {}]) as number;
+      const x1 = evaluate(y1.props.x, [{}, {}]) as number;
+      expect(x0).toBeLessThan(x1);
+    }
+  });
+
+  it("emits wrapped legend label lines for a hyphenated series key", () => {
+    const result = compileSource(
+      `artifact LegWrap
+data rows = [
+  { x: 1, y: 20, grp: "placebo-control" }
+  { x: 2, y: 40, grp: "active-drug" }
+  { x: 1, y: 18, grp: "placebo-control" }
+  { x: 2, y: 36, grp: "active-drug" }
+]
+scene
+  size: 200 140
+  background: #ffffff
+widget chart.line
+  data: rows
+  xField: x
+  yField: y
+  group: grp
+  xlim: 0 3
+  ylim: 0 50
+  legend: right
+  interactive: false
+`,
+      "leg-wrap.viva",
+      { handbookIds: ["print-nature"] },
+    );
+    expect(result.error).toBeNull();
+    const axes = result.ir!.scene.layers.find((l) => l.name.endsWith("_axes"))!;
+    const labels = axes.items.filter((i) => i.kind === "node" && /_legLbl_/.test(i.name));
+    const texts = labels.map((i) =>
+      i.kind === "node" ? String(evaluate(i.props.text, [{}, {}])) : "",
+    );
+    expect(labels.length).toBeGreaterThanOrEqual(2);
+    expect(texts.join(" ")).toMatch(/placebo-/);
+    expect(texts.join(" ")).toMatch(/control/);
+  });
+
+  it("keeps adjacent-panel chrome boxes from overlapping", () => {
+    const result = compileSource(
+      `artifact Neighbors
+data left = [
+  { x: 1, y: 20, grp: "placebo-control" }
+  { x: 2, y: 40, grp: "active-drug" }
+  { x: 1, y: 18, grp: "placebo-control" }
+  { x: 2, y: 36, grp: "active-drug" }
+]
+data right = [{ x: 1, y: 12 }, { x: 2, y: 18 }]
+scene
+  size: 360 180
+  background: #ffffff
+widget layout.figure
+  cols: 2
+  rows: 1
+  gutter: 8
+  margin: 6
+widget chart.line
+  panel: a
+  data: left
+  xField: x
+  yField: y
+  group: grp
+  xlim: 0 3
+  ylim: 0 50
+  title: "LEFT"
+  interactive: false
+widget chart.line
+  panel: b
+  data: right
+  xField: x
+  yField: y
+  xlim: 0 3
+  ylim: 0 24
+  yLabel: "Serum concentration of inflammatory cytokine"
+  title: "RIGHT"
+  interactive: false
+`,
+      "neighbors.viva",
+      { handbookIds: ["print-nature"] },
+    );
+    expect(result.error).toBeNull();
+    const ir = result.ir!;
+    const env = [ir.state, ir.data];
+    const nodes = ir.scene.layers.flatMap((l) => l.items.filter((i) => i.kind === "node"));
+    const aLegs = nodes.filter((n) => n.kind === "node" && /^a_legLbl_/.test(n.name));
+    const bTitles = nodes.filter((n) => n.kind === "node" && /b_yTitle/.test(n.name));
+    expect(aLegs.length).toBeGreaterThan(0);
+    expect(bTitles.length).toBeGreaterThan(0);
+    for (const leg of aLegs) {
+      if (leg.kind !== "node") continue;
+      const lx = evaluate(leg.props.x, env) as number;
+      const ly = evaluate(leg.props.y, env) as number;
+      const text = String(evaluate(leg.props.text, env));
+      const boxA = {
+        id: "a",
+        x: lx,
+        y: ly - 6,
+        w: estimateTextWidthPx(text, 8, 0.1),
+        h: 12,
+      };
+      for (const title of bTitles) {
+        if (title.kind !== "node") continue;
+        const tx = evaluate(title.props.x, env) as number;
+        const ty = evaluate(title.props.y, env) as number;
+        const ttext = String(evaluate(title.props.text, env));
+        const tw = estimateTextWidthPx(ttext, 9, 0.2);
+        const boxB = { id: "b", x: tx - 5, y: ty - tw / 2, w: 11, h: tw };
+        expect(rectsOverlap(boxA, boxB, 1)).toBe(false);
+      }
+    }
+  });
+
+  it("clamps insets to a plot floor, not a 38% / 50% side cap", () => {
+    const floor = { l: 8, r: 8, t: 8, b: 8 };
+    const pastSoft = clampChartInsets({ l: 8, r: 90, t: 8, b: 8 }, 200, 160, floor);
+    expect(pastSoft.r).toBeGreaterThan(200 * INSET_CAP_SOFT.r);
+    expect(pastSoft.r).toBe(90);
+    const pastFit = clampChartInsets({ l: 8, r: 120, t: 8, b: 8 }, 200, 160, floor);
+    expect(pastFit.r).toBeGreaterThan(200 * INSET_CAP_FIT.r);
+    expect(pastFit.r).toBe(120);
+    const squeezed = clampChartInsets({ l: 80, r: 120, t: 8, b: 8 }, 200, 160, floor);
+    expect(squeezed.l + squeezed.r).toBeLessThanOrEqual(200 * (1 - MIN_PLOT_FRAC) + 0.01);
+    expect(200 - squeezed.l - squeezed.r).toBeGreaterThanOrEqual(200 * MIN_PLOT_FRAC - 0.01);
+  });
+
+  it("grows neighbor overflow by the full overlap, not a half-notch", () => {
+    const grow = growInsetsForNeighbors(
+      [{ id: "legend-0", x: 168, y: 20, w: 40, h: 12 }],
+      { x0: 0, y0: 0, x1: 180, y1: 120 },
+      [
+        {
+          cell: { x0: 188, y0: 0, x1: 360, y1: 120 },
+          rects: [{ id: "yTitle", x: 186, y: 30, w: 10, h: 60 }],
+        },
+      ],
+      2,
+    );
+    expect(grow.r).toBeGreaterThan(20);
+  });
+
+  it("grows cell overflow by the full delta", () => {
+    const grow = growInsetsForChrome(
+      [{ id: "legend-0", x: 170, y: 20, w: 50, h: 12 }],
+      { x0: 0, y0: 0, x1: 200, y1: 120 },
+      4,
+    );
+    expect(grow.r).toBeCloseTo(24, 5);
+  });
+
+  it("grows past the soft inset cap so a cramped right legend stays in the cell", () => {
+    const result = compileSource(
+      `artifact Cram
+data rows = [
+  { x: 1, y: 2, grp: "placebo-control-arm" }
+  { x: 2, y: 4, grp: "active-treatment-arm" }
+]
+scene
+  size: 220 160
+  background: #ffffff
+widget chart.line
+  data: rows
+  xField: x
+  yField: y
+  group: grp
+  xlim: 0 3
+  ylim: 0 5
+  yLabel: "Serum inflammatory cytokine concentration"
+  legend: right
+  interactive: false
+`,
+      "cram.viva",
+      { handbookIds: ["print-nature"] },
+    );
+    expect(result.error).toBeNull();
+    const ir = result.ir!;
+    const env = [ir.state, ir.data];
+    const frame = ir.frames[0]!;
+    const cellX = evaluate(frame.props.cellX!, env) as number[];
+    const plotX = evaluate(frame.props.x, env) as number[];
+    const rightInset = cellX[1]! - plotX[1]!;
+    const labels = ir.scene.layers
+      .flatMap((l) => l.items)
+      .filter((i) => i.kind === "node" && /legLbl_/.test(i.name));
+    expect(labels.length).toBeGreaterThan(0);
+    const texts = labels.map((node) =>
+      node.kind === "node" ? String(evaluate(node.props.text, env)) : "",
+    );
+    expect(rightInset).toBeGreaterThan(220 * INSET_CAP_SOFT.r + 1);
+    expect(texts.some((t) => /\.\.\.$/.test(t))).toBe(false);
+    expect(texts.join(" ")).toMatch(/placebo/);
+    expect(texts.join(" ")).toMatch(/active/);
+    for (const node of labels) {
+      if (node.kind !== "node") continue;
+      const x = evaluate(node.props.x, env) as number;
+      const text = String(evaluate(node.props.text, env));
+      expect(x + estimateTextWidthPx(text, 8, 0.1)).toBeLessThanOrEqual(cellX[1]! + 2);
+    }
+  });
+
+  it("grows a right legend past the old 50% fit cap instead of ellipsizing", () => {
+    const result = compileSource(
+      `artifact TightFit
+data rows = [
+  { x: 1, y: 2, grp: "placebo-control-arm" }
+  { x: 2, y: 4, grp: "active-treatment-arm" }
+]
+scene
+  size: 180 140
+  background: #ffffff
+widget chart.line
+  data: rows
+  xField: x
+  yField: y
+  group: grp
+  xlim: 0 3
+  ylim: 0 5
+  yLabel: "Score"
+  legend: right
+  interactive: false
+`,
+      "tight-fit.viva",
+      { handbookIds: ["print-nature"] },
+    );
+    expect(result.error).toBeNull();
+    const ir = result.ir!;
+    const env = [ir.state, ir.data];
+    const frame = ir.frames[0]!;
+    const cellX = evaluate(frame.props.cellX!, env) as number[];
+    const plotX = evaluate(frame.props.x, env) as number[];
+    const rightInset = cellX[1]! - plotX[1]!;
+    const labels = ir.scene.layers
+      .flatMap((l) => l.items)
+      .filter((i) => i.kind === "node" && /legLbl_/.test(i.name));
+    const texts = labels.map((node) =>
+      node.kind === "node" ? String(evaluate(node.props.text, env)) : "",
+    );
+    expect(rightInset).toBeGreaterThan(180 * INSET_CAP_FIT.r);
+    expect(texts.some((t) => /\.\.\.$/.test(t))).toBe(false);
+    expect(texts.join(" ")).toMatch(/placebo/);
+    expect(texts.join(" ")).toMatch(/control/);
+    expect(plotX[1]! - plotX[0]!).toBeGreaterThanOrEqual(180 * MIN_PLOT_FRAC - 1);
+    for (const node of labels) {
+      if (node.kind !== "node") continue;
+      const x = evaluate(node.props.x, env) as number;
+      const text = String(evaluate(node.props.text, env));
+      expect(x + estimateTextWidthPx(text, 8, 0.1)).toBeLessThanOrEqual(cellX[1]! + 2);
+    }
+  });
+
+  it("nudges a wrapped title back into the cell without entering the plot", () => {
+    const { rects } = placePaperChrome(
+      { px0: 16, px1: 88, py0: 50, py1: 140 },
+      (px) => px,
+      false,
+      {
+        title: "Survival and response by treatment cohort",
+        yTicks: [{ label: "0", y: 130 }],
+        xTicks: [{ label: "1", x: 40 }],
+      },
+      { x0: 0, y0: 0, x1: 120, y1: 160 },
+    );
+    const title = rects.find((r) => r.id === "title")!;
+    expect(title).toBeTruthy();
+    expect(title.y).toBeGreaterThanOrEqual(-0.5);
+    expect(title.y + title.h).toBeLessThanOrEqual(50 + 0.5);
+    expect(title.x).toBeGreaterThanOrEqual(-0.5);
+    expect(title.x + title.w).toBeLessThanOrEqual(120 + 0.5);
+  });
+
+  it("does not push a y-title through y-tick boxes when the cell is tight", () => {
+    const { chrome, rects } = placePaperChrome(
+      { px0: 28, px1: 160, py0: 20, py1: 140 },
+      (px) => px,
+      false,
+      {
+        yCaption: "Serum concentration of inflammatory cytokine",
+        yTicks: [
+          { label: "100", y: 28 },
+          { label: "0", y: 132 },
+        ],
+        xTicks: [{ label: "1", x: 40 }],
+      },
+      { x0: 0, y0: 0, x1: 180, y1: 160 },
+    );
+    const yTitle = rects.find((r) => r.id === "yTitle")!;
+    const ticks = rects.filter((r) => r.id.startsWith("ytick-"));
+    expect(yTitle).toBeTruthy();
+    for (const tick of ticks) {
+      expect(rectsOverlap(yTitle, tick, 1)).toBe(false);
+    }
+    expect(chrome.yTitleX).toBeLessThan(chrome.yTickX);
+  });
+
+  it("fitShift keeps chrome inside the cell without crossing a plot wall", () => {
+    expect(fitShift(-8, 20, 2, 100, -20, 36)).toBe(10);
+    expect(fitShift(90, 130, 2, 100, 80, 200)).toBe(-10);
+    expect(fitShift(10, 40, 2, 100, 2, 36)).toBe(0);
+  });
+});

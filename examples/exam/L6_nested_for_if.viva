@@ -1,0 +1,34 @@
+artifact "L6 nested for/if"
+
+state show = true
+
+data groups = [
+  {
+    name: "A"
+    items: [
+      { x: 40, y: 40 }
+      { x: 80, y: 40 }
+    ]
+  }
+  {
+    name: "B"
+    items: [
+      { x: 40, y: 90 }
+      { x: 80, y: 90 }
+    ]
+  }
+]
+
+scene
+  size: 240 160
+  background: #0b1220
+
+  layer marks
+    for g in groups
+      if show
+        for p in g.items
+          node dot as dots
+            x: p.x
+            y: p.y
+            r: 6
+            fill: #38bdf8

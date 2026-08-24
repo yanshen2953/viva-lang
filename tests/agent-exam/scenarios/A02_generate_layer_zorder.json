@@ -1,0 +1,14 @@
+{
+  "id": "A02_generate_layer_zorder",
+  "title": "Agent generates two stacked layers (z-order = declaration order)",
+  "kind": "generate",
+  "handbooks": [],
+  "prompt": "Write a Viva artifact that demonstrates layering: two layers named bottom and top. Both contain a rect at the same x/y/w/h so they overlap. bottom must be declared before top. Different fills. Output ONLY valid Viva source starting with artifact.",
+  "assertions": {
+    "compiles": true,
+    "mustMatch": ["layer\\s+bottom", "layer\\s+top"],
+    "ir": {
+      "layerOrder": ["bottom", "top"]
+    }
+  }
+}

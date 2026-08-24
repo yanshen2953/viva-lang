@@ -1,0 +1,32 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`exam layers — SVG structure snapshots (numbers normalized) > L1 z-order 1`] = `
+"0:bottom opacity=1 display=(visible) blend=(normal) filter=(none)
+1:top opacity=1 display=(visible) blend=(normal) filter=(none)
+--- defs ---
+(none)"
+`;
+
+exports[`exam layers — SVG structure snapshots (numbers normalized) > L2 opacity 1`] = `
+"0:mist opacity=0.5 display=(visible) blend=(normal) filter=(none)
+--- defs ---
+(none)"
+`;
+
+exports[`exam layers — SVG structure snapshots (numbers normalized) > L3 visible:false 1`] = `
+"0:hidden opacity=1 display=none blend=(normal) filter=(none)
+--- defs ---
+(none)"
+`;
+
+exports[`exam layers — SVG structure snapshots (numbers normalized) > L4 blend 1`] = `
+"0:glowLayer opacity=1 display=(visible) blend=screen filter=(none)
+--- defs ---
+(none)"
+`;
+
+exports[`exam layers — SVG structure snapshots (numbers normalized) > L5 blur/glow 1`] = `
+"0:soft opacity=1 display=(visible) blend=(normal) filter=url(#flt_layer_L)
+--- defs ---
+feGaussianBlur,feGaussianBlur,feFlood,feComposite,feMerge"
+`;

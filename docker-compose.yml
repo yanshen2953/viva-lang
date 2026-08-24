@@ -1,0 +1,19 @@
+# One-click local agent bridge
+# Usage: docker compose up -d
+services:
+  viva-agent:
+    build: .
+    image: viva-lang-agent:local
+    ports:
+      - "${VIVA_PORT:-8765}:8765"
+    environment:
+      VIVA_PORT: "8765"
+      VIVA_HOST: "0.0.0.0"
+      # Optional multimodal check (mount viva.models.json)
+      VIVA_MODELS_CONFIG: /config/viva.models.json
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      VIVA_VISION_API_KEY: ${VIVA_VISION_API_KEY:-}
+    volumes:
+      - ./examples:/app/examples:ro
+      - ./viva.models.json.example:/config/viva.models.json:ro
+    restart: unless-stopped

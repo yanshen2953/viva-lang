@@ -25,6 +25,7 @@ export type SceneNodeIR =
 export type LayerIR = {
   id: string;
   name: string;
+  props: Record<string, Expr>;
   items: SceneNodeIR[];
 };
 
@@ -33,9 +34,15 @@ export type SceneIR = {
   layers: LayerIR[];
 };
 
+export type FrameIR = {
+  name: string;
+  props: Record<string, Expr>;
+};
+
 export type VisualIR = {
   name: string;
   scene: SceneIR;
+  frames: FrameIR[];
   state: Record<string, unknown>;
   data: Record<string, unknown>;
   events: { type: string; target: string; body: Statement[] }[];
@@ -43,4 +50,7 @@ export type VisualIR = {
   binds: { target: string[]; source: Expr }[];
   ticks: { fps: number; body: Statement[] }[];
   animates: { name: string; props: Record<string, unknown> }[];
+  meta?: import("./style/types.js").StyleMeta;
+  /** layout.board play clock. Plugin property, not a keyword. */
+  timeline?: import("./timeline/clock.js").TimelineSpec;
 };

@@ -1,0 +1,29 @@
+{
+  "id": "H08_print_scatter_regression",
+  "title": "Hard: print-nature scatter with frame + secondary line series, no coaching",
+  "track": "hard",
+  "kind": "generate",
+  "system": "slim",
+  "handbooks": ["print-nature"],
+  "repair": { "maxAttempts": 1, "syntaxCrib": false },
+  "prompt": "One-shot: publication-style scatter of ≥8 points in a named top-level frame (marks use frame: …), plus a top-level chart.line for a fitted trend series in a second panel. No glow/blur. Output ONLY Viva source starting with artifact.",
+  "assertions": {
+    "compiles": true,
+    "mustMatch": [
+      "(?m)^frame\\s+\\w+",
+      "frame:\\s*\\w+",
+      "(?m)^widget\\s+chart\\.line"
+    ],
+    "forbidMatch": [
+      "glow:\\s*[1-9]",
+      "blur:\\s*[1-9]",
+      "(?m)^[ \\t]+frame\\s+\\w+",
+      "widget:\\s*chart"
+    ],
+    "ir": {
+      "minFrames": 1,
+      "minDataKeys": 2,
+      "minLayers": 2
+    }
+  }
+}

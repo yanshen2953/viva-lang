@@ -1,0 +1,23 @@
+artifact "L1 z-order"
+
+scene
+  size: 400 300
+  background: #0b1220
+
+  # Declared FIRST -> drawn FIRST (bottom of z-stack).
+  layer bottom
+    node back
+      x: 100
+      y: 100
+      w: 120
+      h: 80
+      fill: #38bdf8
+
+  # Declared LATER -> drawn LATER, so this rect paints ABOVE `back`.
+  layer top
+    node front
+      x: 100
+      y: 100
+      w: 120
+      h: 80
+      fill: #f59e0b

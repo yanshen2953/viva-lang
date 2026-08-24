@@ -1,0 +1,23 @@
+artifact "C1 chart.scatter"
+
+data series = [
+  { x: 1, y: 2 }
+  { x: 3, y: 4 }
+]
+
+frame plot
+  x: 40 400
+  y: 60 300
+  xlim: 0 5
+  ylim: 0 10
+
+scene
+  size: 880 480
+  background: #0b1220
+
+widget chart.scatter
+  data: series
+  xField: x
+  yField: y
+  frame: plot
+  title: "SCATTER"

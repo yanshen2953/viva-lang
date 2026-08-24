@@ -1,0 +1,8 @@
+{
+  "case": "L4_blend",
+  "input": "examples/exam/L4_blend.viva",
+  "expect": {
+    "layers": ["glowLayer"],
+    "layerProps": { "glowLayer": { "blend": "screen" } }
+  }
+}

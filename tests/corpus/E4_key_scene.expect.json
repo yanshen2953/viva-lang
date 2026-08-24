@@ -1,0 +1,8 @@
+{
+  "case": "E4_key_scene",
+  "input": "examples/exam/E4_key_scene.viva",
+  "expect": {
+    "layers": ["hud"],
+    "events": [{ "type": "key", "target": "scene" }]
+  }
+}
