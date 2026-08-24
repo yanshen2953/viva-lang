@@ -54,8 +54,11 @@ describe("arrival 5 — real browser session", () => {
     });
     page = await browser.newPage();
     page.setDefaultTimeout(25_000);
-    await page.goto(BASE, { waitUntil: "networkidle0" });
+    await page.goto(BASE, { waitUntil: "domcontentloaded", timeout: 60_000 });
     await page.waitForSelector("#examples");
+    await page.waitForFunction(
+      () => [...document.querySelectorAll("#examples button")].some((b) => b.textContent?.trim() === "Arrival"),
+    );
     await page.evaluate(() => {
       const btn = [...document.querySelectorAll("#examples button")].find((b) => b.textContent?.trim() === "Arrival");
       if (!btn) throw new Error("Arrival example missing");
