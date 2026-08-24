@@ -4,7 +4,7 @@
 
 前序清单把 PLAN §1 的 1–3 标成「齐」，**过满**。接口在，产品观感仍粗。本文以用户可见质量为准。
 
-评估：2026-08-24。分支 `cursor/style-handbook-hook-a8c1`。HEAD `dba0a84`。接续说明：`docs/HANDOFF.md`。
+评估：2026-08-24。分支 `cursor/style-handbook-hook-a8c1`。接续说明：`docs/HANDOFF.md`。
 
 ## 总判断
 
@@ -21,11 +21,11 @@
 
 ## 粗糙的根因（不是缺再一个 HTTP 路由）
 
-1. **图核语义仍缺出版层** — 有轴标题/单位/band/log/time/box/violin/括号；`print-nature` 已接管字号/字距。编译器按字号估盒子，并对标题/刻度/图例/色条/`(a)` 做重叠消解；图/轴标题按栏宽折行（像素字宽、场景落位，避免 mm 栏把字宽当毫米），封顶后尾行省略，重叠刻度抽稀。chrome 出格或互叠时按整量长 inset，相邻格同样整量让路；封顶是绘图区下限（约 22%），不再 38%/50% 侧帽。绘图区触底后仍会把标题/轴题/图例往格内收（不推进刻度）。仍不是通用排版求解。
-2. **默认交互还不是完整 linked view** — `__sel.keys` 已跨面板藏行（含 box / violin / 折线）；box 四分位、violin KDE 和折线线段会按选中行重算/重连。挂了 `frame:` 的 World 点默认吃同一套 tooltip / 高亮 / `__sel`（投影坐标不绑 brush，避免和拖轨道抢手）。Runtime 用 CSS opacity + highlight `scale` 缓 220ms（含 play 拍遮罩）；当前拍的遮罩 `visible: false`，指针穿透到这张图的默认 tooltip/brush。box/折线摘要几何和同骨架 violin 路径 `d` 也走同一段 220ms 插值（骨架不同仍硬切）。不是时间轴动画。本地 brush 默认矩形窗，路径够长时切套索。
-3. **导出 ≠ 预览** — SVG/PDF 已接近 Runtime，并硬切藏 `visible: false` 的 linked 摘要（不是 220ms 缓动）；PNG/JPG 填场景底色；`page: a4` 的 PDF 按页高切片并盖 `n / N` 页戳；续页顶栏会重复 figure `(continued)` 或 board 题注；奇数页（recto）页码/跑页眉靠右，偶数页（verso）靠左（仍不是章节标）。figure 格子会避开页缝并拉高场景，SVG 仍是长画布；不是栏宽重排的排版器。PDF 默认随包 CJK 子集；宿主可用 `VIVA_PDF_CJK_FONT` / `--cjk-font` / `cjkFontPath` 挂全库。未覆盖的字仍可能 `?`。
-4. **Agent 闭环没产品化** — MCP/HTTP compile 与 session compile/patch 会附 raster visual QA，但不挡 IR 成功；结构层会用旋转感知、CJK 字宽的盒子警告 `chromeOverflow`（不挡成功）；内联卡仍只画结构检查条；不自动修；生成成功率未测。
-5. **手册仍不执行图语法** — 会覆盖 widget 字号；深色场景上会把标题/刻度字色翻亮。仍不做避让或栏宽文法。
+1. **图核语义仍缺出版层** — 标题/轴/图例/色条/`(a)` 用同一残差向量长 inset（邻格同一步）。log/linear/time 与色条有次刻度；box 按类目间距定宽；violin 有内嵌箱线；漏斗聚合级画梯形；矢量有比例尺。`print-nature` 的 `maxMajorTicks` / `minorTicks` / `plotFloor` 在 expand 时生效。仍不是 InDesign / Nature 栏宽文法。
+2. **默认交互还不是完整 linked view** — `__sel` 跨面板藏行并重算摘要。`layout.board play` 是 hold+ease 时钟（`__t` / `__veilN`）；Runtime、simulate、静态导出同构采样。`__view` 记录相位。220ms CSS 仍用于 `__sel` 几何，不是剪辑轨。
+3. **导出 ≠ 预览** — play 导出按时钟采 hold / playback 帧，gif|mp4 用 `timeline.fps`。`page: a4` 有 `n / N`、subtitle 章节标、`→ n+1` 跳页；正文会绕 figure 格子过页。PDF 优先系统 CJK 全库，否则随包子集。仍不是报纸成品或 NLE。
+4. **Agent 闭环没产品化** — visual 仍不挡 IR 成功。内联卡跑 browser visual（警告）。session 对 overflow 做确定性 repair。`viva.drag-param` 是宿主胶水。`test:agent-exam` 要 key，生成率未测。
+5. **手册开始执行图语法** — 除上色外，policies 进编译器（刻度数 / 次刻度 / 绘图区下限）。仍不做完整栏宽避让。
 
 ## 本轮已补（相对「接口堆砌」）
 
@@ -79,7 +79,7 @@
 1. 更完整的排版求解；`page: a4` 做 PDF 页高切片并盖 `n / N`，续页顶栏会重复 figure/board 题注；figure 格子会避开页缝并拉高场景；board `body:` 会过页，仍不是章节标或报纸分栏。`layout.figure` 已能 `span` 跨栏，省略 gutter/margin/titleH 时按 mm/像素估缝和题注带；图/轴标题、图例键和色条标签会按栏宽折行（像素字宽、场景落位；无连字符的拉丁图例键按整词让 inset）；色条/右图例先按场景剩余宽度和 inset 让路，仍装不下才省略，重叠刻度会抽稀，相邻格 chrome 按溢出整量让路；inset 互叠缝跟 `pad` 走。inset 封顶是绘图区下限，不是 38%/50% 侧帽；触底后 chrome 尽量收回格内
 2. linked selection 已藏热图、折线、box/violin；box 四分位、violin KDE、折线线段、热图均值、漏斗/柱合计和矢量位移会按 `__sel` 行重算。Runtime 对 box/折线/柱/矢量几何和同骨架 violin `d` 做 220ms 插值。仍缺时间轴动画
 3. 随包 CJK 子集已按当前 examples + 论文词表从 Droid 重建；仍不是全库。宿主已能用 `VIVA_PDF_CJK_FONT` / `--cjk-font` / `cjkFontPath` 挂全库
-4. `layout.board play` 遮罩画在图表之上且永不抢指针，Runtime 用 220ms CSS opacity 淡入淡出（不是时间轴）；`typeGrid` 的 `body:` 已按可读栏宽分流，仍不是报纸分栏器。`export --beats` / MCP `beats` 默认 PNG 序列，`gif|mp4` 只是 ffmpeg 幻灯，不是成片时间轴
-5. agent-exam 种子编译进 CI；MCP/HTTP compile 已附 visual QA（空栏看 figure cell，不挡成功）。生成成功率仍未测（要 LLM）
+4. `layout.board play` 是 hold+ease 时钟；导出按同一时钟采样，`gif|mp4` 用 `timeline.fps`。仍不是剪辑时间轴。`typeGrid` + figure 会绕格过页，仍不是 InDesign
+5. session 会确定性修 overflow；内联卡有 browser visual 警告。生成成功率仍未测（要 LLM）
 
 对照真源：`docs/VISION.md`。
