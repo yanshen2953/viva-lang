@@ -116,7 +116,8 @@ function drawNode(
   opts: VectorPdfOptions = {},
 ): void {
   const p = node.props;
-  const opacity = p.opacity === undefined ? 1 : clamp01(Number(p.opacity) || 1);
+  const rawOpacity = p.opacity === undefined ? 1 : Number(p.opacity);
+  const opacity = clamp01(Number.isFinite(rawOpacity) ? rawOpacity : 1);
   const tag = inferTag(p);
   const dash = dashArray(p, scale);
 
@@ -175,7 +176,7 @@ function drawNode(
             opacity,
           );
         }
-        page.drawSvgPath(roundedRectPath(x, y, w, h, radius), {
+        drawSceneSvgPath(page, roundedRectPath(x, y, w, h, radius), pageH, scale, originY, {
           color: spec ? undefined : (fill ?? undefined),
           opacity,
           borderColor: stroke ?? undefined,
@@ -233,15 +234,15 @@ function drawNode(
   const strokeRaw = str(p.stroke, "");
   const fill = fillRaw && fillRaw !== "none" ? parseColor(fillRaw) : null;
   const stroke = strokeRaw && strokeRaw !== "none" ? parseColor(strokeRaw) : null;
-  withSceneCtm(page, pageH, scale, originY, () => {
-    page.drawSvgPath(d, {
-      color: fill ?? undefined,
-      opacity,
-      borderColor: stroke ?? undefined,
-      borderWidth: stroke || p.strokeWidth ? num(p.strokeWidth, 1) : undefined,
-      borderOpacity: opacity,
-      borderDashArray: dashArray(p, 1),
-    });
+  // pdf-lib drawSvgPath already flips Y. Nesting it under withSceneCtm
+  // cancels the flip and throws filled paths off the page.
+  drawSceneSvgPath(page, d, pageH, scale, originY, {
+    color: fill ?? undefined,
+    opacity,
+    borderColor: stroke ?? undefined,
+    borderWidth: stroke || p.strokeWidth ? num(p.strokeWidth, 1) : undefined,
+    borderOpacity: opacity,
+    borderDashArray: dashArray(p, 1),
   });
 }
 
@@ -313,6 +314,29 @@ function textWidth(font: PDFFont, text: string, size: number, tracking: number):
     n += 1;
   }
   return w + Math.max(0, n) * tracking;
+}
+
+function drawSceneSvgPath(
+  page: PDFPage,
+  d: string,
+  pageH: number,
+  scale: number,
+  originY: number,
+  opts: {
+    color?: ReturnType<typeof rgb>;
+    opacity?: number;
+    borderColor?: ReturnType<typeof rgb>;
+    borderWidth?: number;
+    borderOpacity?: number;
+    borderDashArray?: number[];
+  },
+): void {
+  page.drawSvgPath(d, {
+    x: 0,
+    y: pageH + originY * scale,
+    scale,
+    ...opts,
+  });
 }
 
 function withSceneCtm(

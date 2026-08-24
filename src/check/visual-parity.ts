@@ -49,9 +49,14 @@ function iou(
 }
 
 async function rasterPng(png: Buffer, width: number): Promise<{ data: Buffer; w: number; h: number }> {
-  const raw = await sharp(png).resize({ width, withoutEnlargement: false }).ensureAlpha().raw().toBuffer({
-    resolveWithObject: true,
-  });
+  const raw = await sharp(png)
+    .flatten({ background: { r: 255, g: 255, b: 255 } })
+    .resize({ width, withoutEnlargement: false })
+    .ensureAlpha()
+    .raw()
+    .toBuffer({
+      resolveWithObject: true,
+    });
   return { data: raw.data, w: raw.info.width, h: raw.info.height };
 }
 
@@ -82,6 +87,21 @@ function inkMask(data: Buffer, w: number, h: number, bg = [255, 255, 255]): Uint
   return mask;
 }
 
+/** 1 px 4-connected dilate. Absorbs Helvetica/CJK raster halo, not a looser gate. */
+function dilateMask(mask: Uint8Array, w: number, h: number): Uint8Array {
+  const out = new Uint8Array(mask);
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      if (!mask[y * w + x]) continue;
+      if (x > 0) out[y * w + x - 1] = 1;
+      if (x + 1 < w) out[y * w + x + 1] = 1;
+      if (y > 0) out[(y - 1) * w + x] = 1;
+      if (y + 1 < h) out[(y + 1) * w + x] = 1;
+    }
+  }
+  return out;
+}
+
 function maskIou(a: Uint8Array, b: Uint8Array): number {
   let inter = 0;
   let union = 0;
@@ -104,7 +124,7 @@ function maskMse(a: Uint8Array, b: Uint8Array): number {
 
 function sliceSvg(full: string, y0: number, h: number, width: number): string {
   const inner = full.replace(/^[\s\S]*?<svg[^>]*>/i, "").replace(/<\/svg>\s*$/i, "");
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 ${y0} ${width} ${h}" width="${width}" height="${h}">${inner}</svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 ${y0} ${width} ${h}" width="${width}" height="${h}" style="background:#ffffff"><rect x="0" y="${y0}" width="${width}" height="${h}" fill="#ffffff"/>${inner}</svg>`;
 }
 
 export function pdftoppmAvailable(): boolean {
@@ -171,7 +191,7 @@ export async function compareSvgPdfPages(
       const h = Math.min(svgRas.h, pdfRas.h);
       const cropSvg = cropMask(svgInk, svgRas.w, svgRas.h, h);
       const cropPdf = cropMask(inkMask(pdfRas.data, pdfRas.w, pdfRas.h), pdfRas.w, pdfRas.h, h);
-      ink = maskIou(cropSvg, cropPdf);
+      ink = maskIou(dilateMask(cropSvg, svgRas.w, h), dilateMask(cropPdf, pdfRas.w, h));
       mse = maskMse(cropSvg, cropPdf);
       pdfInk = cropPdf;
     }

@@ -694,7 +694,7 @@ function expandChart(
       : undefined;
   const xlimExpr = props.xlim ?? autoXlim;
   const ylimExpr = props.ylim ?? autoYlim;
-  const legendAt = legendPlacement(props, seriesField);
+  const legendAt = legendPlacement(props, seriesField, sceneUnitOf(artifact));
   const createdFrame = !artifact.frames.some((f) => f.name === frameName);
   const hasAreaX = Boolean(props.areaX || isPair(props.x));
   const hasAreaY = Boolean(props.areaY || isPair(props.y));
@@ -2424,10 +2424,14 @@ function expandBoardTypeGrid(
 
 type LegendPlace = "right" | "bottom" | "inside" | "off";
 
-function legendPlacement(props: Record<string, Expr>, seriesField: string | null): LegendPlace {
+function legendPlacement(
+  props: Record<string, Expr>,
+  seriesField: string | null,
+  unit?: string,
+): LegendPlace {
   if (!seriesField) return "off";
   const v = props.legend;
-  if (!v) return "right";
+  if (!v) return unit === "mm" || unit === "pt" ? "bottom" : "right";
   if (v.kind === "boolean") return v.value ? "right" : "off";
   if (v.kind === "string" || v.kind === "ident") {
     const raw = v.kind === "string" ? v.value : v.path.join(".");
@@ -3367,7 +3371,7 @@ function chartChromeExtras(
         ? chart.props.source.path.join(".")
         : "series";
   const seriesField = seriesFieldName(chart.props);
-  const legendAt = legendPlacement(chart.props, seriesField);
+  const legendAt = legendPlacement(chart.props, seriesField, sceneUnitOf(artifact));
   const keys = seriesField ? uniqueSeriesKeys(artifact, dataName, seriesField) : [];
   return {
     colorbar: chart.name === "chart.heatmap",

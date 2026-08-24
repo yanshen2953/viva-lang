@@ -53,6 +53,13 @@ function cellWidthMm(ir: ReturnType<typeof compileArrival>["ir"], name: string):
   return cellX[1]! - cellX[0]!;
 }
 
+function plotWidthMm(ir: ReturnType<typeof compileArrival>["ir"], name: string): number {
+  const frame = ir.frames.find((f) => f.name === name);
+  expect(frame, `missing frame ${name}`).toBeTruthy();
+  const x = evaluate(frame!.props.x!, [ir.state, ir.data]) as number[];
+  return x[1]! - x[0]!;
+}
+
 function pdfOperators(bytes: Uint8Array): string {
   const raw = new TextDecoder("latin1").decode(bytes);
   const chunks = [...raw.matchAll(/stream\r?\n([\s\S]*?)\r?\nendstream/g)];
@@ -95,6 +102,9 @@ describe("arrival 2 — 89 mm span:1 and 183 mm span:2", () => {
     expect(b).toBeCloseTo(COLUMN_MM.single, 0);
     expect(c).toBeCloseTo(COLUMN_MM.double, 0);
     expect(c).toBeGreaterThan(a * 1.8);
+    expect(plotWidthMm(ir, "a"), "span:1 plot must keep a printable measure").toBeGreaterThan(50);
+    expect(plotWidthMm(ir, "b")).toBeGreaterThan(50);
+    expect(plotWidthMm(ir, "c")).toBeGreaterThan(120);
   });
 });
 
