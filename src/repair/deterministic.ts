@@ -180,16 +180,16 @@ export function repairSource(
   source: string,
   diagnostics: Array<{ code?: string; message?: string; hint?: string }> = [],
 ): { source: string; plan: RepairPlan; changed: boolean } {
-  const folded = foldBadFrameTitle(foldMissingPropColons(foldOrphanSceneProps(source)));
+  const folded = sanitizeGeneratedViva(source);
   const plan = planRepairs(folded, diagnostics);
   if (folded !== source) {
     plan.patches.unshift({
       op: "hint",
-      reason: "fold top-level unit/column/page into scene",
-      code: "repair.foldSceneProp",
-      hint: "unit/column/page/height/background live only under scene.",
+      reason: "canonicalize generated Viva (scene props, quotes, YAML, garbage lines)",
+      code: "repair.canonicalize",
+      hint: "unit/column/page live under scene; quote CJK; drop illegal top-level lines.",
     });
-    plan.notes.unshift("fold top-level unit/column/page into scene");
+    plan.notes.unshift("canonicalize generated Viva");
   }
   const applied = applyRepairs(folded, plan);
   return { source: applied.source, plan, changed: applied.source !== source };
@@ -198,14 +198,151 @@ export function repairSource(
 const KNOWN_PROP =
   /^(title|subtitle|caption|body|beats|play|panel|span|data|xField|yField|xlim|ylim|xLabel|yLabel|cols|rows|group|playFps|guides|column|unit|page|height|background|size|bind|controls)$/;
 
-/** `title 到站件` → `title: 到站件` — models drop the colon on widget props. */
+const TOP_DECL =
+  /^(artifact|state|data|entity|scene|event|rule|bind|tick|animate|widget|timeline|frame|function)\b/;
+const ORPHAN_TOP = /^(unit|column|page|height|background|width|size)\s*:/;
+const UNSAFE_LIT = /[^\x00-\x7F]|[·•—–]/;
+
+/** Lexer-safe folds for the shapes models actually emit. Order is significant. */
+export function sanitizeGeneratedViva(source: string): string {
+  return quoteUnsafeLiterals(
+    foldBadFrameTitle(
+      foldMissingPropColons(
+        foldOrphanSceneProps(
+          dropInventedTimeline(
+            dropInvalidEvents(dropIllegalLines(foldBareWidgets(foldYamlDeclColons(source)))),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+function quoteBareValue(value: string): string {
+  const v = value.trim();
+  if (!v) return value;
+  if (
+    (v.startsWith('"') && v.endsWith('"')) ||
+    (v.startsWith("'") && v.endsWith("'"))
+  ) {
+    return value.startsWith(" ") ? ` ${v}` : v;
+  }
+  if (/^[[{]/.test(v) || /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(v)) return value;
+  if (/^(true|false|none)$/.test(v)) return value;
+  if (/^[-0-9.][\d.\s]*$/.test(v)) return value;
+  if (!UNSAFE_LIT.test(v) && /^[A-Za-z_][\w.]*(?:\s+[A-Za-z0-9_.-]+)*$/.test(v)) return value;
+  return JSON.stringify(v);
+}
+
+/** `title: 到站件` / `{ arm: 对照 }` — unquoted CJK dies in the lexer. */
+export function quoteUnsafeLiterals(source: string): string {
+  return source
+    .split(/\r?\n/)
+    .map((line) => {
+      const prop = line.match(/^(\s*)([A-Za-z_][\w.]*)\s*:\s*(.*)$/);
+      if (prop && !/^\s*[[{]/.test(prop[3] ?? "")) {
+        return `${prop[1]}${prop[2]}: ${quoteBareValue(prop[3] ?? "")}`;
+      }
+      return line.replace(/:\s*(?!["'\d#[{\s-])([^,}\]\n]+)/g, (full, raw: string) => {
+        if (!UNSAFE_LIT.test(raw)) return full;
+        return `: ${JSON.stringify(String(raw).trim())}`;
+      });
+    })
+    .join("\n");
+}
+
+/** `scene:` / `state n: 0` — models emit YAML declarations. */
+export function foldYamlDeclColons(source: string): string {
+  return source
+    .replace(/^(\s*)(scene|timeline)\s*:\s*$/gm, "$1$2")
+    .replace(/^(state|data)\s+(\w+)\s*:\s*/gm, "$1 $2 = ");
+}
+
+/** `.chart.scatter` / `layout.board` at indent 0. */
+export function foldBareWidgets(source: string): string {
+  return source
+    .replace(/^(\s*)\.(layout|chart)\./gm, "$1widget $2.")
+    .replace(/^(layout\.(?:board|figure)|chart\.\w+)\b/gm, "widget $1");
+}
+
+/** Lone `.` / Chinese prose / markdown leftovers are not declarations. */
+export function dropIllegalLines(source: string): string {
+  return source
+    .split(/\r?\n/)
+    .filter((line) => {
+      if (/^\s*[.\-–—…·]{1,6}\s*$/.test(line)) return false;
+      const indent = line.match(/^(\s*)/)?.[1].length ?? 0;
+      const trimmed = line.trim();
+      if (/^[\]}),;]+$/.test(trimmed)) return true;
+      if (indent === 0 && trimmed && !trimmed.startsWith("#") && !TOP_DECL.test(trimmed) && !ORPHAN_TOP.test(trimmed)) {
+        return false;
+      }
+      if (indent > 0 && /^[\u3000-\u9fff]/.test(trimmed) && !/:\s/.test(line)) return false;
+      return true;
+    })
+    .join("\n");
+}
+
+const KNOWN_EVENT = /^(click|hover|dragstart|drag|dragend|collide|key)$/;
+
+/** `event brush on chart.scatter` leaves a DOT at declaration level. */
+export function dropInvalidEvents(source: string): string {
+  const lines = source.split(/\r?\n/);
+  const out: string[] = [];
+  let skipIndent: number | null = null;
+  for (const line of lines) {
+    const indent = line.match(/^(\s*)/)?.[1].length ?? 0;
+    if (skipIndent !== null) {
+      if (!line.trim() || indent > skipIndent) continue;
+      skipIndent = null;
+    }
+    const m = line.match(/^(\s*)event\s+(\w+)\s+on\s+(\S+)/);
+    if (m && (!KNOWN_EVENT.test(m[2]!) || /\./.test(m[3]!))) {
+      skipIndent = indent;
+      continue;
+    }
+    out.push(line);
+  }
+  return out.join("\n");
+}
+
+/** Models invent `timeline` / `beat 1` / nested widget blocks. Clock is board beats+play. */
+export function dropInventedTimeline(source: string): string {
+  const lines = source.split(/\r?\n/);
+  const out: string[] = [];
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i]!;
+    const indent = line.match(/^(\s*)/)?.[1].length ?? 0;
+    if (indent === 0 && /^timeline\s*:?\s*$/.test(line.trim())) {
+      let j = i + 1;
+      while (j < lines.length && !lines[j]!.trim()) j += 1;
+      const peek = lines[j] ?? "";
+      if (/^\s+(beat\b|widget\b)/.test(peek)) {
+        i += 1;
+        while (i < lines.length) {
+          const t = lines[i]!;
+          const nextIndent = t.match(/^(\s*)/)?.[1].length ?? 0;
+          if (t.trim() && nextIndent === 0) break;
+          i += 1;
+        }
+        continue;
+      }
+    }
+    out.push(line);
+    i += 1;
+  }
+  return out.join("\n");
+}
+
+/** `title 到站件` → `title: "到站件"` — models drop the colon on widget props. */
 export function foldMissingPropColons(source: string): string {
   return source
     .split(/\r?\n/)
     .map((line) => {
       const m = line.match(/^(\s+)([A-Za-z][\w.]*)\s+(?![:\s=/])(.+)$/);
       if (!m || !KNOWN_PROP.test(m[2]!)) return line;
-      return `${m[1]}${m[2]}: ${m[3]}`;
+      return `${m[1]}${m[2]}: ${quoteBareValue(m[3]!)}`;
     })
     .join("\n");
 }

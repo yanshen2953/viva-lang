@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { compileSource } from "../../src/pipeline.js";
 import { runAgentLoop, productSystemPrompt } from "../../src/agent/orchestrator.js";
 import { COLUMN_MM } from "../../src/space/scene-box.js";
@@ -100,6 +100,20 @@ describe("agent loop", () => {
           return extractViva(json.choices?.[0]?.message?.content ?? "");
         },
       });
+      mkdirSync("/opt/cursor/artifacts", { recursive: true });
+      writeFileSync("/opt/cursor/artifacts/agent-loop-live.viva", result.source);
+      writeFileSync(
+        "/opt/cursor/artifacts/agent-loop-live.json",
+        JSON.stringify(
+          {
+            ok: result.ok,
+            error: result.error,
+            rounds: result.rounds.map((r) => ({ error: r.error, repaired: r.repaired, chars: r.source.length })),
+          },
+          null,
+          2,
+        ),
+      );
       expect(result.ok, result.error ?? "").toBe(true);
       expect(result.source).not.toMatch(/(^|\n)\s*(areaX|areaY|insetL)\s*:/);
       const compiled = compileSource(result.source, "agent-arrival.viva", PRINT);

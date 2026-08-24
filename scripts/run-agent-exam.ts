@@ -26,6 +26,7 @@ import { createNodePromptService } from "../src/agent/prompt.node.ts";
 import { SYSTEM_PROMPT } from "../src/llm/system-prompt.ts";
 import { productSystemPrompt } from "../src/agent/orchestrator.ts";
 import { compileSource } from "../src/pipeline.ts";
+import { repairSource } from "../src/repair/index.ts";
 import type { SceneNodeIR, VisualIR } from "../src/ir.ts";
 
 type Track = "smoke" | "hard" | "all";
@@ -122,6 +123,10 @@ function extractVivaSource(text: string): string {
   return src.trim();
 }
 
+function canonicalize(source: string, detail = "generated"): string {
+  return repairSource(source, [{ message: detail }]).source;
+}
+
 function callPi(opts: {
   model: string;
   system: string;
@@ -202,6 +207,7 @@ function anyNodeProp(ir: VisualIR, key: string): boolean {
 
 function grade(scenario: Scenario, source: string): CaseResult["checks"] {
   const checks: CaseResult["checks"] = [];
+  source = canonicalize(source, "exam-grade");
   const compiled = compileSource(source, `${scenario.id}.viva`);
   const compiles = Boolean(compiled.ir) && !compiled.error;
   if (scenario.assertions.compiles !== false) {
@@ -444,7 +450,7 @@ function maybeRepair(
     const detail = curChecks.find((c) => c.name === "compiles")?.detail ?? "error";
     const got = tryExtract(model, system, repairUserPrompt(scenario, cur, detail), counter);
     if (got.source?.startsWith("artifact")) {
-      cur = got.source;
+      cur = canonicalize(got.source, detail);
       curChecks = grade(scenario, cur);
     } else {
       break;
@@ -501,7 +507,7 @@ function runScenario(scenario: Scenario, model: string): CaseResult {
           checks: [{ name: "extract", pass: false, detail: lastError }],
         };
       }
-      source = got.source;
+      source = canonicalize(got.source);
       // Mid-turn compile repair (diagnostics only; no syntax crib on hard)
       const mid = grade(
         { ...scenario, assertions: { compiles: true } },
@@ -522,14 +528,14 @@ function runScenario(scenario: Scenario, model: string): CaseResult {
     let got = tryExtract(model, system, user, counter);
     lastRaw = got.raw;
     lastError = got.error;
-    source = got.source ?? "";
+    source = got.source ? canonicalize(got.source) : "";
     // One empty-output retry for flaky model extracts (still no syntax crib)
     if (!source.startsWith("artifact") && (scenario.repair?.maxAttempts ?? 1) > 0) {
       const retryUser = `${user}\n\nReminder: respond with ONLY valid Viva source starting with the word artifact.`;
       got = tryExtract(model, system, retryUser, counter);
       lastRaw = got.raw;
       lastError = got.error;
-      source = got.source ?? "";
+      source = got.source ? canonicalize(got.source) : "";
     }
     if (!source.startsWith("artifact")) {
       return {
