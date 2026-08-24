@@ -1,93 +1,181 @@
-# Agent handoff — viva-lang（接续任务）
+# Agent handoff — viva-lang
 
-> **用途：** 新建 Cloud Agent（建议模型 **Cursor Grok 4.6**）时，把本文 + 下方「复制块」一并贴进首条消息。  
+> **用途：** 新开 Cloud Agent / 新 chat 时，先读本文 + `AGENTS.md`，再把文末「复制块」贴进首条消息。  
 > **仓库：** https://github.com/yanshen2953/viva-lang  
-> **主接续分支：** `cursor/style-handbook-hook-a8c1`  
-> **主 PR：** https://github.com/yanshen2953/viva-lang/pull/9（DRAFT，勿自动 merge）
+> **真源分支：** `cursor/style-handbook-hook-a8c1`  
+> **主 PR：** https://github.com/yanshen2953/viva-lang/pull/9（**DRAFT，勿 merge，勿 mark ready**）  
+> **对照：** `docs/VISION.md`（愿景 vs 现状）· `docs/GAPS.md`（诚实缺口）· `docs/DESIGN.md` / `docs/PLAN.md`（设计真源；PLAN §1 里「1–3 已齐」**过满**，以 GAPS 为准）
 
 ---
 
-## 1. 用户目标（北极星）
+## 0. 给新对话的人
 
-一门**语法极简、复杂度进编译器、动态插件**的 agent **内联汇报语言**，同一套原语同时做到：
+上一轮用户说了 **「停掉现在的 /goal」**。那条 durable goal（状态栏摘要类似「做成新语法」）**没有**被标 `complete`，因为四柱没做完。桌面 / Cloud 状态栏中间那条 **没有暂停按钮**；文档里唯一的 pause 是 CLI `Ctrl+C`。开新 chat 是在试：栏上那条会不会自己消失。
 
-1. **游戏式丰富交互**
-2. **论文级精美图表**
-3. **图像 / 视频级排版**
-
-默认内联：`print-nature` + **可交互** Runtime（非静态 PNG）。
-
-对照：`docs/VISION.md`（愿景 vs 现状）。设计真源：`docs/DESIGN.md`、`docs/PLAN.md`。**不要**宣称 Nature 级或已超过 Claude Science。
+**新 Agent 不要自己 `CreateGoal`。** 用户没再发 `/goal …` 之前，当普通任务做，不要把四柱重新武装成 durable goal。
 
 ---
 
-## 2. 当前状态（截至 2026-08-23）
+## 1. 北极星（不要缩小）
 
-| 项 | 状态 |
+一门 **新的 agent 内联汇报语言**，同一套极小原语 **同时** 做到：
+
+1. **游戏式丰富交互**（图用同一套 Runtime；默认数据域 tooltip / brush / 跨面板高亮）
+2. **论文级精美图表**（mm / 栏宽、PDF/CJK 可读、完整轴语义、Atlas 无魔法数）
+3. **图像 / 视频级排版**（`layout.board` 安全框、lower-third、分镜槽）
+
+约束必须一直为真：
+
+- 语法和原语极小；复杂度进编译器 / Runtime
+- 动态插件：`registerWidget()`，**不加新关键字**
+- 服务 coding agent（CLI / MCP / HTTP / SDK / embed）
+- 默认内联：`print-nature` + **可交互** Runtime，不是静态 PNG
+- **不要**宣称 Nature 级或已超过 Claude Science，除非三柱质量都真的齐
+
+对齐定义：一处改动只有让上述终态更真，才算对齐。不要用「更好测 / 更安全 / 更小」的替代品换掉终态。
+
+---
+
+## 2. 快照（2026-08-24）
+
+| 项 | 值 |
 | --- | --- |
-| 工作分支 | `cursor/style-handbook-hook-a8c1` |
-| 最新提交 | 见 git log（含 handbook、CJK 折行、chrome 格内回收、旋转感知 bbox） |
-| 测试 | `npm test` — 见当前 vitest；含 handbook 字号、typeGrid、CJK PDF 短语 |
-| `build:lib` | `npm run build:lib` 通过 |
-| CI | `.github/workflows/ci.yml`：`npm ci` / `build:lib` / `npm test` / Atlas `--visual` |
-| `npm run build` | 可能因 playground/runtime 严格 tsc 失败；日常用 `vite-node` + vitest |
+| 分支 | `cursor/style-handbook-hook-a8c1` |
+| HEAD | `dba0a84` — *Let print-nature square bars; dashboard keeps rounded marks.* |
+| 工作树 | 写本文件前 clean，与 origin 同步 |
+| 测试 | 上一轮本机 `npm test`：**278 passed** |
+| `build:lib` | 通过 |
+| CI | `.github/workflows/ci.yml`：`npm ci` / `build:lib` / `npm test` / Atlas `--visual`。`dba0a84` 当时绿 |
+| `npm run build` | playground/runtime 严格 tsc 仍可能失败；日常用 `vite-node` + vitest |
+| 用户语言 | **中文回复**；GPU 只用 `cuda:0` |
 
-### PR #9 已包含的主要交付（按提交顺序）
+其它开放 PR（#8…#1）较旧。**以 #9 分支为真源**；不要无计划大合并。
 
-| 主题 | 说明 |
-| --- | --- |
-| Style handbook hook | 任意 scene 编译期挂 handbook（`print-nature` 等） |
-| Figure Atlas | `examples/figure-atlas.viva` 六 panel 虚拟临床数据 |
-| 布局修复 | hyphenated role、`chart.bar` x-dodge、热图对比度、flow grid |
-| 三层检查 | `src/check/` structural + visual(raster) + vision(multimodal) |
-| 缓存清理 | `scripts/cleanup-artifacts.mjs`；Atlas 单张截图 |
-| 默认内联 embed | `createVivaInlineEmbed()`、`builtin.viva-inline`、`docs/hosts/inline-embed.md` |
-| 安装与部署 | `pack:release`、Docker、`install/one-click.sh`、`viva serve` HTTP API |
-| **MCP** | `viva mcp` / `viva-mcp`；工具见 `docs/hosts/mcp.md` |
-| Session API | HTTP `/api/session` + MCP `viva_session`；Pipeline `inline.set` / http-webhook |
-| 缺口清单 | `docs/GAPS.md`（PLAN §1 六条胜利条件） |
+---
 
-### 其它开放 PR（较旧，可能已被 #9 覆盖或需合并策略）
+## 3. 本轮已落地（相对接口堆砌；仍不是愿景齐）
 
-| PR | 分支 | 备注 |
+按主题，不是按 commit 流水账。细节与考试在 `docs/GAPS.md` / `tests/exam/`。
+
+| 主题 | 现在的行为 | 仍不是 |
 | --- | --- | --- |
-| #8 | `cursor/vector-review-feedback-a8c1` | vector export + review |
-| #7 | `cursor/embed-export-packages-a8c1` | embed/export 早期 |
-| #6–#1 | 各 feature 分支 | 历史迭代；合并前 diff 主分支 |
+| Handbook | 编译期挂 `print-nature` / `dashboard`；手册在 widget **之后**上色。`print-nature` 的 plot / deck / plate / 柱 `radius: 0`；`dashboard` 仍是 6 / 3。可选 `plotRadius` / `barRadius` | 手册不执行避让 / 栏宽文法 |
+| Figure Atlas | `examples/figure-atlas.viva` 六 panel；HUD 芯片按 10pt `hud` 字宽（`CD8A`/`IL6`，下限 56，挤时 48）；plot 槽芯片不再 `min(36, …)` | OCR 仍可能读错芯片字 |
+| 热图 | 格心刻度、中位步长铺格、短边 5% 缝、Y 第一行在顶、无笛卡尔虚线；色条按 `zlim` 刻（`0 4` → `4 3 2 1 0`）、短刻度线、顺序色 **一条** `linearGradient`（Runtime + 静态 SVG 共用 `gradientSpec`）；格子连续 `clamp(norm * 6, 0, 6)` | 不是 Nature CIE 色条 |
+| 轴 | 未加引号多词轴题拼成一句；线性轴键 `xlim`/`ylim` 端点；柱/箱/小提琴少量整数类目刻在取值上；折线/散点/矢量整数 x 铺满域时刻在取样点（周次不插 5） | 不是完整轴文法 |
+| 矢量 | 箭头头是场景三角，杆停在箭颈 | 不是带比例尺的 quiver |
+| 排版 | `layout.figure` 估 inset / 跨栏 / 编译器画题注；`layout.board` 安全框 + 芯片 + `typeGrid` 2–3 栏灌文；`page: a4` PDF 切片 + `n / N` + verso/recto 页戳；figure 行避页刀 | 不是报纸 / InDesign / 章节标 |
+| 交互 | 默认 `__tip` / `__brush` / `__sel` 藏行并重算摘要；220ms CSS + 几何插值；play 遮罩不抢指针，拍号 `n / N` | 不是时间轴；导出硬切 |
+| Agent 面 | CLI / MCP / HTTP / session / `createVivaInlineEmbed()`；MCP/HTTP 附 raster visual，**不挡 IR 成功**；内联卡只读 structural | 无自动修；生成率未测 |
 
-**接续策略建议：** 以 **#9 分支为真源**继续；其它 PR 仅在有明确冲突/缺失时 cherry-pick，不要无计划大合并。
+最近相关提交（新 → 旧，便于 `git log`）：
+
+```
+dba0a84  print-nature 方角柱；dashboard 仍圆角
+873a7e3  语言文档记下 10pt HUD
+35f4759  芯片按 10pt 估宽，不再 8pt/44 下限
+a1da5e1  print-nature 方角 plot/deck/plate
+1a4c131  热图不画笛卡尔虚线
+feac290  色条一条 sequential linearGradient
+be4394f  顺序色插值 / 连续 heat tier
+ab659f7  色条刻在 zlim，不是三段色块端
+8888866  热图 row 0 在顶
+2a5ba01  矢量头场景三角
+```
 
 ---
 
-## 3. 关键路径（给新 Agent 的地图）
+## 4. 仍未齐（四柱，用户可见质量）
+
+完成审计必须逐条对着当前树证明，不能靠「接口在」或「考试绿」。
+
+### 4.1 出版级排版求解
+
+- inset 仍封顶约 38% / 再让到约半格；chrome 只互推 **一档**，不是通用 typesetter
+- CJK 是随包子集，不是全库
+- 色条比「三段色块」好，仍不是 Nature
+- box / violin / funnel / quiver 观感仍粗
+
+### 4.2 时间轴 + 完整 linked view
+
+- 过渡是 220ms CSS + 几何 lerp
+- `play` 是拍遮罩 + `n / N`，不是 animation timeline
+- 导出硬切 `visible: false`，`--beats gif|mp4` 是 ffmpeg **幻灯**
+- `__sel` 藏行 / 重算，不是游戏级状态机
+
+### 4.3 报纸 + 成品视频
+
+- `typeGrid` 是 2–3 栏可读灌槽，不是 InDesign
+- `page: a4` 是页装箱 + 对页戳，不是章节标或正文重排
+- 没有成片时间轴
+
+### 4.4 Agent 闭环
+
+- visual QA **附着但不挡** IR 成功
+- 内联卡 **无 raster**
+- **无自动 repair**
+- `test:agent-exam` 要 `DEEPSEEK_API_KEY`；生成可靠性未测
+
+**建议下一刀（不缩小北极星）：**
+
+1. chrome 碰撞求解突破 inset 封顶（真避让，不是再加一档魔法数）
+2. Runtime 时间轴：`play` / `__beat` 插值；导出不再是幻灯
+3. Agent 产品环：内联 raster、对 `chromeOverflow` 的确定性 repair、测 LLM 生成率。**在误报降下来之前，不要让 visual 挡 IR 成功**
+
+---
+
+## 5. 硬约束（接续时不要破）
+
+- **不要**全局关掉词中折行
+- **不要**让 visual 检查失败 IR 成功（除非用户以后明确要求，且误报已降）
+- **不要**加关键字：`figure` / `panel` / `colorbar` / `safe` / `lowerThird`
+- **不要**把 play 遮罩写成 `role: hud`
+- **不要** merge PR #9，不要 mark ready（除非用户明说）
+- `src/embed/web.ts` **不能** import `agent/index`（会把 resvg/sharp 打进浏览器）
+- Handbook 在 widget 之后；`print-nature` 的 `.*Title$` → `title` **不覆盖**节点上已写的 `role`
+- 共享 bbox：`src/layout/node-bbox.ts`；审查必须先 `scaleSceneGeom`；frame 映射过的属性不要再 scale
+- `__event.x/y` 是 **作者场景单位**（`unit: mm` 时是毫米）
+- 语言 **没有** 三元 `? :`；eval 有 `floor` / `clamp` / `min` / `max`；任一侧是字符串则 `+` 拼接
+- `parsePropLine` 收齐一行上 **所有** expr
+- `fieldLooksCategorical` **只看字符串**；整数 visit/week/col 保持线性，除非 `xTickVals` / band cats
+- Atlas 柱图例在 **格内、绘图区右侧**（plot ~255，legend ~261）是投稿位置，不是「图例画进数据」
+- `styleSkip: true` 跳过手册上色
+- 热路径：`src/check/index.ts` 的 `attachHotPathVisual`；MCP/HTTP/session 附 structural + raster；**不挡 IR 成功**。内联卡只有 structural（`src/embed/inline-check.ts`）
+- 保持 `interactive: false` 的 exam / MCP / HTTP fixture **不要**擅自改成 live
+- Cloud 新建旁支：`cursor/<descriptive-name>-e94d`（本任务继续用已有 `cursor/style-handbook-hook-a8c1`）
+
+---
+
+## 6. 代码地图
 
 ```
 src/
-  parser.ts, compiler.ts, runtime.ts, pipeline.ts
-  style/          # handbook、roles（注意 mark-area 等 hyphenated role）
-  check/          # structural.ts, visual.ts, vision.ts, models/
-  agent/          # VivaAgentHost, http-server.ts, session, domain registry
-  embed/          # inline.ts, web.ts（勿从 agent/index 拉 http-server 进浏览器 bundle）
-  export/         # svg/png/pdf
-  review/         # 审查模式 → agentBrief
-  mcp/            # server.ts, tools.ts
-examples/figure-atlas.viva   # 布局回归黄金样例
-docs/CHECK.md, docs/DEPLOY.md, docs/hosts/mcp.md
-AGENTS.md         # Cloud 开发命令速查
+  parser.ts  compiler.ts  runtime.ts  pipeline.ts  widgets.ts  paint.ts
+  style/           handbook、roles（hyphenated：mark-area）
+  layout/          node-bbox、board-chrome、chrome collide
+  check/           structural / visual / vision；热路径不挡成功
+  agent/           Host、http-server、session（web.ts 勿再进口）
+  embed/           inline.ts、web.ts、inline-check.ts
+  export/          svg / png / pdf；static-svg 的 linearGradient
+  review/          审查 → agentBrief
+  mcp/             server.ts、tools.ts
+examples/
+  figure-atlas.viva          布局黄金样例
+  paper-*.viva               投稿 / 分页 / 分镜 / 跨页 __sel
+  science-studio.viva        board + figure，无手摆魔法数
+tests/exam/
+  figure-atlas.test.ts       柱 1–6、周次无 5、热图、色条、方角、HUD
+  chart-quality.test.ts      热图 / 矢量 / 色条 gradient / 圆角手册
+  board-chrome.test.ts       measureChipWidth("CD8A") >= 56
+  vision-pillars.test.ts     三柱骨架，不是愿景完成证明
+docs/LANGUAGE.md             语言表面（给人和模型）
 ```
 
-### Agent 接入面（用户已确认需要 MCP）
-
-| 面 | 入口 |
-| --- | --- |
-| MCP（IDE） | `viva mcp`；Cursor 配置 `docs/hosts/mcp-config.example.json` |
-| HTTP | `viva serve` → `/api/compile|check|export|models|prompt` |
-| CLI | `viva compile|check|export|models` |
-| Embed | `viva-lang/embed` + `createVivaInlineEmbed()` |
+插件发现：`viva widgets` / `listWidgets()`。
 
 ---
 
-## 4. 验证命令（接续后应先跑）
+## 7. 接续后先跑
 
 ```bash
 git checkout cursor/style-handbook-hook-a8c1
@@ -97,72 +185,57 @@ npm run build:lib
 npm test
 ```
 
-可选冒烟：
+质量回归（改图核 / 手册 / 导出时）：
 
 ```bash
+npx vitest run \
+  tests/exam/vision-pillars.test.ts \
+  tests/exam/figure-page.test.ts \
+  tests/exam/chart-quality.test.ts \
+  tests/exam/chrome-collide.test.ts \
+  tests/exam/figure-atlas.test.ts \
+  tests/exam/export.test.ts \
+  tests/exam/space-widgets.test.ts \
+  tests/exam/board-chrome.test.ts
+
+npx vite-node src/cli.ts -- export examples/paper-linked-marks.viva -f png -o /tmp/plm.png --handbook print-nature
+npx vite-node src/cli.ts -- export examples/figure-atlas.viva -f png -o /tmp/atlas.png --handbook print-nature
 npx vite-node src/cli.ts -- check examples/figure-atlas.viva --visual --handbook print-nature
-npx vite-node src/cli.ts -- serve --port 8765   # HTTP
-npx @modelcontextprotocol/inspector viva mcp    # MCP（需全局安装或 npx vite-node）
 ```
 
-Vision 检查需 `viva.models.json`（见 `viva.models.json.example`）或 env `VIVA_VISION_*`。
+Vision 要 `viva.models.json` 或 `VIVA_VISION_*`。Agent exam 要 `DEEPSEEK_API_KEY`。
 
 ---
 
-## 5. 建议后续工作（未完成 / 可选）
+## 8. Git / PR
 
-按优先级：
-
-1. **PR #9 收尾** — CI 已加；按需把 DRAFT → ready（**仅用户明确要求时**）。勿自动 merge
-2. **AGENTS.md / MCP** — 已含 `viva mcp`；现增 `viva_session` / `viva_pipeline`
-3. **Playground** — 状态栏已有结构检查；浏览器内 vision/MCP 不现实
-4. **Agent exam** — `npm run test:agent-exam` 需 `DEEPSEEK_API_KEY`（Pi+DeepSeek SUT）
-5. **发布包实跑** — `npm run pack:release`，在干净环境验证 `release/` 与 Docker
-6. **三柱推进中（未齐）** — 内联卡会画出编译错误和 structural 条（只读，不跑 visual，不自动修）。`layout.figure` 省略 gutter/margin/titleH 时按场景单位估缝和题注带（mm 不再误用 28/24px）。 `layout.figure` 可按 chrome 估 inset，并可铺满场景或 `panel: body`；`title`/`subtitle`/`caption` 由编译器画；`controls`/`bind` 出 HUD 芯片（按 10pt `hud` 字宽估宽，选中亮、不另画绑定值；Atlas 已无手摆基因按钮）。`layout.board` 不写 `safe`/`titleH`/`lowerH` 时按题注折行和芯片估条带。`page: a4` 的 PDF 按页高切片并盖 `n / N`；有 `page` 时 `column` 是 89/183 mm 图栏（纸页仍是 210 mm），会被页刀切开的 figure 行整行进下一页并拉高场景；board `body:` 按栏宽折行并过页（仍不是报纸分栏）。chrome 盒子会互推一档，重叠刻度会抽稀，未加引号的多词轴题（`xLabel: Sum score`）会拼成一句而不再静默丢掉。线性轴键上作者 `xlim`/`ylim` 端点。柱/箱/小提琴的少量整数类目轴刻在取值上，不画 `xlim` 两端空位。折线/散点/矢量的整数 x 若铺满大部分域，刻在取样点（周次不再插入 5）；稀疏散点仍键端点。`chart.vector` 箭头头是场景三角，不是圆点。mm 热图色条按场景比例画，`zLabel` 在色标右侧 −90° 竖排；色条刻度落在 `zlim`（整数短域逐档，更宽域 nice + 键端），不再只标底/中/顶三段；色带是顺序色 `linearGradient`（静态 SVG 与 Runtime 同一套）。热图格子按相邻唯一坐标的中位步长铺格，离散数值刻度落在格心，白缝按短边比例（不再减 1 个场景单位）。热图 Y 第一行在顶上，不是笛卡尔底边；热图默认不画穿过格子的笛卡尔虚线。`print-nature` 的 plot / figure 甲板 / 外框是方角（手册接管圆角）；`dashboard` 仍是圆角卡片。长图/轴标题、图例键和色条标签按栏宽折行（折行按像素字宽、落位按场景单位，避免 89 mm 投稿图把 `单栏投稿图` 拆成 `单栏投` / `稿图`；无连字符的拉丁图例键不拆成 `treatmen` / `t`，先让 inset；Y 轴折行后自上而下阅读；色条/右图例先按场景剩余宽度让 inset，仍装不下才 `...`），热图可用 `zLabel`/`zUnit`，相邻格 chrome 互叠时再长 inset；软顶装不下时 inset 可再长到约半格。有效 brush 松手后保持选择窗；路径够长切数据域套索。`__event.x/y` 是作者场景单位（mm 投稿图不再二次缩放刷选/tip）。跟手 `chartTip` 绑 `__tipX`/`__tipY`，空 `__tip` 不画；HUD/brush 不抢指针。paper-cjk / paper-column / paper-pages / paper-spread / paper-linked-pages / paper-board-linked / paper-storyboard / paper-linked-marks / figure-grid / figure-span / box / violin / time-axis / brackets 默认可交互。热图均值、漏斗合计和矢量位移按 `__sel` 重算。分页 `chartTip` 夹在当前 A4 页带，folio 不抢指针。多页 folio 奇数靠右、偶数靠左（对页页戳，仍不是章节标）。`paper-linked-pages` 用同一套 `__sel` 让第 1 页 visit 刷选重算第 2 页 box。绑了 `panel: right` 的 figure 也会按页刀跳行；`paper-board-linked` 把 board 安全框、A4 页刀和跨页 box 重算放在同一件（拉高后 lower 跟到最后一页，仍不是对页排版器）。play 遮罩全部 `pointer-events: none`；`paper-storyboard` 是 183×103 mm 分镜 + play + 跨拍 `__sel`（暗拍也可刷选，仍不是时间轴）。box 会按 `__sel` 行重算四分位。高亮点会放大并和藏行一起缓 220ms；`play` 拍遮罩走同一条 CSS opacity，仍不是时间轴。`--beats -f gif|mp4` 是 ffmpeg 拼 `__beat` 栅格幻灯，不是剪辑成片。单图省略 `areaX`/`areaY` 时停在作者节点/手写 frame 腾出的最大空矩形；作者 `role: panel` / `role: plot` 升成同名 frame；省略 `x/y/w/h` 且写了 `panel:` 的作者节点填进该槽（`role: plot` 吃 figure cell，不叠空格图表 inset）；`science-studio` 文案/四宫格吃 `layout.board` + `layout.figure`（`body:` 折进 `left`），矢量场改 `chart.vector`，PCA 投影走 `pcaPlotBg` frame；PCA 点默认吃图表同一套 `__tip` / 高亮 / `__sel`，`colorBy` 图例、plot title 和数值 `+`/`-` 芯片由编译器画，拖轨道仍不绑 brush。仍欠：栏宽重排、时间轴动画、CJK 全库、成片视频、LLM 生成率。对照 `docs/VISION.md`。**不要**标愿景完成。
-
-### 已知约束 / 坑
-
-- `web.ts` embed bundle **不能** import `agent/index`（会拉入 resvg/sharp）
-- 结构检查用 `withIrStyleContext`，palette 才与 Runtime 一致
-- `overlapPairIgnored` / `isChromeNode` 对 Atlas 有专门豁免，改检查逻辑要跑 Atlas 测试
-- Cloud Agent **分支名** 新建时用 `cursor/<descriptive-name>-a8c1`
-- 用户规则：**中文回复**；若涉及 GPU 训练/推理指定 **`cuda:0`**
-
-### 刻意未做
-
-- Playground 内跑 vision 检查
-- MCP 生产环境鉴权（stdio 本地由宿主管理）
-- 自动 merge 其它开放 PR
-
----
-
-## 6. Git / PR 规范（Cloud Agent）
-
-- 推送：`git push -u origin <branch>`
+- 推送：`git push -u origin cursor/style-handbook-hook-a8c1`（网络失败指数退避最多 4 次）
 - 每个逻辑变更单独 commit；**不要** force push / amend（除非用户要求）
-- 用 `ManagePullRequest` 创建/更新 PR；默认 **draft**
-- **不要** `gh pr merge` 或 mark ready，除非用户明确说
+- 用 `ManagePullRequest` 更新 PR #9；读现有 body，**保留人类改过的段落**
+- **不要** `gh pr merge` / 开 auto-merge / mark ready
 
 ---
 
-## 7. 复制块（贴进新 Agent 首条消息）
+## 9. 复制块（贴进新 Agent 首条消息）
 
 ```
-请接续 viva-lang 任务。先读仓库内 docs/HANDOFF.md 和 AGENTS.md。
+请接续 viva-lang。先读 docs/HANDOFF.md 和 AGENTS.md，再读 docs/VISION.md、docs/GAPS.md。
 
 仓库：https://github.com/yanshen2953/viva-lang
 分支：cursor/style-handbook-hook-a8c1
-PR：https://github.com/yanshen2953/viva-lang/pull/9
+PR：https://github.com/yanshen2953/viva-lang/pull/9（DRAFT）
+HEAD（写 handoff 时）：dba0a84
 
-目标：一门极简内联汇报语言，同时覆盖游戏交互 × 论文图表 × 影像排版；复杂度进编译器；动态插件；服务 coding agent。对照 docs/VISION.md。默认内联 print-nature 可交互卡片。
+北极星：一门极简内联汇报语言，同时覆盖游戏交互 × 论文图表 × 影像排版；复杂度进编译器；动态插件；服务 coding agent。默认内联 print-nature 可交互卡片。不要宣称 Nature 级。
 
-请先：checkout 分支 → npm install → npm run build:lib → npm test。
+上一轮用户已停掉 /goal。不要 CreateGoal，除非我再发 /goal。
 
-然后按 HANDOFF.md §5 建议后续工作继续；以 #9 分支为真源。中文回复。GPU 任务用 cuda:0。
-
-不要自动 merge PR；改动后 commit、push、更新 PR #9。
+请先：checkout 该分支 → npm install → npm run build:lib → npm test。
+然后按 HANDOFF.md §4 的下一刀继续，不要缩小北极星，也不要用「更好测」的替代品换终态。
+中文回复。GPU 只用 cuda:0。
+不要 merge / mark ready。改动后 commit、push、更新 PR #9（保留我改过的 PR 正文）。
 ```
 
 ---
 
-*本文件由前序 Cloud Agent 生成，用于 Grok 4.6 等新模型接续。*
+*本文件 2026-08-24 由 Cloud Agent 按当时工作树重写，供新 chat / 新模型接续。*
