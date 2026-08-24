@@ -24,6 +24,7 @@ import path from "node:path";
 import {
   EXAM_MCP_SYSTEM_ADDENDUM,
   EXAM_PI_MCP_TOOLS,
+  SYSTEM_PROMPT_EXAM_MCP,
   extractVivaSource,
   formatFailedChecks,
   redactSecrets,
@@ -32,7 +33,6 @@ import {
 import { createVivaAgentHost } from "../src/agent/index.ts";
 import { createNodePromptService } from "../src/agent/prompt.node.ts";
 import { SYSTEM_PROMPT } from "../src/llm/system-prompt.ts";
-import { SYSTEM_PROMPT_SLIM } from "../src/llm/system-prompt-slim.ts";
 import { compileSource } from "../src/pipeline.ts";
 import type { SceneNodeIR, VisualIR } from "../src/ir.ts";
 
@@ -371,9 +371,8 @@ function buildSystem(scenario: Scenario): string {
   const mode = scenario.system ?? (inferTrack(scenario) === "hard" ? "slim" : "full");
   const parts: string[] = [];
   if (mode === "slim") {
-    parts.push(SYSTEM_PROMPT_SLIM);
-    // Language reference is on-demand via MCP viva_prompt { includeLanguage: true }.
-    // Inlining LANGUAGE.md + tools made DeepSeek tool loops hang past 15 minutes.
+    // Short core only. Full slim + LANGUAGE.md + tools hung DeepSeek for 15m.
+    parts.push(SYSTEM_PROMPT_EXAM_MCP);
   } else {
     parts.push(SYSTEM_PROMPT);
   }

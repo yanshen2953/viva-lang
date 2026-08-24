@@ -8,6 +8,23 @@ export const EXAM_PI_MCP_TOOLS = [
   "viva_prompt",
 ] as const;
 
+/** Hard exam + MCP: syntax only. Chrome essay is on-demand via viva_prompt. */
+export const SYSTEM_PROMPT_EXAM_MCP = `You generate Viva, an LLM-native interactive artifact language.
+Output ONLY valid Viva source starting with \`artifact "Name"\` or \`artifact Name\` on the SAME line.
+No markdown fences, no HTML/CSS/JS/React, no YAML, no JSON wrappers.
+
+Punctuation:
+- Significant indentation (2 spaces). Declarations are words, not \`key:\` maps.
+- Correct: \`state n = 0\` / \`data rows = [{ x: 1, y: 2 }]\` / \`frame plot\` then indented props.
+- Wrong: \`state:\` / \`data:\` / \`scene:\` / \`artifact {\` / nested YAML.
+- Top-level only: artifact, state, data, frame NAME, scene, widget chart.*, widget layout.figure, timeline, event, rule, bind, tick.
+- Never nest frame/widget under scene. Never write \`widget: chart.x\`.
+- Colliding nodes need \`solid: true\`. Back entities with \`data NAME = [...]\` plus drag or tick.
+- Events: \`event click on target\` / \`event collide on <group>\` / \`event key on scene\` then indented assigns.
+- tick: \`tick 30\` then body assigns. Draggable x/y write __event.x / __event.y.
+- timeline body: from: to: bind:.
+`;
+
 export const EXAM_MCP_SYSTEM_ADDENDUM = `You have Viva MCP tools (stdio server via the Pi extension). Use them.
 
 - After drafting source, call viva_compile once (visual:false). If success/ok is false, ir.data is empty, or hints mention data tables, fix and compile once more — then stop calling tools.
