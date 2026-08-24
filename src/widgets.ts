@@ -4003,9 +4003,16 @@ function axisCaption(props: Record<string, Expr>, axis: "x" | "y" | "z"): string
       : axis === "y"
         ? stringProp(props, ["yUnit", "yunit"])
         : stringProp(props, ["zUnit", "zunit", "colorUnit"]);
-  if (!label && !unit) return null;
-  if (label && unit) return `${label} (${unit})`;
-  return label ?? unit;
+  const field =
+    axis === "x"
+      ? fieldName(props.xField ?? props.x, "")
+      : axis === "y"
+        ? fieldName(props.yField ?? props.y, "")
+        : fieldName(props.zField ?? props.colorBy ?? props.valueField, "");
+  const text = label || (field && field !== "x" && field !== "y" && field !== "z" ? field : null);
+  if (!text && !unit) return null;
+  if (text && unit) return `${text} (${unit})`;
+  return text ?? unit;
 }
 
 function expandAxisTitles(

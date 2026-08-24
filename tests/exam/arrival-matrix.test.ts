@@ -422,9 +422,19 @@ describe("arrival 10 — slim prompt + capabilities + loop", () => {
       const side = [...new Set((pdf.sidecar ?? []).map((n) => n.id))].sort();
       expect(side, name).toEqual(painted);
       const ops = pdfOperators(pdf.bytes);
+      expect(svg, name).toMatch(/rotate\(/);
+      expect(svg, name).toMatch(/letter-spacing/);
+      expect(svg, name).toMatch(/stroke-dasharray/);
+      expect(ops).toMatch(/cm/);
+      expect(ops).toMatch(/\bd\b|\[\s*\d/);
       expect(ops).toMatch(/W\s+n|W\*/);
       expect(ops).toMatch(/\bf\b|f\*|B/);
       expect(pdfUnmappedGlyphs("到站件对照处理时间得分")).toEqual([]);
+      const holds = await exportBeatSequence(src, { width: 240, ...PRINT }, `${name}.viva`);
+      const play = await exportBeatPlayback(src, { width: 240, ...PRINT }, `${name}.viva`);
+      expect(holds.length, name).toBe(4);
+      expect(play.length, name).toBe(playbackFrameTimes(ir.timeline!).length);
+      expect(play.length, name).toBeGreaterThan(holds.length);
       if (pdftoppmAvailable()) {
         const report = await compareSvgPdfPages(ir, { width: 640 });
         expect(report.pdfRaster, name).toBe("pdftoppm");
@@ -434,5 +444,5 @@ describe("arrival 10 — slim prompt + capabilities + loop", () => {
         expect(report.maxMse, name).toBeLessThan(0.45);
       }
     }
-  }, 60_000);
+  }, 120_000);
 });

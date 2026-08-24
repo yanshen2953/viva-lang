@@ -46,12 +46,16 @@ widget chart.scatter
   data: rows
   xField: t
   yField: score
+  xLabel: "时间"
+  yLabel: "得分"
 widget chart.violin
   panel: c
   span: 2
   data: rows
   xField: arm
   yField: score
+  xLabel: "组别"
+  yLabel: "得分"
 widget layout.board
   title: "跨页"
 widget layout.figure
@@ -63,6 +67,8 @@ widget chart.box
   data: rows
   xField: arm
   yField: score
+  xLabel: "组别"
+  yLabel: "得分"
 event drag on tokens
   token.x = __event.x
   token.y = __event.y
