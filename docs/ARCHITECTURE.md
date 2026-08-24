@@ -28,8 +28,9 @@ Host 文档：`docs/hosts/`（含 [`review.md`](./hosts/review.md)）。
 ## Runtime 要点
 
 - 拖拽：pointer capture；世界物体过 slop 才 `dragstart`，轻点在 `pointerup` 才 `click`；`drag: true` 写回 `item.x/y`；CTM 场景坐标
-- 握持：Runtime `state.__hand`（`ids` / `held` / `n` / `phase`），不是关键字；Shift 加减选；空地拖过 slop 套索；空地点清除
-- 碰撞：`solid` / `event collide`；拖着的固体也参与；扫掠顶住不穿模；作者 `collide` 只在 enter 打；`__event.phase` / `nx` / `ny`
+- 握持：Runtime `state.__hand`（`ids` / `held` / `n` / `phase`），不是关键字；Shift 加减选；空地拖过 slop 套索（橡皮筋 + 握持圈，不进 IR）；空地点清除；地图/标签等无事件装饰不抢手
+- 编组：已握持的可拖单位共享一步位移，撞墙时一起停/滑，不各走各的
+- 碰撞：`solid` / `event collide`；拖着的固体也参与；扫掠顶住 + 切向滑墙；作者 `collide` 只在 enter 打；`__event.phase` / `nx` / `ny`
 - 键：先打 `__hand` 里的单位，再 hover，最后 `scene` / `world`
 - 图层：每层 `<g>`，声明序 = z-order
 - 视觉：`src/paint.ts`（gradient / glow / shadow / type / transform）
