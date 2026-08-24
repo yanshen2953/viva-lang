@@ -11,9 +11,6 @@ export function figureGapDefaults(opts: {
     if (opts.cols >= 2 && Math.abs(opts.width - COLUMN_MM.double) < 0.6) {
       return { gutter: COLUMN_MM.double - COLUMN_MM.single * 2, margin: 0 };
     }
-    if (Math.abs(opts.width - COLUMN_MM.single) < 0.6) {
-      return { gutter: 0, margin: 0 };
-    }
     return {
       gutter: opts.cols >= 2 ? 2.4 : 3,
       margin: 1.6,
