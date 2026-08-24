@@ -35,7 +35,9 @@ export function attachDragParamLoop(
 ): () => void {
   registerDragParamPipeline(host);
   const path = opts?.path ?? "param";
-  let last: unknown = undefined;
+  const world = session.getWorld();
+  const root = (world.state ?? {}) as Record<string, unknown>;
+  let last: unknown = root[path.replace(/^state\./, "")];
   let running = false;
   return session.watch(path, (value) => {
     if (Object.is(value, last) || running) return;

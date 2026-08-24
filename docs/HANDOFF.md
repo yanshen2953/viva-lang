@@ -43,7 +43,7 @@
 | 分支 | `cursor/style-handbook-hook-a8c1` |
 | HEAD | 手册文法 / 逐拍 hold / repair 扩补 / 拖参环（接续 `79374f4`） |
 | 工作树 | 本轮剩余缺口已进编译器，见 §3 / §4 |
-| 测试 | 改完后再跑 `npm test` + `build:lib` |
+| 测试 | 本轮本机 `npm test`：**306 passed** |
 | `build:lib` | 通过 |
 | CI | `.github/workflows/ci.yml`：`npm ci` / `build:lib` / `npm test` / Atlas `--visual`。`dba0a84` 当时绿 |
 | `npm run build` | playground/runtime 严格 tsc 仍可能失败；日常用 `vite-node` + vitest |

@@ -72,7 +72,7 @@ function flattenNodesFromIrInner(ir: VisualIR): { scene: SceneBox; nodes: FlatNo
     const lp = evalProps(layer.props ?? {}, scopes());
     const visible = lp.visible === undefined ? true : Boolean(lp.visible);
     if (!visible) continue;
-    flattenItems(layer.items, scopes(), nodes, layer.name, layer.id, layer.name, scales, sceneScale);
+    flattenItems(layer.items, scopes(), nodes, layer.name, layer.id, layer.name, scales, sceneScale, state);
   }
   return { scene: { width, height, background }, nodes };
 }
@@ -102,7 +102,7 @@ function buildSvgParts(ir: VisualIR): {
   const defsXml: string[] = [];
   for (const layer of ir.scene.layers) {
     const nodes: FlatNode[] = [];
-    flattenItems(layer.items, scopes(), nodes, layer.name, layer.id, layer.name, scales, sceneScale);
+    flattenItems(layer.items, scopes(), nodes, layer.name, layer.id, layer.name, scales, sceneScale, state);
     const lp = evalProps(layer.props ?? {}, scopes());
     const opacity = lp.opacity === undefined ? 1 : num(lp.opacity, 1);
     const visible = lp.visible === undefined ? true : Boolean(lp.visible);
@@ -127,6 +127,7 @@ function flattenItems(
   layerName: string,
   scales: FrameScales[],
   sceneScale: number,
+  state: Record<string, unknown>,
 ): void {
   for (const item of items) {
     if (item.kind === "node") {
@@ -139,7 +140,7 @@ function flattenItems(
       );
       const framed = applyFrameToProps(raw, scales);
       const laid = layoutChartGeom(framed, scales);
-      const props = applyExportEase(item.name, laid, scopes[0] as Record<string, unknown>);
+      const props = applyExportEase(`${prefix}:${item.id}`, item.name, laid, state);
       out.push({
         id: `${prefix}:${item.id}`,
         name: item.name,
@@ -151,14 +152,14 @@ function flattenItems(
     }
     if (item.kind === "if") {
       if (truthy(evaluate(item.cond, scopes))) {
-        flattenItems(item.body, scopes, out, `${prefix}:${item.id}`, layerId, layerName, scales, sceneScale);
+        flattenItems(item.body, scopes, out, `${prefix}:${item.id}`, layerId, layerName, scales, sceneScale, state);
       }
       continue;
     }
     const source = evaluate(item.source, scopes);
     const list = Array.isArray(source) ? source : [];
     list.forEach((entry, index) => {
-      flattenItems(
+        flattenItems(
         item.body,
         [{ [item.item]: entry }, ...scopes],
         out,
@@ -167,6 +168,7 @@ function flattenItems(
         layerName,
         scales,
         sceneScale,
+        state,
       );
     });
   }
@@ -265,15 +267,17 @@ function inferTag(props: Record<string, unknown>): string {
 }
 
 function applyExportEase(
+  id: string,
   name: string,
   props: Record<string, unknown>,
   state: Record<string, unknown>,
 ): Record<string, unknown> {
   const u = Number(state.__easeU);
-  if (!Number.isFinite(u) || u >= 1 || !isSummaryMark(props)) return props;
+  if (!Number.isFinite(u) || u >= 1) return props;
   const fromAll = state.__easeFrom;
   if (!fromAll || typeof fromAll !== "object") return props;
-  const from = (fromAll as Record<string, Record<string, number>>)[name];
+  const table = fromAll as Record<string, Record<string, number>>;
+  const from = table[id] ?? table[name];
   if (!from) return props;
   const target = pickGeom(props);
   const { values } = sampleGeomEase(from, target, u * MARK_EASE_MS, { t0: 0, from, to: target }, MARK_EASE_MS);

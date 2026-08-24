@@ -87,12 +87,15 @@ widget chart.bar
     const end = flattenNodesFromIr(ir).nodes.filter((n) => n.props.__chartBar);
     expect(end.length).toBeGreaterThan(0);
     const first = end[0]!;
-    const from = { ...pickGeom(first.props), w: Number(first.props.w ?? 8) * 0.2 };
+    const targetW = Number(first.props.w ?? first.props.h ?? 8);
+    const from = { ...pickGeom(first.props), w: targetW * 0.2 };
     ir.state.__easeU = 0.5;
-    ir.state.__easeFrom = { [first.name]: from };
-    const mid = flattenNodesFromIr(ir).nodes.find((n) => n.name === first.name);
-    expect(Number(mid?.props.w)).toBeGreaterThan(from.w);
-    expect(Number(mid?.props.w)).toBeLessThan(Number(first.props.w));
+    ir.state.__easeFrom = { [first.id]: from, [first.name]: from };
+    const mid = flattenNodesFromIr(ir).nodes.find((n) => n.id === first.id);
+    const midW = Number(mid?.props.w);
+    expect(midW).toBeGreaterThan(from.w);
+    expect(midW).toBeLessThan(targetW + 1e-9);
+    expect(Math.abs(midW - targetW)).toBeGreaterThan(1e-6);
   });
 
   it("view machine guards brush → selected → linked", () => {
