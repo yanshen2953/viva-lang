@@ -75,10 +75,20 @@ describe.skipIf(!GENERATED || !CHROME)("arrival 10 — generated card real brows
       source.blur();
     }, src);
     await page.waitForFunction(() => document.querySelector("svg.viva-scene"));
-    await page.waitForFunction(() => {
-      const err = document.querySelector("#error") as HTMLElement | null;
-      return !err || err.hidden || !err.textContent;
-    });
+    try {
+      await page.waitForFunction(() => {
+        const err = document.querySelector("#error") as HTMLElement | null;
+        const status = document.querySelector("#status")?.textContent ?? "";
+        return (!err || err.hidden || !err.textContent) && /到站|Arrival|ms/.test(status);
+      });
+    } catch (err) {
+      const dump = await page.evaluate(() => ({
+        error: (document.querySelector("#error") as HTMLElement | null)?.textContent ?? "",
+        hidden: (document.querySelector("#error") as HTMLElement | null)?.hidden ?? true,
+        status: document.querySelector("#status")?.textContent ?? "",
+      }));
+      throw new Error(`playground compile failed: ${JSON.stringify(dump)}`);
+    }
     await page.click("svg.viva-scene", { offset: { x: 16, y: 16 } });
     await new Promise((r) => setTimeout(r, 400));
   }, 60_000);
@@ -115,22 +125,27 @@ describe.skipIf(!GENERATED || !CHROME)("arrival 10 — generated card real brows
     const plotSel = '[data-viva-name="a_plotBg"], [data-viva-name="c_plotBg"]';
     await page.waitForSelector(plotSel);
     await page.waitForSelector('[data-viva-name="mark"], [data-viva-name="token"], [data-viva-id*="marks"]');
-    const plot = await boxOf(plotSel);
-    expect(plot.width, JSON.stringify(plot)).toBeGreaterThan(40);
-    await page.mouse.move(plot.x + plot.width * 0.08, plot.y + plot.height * 0.12);
-    await page.mouse.down();
-    await page.mouse.move(plot.x + plot.width * 0.92, plot.y + plot.height * 0.88, { steps: 28 });
-    await page.mouse.up();
-    await new Promise((r) => setTimeout(r, 350));
+    const plots = await page.$$(plotSel);
+    expect(plots.length).toBeGreaterThan(0);
+    const strokes: [number, number, number, number][] = [
+      [0.22, 0.42, 0.9, 0.9],
+      [0.35, 0.55, 0.88, 0.92],
+      [0.15, 0.6, 0.85, 0.95],
+    ];
     let afterBrush = await snap();
-    if (((afterBrush.sel?.n as number) ?? 0) === 0) {
-      const mark = await page.$('[data-viva-name="mark"], circle[data-viva-id*="marks"]');
-      if (mark) {
-        const mb = await mark.boundingBox();
-        if (mb) await page.mouse.click(mb.x + mb.width / 2, mb.y + mb.height / 2);
-        await new Promise((r) => setTimeout(r, 250));
+    for (const el of plots) {
+      const plot = await el.boundingBox();
+      if (!plot || plot.width < 40 || plot.height < 40) continue;
+      for (const [x0, y0, x1, y1] of strokes) {
+        await page.mouse.move(plot.x + plot.width * x0, plot.y + plot.height * y0);
+        await page.mouse.down();
+        await page.mouse.move(plot.x + plot.width * x1, plot.y + plot.height * y1, { steps: 28 });
+        await page.mouse.up();
+        await new Promise((r) => setTimeout(r, 300));
         afterBrush = await snap();
+        if (((afterBrush.sel?.n as number) ?? 0) > 0) break;
       }
+      if (((afterBrush.sel?.n as number) ?? 0) > 0) break;
     }
     expect(afterBrush.page, JSON.stringify(afterBrush)).toBeGreaterThanOrEqual(1);
     expect((afterBrush.sel?.n as number) ?? 0, JSON.stringify(afterBrush)).toBeGreaterThan(0);

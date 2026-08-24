@@ -14,13 +14,13 @@ Punctuation (critical):
 - Multi-panel: widget layout.figure (cols/rows, title/subtitle/caption) then widget chart.* with panel: a. panel: body fills a board slot.
 - Video/image board: widget layout.board (safe/title/body/lower). typeGrid: true paints baseline + type columns. play: true is a hold+ease clock on __t / __beat (keys n/N jump beats). Charts emit __hover / __brush / __sel.keys. Never write event brush, never target chart.*, never nest widget under timeline/beat.
 - Scene: unit / column / page / height / background live ONLY under scene (2-space indent). Never write top-level unit:. column: single (89) or double (183); page: a4|letter. Events: event click/drag/hover/collide/key on target.
-- Draggable x/y write back via __event.x / __event.y (author scene units; mm when unit: mm).
+- Draggable x/y write back via __event.x / __event.y (author scene units; mm when unit: mm). Put World tokens in the title/margin, not on the plot.
 - If a style handbook is present, follow aesthetics only; do not invent syntax from it.
 
 Minimal valid shape (copy structure, change names/data):
 artifact "Name"
 data rows = [{ t: 1, score: 12, arm: "A" }]
-data tokens = [{ id: "p1", x: 24, y: 36 }]
+data tokens = [{ id: "p1", x: 8, y: 16 }, { id: "p2", x: 14, y: 22 }]
 scene
   unit: mm
   page: a4

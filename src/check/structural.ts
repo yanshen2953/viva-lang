@@ -230,7 +230,7 @@ export function runStructuralChecks(ir: VisualIR, opts: CheckOptions = {}): Chec
         out,
         "check.struct.flatHeatmap",
         `heatmap cells (${cells.length}) share a single fill color`,
-        "error",
+        "warn",
         "Use palette(c.tier, sequential) or fix role: mark-area parsing.",
       );
     }

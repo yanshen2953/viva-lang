@@ -1569,12 +1569,11 @@ function expandLayoutFigure(
   const gridW = width;
   const gridH = Math.max(copyBands.minGrid, height - titleH - headGap - capH - footGap);
   const cols = Math.max(1, Math.floor(numProp(props, "cols", 2)));
-  const figureCount = artifact.widgets.filter((w) => w.name === "layout.figure").length;
   const owned = figureOwnedPanelNames(artifact, index);
   const defaultRows = Math.max(1, Math.floor(numProp(props, "rows", 2)));
-  const multiFigure = figureCount >= 2 && owned.length > 0 && props.panels === undefined;
-  const names = multiFigure ? owned : panelNamesFromProps(props, cols * defaultRows, index);
-  const rows = multiFigure
+  const useOwned = owned.length > 0 && props.panels === undefined;
+  const names = useOwned ? owned : panelNamesFromProps(props, cols * defaultRows, index);
+  const rows = useOwned
     ? props.rows !== undefined
       ? defaultRows
       : inferFigureRows(artifact, names, cols, 1)
