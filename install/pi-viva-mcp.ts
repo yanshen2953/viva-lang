@@ -75,7 +75,11 @@ export default function (pi: ExtensionAPI) {
       params: Record<string, unknown>,
     ): Promise<{ content: { type: "text"; text: string }[]; details: { mcp: string; isError: boolean } }> => {
       const mcp = await ensure();
-      const result = await mcp.callTool(name, params);
+      const args = { ...params };
+      if ((name === "viva_compile" || name === "viva_check") && args.visual === undefined) {
+        args.visual = false;
+      }
+      const result = await mcp.callTool(name, args);
       return {
         content: [{ type: "text", text: result.text || "(empty MCP result)" }],
         details: { mcp: name, isError: result.isError },
