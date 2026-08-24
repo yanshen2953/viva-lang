@@ -52,6 +52,17 @@ widget chart.violin
   data: rows
   xField: arm
   yField: score
+widget layout.board
+  title: "跨页"
+widget layout.figure
+  panel: body
+  cols: 1
+widget chart.box
+  panel: d
+  span: 2
+  data: rows
+  xField: arm
+  yField: score
 event drag on tokens
   token.x = __event.x
   token.y = __event.y
