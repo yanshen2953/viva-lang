@@ -33,4 +33,5 @@ event drag on bodies
   body.y = __event.y
 
 event collide on bodies
-  hits = hits + 1
+  if __event.phase == "enter"
+    hits = hits + 1

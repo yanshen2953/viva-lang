@@ -242,7 +242,7 @@ function paintPageFolio(artifact: Artifact): void {
       items.push(
         node(`__page_jump_${n}`, {
           role: literal("caption"),
-          text: literal(`→ ${n + 1}`),
+          text: literal(`> ${n + 1}`),
           x: literal(innerX),
           y: literal(bottom - pad * 0.85),
           align: literal(innerAlign),
@@ -3287,7 +3287,8 @@ function estimatePanelInsets(
   cellW: number,
   cellH: number,
 ): { l: number; r: number; t: number; b: number } {
-  const fallback = { l: 76, r: 32, t: 32, b: 52 };
+  const scale = Math.max(sceneScaleOf({ unit: sceneUnitOf(artifact) }), 1e-6);
+  const fallback = { l: 76 / scale, r: 32 / scale, t: 32 / scale, b: 52 / scale };
   const chart = chartForPanel(artifact, panelName);
   if (chart) return fitChartInsets(artifact, chart, cellX0, cellY0, cellW, cellH);
   if (slotHasAuthorPlot(artifact, panelName)) return { ...PLOT_SLOT_INSET };

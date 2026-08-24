@@ -261,20 +261,22 @@ event dragend on units
             message = base.name
 
 event collide on units
-  if __event.otherGroup == "enemies"
-    unit.hp = unit.hp - 20
-    lives = lives - 1
-    score = score - 5
-    message = "遭敌撞击"
-    unit.x = 140
-    unit.y = 380
-    if lives < 0
-      lives = 0
+  if __event.phase == "enter"
+    if __event.otherGroup == "enemies"
+      unit.hp = unit.hp - 20
+      lives = lives - 1
+      score = score - 5
+      message = "遭敌撞击"
+      unit.x = 140
+      unit.y = 380
+      if lives < 0
+        lives = 0
 
 event collide on enemies
-  if __event.otherGroup == "units"
-    enemy.vx = 0 - enemy.vx
-    enemy.vy = 0 - enemy.vy
+  if __event.phase == "enter"
+    if __event.otherGroup == "units"
+      enemy.vx = 0 - enemy.vx
+      enemy.vy = 0 - enemy.vy
 
 event key on scene
   if __event.key == " "

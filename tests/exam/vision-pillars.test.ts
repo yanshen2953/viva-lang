@@ -87,7 +87,7 @@ describe("vision pillars: board, mm, log, hover object, CJK pdf", () => {
       .map((i) => (i.kind === "node" ? evaluate(i.props.text, [compiled.ir!.state, compiled.ir!.data]) : ""));
     expect(folioTexts).toEqual([
       "1 / 2",
-      "→ 2",
+      "> 2",
       "2 / 2",
       "Single-column 89 mm on A4, two slices (continued)",
     ]);

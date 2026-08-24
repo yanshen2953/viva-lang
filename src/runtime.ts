@@ -53,6 +53,7 @@ import {
 } from "./runtime/hand.js";
 import { applyTimelineState, holdOf, startOfBeat } from "./timeline/clock.js";
 import { applyViewState } from "./runtime/view-machine.js";
+import { propsToSceneShape } from "./runtime/units.js";
 
 export { nodeIgnoresPointer };
 
@@ -688,8 +689,7 @@ export class Runtime {
     });
 
     this.svg.addEventListener("pointerdown", (event) => {
-      const raw = this.targetOf(event);
-      const target = raw && this.isHandSubject(raw) ? raw : null;
+      const target = this.handTargetOf(event);
       this.svg?.setPointerCapture(event.pointerId);
       const scene = this.pointerToScene(event);
       this.press = {
@@ -991,23 +991,18 @@ export class Runtime {
     ignore: string[],
   ): { dx: number; dy: number } {
     const walls = this.obstacleShapes(ignore);
-    const members = origins.map((origin) =>
-      this.shapeOf({ ...origin.node, props: { ...origin.node.props, x: origin.x, y: origin.y } }),
-    );
+    const members = origins.map((origin) => this.sceneShapeOf(origin.node, origin));
     return sharedShift(members, dx, dy, walls);
   }
 
   private poseOf(node: RenderNode): { x: number; y: number } {
-    if (isRecord(node.item)) {
-      return { x: num(node.item.x, num(node.props.x, 0)), y: num(node.item.y, num(node.props.y, 0)) };
-    }
-    return { x: num(node.props.x, 0), y: num(node.props.y, 0) };
+    return this.scenePoseOf(node);
   }
 
-  private obstacleShapes(ignore: string[]): ReturnType<Runtime["shapeOf"]>[] {
+  private obstacleShapes(ignore: string[]): ReturnType<Runtime["sceneShapeOf"]>[] {
     return this.worldSolids()
       .filter((other) => !ignore.includes(other.id))
-      .map((other) => this.shapeOf(other));
+      .map((other) => this.sceneShapeOf(other));
   }
 
   private writeWorldPose(node: RenderNode, x: number, y: number): void {
@@ -1040,7 +1035,7 @@ export class Runtime {
       for (let j = i + 1; j < solids.length; j++) {
         const a = solids[i]!;
         const b = solids[j]!;
-        if (penetration(this.shapeOf(a), this.shapeOf(b)) <= -0.75) continue;
+        if (penetration(this.sceneShapeOf(a), this.sceneShapeOf(b)) <= -0.75) continue;
         next.add(pairKey(a.id, b.id));
       }
     }
@@ -1054,6 +1049,22 @@ export class Runtime {
       if (!a || !b) continue;
       this.fireCollision(a, b, "enter");
       this.fireCollision(b, a, "enter");
+    }
+    for (const key of phases.stay) {
+      const [idA, idB] = key.split("|") as [string, string];
+      const a = byId.get(idA);
+      const b = byId.get(idB);
+      if (!a || !b) continue;
+      this.fireCollision(a, b, "stay");
+      this.fireCollision(b, a, "stay");
+    }
+    for (const key of phases.leave) {
+      const [idA, idB] = key.split("|") as [string, string];
+      const a = byId.get(idA) ?? this.refreshNode(idA);
+      const b = byId.get(idB) ?? this.refreshNode(idB);
+      if (!a || !b) continue;
+      this.fireCollision(a, b, "leave");
+      this.fireCollision(b, a, "leave");
     }
     if (phases.leave.length) {
       const hand = readHand(this.state);
@@ -1071,9 +1082,9 @@ export class Runtime {
       const a = byId.get(idA);
       const b = byId.get(idB);
       if (!a || !b) continue;
-      if (penetration(this.shapeOf(a), this.shapeOf(b)) <= 0.5) continue;
-      const { nx, ny } = contactNormal(this.shapeOf(a), this.shapeOf(b));
-      const depth = penetration(this.shapeOf(a), this.shapeOf(b));
+      if (penetration(this.sceneShapeOf(a), this.sceneShapeOf(b)) <= 0.5) continue;
+      const { nx, ny } = contactNormal(this.sceneShapeOf(a), this.sceneShapeOf(b));
+      const depth = penetration(this.sceneShapeOf(a), this.sceneShapeOf(b));
       if (held === a.id && isRecord(b.item)) {
         b.item.x = num(b.item.x, num(b.props.x, 0)) - nx * depth;
         b.item.y = num(b.item.y, num(b.props.y, 0)) - ny * depth;
@@ -1096,11 +1107,12 @@ export class Runtime {
   }
 
   private fireCollision(node: RenderNode, other: RenderNode, phase: "enter" | "stay" | "leave"): void {
-    const n = contactNormal(this.shapeOf(node), this.shapeOf(other));
+    const n = contactNormal(this.sceneShapeOf(node), this.sceneShapeOf(other));
+    const pose = this.scenePoseOf(node);
     const extra: Scope = {
       __event: {
-        x: num(node.props.x, 0),
-        y: num(node.props.y, 0),
+        x: pose.x,
+        y: pose.y,
         t: 0,
         phase,
         nx: n.nx,
@@ -1208,6 +1220,52 @@ export class Runtime {
     if (!el) return null;
     const id = el.getAttribute("data-viva-id");
     return this.lastNodes.find((node) => node.id === id) ?? this.flatten().find((node) => node.id === id) ?? null;
+  }
+
+  /**
+   * Chart brush may start on a mark. Hover-only marks are hand subjects
+   * but have no drag — fall through to the plot under them.
+   */
+  private handTargetOf(event: PointerEvent): RenderNode | null {
+    const raw = this.targetOf(event);
+    if (!raw) return null;
+    if (nodeIgnoresPointer(raw.name, raw.props.role)) return this.plotGripNear(raw);
+    if (this.isChartGrip(raw) || this.isWorldGrip(raw) || this.isDraggable(raw)) return raw;
+    if (this.hasHandler("drag", raw) || this.hasHandler("dragstart", raw) || this.hasHandler("dragend", raw)) {
+      return raw;
+    }
+    const plot = this.plotGripNear(raw);
+    if (plot) return plot;
+    return this.isHandSubject(raw) ? raw : null;
+  }
+
+  private plotGripNear(node: RenderNode): RenderNode | null {
+    const frame = String(node.props.frame ?? "");
+    const nodes = this.lastNodes.length ? this.lastNodes : this.flatten();
+    const plots = nodes.filter((item) => this.isChartGrip(item));
+    const sameFrame = plots.find((item) => frame && String(item.props.frame ?? "") === frame);
+    if (sameFrame) return sameFrame;
+    const layer = node.layerName;
+    return (
+      plots.find((item) => item.layerName === layer && String(item.name).includes("plotBg")) ??
+      plots.find((item) => String(item.name).includes("plotBg")) ??
+      null
+    );
+  }
+
+  private scenePoseOf(node: RenderNode): { x: number; y: number } {
+    const scale = Math.max(this.sceneScale(), 1e-9);
+    if (isRecord(node.item) && (node.item.x !== undefined || node.item.y !== undefined)) {
+      return {
+        x: num(node.item.x, num(node.props.x, 0) / scale),
+        y: num(node.item.y, num(node.props.y, 0) / scale),
+      };
+    }
+    return { x: num(node.props.x, 0) / scale, y: num(node.props.y, 0) / scale };
+  }
+
+  private sceneShapeOf(node: RenderNode, origin?: { x: number; y: number }): ReturnType<Runtime["shapeOf"]> {
+    return propsToSceneShape(node.props, this.sceneScale(), origin ?? this.scenePoseOf(node));
   }
 
   private refreshNode(id: string): RenderNode | null {
