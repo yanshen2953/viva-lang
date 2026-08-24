@@ -8,7 +8,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { compileSource } from "../../src/pipeline.js";
-import { flattenNodesFromIr, renderSvgFromIr } from "../../src/export/static-svg.js";
+import { flattenNodesFromIr, nodePainted, renderSvgFromIr } from "../../src/export/static-svg.js";
 import { exportArtifact, exportBeatSequence } from "../../src/export/index.js";
 import { evaluate } from "../../src/eval.js";
 import {
@@ -111,9 +111,9 @@ describe("four gates — hand", () => {
     const target = ir.events.find((e) => e.type === "dragstart")!.target;
     const brushed = simulate(ir, {
       events: [
-        { type: "dragstart", target, event: { x: 20, y: 50 } },
-        { type: "drag", target, event: { x: 50, y: 30 } },
-        { type: "dragend", target, event: { x: 50, y: 30 } },
+        { type: "dragstart", target, event: { x: 40, y: 28 } },
+        { type: "drag", target, event: { x: 60, y: 18 } },
+        { type: "dragend", target, event: { x: 60, y: 18 } },
       ],
     });
     expect((brushed.state.__sel as { n: number }).n).toBeGreaterThan(0);
@@ -156,9 +156,11 @@ describe("four gates — export", () => {
     for (const file of ["paper-column.viva", "paper-cjk.viva", "paper-storyboard.viva", "figure-atlas.viva"]) {
       const { ir } = compile(file);
       const { nodes } = flattenNodesFromIr(ir);
+      const painted = nodes.filter((n) => nodePainted(n.props));
       const ids = svgIds(renderSvgFromIr(ir));
-      expect(nodes.length).toBeGreaterThan(0);
-      for (const node of nodes) expect(ids.has(node.id), `${file} ${node.id}`).toBe(true);
+      expect(painted.length).toBeGreaterThan(0);
+      for (const node of painted) expect(ids.has(node.id), `${file} ${node.id}`).toBe(true);
+      for (const id of ids) expect(painted.some((n) => n.id === id), `${file} svg ${id}`).toBe(true);
     }
   });
 
