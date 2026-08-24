@@ -852,16 +852,22 @@ export class Runtime {
             return Boolean(mate && this.isDraggable(mate));
           })
         : [target.id];
+    // Chart brush invert() maps __event.x/y from author scene units to the
+    // data domain. Report the pointer, not the plot node's grab pose — a
+    // top-left origin on default ylim [0, 100] inverts to dy0=100 and the
+    // selection box misses the marks.
+    const eventX = world ? anchor.x : scene.x;
+    const eventY = world ? anchor.y : scene.y;
     this.drag = {
       node: target,
       pointerId: event.pointerId,
-      grabDx: scene.x - anchor.x,
-      grabDy: scene.y - anchor.y,
+      grabDx: world ? scene.x - anchor.x : 0,
+      grabDy: world ? scene.y - anchor.y : 0,
       moved: false,
-      originX: anchor.x,
-      originY: anchor.y,
-      lastX: anchor.x,
-      lastY: anchor.y,
+      originX: eventX,
+      originY: eventY,
+      lastX: eventX,
+      lastY: eventY,
       world,
       squad,
     };
@@ -874,8 +880,8 @@ export class Runtime {
       });
     }
     this.fire("dragstart", target, event, {
-      x: anchor.x,
-      y: anchor.y,
+      x: eventX,
+      y: eventY,
       px: scene.px,
       py: scene.py,
       t: scene.t,
