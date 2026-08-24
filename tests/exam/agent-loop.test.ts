@@ -4,6 +4,10 @@ import { compileSource } from "../../src/pipeline.js";
 import { runAgentLoop, productSystemPrompt } from "../../src/agent/orchestrator.js";
 import { COLUMN_MM } from "../../src/space/scene-box.js";
 import { evaluate } from "../../src/eval.js";
+import { flattenNodesFromIr, nodePainted, renderSvgFromIr } from "../../src/export/static-svg.js";
+import { exportArtifact } from "../../src/export/index.js";
+import { holdFrameTimes, playbackFrameTimes } from "../../src/timeline/clock.js";
+import { listSelectableNodes } from "../../src/review/nodes.js";
 
 const PRINT = { handbookIds: ["print-nature"] } as const;
 const ARRIVAL = readFileSync("examples/arrival.viva", "utf8");
@@ -122,12 +126,23 @@ describe("agent loop", () => {
       expect(ir.timeline?.beats).toBeGreaterThanOrEqual(4);
       expect(ir.events.some((e) => e.type === "drag")).toBe(true);
       expect(result.source).toMatch(/[\u4e00-\u9fff]/);
-      const widths = ["a", "b", "c"]
+      const widths = ["a", "b", "c", "d"]
         .map((name) => cellWidth(ir, name))
         .filter((w) => w > 0)
         .sort((x, y) => x - y);
       expect(widths[0]).toBeGreaterThan(COLUMN_MM.single * 0.7);
       expect(widths[widths.length - 1]).toBeGreaterThan(COLUMN_MM.double * 0.7);
+
+      expect(holdFrameTimes(ir.timeline!).length).toBeGreaterThanOrEqual(4);
+      expect(playbackFrameTimes(ir.timeline!).length).toBeGreaterThan(holdFrameTimes(ir.timeline!).length);
+      const pdf = await exportArtifact(result.source, "pdf", PRINT, "agent-arrival.viva");
+      expect(pdf.vector).toBe(true);
+      const painted = flattenNodesFromIr(ir).nodes.filter((n) => nodePainted(n.props)).map((n) => n.id).sort();
+      const svgIds = [...renderSvgFromIr(ir).matchAll(/data-viva-id="([^"]+)"/g)].map((m) => m[1]!).sort();
+      expect(svgIds).toEqual(painted);
+      expect([...new Set((pdf.sidecar ?? []).map((n) => n.id))].sort()).toEqual(painted);
+      expect(painted.every((id) => listSelectableNodes(ir).some((n) => n.id === id))).toBe(true);
+      writeFileSync("/opt/cursor/artifacts/deepseek-arrival.viva", result.source);
     },
     180_000,
   );

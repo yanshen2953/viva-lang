@@ -156,6 +156,19 @@ timeline
     expect(compiled.ir?.events.some((e) => e.type === "drag")).toBe(true);
   });
 
+  it("rewrites bind name = expr to bind name <- expr", () => {
+    const src = `artifact B
+scene
+  size: 120 80
+state beat = 0
+bind beat = __beat
+`;
+    const next = repairSource(src, [{ message: "expected BIND, got '='" }]);
+    expect(next.source).toMatch(/bind beat <- __beat/);
+    const compiled = compileSource(next.source, "bind-fold.viva");
+    expect(compiled.error, compiled.error ?? "").toBeNull();
+  });
+
   it("folds top-level unit/column/page under scene", () => {
     const src = `artifact Fold
 data rows = [{ x: 1, y: 2 }]

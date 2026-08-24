@@ -4,6 +4,7 @@ export {
   dropInvalidEvents,
   dropInventedTimeline,
   foldBareWidgets,
+  foldBindArrow,
   foldBadFrameTitle,
   foldMissingPropColons,
   foldOrphanSceneProps,

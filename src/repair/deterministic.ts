@@ -210,7 +210,9 @@ export function sanitizeGeneratedViva(source: string): string {
       foldMissingPropColons(
         foldOrphanSceneProps(
           dropInventedTimeline(
-            dropInvalidEvents(dropIllegalLines(foldBareWidgets(foldYamlDeclColons(source)))),
+            dropInvalidEvents(
+              dropIllegalLines(foldBareWidgets(foldBindArrow(foldYamlDeclColons(source)))),
+            ),
           ),
         ),
       ),
@@ -249,6 +251,11 @@ export function quoteUnsafeLiterals(source: string): string {
       });
     })
     .join("\n");
+}
+
+/** `bind beat = __beat` — models emit `=` instead of `<-`. */
+export function foldBindArrow(source: string): string {
+  return source.replace(/^(bind\s+\S+)\s+=\s+/gm, "$1 <- ");
 }
 
 /** `scene:` / `state n: 0` — models emit YAML declarations. */

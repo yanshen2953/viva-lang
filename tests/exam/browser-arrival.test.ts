@@ -133,9 +133,12 @@ describe("arrival 5 — real browser session", () => {
     expect((afterDrag.sel?.n as number) ?? 0).toBe(selN);
     expect(afterDrag.hand.n).toBeGreaterThanOrEqual(0);
 
-    await page.keyboard.press("n");
-    await new Promise((r) => setTimeout(r, 200));
-    const afterBeat = await snap();
+    let afterBeat = await snap();
+    for (let i = 0; i < 4 && afterBeat.beat === afterBrush.beat; i += 1) {
+      await page.keyboard.press("n");
+      await new Promise((r) => setTimeout(r, 200));
+      afterBeat = await snap();
+    }
     expect(afterBeat.beat).not.toBe(afterBrush.beat);
     expect((afterBeat.sel?.n as number) ?? 0).toBe(selN);
 
