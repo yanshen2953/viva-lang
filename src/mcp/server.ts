@@ -55,6 +55,15 @@ export async function runVivaMcpServer(): Promise<void> {
   );
 
   server.registerTool(
+    "viva_capabilities",
+    {
+      description: "Registered widgets, compile hooks, handbooks, events, and scene properties.",
+      inputSchema: mcpToolSchemas.viva_capabilities,
+    },
+    async (args) => handleMcpTool("viva_capabilities", args),
+  );
+
+  server.registerTool(
     "viva_session",
     {
       description:

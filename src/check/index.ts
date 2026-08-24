@@ -14,6 +14,8 @@ export { runStructuralChecks } from "./structural.js";
 export { figureCellsFromIr, runVisualChecks } from "./visual.js";
 export { runVisionChecks } from "./vision.js";
 export { rasterizeIr } from "./raster.js";
+export { compareSvgPdfPages, sidecarOverlap, pdftoppmAvailable } from "./visual-parity.js";
+export type { VisualParityReport, PageParity } from "./visual-parity.js";
 export {
   createTextModelClient,
   createVisionModelClient,

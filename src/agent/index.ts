@@ -33,6 +33,9 @@ export {
 } from "./domain/registry.js";
 export { createEventBus } from "./events.js";
 export { resolveSessionHandbooks, shouldApplyHandbookHook } from "./handbook.js";
+export { vivaCapabilities, formatCapabilities } from "./capabilities.js";
+export { runAgentLoop, productSystemPrompt } from "./orchestrator.js";
+export type { AgentGenerateFn, AgentLoopResult } from "./orchestrator.js";
 export type * from "./types.js";
 export {
   createReviewController,

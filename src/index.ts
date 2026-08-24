@@ -8,8 +8,12 @@ export {
   registerWidget,
   listWidgets,
   getWidget,
+  registerCompileHook,
+  listCompileHooks,
+  unregisterCompileHook,
+  ensureBuiltinPlugins,
 } from "./widgets.js";
-export type { WidgetPlugin, WidgetExpandContext } from "./widgets.js";
+export type { WidgetPlugin, WidgetExpandContext, CompileHook } from "./widgets.js";
 export { compileSource } from "./pipeline.js";
 export type { CompileOptions as PipelineCompileOptions, PipelineCheckOptions } from "./pipeline.js";
 export { Runtime, nodeIgnoresPointer } from "./runtime.js";
@@ -17,6 +21,9 @@ export { evaluate, execute } from "./eval.js";
 export { simulate, createSimWorld } from "./simulate.js";
 export { SYSTEM_PROMPT } from "./llm/system-prompt.js";
 export { SYSTEM_PROMPT_SLIM } from "./llm/system-prompt-slim.js";
+export { vivaCapabilities, formatCapabilities } from "./agent/capabilities.js";
+export { runAgentLoop, productSystemPrompt } from "./agent/orchestrator.js";
+export type { AgentGenerateFn, AgentLoopResult } from "./agent/orchestrator.js";
 export { VivaError, formatDiagnostic, withSyntaxHint } from "./diagnostics.js";
 export type { Artifact } from "./ast.js";
 export type { VisualIR } from "./ir.js";
@@ -44,7 +51,13 @@ export type {
   SelectionTool,
   SelectionCombine,
 } from "./review/index.js";
-export { exportArtifact, renderSvgFromIr, renderVectorPdfFromIr } from "./export/index.js";
+export {
+  exportArtifact,
+  renderSvgFromIr,
+  renderVectorPdfFromIr,
+  renderVectorPdfPackageFromIr,
+} from "./export/index.js";
+export type { PdfSidecarNode } from "./export/index.js";
 export {
   applyTimelineState,
   sampleBeatAt,
@@ -57,7 +70,15 @@ export {
 export { repairSource, planRepairs } from "./repair/index.js";
 export { registerDragParamPipeline, attachDragParamLoop, DRAG_PARAM_PIPELINE_ID } from "./agent/pipeline/drag-param.js";
 export { runBrowserVisual } from "./check/browser-visual.js";
-export { applyViewState, sampleView, guardView } from "./runtime/view-machine.js";
+export {
+  applyViewState,
+  sampleView,
+  guardView,
+  readPage,
+  writePage,
+} from "./runtime/view-machine.js";
+export type { InteractionSnapshot } from "./runtime/view-machine.js";
+export { compareSvgPdfPages, sidecarOverlap, pdftoppmAvailable } from "./check/visual-parity.js";
 export { setChromeGrammar, getChromeGrammar, grammarFromTypography } from "./layout/chrome-collide.js";
 export {
   hopFiguresPastCopy,

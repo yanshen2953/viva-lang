@@ -24,7 +24,7 @@ import path from "node:path";
 import { createVivaAgentHost } from "../src/agent/index.ts";
 import { createNodePromptService } from "../src/agent/prompt.node.ts";
 import { SYSTEM_PROMPT } from "../src/llm/system-prompt.ts";
-import { SYSTEM_PROMPT_SLIM } from "../src/llm/system-prompt-slim.ts";
+import { productSystemPrompt } from "../src/agent/orchestrator.ts";
 import { compileSource } from "../src/pipeline.ts";
 import type { SceneNodeIR, VisualIR } from "../src/ir.ts";
 
@@ -358,16 +358,8 @@ function buildSystem(scenario: Scenario): string {
   const mode = scenario.system ?? (inferTrack(scenario) === "hard" ? "slim" : "full");
   const parts: string[] = [];
   if (mode === "slim") {
-    parts.push(SYSTEM_PROMPT_SLIM);
-    // Hard track gets LANGUAGE.md like an agent with repo docs open — not per-task coaching.
-    try {
-      parts.push(
-        "# Language reference\n\n" +
-          readFileSync(path.join(root, "docs/LANGUAGE.md"), "utf8"),
-      );
-    } catch {
-      /* optional */
-    }
+    // Same product prompt as CLI / MCP. No LANGUAGE.md injection.
+    parts.push(productSystemPrompt());
   } else {
     parts.push(SYSTEM_PROMPT);
   }

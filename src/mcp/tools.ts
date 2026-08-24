@@ -3,7 +3,7 @@ import { compileSource } from "../pipeline.js";
 import { attachHotPathVisual, runArtifactChecks } from "../check/index.js";
 import { exportArtifact, exportBeatAnimation, exportBeatSequence, isBeatAnimFormat, type ExportFormat } from "../export/index.js";
 import { SYSTEM_PROMPT } from "../llm/system-prompt.js";
-import { SYSTEM_PROMPT_SLIM } from "../llm/system-prompt-slim.js";
+import { productSystemPrompt, vivaCapabilities } from "../agent/orchestrator.js";
 import { createNodePromptService } from "../agent/prompt.node.js";
 import { describeModelSlots, resolveModelsConfig } from "../check/models/index.js";
 import type { VivaAgentHost } from "../agent/host.js";
@@ -37,6 +37,8 @@ export async function handleMcpTool(
         return toolPrompt(args);
       case "viva_models":
         return toolModels(args);
+      case "viva_capabilities":
+        return textResult(JSON.stringify(vivaCapabilities(), null, 2));
       case "viva_session":
         return await toolSession(args, ensureHost(host));
       case "viva_pipeline":
@@ -175,7 +177,7 @@ function toolPrompt(args: Record<string, unknown>) {
   const handbookIds = (args.handbookIds as string[] | undefined) ?? [];
   const variant = String(args.variant ?? "slim");
   const prompt = createNodePromptService();
-  const parts = [variant === "full" ? SYSTEM_PROMPT : SYSTEM_PROMPT_SLIM];
+  const parts = [variant === "full" ? SYSTEM_PROMPT : productSystemPrompt()];
   for (const id of handbookIds) {
     parts.push(prompt.loadHandbook(id));
   }
@@ -363,6 +365,14 @@ export const MCP_TOOL_DEFINITIONS = [
     },
   },
   {
+    name: "viva_capabilities",
+    description: "Registered widgets, compile hooks, handbooks, events, and scene properties.",
+    inputSchema: {
+      type: "object",
+      properties: {},
+    },
+  },
+  {
     name: "viva_session",
     description:
       "Headless VivaSession: create/compile/patch/world/set/simulate/provenance/bundle/dispose.",
@@ -453,6 +463,9 @@ export const mcpToolSchemas = {
   },
   viva_models: {
     configPath: z.string().optional(),
+  },
+  viva_capabilities: {
+    detail: z.boolean().optional(),
   },
   viva_session: {
     action: z.enum([
