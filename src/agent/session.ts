@@ -1,6 +1,7 @@
 import { compileSource } from "../pipeline.js";
 import { repairSource } from "../repair/index.js";
 import { Runtime } from "../runtime.js";
+import type { InteractionSnapshot } from "../runtime/view-machine.js";
 import { simulate } from "../simulate.js";
 import type { VisualIR } from "../ir.js";
 import type { Diagnostic } from "../diagnostics.js";
@@ -77,6 +78,9 @@ export type VivaSession = {
     data: unknown;
   };
   snapshot(): ArtifactSnapshot;
+  interactionSnapshot(): InteractionSnapshot | null;
+  goToPage(page: number): number;
+  stepBeat(dir: number): number;
   exportProvenanceBundle(): ReturnType<ProvenanceWriter["exportBundle"]>;
   dispose(): void;
 };
@@ -374,6 +378,21 @@ export function createSession(
       }
       notifyWatchers();
       return world;
+    },
+    interactionSnapshot() {
+      return runtime?.interactionSnapshot() ?? null;
+    },
+    goToPage(page) {
+      if (!runtime) return 0;
+      const n = runtime.goToPage(page);
+      notifyWatchers();
+      return n;
+    },
+    stepBeat(dir) {
+      if (!runtime) return 0;
+      const n = runtime.stepBeat(dir);
+      notifyWatchers();
+      return n;
     },
     snapshot() {
       const world = session.getWorld();

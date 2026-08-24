@@ -20,8 +20,10 @@ import {
 import { propsToBBox as nodePropsToBBox } from "./layout/node-bbox.js";
 import {
   evalSceneProps,
+  mmToPx,
   resolveSceneBox,
   scaleSceneGeom,
+  scenePageCount,
   sceneScaleOf,
   viewBoxToScene,
 } from "./space/scene-box.js";
@@ -52,7 +54,12 @@ import {
   writeHand,
 } from "./runtime/hand.js";
 import { applyTimelineState, holdOf, startOfBeat } from "./timeline/clock.js";
-import { applyViewState } from "./runtime/view-machine.js";
+import {
+  applyViewState,
+  readPage,
+  writePage,
+  type InteractionSnapshot,
+} from "./runtime/view-machine.js";
 import { propsToSceneShape } from "./runtime/units.js";
 
 export { nodeIgnoresPointer };
@@ -188,6 +195,54 @@ export class Runtime {
 
   getWorld(): { state: Record<string, unknown>; data: Record<string, unknown> } {
     return { state: this.state, data: this.data };
+  }
+
+  interactionSnapshot(): InteractionSnapshot {
+    const hand = readHand(this.state);
+    const view = (this.state.__view && typeof this.state.__view === "object"
+      ? (this.state.__view as InteractionSnapshot["view"])
+      : null);
+    return {
+      sel: isRecord(this.state.__sel) ? this.state.__sel : null,
+      brush: isRecord(this.state.__brush) ? this.state.__brush : null,
+      hand,
+      beat: Number(this.state.__beat ?? 0) || 0,
+      page: readPage(this.state),
+      view,
+      hoverId: this.hoverId,
+      dragging: Boolean(this.drag),
+    };
+  }
+
+  goToPage(page: number): number {
+    const model = this.pageModel();
+    const n = writePage(this.state, page, model.count);
+    this.applyBinds();
+    this.applyRules();
+    applyViewState(this.state, {
+      hovering: Boolean(this.hoverId),
+      dragging: Boolean(this.drag),
+    });
+    this.render();
+    return n;
+  }
+
+  stepBeat(dir: number): number {
+    if (!this.ir.timeline) return Number(this.state.__beat ?? 0) || 0;
+    const spec = this.ir.timeline;
+    const cur = Number(this.state.__t ?? 0);
+    const sample = applyTimelineState(this.state, spec, cur);
+    const nextBeat = (sample.beat + dir + spec.beats) % spec.beats;
+    applyTimelineState(this.state, spec, startOfBeat(spec, nextBeat) + holdOf(spec, nextBeat) * 0.05);
+    this.applyBinds();
+    this.applyRules();
+    applyViewState(this.state, {
+      playing: true,
+      hovering: Boolean(this.hoverId),
+      dragging: Boolean(this.drag),
+    });
+    this.render();
+    return Number(this.state.__beat ?? 0) || 0;
   }
 
   exportSvg(): string {
@@ -341,10 +396,37 @@ export class Runtime {
     if (!this.svg) return;
     const props = evalSceneProps(this.ir.scene.props, this.scopes());
     const box = resolveSceneBox(props);
-    this.svg.setAttribute("viewBox", `0 0 ${box.width} ${box.height}`);
+    const pages = scenePageCount(box);
+    if (pages >= 2 && !readPage(this.state)) writePage(this.state, 1, pages);
+    const page = readPage(this.state);
+    const sliceH = box.page ? mmToPx(box.page.h) : box.height;
+    if (pages >= 2 && page >= 1) {
+      const y0 = (page - 1) * sliceH;
+      this.svg.setAttribute("viewBox", `0 ${y0} ${box.width} ${sliceH}`);
+    } else {
+      this.svg.setAttribute("viewBox", `0 0 ${box.width} ${box.height}`);
+    }
     this.svg.setAttribute("width", "100%");
     this.svg.setAttribute("height", "100%");
     this.svg.style.background = box.background;
+  }
+
+  private pageJumpTarget(name: string): number | null {
+    const jump = /^__page_jump_(\d+)$/.exec(name);
+    if (jump) return Number(jump[1]) + 1;
+    const folio = /^__page_folio_(\d+)$/.exec(name);
+    if (folio) return Number(folio[1]);
+    return null;
+  }
+
+  private pageModel(): { count: number; sliceH: number; width: number; height: number } {
+    const box = resolveSceneBox(evalSceneProps(this.ir.scene.props, this.scopes()));
+    return {
+      count: scenePageCount(box),
+      sliceH: box.page ? mmToPx(box.page.h) : box.height,
+      width: box.width,
+      height: box.height,
+    };
   }
 
   private flatten(): RenderNode[] {
@@ -722,6 +804,10 @@ export class Runtime {
         this.lasso = null;
         this.applyWorldLasso(this.press.startX, this.press.startY, scene.x, scene.y, this.press.shift);
       } else if (this.press.node) {
+        const jump = this.pageJumpTarget(this.press.node.name);
+        if (jump !== null) {
+          this.goToPage(jump);
+        }
         this.fire("click", this.press.node, event);
         if (this.isWorldGrip(this.press.node)) {
           const hand = readHand(this.state);
@@ -844,6 +930,15 @@ export class Runtime {
         });
         this.render();
         return;
+      }
+      if (event.key === "PageDown" || event.key === "PageUp" || event.key === "[" || event.key === "]") {
+        const model = this.pageModel();
+        if (model.count >= 2) {
+          const dir = event.key === "PageUp" || event.key === "[" ? -1 : 1;
+          this.goToPage(readPage(this.state) + dir);
+          event.preventDefault();
+          return;
+        }
       }
       if (!this.running) return;
       const sceneNode: RenderNode = {
@@ -1229,6 +1324,7 @@ export class Runtime {
   private handTargetOf(event: PointerEvent): RenderNode | null {
     const raw = this.targetOf(event);
     if (!raw) return null;
+    if (this.pageJumpTarget(raw.name) !== null) return raw;
     if (nodeIgnoresPointer(raw.name, raw.props.role)) return this.plotGripNear(raw);
     if (this.isChartGrip(raw) || this.isWorldGrip(raw) || this.isDraggable(raw)) return raw;
     if (this.hasHandler("drag", raw) || this.hasHandler("dragstart", raw) || this.hasHandler("dragend", raw)) {

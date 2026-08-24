@@ -8,7 +8,7 @@ import sharp from "sharp";
 import { compileSource } from "../pipeline.js";
 import type { VisualIR } from "../ir.js";
 import { flattenNodesFromIr, renderSvgFromIr } from "./static-svg.js";
-import { renderVectorPdfFromIr } from "./vector-pdf.js";
+import { renderVectorPdfFromIr, renderVectorPdfPackageFromIr, type PdfSidecarNode } from "./vector-pdf.js";
 import { applyTimelineState, holdFrameTimes, playbackFrameTimes, timelineFromState } from "../timeline/clock.js";
 
 export type ExportFormat = "svg" | "png" | "jpg" | "jpeg" | "pdf" | "pdf-raster" | "gif" | "mp4";
@@ -57,6 +57,8 @@ export type ExportResult = {
   vector?: boolean;
   /** Characters the PDF font could not cover (substituted as `?`). */
   missingGlyphs?: string[];
+  /** Painted node id / page / bbox in PDF points. */
+  sidecar?: PdfSidecarNode[];
 };
 
 export function exportSvgFromSource(
@@ -101,17 +103,18 @@ export async function exportArtifact(
     const mode = fmt === "pdf-raster" ? "raster" : (opts.pdfMode ?? "vector");
     if (mode === "vector") {
       const missingGlyphs: string[] = [];
-      const bytes = await renderVectorPdfFromIr(result.ir, {
+      const pack = await renderVectorPdfPackageFromIr(result.ir, {
         ...(opts.scale !== undefined ? { scale: opts.scale } : {}),
         cjkFontPath: opts.cjkFontPath,
         missingGlyphs,
       });
       return {
         format: "pdf",
-        bytes,
+        bytes: pack.bytes,
         mime: "application/pdf",
         svg,
         vector: true,
+        sidecar: pack.sidecar,
         ...(missingGlyphs.length ? { missingGlyphs } : {}),
       };
     }
@@ -293,4 +296,8 @@ export async function exportBeatAnimation(
 }
 
 export { renderSvgFromIr, flattenNodesFromIr } from "./static-svg.js";
-export { renderVectorPdfFromIr } from "./vector-pdf.js";
+export {
+  renderVectorPdfFromIr,
+  renderVectorPdfPackageFromIr,
+  type PdfSidecarNode,
+} from "./vector-pdf.js";

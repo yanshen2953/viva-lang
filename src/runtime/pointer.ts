@@ -7,7 +7,6 @@ export function nodeIgnoresPointer(name: string, role?: unknown): boolean {
     name === "brushRect" ||
     name === "brushPath" ||
     name.startsWith("__page_folio") ||
-    name.startsWith("__page_jump_") ||
     name.startsWith("__page_chapter_") ||
     name.includes("_veil_")
   );

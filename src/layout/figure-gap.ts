@@ -1,3 +1,5 @@
+import { COLUMN_MM } from "../space/scene-box.js";
+
 /** Default figure gutter/margin/title bands in scene units. Not a column typesetter. */
 
 export function figureGapDefaults(opts: {
@@ -6,6 +8,12 @@ export function figureGapDefaults(opts: {
   cols: number;
 }): { gutter: number; margin: number } {
   if (opts.unit === "mm" || opts.unit === "pt") {
+    if (opts.cols >= 2 && Math.abs(opts.width - COLUMN_MM.double) < 0.6) {
+      return { gutter: COLUMN_MM.double - COLUMN_MM.single * 2, margin: 0 };
+    }
+    if (Math.abs(opts.width - COLUMN_MM.single) < 0.6) {
+      return { gutter: 0, margin: 0 };
+    }
     return {
       gutter: opts.cols >= 2 ? 2.4 : 3,
       margin: 1.6,

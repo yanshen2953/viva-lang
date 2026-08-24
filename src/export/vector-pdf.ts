@@ -36,6 +36,18 @@ export type VectorPdfOptions = {
   missingGlyphs?: string[];
 };
 
+export type PdfSidecarNode = {
+  id: string;
+  name: string;
+  page: number;
+  bboxPt: { x: number; y: number; w: number; h: number };
+};
+
+export type VectorPdfPackage = {
+  bytes: Uint8Array;
+  sidecar: PdfSidecarNode[];
+};
+
 /**
  * True vector PDF: draw circle/rect/line/text/path primitives from IR geometry.
  * Coordinates match SVG/viewBox (Y flipped for PDF). Not a PNG-in-PDF raster.
@@ -44,6 +56,13 @@ export async function renderVectorPdfFromIr(
   ir: VisualIR,
   opts: VectorPdfOptions = {},
 ): Promise<Uint8Array> {
+  return (await renderVectorPdfPackageFromIr(ir, opts)).bytes;
+}
+
+export async function renderVectorPdfPackageFromIr(
+  ir: VisualIR,
+  opts: VectorPdfOptions = {},
+): Promise<VectorPdfPackage> {
   const { scene, nodes } = flattenNodesFromIr(ir);
   const box = resolveSceneBox(evalSceneProps(ir.scene.props, [ir.state, ir.data]));
   const autoScale = box.unit === "mm" || box.unit === "pt" ? pxToPdfPt(1) : 1;
@@ -52,6 +71,7 @@ export async function renderVectorPdfFromIr(
   const sliceH = box.page ? mmToPx(box.page.h) : scene.height;
   const pageW = scene.width * scale;
   const pageH = sliceH * scale;
+  const sidecar: PdfSidecarNode[] = [];
 
   const pdf = await PDFDocument.create();
   const fonts = await embedPdfFonts(pdf, { fontPath: opts.cjkFontPath });
@@ -67,11 +87,23 @@ export async function renderVectorPdfFromIr(
       if (!nodePainted(node.props)) continue;
       if (!nodeHitsSlice(node.props, originY, y1)) continue;
       drawNode(page, fonts, node, pageH, scale, originY, opts);
+      const boxPx = propsToBBox(node.props);
+      sidecar.push({
+        id: node.id,
+        name: node.name,
+        page: i + 1,
+        bboxPt: {
+          x: boxPx.x * scale,
+          y: (boxPx.y - originY) * scale,
+          w: boxPx.w * scale,
+          h: boxPx.h * scale,
+        },
+      });
     }
     page.pushOperators(popGraphicsState());
   }
 
-  return pdf.save();
+  return { bytes: await pdf.save(), sidecar };
 }
 
 function drawNode(

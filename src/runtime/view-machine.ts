@@ -174,6 +174,34 @@ export function applyViewState(
   return snap;
 }
 
+/** 1-based page index. Paged scenes start at 1; 0 means “not a sheet”. */
+export function readPage(state: Record<string, unknown>): number {
+  return Number(state.__page ?? 0) || 0;
+}
+
+export function writePage(state: Record<string, unknown>, page: number, pageCount: number): number {
+  if (!(pageCount > 0)) {
+    state.__page = 0;
+    applyViewState(state, {});
+    return 0;
+  }
+  const n = Math.min(pageCount, Math.max(1, Math.round(page) || 1));
+  state.__page = n;
+  applyViewState(state, {});
+  return n;
+}
+
+export type InteractionSnapshot = {
+  sel: Record<string, unknown> | null;
+  brush: Record<string, unknown> | null;
+  hand: { ids: string[]; held: string; n: number; phase: string };
+  beat: number;
+  page: number;
+  view: ViewSnapshot | null;
+  hoverId: string | null;
+  dragging: boolean;
+};
+
 function asRecord(value: unknown): Record<string, unknown> | null {
   return value && typeof value === "object" ? (value as Record<string, unknown>) : null;
 }

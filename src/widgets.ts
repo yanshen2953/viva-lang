@@ -12,10 +12,15 @@ import { VivaError } from "./diagnostics.js";
 import {
   ensureBuiltinPlugins,
   getWidget,
+  listCompileHooks,
   listWidgets,
+  registerCompileHook,
   registerWidget,
   resetWidgetPlugins,
+  runCompileHooks,
   setWidgetBuiltinSeed,
+  unregisterCompileHook,
+  unregisterWidget,
 } from "./plugins/registry.js";
 import { domainMap, parseTimeValue, scaleKind, type ScaleKind } from "./space.js";
 import { COLUMN_MM, mmToPx, pageColumnMeasure, parsePage, sceneScaleOf } from "./space/scene-box.js";
@@ -57,8 +62,19 @@ import {
   type PaperChrome,
 } from "./layout/chrome-collide.js";
 
-export type { WidgetExpandContext, WidgetPlugin } from "./plugins/types.js";
-export { getWidget, listWidgets, registerWidget, resetWidgetPlugins };
+export type { CompileHook, WidgetExpandContext, WidgetPlugin } from "./plugins/types.js";
+export {
+  ensureBuiltinPlugins,
+  getWidget,
+  listCompileHooks,
+  listWidgets,
+  registerCompileHook,
+  registerWidget,
+  resetWidgetPlugins,
+  runCompileHooks,
+  unregisterCompileHook,
+  unregisterWidget,
+};
 
 setWidgetBuiltinSeed(() => {
   registerWidget({
@@ -88,6 +104,21 @@ setWidgetBuiltinSeed(() => {
     name: "layout.board",
     expand: (ctx) => expandLayoutBoard(ctx.artifact, ctx.props, ctx.index),
   });
+  registerCompileHook({ name: "world-lift", run: liftFramedWorldLayers });
+  registerCompileHook({ name: "play-lift", after: ["world-lift"], run: liftPlayLayers });
+  registerCompileHook({ name: "folio", after: ["play-lift"], run: paintPageFolio });
+  registerCompileHook({
+    name: "slot-fill",
+    after: ["folio"],
+    run: (artifact) => {
+      fillAuthorSlotNodes(artifact);
+      promotePanelFrames(artifact);
+      fillAuthorSlotNodes(artifact);
+    },
+  });
+  registerCompileHook({ name: "world-bind", after: ["slot-fill"], run: bindFramedWorldInteract });
+  registerCompileHook({ name: "plot-chrome", after: ["world-bind"], run: paintPlotFrameChrome });
+  registerCompileHook({ name: "newspaper", after: ["plot-chrome"], run: reflowNewspaper });
 });
 
 let activePolicies: StylePolicies = {};
@@ -167,15 +198,7 @@ export function expandWidgets(
       index,
     });
   }
-  liftFramedWorldLayers(next);
-  liftPlayLayers(next);
-  paintPageFolio(next);
-  fillAuthorSlotNodes(next);
-  promotePanelFrames(next);
-  fillAuthorSlotNodes(next);
-  bindFramedWorldInteract(next);
-  paintPlotFrameChrome(next);
-  reflowNewspaper(next);
+  runCompileHooks(next);
   return next;
 }
 
@@ -334,8 +357,16 @@ function reflowNewspaper(artifact: Artifact): void {
     gap: reserves.pad,
   });
   const boardSlotted = artifact.frames.some((frame) => /^(left|right)$/.test(frame.name));
+  const figureOwnsBoardSlot = artifact.widgets.some((widget) => {
+    if (widget.name !== "layout.figure") return false;
+    const slot = stringProp(widget.props, ["panel", "frame"]);
+    return slot === "body" || slot === "left" || slot === "right";
+  });
   const composed = composeNewspaper(lines, figures, columns, measure, { lineH });
-  if (!boardSlotted) {
+  // Board-slotted figures already own their span:1 / span:2 cells. Newspaper
+  // may still pour prose around those boxes, but must not snap them to the
+  // full 183 mm text block.
+  if (!boardSlotted && !figureOwnsBoardSlot) {
     for (let i = 0; i < composed.figures.length; i++) {
       const next = composed.figures[i]!;
       const prev = figures[i]!;
@@ -3101,7 +3132,13 @@ function resolveLayoutBox(
   const bound = stringProp(props, ["panel", "frame"]);
   if (bound) {
     const slot = frameBoxOf(artifact, bound);
-    if (slot) return slot;
+    if (slot) {
+      const measure = sceneColumnMeasure(artifact);
+      if (measure && (bound === "body" || bound === "left" || bound === "right")) {
+        return { x: measure.x, y: slot.y, w: measure.w, h: slot.h };
+      }
+      return slot;
+    }
   }
   const extent = sceneExtentOf(artifact);
   const measure = sceneColumnMeasure(artifact);
