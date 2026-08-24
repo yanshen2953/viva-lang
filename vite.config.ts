@@ -7,6 +7,14 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "src"),
+      [path.resolve(__dirname, "src/export/vector-pdf.ts")]: path.resolve(
+        __dirname,
+        "src/export/vector-pdf.browser.ts",
+      ),
+      [path.resolve(__dirname, "src/export/pdf-font.ts")]: path.resolve(
+        __dirname,
+        "src/export/pdf-font.browser.ts",
+      ),
     },
   },
   server: {

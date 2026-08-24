@@ -5,11 +5,8 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 mkdir -p release
 
-echo "==> TypeScript lib"
-npm run build:lib
-
-echo "==> Browser embed bundle"
-npx vite build --config vite.embed.config.ts
+echo "==> Full library + playground + embed"
+npm run build
 
 echo "==> npm pack"
 npm pack --pack-destination release
@@ -55,6 +52,7 @@ curl http://localhost:8765/api/health
 | HTTP REST | `POST /api/compile`, `/api/check`, `/api/export`, `/api/session`, `/api/pipeline/run` |
 | Browser SDK | `import from "viva-lang/embed"` |
 | Node SDK | `import from "viva-lang/agent"` |
+| Node HTTP | `import from "viva-lang/agent/node"` |
 
 Full guide: `DEPLOY.md` (also in repo `docs/DEPLOY.md`).
 EOF

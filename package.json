@@ -18,6 +18,10 @@
       "types": "./dist/agent/index.d.ts",
       "import": "./dist/agent/index.js"
     },
+    "./agent/node": {
+      "types": "./dist/agent/node.d.ts",
+      "import": "./dist/agent/node.js"
+    },
     "./embed": {
       "types": "./dist/embed/web.d.ts",
       "import": "./dist/embed/web.js"

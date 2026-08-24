@@ -13,6 +13,7 @@ RUN npm ci --omit=dev
 COPY dist ./dist
 COPY docs ./docs
 COPY examples ./examples
+COPY assets ./assets
 COPY viva.models.json.example ./viva.models.json.example
 
 ENV NODE_ENV=production

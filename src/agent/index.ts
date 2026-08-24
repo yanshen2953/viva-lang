@@ -34,8 +34,6 @@ export {
   type DomainViewRegistry,
 } from "./domain/registry.js";
 export { createEventBus } from "./events.js";
-export { startAgentHttpServer, createAgentHttpServer } from "./http-server.js";
-export type { AgentHttpHandle, AgentHttpOptions } from "./http-server.js";
 export { resolveSessionHandbooks, shouldApplyHandbookHook } from "./handbook.js";
 export type * from "./types.js";
 export {

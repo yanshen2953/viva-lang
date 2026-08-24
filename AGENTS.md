@@ -31,7 +31,7 @@ Dependency refresh on pod start is `npm install` (see environment update script)
 | Agent HTTP bridge | `npx vite-node src/cli.ts -- serve --port 8765` |
 | Exam UI scene runner | `npm run dev` then `node scripts/exam-layers-ui.mjs` |
 
-`npm run build` currently fails because the playground browser graph pulls Node/native resvg/sharp through the agent barrel; the separate embed Vite build also pulls Node `pdf-font` through session. `build:lib` + Vitest are the day-to-day floor, not proof that playground/embed ship.
+`npm run build` must produce `dist/` (tsc), `dist/playground/`, and `dist/embed/viva-embed.js` + IIFE. Playground imports the browser-safe `src/agent` barrel (no HTTP/sharp). Embed aliases vector PDF to a browser stub. Docker copies `assets/` so CJK fonts ship in the image.
 
 ### Two test tracks
 

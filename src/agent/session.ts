@@ -15,7 +15,6 @@ import {
   type ReviewSnapshot,
 } from "../review/index.js";
 import { renderSvgFromIr } from "../export/static-svg.js";
-import { renderVectorPdfFromIr } from "../export/vector-pdf.js";
 import {
   resolveSessionHandbooks,
 } from "./handbook.js";
@@ -336,7 +335,12 @@ export function createSession(
         (ir ? renderSvgFromIr(ir) : "");
       let pdf: Uint8Array | undefined;
       if (opts.pdf !== false && ir) {
-        pdf = await renderVectorPdfFromIr(ir);
+        try {
+          const { renderVectorPdfFromIr } = await import("../export/vector-pdf.js");
+          pdf = await renderVectorPdfFromIr(ir);
+        } catch {
+          pdf = undefined;
+        }
       }
       const reviewSnap = review?.snapshot();
       provenance.append({

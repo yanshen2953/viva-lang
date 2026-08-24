@@ -16,7 +16,7 @@ jobs:
           node-version: "20"
           cache: npm
       - run: npm ci
-      - run: npm run build:lib
+      - run: npm run build
       - name: Install ffmpeg
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
       - run: npm test
