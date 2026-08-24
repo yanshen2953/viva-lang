@@ -21,17 +21,17 @@ Dependency refresh on pod start is `npm install` (see environment update script)
 | Multimodal check | `npx vite-node src/cli.ts -- check file.viva --vision` (see `viva.models.json.example`) |
 | Model slots | `npx vite-node src/cli.ts -- models` |
 | Prune artifact screenshots | `node scripts/cleanup-artifacts.mjs` |
-| **One-click deploy** | `docker compose up -d --build` or `bash install/one-click.sh` |
+| Deploy smoke (not release-gated) | `docker compose up -d --build` or `bash install/one-click.sh`; current Dockerfile omits `assets`, so audit CJK/export before claiming release-ready |
 | Agent HTTP API | `viva serve --host 0.0.0.0 --port 8765` — see `docs/DEPLOY.md` |
 | MCP (Cursor) | `viva mcp` or `viva-mcp` — tools include `viva_session` / `viva_pipeline`; see `docs/hosts/mcp.md` |
 | Provenance CLI | `npx vite-node src/cli.ts -- provenance examples/hello.viva` |
-| Gap checklist | `docs/GAPS.md` — PLAN §1 victory conditions |
+| Arrival audit | `docs/ARRIVAL_AUDIT.md` — evidence, blockers, work packages, exit criteria |
 | **Handoff doc** | `docs/HANDOFF.md` — context for new Cloud Agents |
 | Review brief demo | `npm run demo:review` |
 | Agent HTTP bridge | `npx vite-node src/cli.ts -- serve --port 8765` |
 | Exam UI scene runner | `npm run dev` then `node scripts/exam-layers-ui.mjs` |
 
-`npm run build` may still fail on unrelated `tsc` strictness in playground/runtime; prefer `vite-node` + `vitest` for day-to-day.
+`npm run build` currently fails because the playground browser graph pulls Node/native resvg/sharp through the agent barrel; the separate embed Vite build also pulls Node `pdf-font` through session. `build:lib` + Vitest are the day-to-day floor, not proof that playground/embed ship.
 
 ### Two test tracks
 

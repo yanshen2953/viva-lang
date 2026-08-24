@@ -82,7 +82,7 @@
 
 | 门 | 地板（CI 锁住） | 到站？ |
 | --- | --- | --- |
-| 眼睛 | 89 / 183 mm 的 SVG 与矢量 PDF 同宽；paper-cjk 缺字表空 | **否**。Atlas 仍是 1360 px 工作室。间距像印的没有度量。没有屏幕和 PDF 并排视觉 |
+| 眼睛 | 89 / 183 mm 的 SVG 与矢量 PDF 同宽；paper-cjk 测宽不抛错 | **否**。`missingGlyphs=[]` 不能证明 CJK glyph 存在；Atlas 仍是 1360 px；没有屏幕 / PDF 并排视觉 |
 | 手 | 四件默认可刷；翻拍后 `__sel` 还在；暗拍遮罩不抢指针 | **否**。是 `simulate`，不是 Runtime 指针连打四件；分页只有静态 folio / PDF 切片，没有 Runtime 跳页 |
 | 导出 | painted `data-viva-id` 对 flatten；beat PNG 取 hold 中点；gif/mp4 跟完整 Clock playback | **否**。PDF 仍丢 rotate / gradient / dash / letterSpacing / 复杂 path；隐藏节点 ID 契约未定 |
 | agent | MCP 编译 + slim prompt + 确定性 repair | **否**。没有短意图 LLM → 卡上可玩 |
@@ -91,8 +91,10 @@ world-hand 那一轮只跑了几何单测，**没有**过这四道门。
 
 ## 下一刀（质量，不再铺接口）
 
-1. 栏宽 compose 的视觉密度（标题/图/文的投稿级间距）——不要再修图核 inset
-2. 剪辑轨仍必须是插件属性；不要加关键字
-3. 不要宣称 Nature 级或已超过 Claude Science
+1. 统一真实字体度量；当前假字宽使 `iiiiiiii` 高估 161%、`WWWWWWWW` 低估 39%
+2. 补 vector PDF rotate / gradient / dash / path fill / page clip，并做 SVG↔PDF 每页视觉差
+3. 修 mm World 手单位、brush-on-mark、完整 browser / embed build
+4. 定义 board beats × figure × page 的 slot ownership，再做一份规范到站件
+5. 不要加关键字；不要宣称 Nature 级或已超过 Claude Science
 
-对照真源：`docs/VISION.md`。
+完整工作包与退出条件：[`ARRIVAL_AUDIT.md`](./ARRIVAL_AUDIT.md)。

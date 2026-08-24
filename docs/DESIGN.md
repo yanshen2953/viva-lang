@@ -196,7 +196,7 @@ layer marks
 ### 7.1 机制
 
 ```
-core system prompt     # 永远加载，短
+core system prompt     # 目标应短；当前 slim 7,872 字符，仍需收缩
 + handbook id...       # 本轮可选，通常 0 或 1
 + user message
 → Viva source only
@@ -238,14 +238,14 @@ compile({ handbookIds })   # 同一 id 加载 preset hook（见 handbooks/HOOK.m
 | playground examples | ✅ | `examples/*` `atelier` `arena` `param-lab` |
 | frame / scale (linear) | ✅ | `space.ts` |
 | chart.* widgets | ✅ | `widgets.ts` + `plugins/registry.ts` |
-| widget 动态注册 | ✅ | `registerWidget()`；未知名编译失败 |
+| widget 动态注册 | ⚠️ | `registerWidget()` 对简单展开真实；layout/chart 仍依赖 `expandWidgets()` 固定顺序与不可注册 post-pass |
 | layout.figure | ✅ | 网格 frame + `(a)(b)` + 题注；图表 `panel:`；可铺满场景或 board 槽 |
 | layout.board | ✅ | safe/title/body/lower + 题注属性；省略条带数字时按题注/芯片估；beat PNG 与 gif/mp4 共用 Runtime Clock（后者采完整 playback），仍不是桌面 NLE |
 | safe math + array concat | ✅ | `eval.ts` |
 | headless simulate | ✅ | `simulate.ts` / `session.simulate` |
 | export package (source+svg+prov) | ✅ | `session.exportPackage` |
 | PDF/JPG/PNG 导出 | ✅ | `src/export` + `viva export` |
-| PDF/mm 单位规范排版 | ❌ | 规划 |
+| PDF/mm 单位规范排版 | ⚠️ | 尺寸 / 分页骨架在；真实字宽、PDF rotate/gradient/path/page clip 未齐 |
 | `handbook 运行时装载 API` | ✅ | `PromptService` + `docs/handbooks` |
 | **handbook 编译期 preset hook** | ✅ | `src/style/` + `compile({ handbookIds })` |
 | Host Session / provenance MVP | ✅ | `src/agent/` |

@@ -17,7 +17,7 @@ A green `npm test` is the measurable **floor**, not print / film / live-agent ar
 
 | Door | Floor this file locks | Still not arrival |
 | --- | --- | --- |
-| Eyes | paper-column 89 mm + paper-cjk 89 mm + paper-storyboard 183 mm; SVG viewBox and vector PDF page the same size; CJK PDF `missingGlyphs` empty | Atlas is still 1360 px; “spacing like print” is unmeasured; no screen/PDF pair visual |
+| Eyes | paper-column 89 mm + paper-cjk 89 mm + paper-storyboard 183 mm; SVG viewBox and vector PDF page the same size; CJK width probe does not throw | `missingGlyphs=[]` is not real glyph coverage; Atlas is still 1360 px; no screen/PDF pair visual |
 | Hand | those sources stay live; paper-cjk brush `__sel`; storyboard beat jump keeps `__sel`; play veils ignore pointer | Headless `simulate`, not one Runtime pointer session; paged examples have static folio/export slices but **no Runtime page jump** |
 | Export | painted `data-viva-id` = flatten = Runtime id scheme; beat PNGs sample Clock holds; gif/mp4 sample full Clock playback at timeline fps | vector PDF still drops rotate/gradient/dash/letterSpacing/complex paths; hidden-node ID contract is unresolved |
 | Agent | MCP `viva_compile` + default slim prompt (not LANGUAGE.md); deterministic `repairSource` | No short-intent LLM → playable card |
@@ -73,4 +73,4 @@ Details: [`tests/agent-exam/README.md`](../tests/agent-exam/README.md).
 
 - Do not use Pi to invent corpus fixtures as a substitute for deterministic tests.
 - Do not commit `.env` / API keys.
-- Pixel goldens optional later; structure + compile first.
+- Structure + compile remain the fast floor. Arrival additionally requires role-aware SVG↔PDF raster parity; page-size-only checks are insufficient.

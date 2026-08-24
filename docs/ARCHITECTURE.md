@@ -35,7 +35,7 @@ Host 文档：`docs/hosts/`（含 [`review.md`](./hosts/review.md)）。
 - 图层：每层 `<g>`，声明序 = z-order
 - 视觉：`src/paint.ts`（gradient / glow / shadow / type / transform）
 
-Widget（如 `timeline`）是编译期宏，不是语言核。
+Widget（如 `timeline`）是编译期宏，不是语言关键字。`registerWidget()` 对简单展开有效；layout/chart built-in 仍依赖 `expandWidgets()` 的固定顺序和 folio/reflow/world-bind/chrome post-pass，尚不是第三方可等价替换的插件生命周期。
 
 ## LLM
 
