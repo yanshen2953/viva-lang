@@ -491,27 +491,41 @@ function liftFramedWorldLayers(artifact: Artifact): void {
   const layers = artifact.scene?.layers;
   if (!layers?.length) return;
   const world: LayerDecl[] = [];
+  const play: LayerDecl[] = [];
   const rest: LayerDecl[] = [];
   for (const layer of layers) {
-    if (layerHasFramedWorld(layer)) world.push(layer);
+    if (/_play$/.test(layer.name)) play.push(layer);
+    else if (layerHasFramedWorld(layer) || layerHasWorldHand(layer)) world.push(layer);
     else rest.push(layer);
   }
   if (!world.length) return;
-  let insertAt = -1;
-  for (let i = 0; i < rest.length; i++) {
-    const name = rest[i]!.name;
-    if (name.startsWith("__") && (name.includes("_decks") || name.includes("_plate"))) {
-      insertAt = i;
-    }
-  }
-  if (insertAt < 0) return;
-  rest.splice(insertAt + 1, 0, ...world);
-  artifact.scene!.layers = rest;
+  // Author World (framed marks or drag/solid tokens) paints above chrome
+  // so a later figure plate cannot bury the hand. Play veils stay last and
+  // still ignore pointer.
+  artifact.scene!.layers = [...rest, ...world, ...play];
 }
 
 function layerHasFramedWorld(layer: LayerDecl): boolean {
   if (layer.name.startsWith("__")) return false;
   return sceneItemsAreFramedWorld(layer.items);
+}
+
+function layerHasWorldHand(layer: LayerDecl): boolean {
+  if (layer.name.startsWith("__")) return false;
+  return sceneItemsAreWorldHand(layer.items);
+}
+
+function sceneItemsAreWorldHand(items: SceneItem[]): boolean {
+  for (const item of items) {
+    if (item.kind === "for" || item.kind === "if") {
+      if (sceneItemsAreWorldHand(item.body)) return true;
+      continue;
+    }
+    if (item.kind !== "node") continue;
+    if (boolProp(item.props, "drag", false) || boolProp(item.props, "draggable", false)) return true;
+    if (boolProp(item.props, "solid", false) || boolProp(item.props, "collide", false)) return true;
+  }
+  return false;
 }
 
 function sceneItemsAreFramedWorld(items: SceneItem[]): boolean {

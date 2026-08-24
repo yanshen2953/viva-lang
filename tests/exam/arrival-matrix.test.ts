@@ -88,6 +88,8 @@ describe("arrival 1 — print-nature compile", () => {
     const play = ir.scene.layers.find((l) => l.name === "__board_play");
     expect(play?.items.length).toBe(1);
     expect(ir.events.some((e) => e.type === "drag" && e.target === "tokens")).toBe(true);
+    const names = ir.scene.layers.map((l) => l.name);
+    expect(names.indexOf("world")).toBeGreaterThan(names.indexOf("__fig_plate"));
     expect(renderSvgFromIr(ir)).toMatch(/时间|心率|到站/);
   });
 });

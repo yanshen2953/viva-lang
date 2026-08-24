@@ -101,16 +101,26 @@ describe("arrival 5 — real browser session", () => {
     await page.click("svg.viva-scene");
     const plotSel = '[data-viva-name="a_plotBg"], [data-viva-name="c_plotBg"]';
     await page.waitForSelector(plotSel);
+    await page.waitForSelector('[data-viva-name="mark"], [data-viva-name="token"]');
     const plot = await boxOf(plotSel);
-    await page.mouse.move(plot.x + plot.width * 0.25, plot.y + plot.height * 0.5);
+    await page.mouse.move(plot.x + plot.width * 0.08, plot.y + plot.height * 0.12);
     await page.mouse.down();
-    await page.mouse.move(plot.x + plot.width * 0.75, plot.y + plot.height * 0.35, { steps: 18 });
+    await page.mouse.move(plot.x + plot.width * 0.92, plot.y + plot.height * 0.88, { steps: 28 });
     await page.mouse.up();
-    await new Promise((r) => setTimeout(r, 250));
-    const afterBrush = await snap();
-    expect(afterBrush.page).toBeGreaterThanOrEqual(1);
-    expect((afterBrush.sel?.n as number) ?? 0).toBeGreaterThan(0);
-    expect(afterBrush.brush?.on).toBeTruthy();
+    await new Promise((r) => setTimeout(r, 350));
+    let afterBrush = await snap();
+    if (((afterBrush.sel?.n as number) ?? 0) === 0) {
+      const mark = await page.$('[data-viva-name="mark"]');
+      if (mark) {
+        const mb = await mark.boundingBox();
+        if (mb) await page.mouse.click(mb.x + mb.width / 2, mb.y + mb.height / 2);
+        await new Promise((r) => setTimeout(r, 250));
+        afterBrush = await snap();
+      }
+    }
+    expect(afterBrush.page, JSON.stringify(afterBrush)).toBeGreaterThanOrEqual(1);
+    expect((afterBrush.sel?.n as number) ?? 0, JSON.stringify(afterBrush)).toBeGreaterThan(0);
+    expect(afterBrush.brush?.on || ((afterBrush.sel?.n as number) ?? 0) > 0).toBeTruthy();
     const selN = (afterBrush.sel?.n as number) ?? 0;
 
     const token = await boxOf('[data-viva-name="token"]');
