@@ -55,6 +55,8 @@ export type ExportResult = {
   svg: string;
   /** True when PDF used vector primitives (not PNG embed). */
   vector?: boolean;
+  /** Characters the PDF font could not cover (substituted as `?`). */
+  missingGlyphs?: string[];
 };
 
 export function exportSvgFromSource(
@@ -98,11 +100,20 @@ export async function exportArtifact(
   if (fmt === "pdf" || fmt === "pdf-raster") {
     const mode = fmt === "pdf-raster" ? "raster" : (opts.pdfMode ?? "vector");
     if (mode === "vector") {
+      const missingGlyphs: string[] = [];
       const bytes = await renderVectorPdfFromIr(result.ir, {
         ...(opts.scale !== undefined ? { scale: opts.scale } : {}),
         cjkFontPath: opts.cjkFontPath,
+        missingGlyphs,
       });
-      return { format: "pdf", bytes, mime: "application/pdf", svg, vector: true };
+      return {
+        format: "pdf",
+        bytes,
+        mime: "application/pdf",
+        svg,
+        vector: true,
+        ...(missingGlyphs.length ? { missingGlyphs } : {}),
+      };
     }
     const raster = await rasterize(svg, { ...opts, background: opts.background ?? sceneBg });
     const pdf = await PDFDocument.create();

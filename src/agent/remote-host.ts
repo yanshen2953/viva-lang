@@ -1,5 +1,6 @@
 import { createVivaAgentHost, type VivaAgentHost } from "./host.js";
 import { createInlinePipeline } from "./pipeline/port.js";
+import { registerDragParamPipeline } from "./pipeline/drag-param.js";
 
 const INLINE_SET_ID = "inline.set";
 
@@ -9,6 +10,7 @@ let singleton: VivaAgentHost | undefined;
 export function attachBuiltinPipelines(host: VivaAgentHost): void {
   const existing = new Set(host.pipeline.list().map((d) => d.id));
   if (existing.has(INLINE_SET_ID)) return;
+  registerDragParamPipeline(host);
   host.pipeline.register(
     createInlinePipeline(
       INLINE_SET_ID,

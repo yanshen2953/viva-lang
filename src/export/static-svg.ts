@@ -13,6 +13,7 @@ import {
 import { evalSceneProps, resolveSceneBox, scaleSceneGeom, sceneScaleOf } from "../space/scene-box.js";
 import { cssId, gradientSpec } from "../paint.js";
 import { applyTimelineState, timelineFromState } from "../timeline/clock.js";
+import { isSummaryMark, pickGeom, sampleGeomEase, samplePathEase, MARK_EASE_MS } from "../runtime/mark-ease.js";
 
 export type FlatNode = {
   id: string;
@@ -137,7 +138,8 @@ function flattenItems(
         sceneScale,
       );
       const framed = applyFrameToProps(raw, scales);
-      const props = layoutChartGeom(framed, scales);
+      const laid = layoutChartGeom(framed, scales);
+      const props = applyExportEase(item.name, laid, scopes[0] as Record<string, unknown>);
       out.push({
         id: `${prefix}:${item.id}`,
         name: item.name,
@@ -260,6 +262,31 @@ function inferTag(props: Record<string, unknown>): string {
   if (props.w !== undefined || props.width !== undefined || props.h !== undefined || props.height !== undefined)
     return "rect";
   return "circle";
+}
+
+function applyExportEase(
+  name: string,
+  props: Record<string, unknown>,
+  state: Record<string, unknown>,
+): Record<string, unknown> {
+  const u = Number(state.__easeU);
+  if (!Number.isFinite(u) || u >= 1 || !isSummaryMark(props)) return props;
+  const fromAll = state.__easeFrom;
+  if (!fromAll || typeof fromAll !== "object") return props;
+  const from = (fromAll as Record<string, Record<string, number>>)[name];
+  if (!from) return props;
+  const target = pickGeom(props);
+  const { values } = sampleGeomEase(from, target, u * MARK_EASE_MS, { t0: 0, from, to: target }, MARK_EASE_MS);
+  const next = { ...props, ...values };
+  const fromD = typeof (fromAll as Record<string, { d?: string }>)[name]?.d === "string"
+    ? (fromAll as Record<string, { d?: string }>)[name]!.d
+    : undefined;
+  const targetD = typeof props.d === "string" ? props.d : "";
+  if (fromD && targetD) {
+    const eased = samplePathEase(fromD, targetD, u * MARK_EASE_MS, { t0: 0, from: fromD, to: targetD }, MARK_EASE_MS);
+    next.d = eased.value;
+  }
+  return next;
 }
 
 function evalProps(exprs: Record<string, Expr>, scopes: Scope[]): Record<string, unknown> {

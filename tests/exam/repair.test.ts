@@ -24,6 +24,23 @@ describe("deterministic repair", () => {
     expect(next.source).not.toMatch(/insetL:/);
   });
 
+  it("binds declared data and axis labels for empty / axis notes", () => {
+    const empty = `artifact Empty
+data series = [{ x: 1, y: 2 }]
+scene
+  size: 240 160
+widget chart.line
+  xField: x
+  yField: y
+`;
+    const bound = repairSource(empty, [{ code: "check.visual.emptyPanel", message: "empty panel" }]);
+    expect(bound.changed).toBe(true);
+    expect(bound.source).toMatch(/data: series/);
+    const axis = repairSource(empty, [{ code: "check.struct.axis", message: "axis ticks" }]);
+    expect(axis.source).toMatch(/xLabel: x/);
+    expect(axis.source).toMatch(/yLabel: y/);
+  });
+
   it("session compile applies the patch and keeps IR success", () => {
     const host = createVivaAgentHost();
     const session = host.createSession({ mount: null });

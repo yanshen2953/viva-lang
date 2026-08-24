@@ -4,6 +4,7 @@ import type { LayerIR, SceneNodeIR, VisualIR } from "./ir.js";
 import { applyHandbookHook } from "./style/hook.js";
 import { resolveStylePresets } from "./style/registry.js";
 import type { HandbookHookOptions } from "./style/types.js";
+import { grammarFromTypography } from "./layout/chrome-collide.js";
 import { timelineFromState } from "./timeline/clock.js";
 import { expandWidgets } from "./widgets.js";
 
@@ -21,7 +22,10 @@ export function compile(artifact: Artifact, options?: CompileOptions): VisualIR 
   const handbookIds = options?.handbookIds ?? [];
   const preset =
     options?.preset ?? (handbookIds.length ? resolveStylePresets(handbookIds) : null);
-  const expanded = expandWidgets(artifact, { policies: preset?.policies });
+  const expanded = expandWidgets(artifact, {
+    policies: preset?.policies,
+    grammar: grammarFromTypography(preset?.typography, preset?.roles),
+  });
   const hooked = applyHandbookHook(expanded, options ?? {});
   const expandedStyled = hooked.artifact;
   const state: Record<string, unknown> = {};

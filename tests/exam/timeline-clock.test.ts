@@ -7,6 +7,7 @@ import {
   holdFrameTimes,
   playbackFrameTimes,
   sampleBeatAt,
+  startOfBeat,
   veilOpacity,
 } from "../../src/timeline/clock.js";
 import { renderSvgFromIr } from "../../src/export/static-svg.js";
@@ -56,5 +57,14 @@ describe("beat clock", () => {
     expect(svg).toMatch(/opacity="0\./);
     expect(holdFrameTimes(ir.timeline!).length).toBe(4);
     expect(playbackFrameTimes(ir.timeline!).length).toBeGreaterThan(4);
+  });
+
+  it("honors per-beat holds without a new keyword", () => {
+    const uneven = { beats: 3, holdSec: 1, easeSec: 0.2, fps: 10, holds: [1.2, 0.4, 2] };
+    expect(startOfBeat(uneven, 1)).toBeCloseTo(1.4);
+    expect(sampleBeatAt(uneven, 1.5).beat).toBe(1);
+    expect(sampleBeatAt(uneven, 1.5).phase).toBe("hold");
+    expect(holdFrameTimes(uneven)[1]).toBeCloseTo(1.4 + 0.2);
+    expect(sampleBeatAt(uneven, 2.0).beat).toBe(2);
   });
 });

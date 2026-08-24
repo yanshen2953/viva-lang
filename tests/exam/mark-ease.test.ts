@@ -16,6 +16,8 @@ import {
 import { nodeIgnoresPointer } from "../../src/runtime/pointer.js";
 import { gaussianKDE, violinPathD } from "../../src/layout/violin-density.js";
 import { exportArtifact } from "../../src/export/index.js";
+import { flattenNodesFromIr } from "../../src/export/static-svg.js";
+import { applyViewState, guardView } from "../../src/runtime/view-machine.js";
 
 describe("runtime mark ease and paper raster background", () => {
   it("keeps hidden marks painted at opacity 0 so they can fade", () => {
@@ -67,6 +69,44 @@ describe("runtime mark ease and paper raster background", () => {
     expect(done.running).toBeUndefined();
     expect(done.value).toBe(to);
     expect(lerpPathD("M 0 0 L 10 0", "M 0 0 C 1 1 2 2 3 3", 0.5)).toBeNull();
+  });
+
+  it("static flatten samples __easeU the same way Runtime does", () => {
+    const src = `artifact Ease
+data rows = [{ x: 0, y: 1 }, { x: 1, y: 2 }]
+scene
+  size: 240 160
+widget chart.bar
+  data: rows
+  xField: x
+  yField: y
+`;
+    const result = compileSource(src, "ease.viva");
+    expect(result.error).toBeNull();
+    const ir = structuredClone(result.ir!);
+    const end = flattenNodesFromIr(ir).nodes.filter((n) => n.props.__chartBar);
+    expect(end.length).toBeGreaterThan(0);
+    const first = end[0]!;
+    const from = { ...pickGeom(first.props), w: Number(first.props.w ?? 8) * 0.2 };
+    ir.state.__easeU = 0.5;
+    ir.state.__easeFrom = { [first.name]: from };
+    const mid = flattenNodesFromIr(ir).nodes.find((n) => n.name === first.name);
+    expect(Number(mid?.props.w)).toBeGreaterThan(from.w);
+    expect(Number(mid?.props.w)).toBeLessThan(Number(first.props.w));
+  });
+
+  it("view machine guards brush → selected → linked", () => {
+    expect(guardView("idle", "brush")).toBe("brushing");
+    expect(guardView("brushing", "release")).toBe("selected");
+    expect(guardView("selected", "link")).toBe("linked");
+    const state: Record<string, unknown> = {
+      __brush: { on: false, frame: "a" },
+      __sel: { n: 2, page: 1 },
+    };
+    const snap = applyViewState(state);
+    expect(snap.phase).toBe("linked");
+    expect(snap.page).toBe(1);
+    expect(state.__page).toBe(1);
   });
 
   it("writes style.opacity so play veils and hidden marks can CSS-ease", () => {

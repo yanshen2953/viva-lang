@@ -94,3 +94,16 @@ export function pdfSafeText(font: PDFFont, text: string): string {
     return text.replace(/[^\u0000-\u00FF]/g, "?");
   }
 }
+
+/** Characters the embedded font cannot measure. Used for export warnings. */
+export function pdfMissingGlyphs(font: PDFFont, text: string): string[] {
+  const missing: string[] = [];
+  for (const ch of text) {
+    try {
+      font.widthOfTextAtSize(ch, 10);
+    } catch {
+      missing.push(ch);
+    }
+  }
+  return missing;
+}

@@ -5,6 +5,8 @@ export type TimelineSpec = {
   holdSec: number;
   easeSec: number;
   fps: number;
+  /** Per-beat hold seconds. Plugin property, not a keyword. */
+  holds?: number[];
 };
 
 export type BeatSample = {
@@ -25,11 +27,29 @@ export function normalizeTimeline(
   const fps = Math.max(1, numberish(raw, "fps", 12));
   const easeSec = clamp(numberish(raw, "easeSec", numberish(raw, "ease", 0.22)), 0, 8);
   const holdSec = Math.max(0.05, numberish(raw, "holdSec", numberish(raw, "hold", 1.2)));
-  return { beats: n, holdSec, easeSec, fps };
+  const holds = numberList(raw, "holds").map((h) => Math.max(0.05, h));
+  return { beats: n, holdSec, easeSec, fps, ...(holds.length ? { holds } : {}) };
+}
+
+export function holdOf(spec: TimelineSpec, beat: number): number {
+  const i = ((beat % spec.beats) + spec.beats) % spec.beats;
+  const named = spec.holds?.[i];
+  return named != null && named > 0 ? named : spec.holdSec;
+}
+
+export function periodOf(spec: TimelineSpec, beat: number): number {
+  return holdOf(spec, beat) + spec.easeSec;
+}
+
+export function startOfBeat(spec: TimelineSpec, beat: number): number {
+  let t = 0;
+  const n = Math.max(0, Math.floor(beat));
+  for (let i = 0; i < n; i++) t += periodOf(spec, i);
+  return t;
 }
 
 export function cycleSecOf(spec: TimelineSpec): number {
-  return Math.max(0.05, spec.beats * (spec.holdSec + spec.easeSec));
+  return Math.max(0.05, startOfBeat(spec, spec.beats));
 }
 
 export function easeInOutCubic(t: number): number {
@@ -38,24 +58,35 @@ export function easeInOutCubic(t: number): number {
 }
 
 export function sampleBeatAt(spec: TimelineSpec, t: number): BeatSample {
-  const period = spec.holdSec + spec.easeSec;
-  const cycle = Math.max(period, spec.beats * period);
+  const cycle = cycleSecOf(spec);
   const u = ((t % cycle) + cycle) % cycle;
-  const beat = Math.min(spec.beats - 1, Math.floor(u / period));
-  const localT = u - beat * period;
+  let acc = 0;
+  let beat = spec.beats - 1;
+  let localT = 0;
+  let hold = spec.holdSec;
+  for (let i = 0; i < spec.beats; i++) {
+    const period = periodOf(spec, i);
+    if (u < acc + period - 1e-12 || i === spec.beats - 1) {
+      beat = i;
+      localT = u - acc;
+      hold = holdOf(spec, i);
+      break;
+    }
+    acc += period;
+  }
   const next = (beat + 1) % spec.beats;
-  if (localT < spec.holdSec || spec.easeSec <= 1e-9) {
+  if (localT < hold || spec.easeSec <= 1e-9) {
     return {
       t: u,
       beat,
       next,
       phase: "hold",
-      local: spec.holdSec <= 1e-9 ? 1 : localT / spec.holdSec,
+      local: hold <= 1e-9 ? 1 : localT / hold,
       ease: 0,
       cycleSec: cycle,
     };
   }
-  const local = (localT - spec.holdSec) / spec.easeSec;
+  const local = (localT - hold) / spec.easeSec;
   return {
     t: u,
     beat,
@@ -90,8 +121,7 @@ export function applyTimelineState(
 }
 
 export function holdFrameTimes(spec: TimelineSpec): number[] {
-  const period = spec.holdSec + spec.easeSec;
-  return Array.from({ length: spec.beats }, (_, i) => i * period + spec.holdSec * 0.5);
+  return Array.from({ length: spec.beats }, (_, i) => startOfBeat(spec, i) + holdOf(spec, i) * 0.5);
 }
 
 export function playbackFrameTimes(spec: TimelineSpec): number[] {
@@ -122,6 +152,16 @@ function numberish(
   const v = (raw as Record<string, unknown>)[key];
   const n = typeof v === "number" ? v : Number(v);
   return Number.isFinite(n) ? n : fallback;
+}
+
+function numberList(
+  raw: Partial<TimelineSpec> | Record<string, unknown> | undefined,
+  key: string,
+): number[] {
+  if (!raw || typeof raw !== "object") return [];
+  const v = (raw as Record<string, unknown>)[key];
+  if (!Array.isArray(v)) return [];
+  return v.map((n) => Number(n)).filter((n) => Number.isFinite(n));
 }
 
 function clamp(n: number, lo: number, hi: number): number {

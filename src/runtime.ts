@@ -38,7 +38,7 @@ import {
   type PathTween,
 } from "./runtime/mark-ease.js";
 import { nodeIgnoresPointer } from "./runtime/pointer.js";
-import { applyTimelineState } from "./timeline/clock.js";
+import { applyTimelineState, holdOf, startOfBeat } from "./timeline/clock.js";
 import { applyViewState } from "./runtime/view-machine.js";
 
 export { nodeIgnoresPointer };
@@ -696,12 +696,11 @@ export class Runtime {
     this.keyHandler = (event: KeyboardEvent) => {
       if (this.ir.timeline && (event.key === "n" || event.key === "N" || event.key === "ArrowRight" || event.key === "ArrowLeft")) {
         const spec = this.ir.timeline;
-        const period = spec.holdSec + spec.easeSec;
         const cur = Number(this.state.__t ?? 0);
         const sample = applyTimelineState(this.state, spec, cur);
         const dir = event.key === "N" || event.key === "ArrowLeft" ? -1 : 1;
         const nextBeat = (sample.beat + dir + spec.beats) % spec.beats;
-        applyTimelineState(this.state, spec, nextBeat * period + spec.holdSec * 0.05);
+        applyTimelineState(this.state, spec, startOfBeat(spec, nextBeat) + holdOf(spec, nextBeat) * 0.05);
         event.preventDefault();
         this.applyBinds();
         this.applyRules();

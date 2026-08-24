@@ -1,12 +1,12 @@
 /** Measure board safe/title/lower/hud from copy. Not a typesetter. */
 
-import { estimateTextWidthPx, wrapTextLines } from "./chrome-collide.js";
+import { estimateTextWidthPx, getChromeGrammar, wrapTextLines } from "./chrome-collide.js";
 
-const TITLE_FONT = 12;
+const TITLE_FONT = () => getChromeGrammar().titleFont;
 const SUB_FONT = 10;
 const CAP_FONT = 8;
 const CHIP_FONT = 10;
-const TITLE_LINE = TITLE_FONT + 4;
+const TITLE_LINE = () => TITLE_FONT() + 4;
 const SUB_LINE = SUB_FONT + 4;
 const CAP_LINE = CAP_FONT + 4;
 const CHIP_H = 24;
@@ -52,7 +52,7 @@ export function estimateBoardBands(opts: {
 }): BoardBands {
   const safe = opts.safe ?? estimateSafeMargin(opts.width, opts.height);
   const copyW = Math.max(40, opts.width - safe * 2);
-  const titleLines = opts.title ? wrapTextLines(opts.title, copyW, TITLE_FONT, 0.35, 3) : [];
+  const titleLines = opts.title ? wrapTextLines(opts.title, copyW, TITLE_FONT(), 0.35, 3) : [];
   const subtitleLines = opts.subtitle
     ? wrapTextLines(opts.subtitle, copyW, SUB_FONT, 0.2, 2)
     : [];
@@ -74,7 +74,7 @@ export function estimateBoardBands(opts: {
   let titleH = opts.titleH;
   if (titleH === undefined) {
     if (titleLines.length || subtitleLines.length) {
-      titleH = PAD + titleLines.length * TITLE_LINE + subtitleLines.length * SUB_LINE + 4;
+      titleH = PAD + titleLines.length * TITLE_LINE() + subtitleLines.length * SUB_LINE + 4;
     } else if (opts.hasTitle) {
       titleH = opts.hasSubtitle ? 56 : 40;
     } else {

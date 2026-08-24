@@ -116,8 +116,8 @@ export function createSession(
   };
 
   const notifyWatchers = () => {
-    if (!runtime) return;
-    const world = runtime.getWorld();
+    const world = runtime?.getWorld() ?? (ir ? { state: ir.state, data: ir.data } : null);
+    if (!world) return;
     for (const [path, cbs] of watchers) {
       const value = readPath(world, path);
       for (const cb of cbs) cb(value);

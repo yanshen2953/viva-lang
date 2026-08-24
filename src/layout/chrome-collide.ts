@@ -61,14 +61,68 @@ export type ChromeExtras = {
   zCaption?: string | null;
 };
 
-const TICK_FONT = 8;
-const AXIS_FONT = 9;
-const TITLE_FONT = 12;
-const PANEL_FONT = 11;
+export type ChromeGrammar = {
+  titleFont: number;
+  axisFont: number;
+  tickFont: number;
+  panelFont: number;
+  legendFont: number;
+};
+
+const DEFAULT_CHROME_GRAMMAR: ChromeGrammar = {
+  titleFont: 12,
+  axisFont: 9,
+  tickFont: 8,
+  panelFont: 11,
+  legendFont: 8,
+};
+
+let chromeGrammar: ChromeGrammar = { ...DEFAULT_CHROME_GRAMMAR };
+
+/** Handbook typography drives wrap / measure. Not a language keyword. */
+export function setChromeGrammar(next?: Partial<ChromeGrammar> | null): ChromeGrammar {
+  chromeGrammar = { ...DEFAULT_CHROME_GRAMMAR, ...(next ?? {}) };
+  return chromeGrammar;
+}
+
+export function getChromeGrammar(): ChromeGrammar {
+  return { ...chromeGrammar };
+}
+
+export function grammarFromTypography(
+  typography?: Partial<Record<string, { size?: number }>> | null,
+  roles?: Partial<Record<string, { font?: number }>> | null,
+): Partial<ChromeGrammar> {
+  const size = (key: string, fallback: number) =>
+    typography?.[key]?.size ?? roles?.[key]?.font ?? fallback;
+  return {
+    titleFont: size("title", DEFAULT_CHROME_GRAMMAR.titleFont),
+    axisFont: size("axis", DEFAULT_CHROME_GRAMMAR.axisFont),
+    tickFont: size("tick", DEFAULT_CHROME_GRAMMAR.tickFont),
+    panelFont: size("panel", roles?.["panel-label"]?.font ?? DEFAULT_CHROME_GRAMMAR.panelFont),
+    legendFont: size("legend", DEFAULT_CHROME_GRAMMAR.legendFont),
+  };
+}
+
+function titleFont(): number {
+  return chromeGrammar.titleFont;
+}
+function axisFont(): number {
+  return chromeGrammar.axisFont;
+}
+function tickFont(): number {
+  return chromeGrammar.tickFont;
+}
+function panelFont(): number {
+  return chromeGrammar.panelFont;
+}
+function legendFont(): number {
+  return chromeGrammar.legendFont;
+}
 
 export function thinXTicks<T extends { label: string; x: number }>(
   ticks: T[],
-  font = TICK_FONT,
+  font = tickFont(),
   gap = 4,
   toScene: (px: number) => number = (px) => px,
 ): T[] {
@@ -97,7 +151,7 @@ export function thinXTicks<T extends { label: string; x: number }>(
 
 export function thinYTicks<T extends { label: string; y: number }>(
   ticks: T[],
-  font = TICK_FONT,
+  font = tickFont(),
   gap = 3,
   toScene: (px: number) => number = (px) => px,
 ): T[] {
@@ -307,11 +361,11 @@ export function placePaperChrome(
   const yTicks = extras.yTicks ?? [];
   const xTicks = extras.xTicks ?? [];
   const yTickW = Math.max(
-    TICK_FONT,
-    ...yTicks.map((t) => estimateTextWidthPx(t.label, TICK_FONT, 0.08)),
+    tickFont(),
+    ...yTicks.map((t) => estimateTextWidthPx(t.label, tickFont(), 0.08)),
   );
   const keys = extras.legendKeys ?? [];
-  const keyW = Math.max(0, ...keys.map((k) => estimateTextWidthPx(k, TICK_FONT, 0.1)));
+  const keyW = Math.max(0, ...keys.map((k) => estimateTextWidthPx(k, tickFont(), 0.1)));
   const yCap = extras.yCaption ?? null;
   const xCap = extras.xCaption ?? null;
   const title = extras.title ?? "";
@@ -321,19 +375,19 @@ export function placePaperChrome(
   let yTickX = box.px0 - gap;
   let yTitleX = Math.max(
     toScene(compact ? 4 : 8),
-    yTickX - toScene(yTickW) - toScene(AXIS_FONT * 0.55) - gap,
+    yTickX - toScene(yTickW) - toScene(axisFont() * 0.55) - gap,
   );
-  let xTickY = box.py1 + toScene(TICK_FONT) + gap;
-  let xTitleY = xTickY + toScene(AXIS_FONT) + gap;
+  let xTickY = box.py1 + toScene(tickFont()) + gap;
+  let xTitleY = xTickY + toScene(axisFont()) + gap;
   let titleX = box.px0;
-  let titleY = Math.max(toScene(compact ? 8 : 14), box.py0 - toScene(TITLE_FONT) - gap);
+  let titleY = Math.max(toScene(compact ? 8 : 14), box.py0 - toScene(titleFont()) - gap);
   let titleLines = title ? [title] : [];
   let xTitleLines = xCap ? [xCap] : [];
   let yTitleLines = yCap ? [yCap] : [];
   let legendLines = keys.map((key) => [key]);
-  const titleLineH = toScene(TITLE_FONT + 2);
-  const axisLineH = toScene(AXIS_FONT + 2);
-  const legendLineH = toScene(TICK_FONT + 2);
+  const titleLineH = toScene(titleFont() + 2);
+  const axisLineH = toScene(axisFont() + 2);
+  const legendLineH = toScene(tickFont() + 2);
   let cbarX = box.px1 + toScene(compact ? 4 : 8);
   let cbarLines = cbarLabels.map((s) => [s]);
   let cbarTitleLines: string[] = [];
@@ -343,13 +397,13 @@ export function placePaperChrome(
   let legendNeedW = 0;
   const cbarLabelW = () =>
     Math.max(
-      TICK_FONT,
+      tickFont(),
       cbarNeedW,
-      ...cbarLines.flatMap((lines) => lines.map((s) => estimateTextWidthPx(s, TICK_FONT, 0.08))),
+      ...cbarLines.flatMap((lines) => lines.map((s) => estimateTextWidthPx(s, tickFont(), 0.08))),
     );
   const cbarTitleCol = () =>
     cbarTitleLines.length
-      ? toScene(AXIS_FONT) + (cbarTitleLines.length - 1) * axisLineH + toScene(4)
+      ? toScene(axisFont()) + (cbarTitleLines.length - 1) * axisLineH + toScene(4)
       : 0;
   const cbarRight = () =>
     extras.colorbar ? cbarX + toScene(10 + 4 + cbarLabelW()) + cbarTitleCol() : box.px1;
@@ -361,7 +415,7 @@ export function placePaperChrome(
         : box.px0 + toScene(8);
   let legendY =
     extras.legendAt === "bottom"
-      ? xTitleY + toScene(AXIS_FONT) + gap
+      ? xTitleY + toScene(axisFont()) + gap
       : extras.legendAt === "inside"
         ? box.py1 - toScene(14)
         : box.py0 + toScene(12);
@@ -376,8 +430,8 @@ export function placePaperChrome(
           id: "panel-label",
           x: cell.x0 + toScene(6),
           y: cell.y0 + toScene(4),
-          w: textW(extras.panelLabel, PANEL_FONT, 0.15),
-          h: toScene(PANEL_FONT + 2),
+          w: textW(extras.panelLabel, panelFont(), 0.15),
+          h: toScene(panelFont() + 2),
         }
       : null;
 
@@ -385,55 +439,55 @@ export function placePaperChrome(
     const rects: ChromeRect[] = [];
     if (panel) rects.push(panel);
     if (titleLines.length) {
-      const lineW = Math.max(...titleLines.map((line) => textW(line, TITLE_FONT, 0.35)));
+      const lineW = Math.max(...titleLines.map((line) => textW(line, titleFont(), 0.35)));
       rects.push({
         id: "title",
         x: titleX,
-        y: titleY - toScene(TITLE_FONT * 0.75),
+        y: titleY - toScene(titleFont() * 0.75),
         w: lineW,
         h: titleLineH * titleLines.length,
       });
     }
     for (const [i, tick] of yTicks.entries()) {
-      const tw = textW(tick.label, TICK_FONT, 0.08);
+      const tw = textW(tick.label, tickFont(), 0.08);
       rects.push({
         id: `ytick-${i}`,
         x: yTickX - tw,
-        y: tick.y - toScene(TICK_FONT * 0.5),
+        y: tick.y - toScene(tickFont() * 0.5),
         w: tw,
-        h: toScene(TICK_FONT),
+        h: toScene(tickFont()),
       });
     }
     for (const [i, tick] of xTicks.entries()) {
-      const tw = textW(tick.label, TICK_FONT, 0.08);
+      const tw = textW(tick.label, tickFont(), 0.08);
       rects.push({
         id: `xtick-${i}`,
         x: tick.x - tw / 2,
-        y: xTickY - toScene(TICK_FONT * 0.75),
+        y: xTickY - toScene(tickFont() * 0.75),
         w: tw,
-        h: toScene(TICK_FONT),
+        h: toScene(tickFont()),
       });
     }
     if (yTitleLines.length) {
-      const tw = Math.max(...yTitleLines.map((line) => textW(line, AXIS_FONT, 0.2)));
+      const tw = Math.max(...yTitleLines.map((line) => textW(line, axisFont(), 0.2)));
       const n = yTitleLines.length;
       rects.push({
         id: "yTitle",
-        x: yTitleX - toScene(AXIS_FONT * 0.85) - (n - 1) * axisLineH,
+        x: yTitleX - toScene(axisFont() * 0.85) - (n - 1) * axisLineH,
         y: (box.py0 + box.py1) / 2 - tw / 2,
-        w: toScene(AXIS_FONT * 1.4) + (n - 1) * axisLineH,
+        w: toScene(axisFont() * 1.4) + (n - 1) * axisLineH,
         h: tw,
       });
     }
     if (xTitleLines.length) {
-      const tw = Math.max(...xTitleLines.map((line) => textW(line, AXIS_FONT, 0.2)));
+      const tw = Math.max(...xTitleLines.map((line) => textW(line, axisFont(), 0.2)));
       const n = xTitleLines.length;
       rects.push({
         id: "xTitle",
         x: (box.px0 + box.px1) / 2 - tw / 2,
-        y: xTitleY - toScene(AXIS_FONT * 0.75),
+        y: xTitleY - toScene(axisFont() * 0.75),
         w: tw,
-        h: toScene(AXIS_FONT) + (n - 1) * axisLineH,
+        h: toScene(axisFont()) + (n - 1) * axisLineH,
       });
     }
     if (extras.colorbar) {
@@ -445,13 +499,13 @@ export function placePaperChrome(
         h: Math.max(toScene(8), box.py1 - box.py0),
       });
       if (cbarTitleLines.length) {
-        const tw = Math.max(...cbarTitleLines.map((line) => textW(line, AXIS_FONT, 0.2)));
+        const tw = Math.max(...cbarTitleLines.map((line) => textW(line, axisFont(), 0.2)));
         const n = cbarTitleLines.length;
         rects.push({
           id: "cbar-title",
-          x: cbarTitleX - toScene(AXIS_FONT * 0.5) - (n - 1) * axisLineH,
+          x: cbarTitleX - toScene(axisFont() * 0.5) - (n - 1) * axisLineH,
           y: cbarTitleY - tw / 2,
-          w: toScene(AXIS_FONT) + (n - 1) * axisLineH,
+          w: toScene(axisFont()) + (n - 1) * axisLineH,
           h: tw,
         });
       }
@@ -462,7 +516,7 @@ export function placePaperChrome(
         const tw = toScene(
           Math.max(
             extras.legendAt === "right" ? legendNeedW : 0,
-            ...lines.map((line) => estimateTextWidthPx(line, TICK_FONT, 0.1)),
+            ...lines.map((line) => estimateTextWidthPx(line, tickFont(), 0.1)),
           ),
         );
         const x = extras.legendAt === "bottom" ? legendX + i * legendStep : legendX;
@@ -472,7 +526,7 @@ export function placePaperChrome(
           x,
           y: y - toScene(6),
           w: toScene(14) + tw,
-          h: toScene(TICK_FONT + 4) + (lines.length - 1) * legendLineH,
+          h: toScene(tickFont() + 4) + (lines.length - 1) * legendLineH,
         });
       }
     }
@@ -486,103 +540,109 @@ export function placePaperChrome(
       return rects.some((b) => (b.id === other || b.id.startsWith(other)) && a.id !== b.id && rectsOverlap(a, b, gap));
     });
 
-  if (panel && title && collide("title", "panel-label")) {
-    titleX = panel.x + panel.w + gap;
-    rects = build();
-  }
-  if (title) {
-    const maxW = Math.max(TITLE_FONT * 4, toPx(box.px1 - titleX) - 4);
-    titleLines = wrapTextLines(title, maxW, TITLE_FONT, 0.35, 3);
-    if (!titleLines.length) titleLines = [title];
-    if (titleLines.length > 1) {
-      titleY -= (titleLines.length - 1) * titleLineH;
+  let titleWrapExtra = 0;
+  const wrapChrome = () => {
+    if (title) {
+      const maxW = Math.max(titleFont() * 4, toPx(box.px1 - titleX) - 4);
+      const next = wrapTextLines(title, maxW, titleFont(), 0.35, 3);
+      titleLines = next.length ? next : [title];
+      const extra = Math.max(0, titleLines.length - 1);
+      if (extra !== titleWrapExtra) {
+        titleY -= (extra - titleWrapExtra) * titleLineH;
+        titleWrapExtra = extra;
+      }
     }
-    rects = build();
-  }
-  if (xCap) {
-    const maxW = Math.max(AXIS_FONT * 4, toPx(box.px1 - box.px0));
-    xTitleLines = wrapTextLines(xCap, maxW, AXIS_FONT, 0.2, 3);
-    if (!xTitleLines.length) xTitleLines = [xCap];
-    rects = build();
-  }
-  if (yCap) {
-    const maxW = Math.max(AXIS_FONT * 4, toPx(box.py1 - box.py0));
-    yTitleLines = wrapTextLines(yCap, maxW, AXIS_FONT, 0.2, 3);
-    if (!yTitleLines.length) yTitleLines = [yCap];
-    rects = build();
-  }
-  if (yCap && yTicks.length && collide("yTitle", "ytick-")) {
-    const tickLeft = Math.min(...rects.filter((r) => r.id.startsWith("ytick-")).map((r) => r.x));
-    yTitleX = tickLeft - gap - toScene(AXIS_FONT * 0.5);
-    rects = build();
-  }
-  if (xCap && xTicks.length && collide("xTitle", "xtick-")) {
-    const tickBot = Math.max(...rects.filter((r) => r.id.startsWith("xtick-")).map((r) => r.y + r.h));
-    xTitleY = tickBot + gap + toScene(AXIS_FONT * 0.75);
-    rects = build();
-  }
-  if (extras.colorbar && extras.legendAt === "right" && collide("legend-", "cbar")) {
-    const cbar = rects.find((r) => r.id === "cbar");
-    if (cbar) {
-      legendX = cbar.x + cbar.w + gap;
-      rects = build();
+    if (xCap) {
+      const maxW = Math.max(axisFont() * 4, toPx(box.px1 - box.px0));
+      const next = wrapTextLines(xCap, maxW, axisFont(), 0.2, 3);
+      xTitleLines = next.length ? next : [xCap];
     }
-  }
-  if (extras.legendAt === "bottom" && xCap && collide("legend-", "xTitle")) {
-    legendY = xTitleY + toScene(AXIS_FONT) + gap + (xTitleLines.length - 1) * axisLineH;
-    rects = build();
-  }
-  if (keys.length && extras.legendAt && extras.legendAt !== "inside") {
-    const leftover =
-      extras.legendAt === "bottom"
-        ? legendStep - toScene(14) - toScene(6)
-        : cell
-          ? cell.x1 - legendX - toScene(14)
-          : toScene(compact ? 52 : 72);
-    const maxW = Math.max(TICK_FONT * 5, toPx(leftover));
-    legendLines = keys.map((key) => {
-      const need = minWidthForLines(key, TICK_FONT, 0.1, 2);
-      const room = cell ? toPx((cell.x1 - cell.x0) * 0.5 - toScene(20)) : maxW;
-      const wrapW =
-        extras.legendAt === "right" && isUnbreakableLatin(key) && need <= Math.max(maxW, room)
-          ? Math.max(maxW, need)
-          : maxW;
-      const lines = wrapTextLines(key, wrapW, TICK_FONT, 0.1, 2);
-      return lines.length ? lines : [key];
-    });
-    if (extras.legendAt === "right") {
-      legendNeedW = Math.max(0, ...keys.map((key) => minWidthForLines(key, TICK_FONT, 0.1, 2)));
+    if (yCap) {
+      const maxW = Math.max(axisFont() * 4, toPx(box.py1 - box.py0));
+      const next = wrapTextLines(yCap, maxW, axisFont(), 0.2, 3);
+      yTitleLines = next.length ? next : [yCap];
     }
-    const extra = Math.max(0, ...legendLines.map((lines) => lines.length - 1));
-    if (extras.legendAt !== "bottom" && extra > 0) {
-      legendStep = toScene(14) + extra * legendLineH;
+    if (keys.length && extras.legendAt && extras.legendAt !== "inside") {
+      const leftover =
+        extras.legendAt === "bottom"
+          ? legendStep - toScene(14) - toScene(6)
+          : cell
+            ? cell.x1 - legendX - toScene(14)
+            : toScene(compact ? 52 : 72);
+      const maxW = Math.max(legendFont() * 5, toPx(leftover));
+      legendLines = keys.map((key) => {
+        const need = minWidthForLines(key, legendFont(), 0.1, 2);
+        const room = cell ? toPx((cell.x1 - cell.x0) * 0.5 - toScene(20)) : maxW;
+        const wrapW =
+          extras.legendAt === "right" && isUnbreakableLatin(key) && need <= Math.max(maxW, room)
+            ? Math.max(maxW, need)
+            : maxW;
+        const lines = wrapTextLines(key, wrapW, legendFont(), 0.1, 2);
+        return lines.length ? lines : [key];
+      });
+      if (extras.legendAt === "right") {
+        legendNeedW = Math.max(0, ...keys.map((key) => minWidthForLines(key, legendFont(), 0.1, 2)));
+      }
+      const extra = Math.max(0, ...legendLines.map((lines) => lines.length - 1));
+      if (extras.legendAt !== "bottom" && extra > 0) {
+        legendStep = toScene(14) + extra * legendLineH;
+      }
     }
-    rects = build();
-  }
     if (extras.colorbar) {
-    const leftoverScene = cell
-      ? cell.x1 - (cbarX + toScene(14)) - toScene(4)
-      : toScene(compact ? 36 : 56);
-    const leftover = Math.max(TICK_FONT * 4, toPx(leftoverScene));
-    cbarLines = cbarLabels.map((label) => {
-      cbarNeedW = Math.max(cbarNeedW, minWidthForLines(label, TICK_FONT, 0.08, 2));
-      const lines = wrapTextLines(label, leftover, TICK_FONT, 0.08, 2);
-      return lines.length ? lines : [label];
-    });
-    if (zCap) {
-      const maxW = Math.max(AXIS_FONT * 4, toPx(box.py1 - box.py0));
-      cbarTitleLines = wrapTextLines(zCap, maxW, AXIS_FONT, 0.2, 3);
-      if (!cbarTitleLines.length) cbarTitleLines = [zCap];
-      cbarTitleX = cbarX + toScene(10 + 4 + cbarLabelW()) + toScene(AXIS_FONT * 0.55);
-      cbarTitleY = (box.py0 + box.py1) / 2;
+      const leftoverScene = cell
+        ? cell.x1 - (cbarX + toScene(14)) - toScene(4)
+        : toScene(compact ? 36 : 56);
+      const leftover = Math.max(tickFont() * 4, toPx(leftoverScene));
+      cbarLines = cbarLabels.map((label) => {
+        cbarNeedW = Math.max(cbarNeedW, minWidthForLines(label, tickFont(), 0.08, 2));
+        const lines = wrapTextLines(label, leftover, tickFont(), 0.08, 2);
+        return lines.length ? lines : [label];
+      });
+      if (zCap) {
+        const maxW = Math.max(axisFont() * 4, toPx(box.py1 - box.py0));
+        cbarTitleLines = wrapTextLines(zCap, maxW, axisFont(), 0.2, 3);
+        if (!cbarTitleLines.length) cbarTitleLines = [zCap];
+        cbarTitleX = cbarX + toScene(10 + 4 + cbarLabelW()) + toScene(axisFont() * 0.55);
+        cbarTitleY = (box.py0 + box.py1) / 2;
+      }
     }
-    if (extras.legendAt === "right") {
-      legendX = cbarRight() + toScene(compact ? 6 : 10);
+  };
+
+  const applyPoseResiduals = (): number => {
+    let residual = 0;
+    const take = (from: number, to: number) => {
+      residual += Math.abs(to - from);
+      return to;
+    };
+    rects = build();
+    if (panel && title && collide("title", "panel-label")) {
+      titleX = take(titleX, panel.x + panel.w + gap);
+    }
+    if (yCap && yTicks.length && collide("yTitle", "ytick-")) {
+      const tickLeft = Math.min(...rects.filter((r) => r.id.startsWith("ytick-")).map((r) => r.x));
+      yTitleX = take(yTitleX, tickLeft - gap - toScene(axisFont() * 0.5));
+    }
+    if (xCap && xTicks.length && collide("xTitle", "xtick-")) {
+      const tickBot = Math.max(...rects.filter((r) => r.id.startsWith("xtick-")).map((r) => r.y + r.h));
+      xTitleY = take(xTitleY, tickBot + gap + toScene(axisFont() * 0.75));
+    }
+    if (extras.colorbar && extras.legendAt === "right" && collide("legend-", "cbar")) {
+      const cbar = rects.find((r) => r.id === "cbar");
+      if (cbar) legendX = take(legendX, cbar.x + cbar.w + gap);
+    } else if (extras.colorbar && extras.legendAt === "right") {
+      legendX = take(legendX, cbarRight() + toScene(compact ? 6 : 10));
+    }
+    if (extras.legendAt === "bottom" && xCap && collide("legend-", "xTitle")) {
+      legendY = take(
+        legendY,
+        xTitleY + toScene(axisFont()) + gap + (xTitleLines.length - 1) * axisLineH,
+      );
+    }
+    if (!cell) {
+      rects = build();
+      return residual;
     }
     rects = build();
-  }
-
-  if (cell) {
     const pad = toScene(compact ? 2 : 3);
     const wantX0 = cell.x0 + pad;
     const wantX1 = cell.x1 - pad;
@@ -608,41 +668,48 @@ export function placePaperChrome(
     );
     const titleBox = union(["title"]);
     if (titleBox) {
-      titleX += fitShift(titleBox.x0, titleBox.x1, wantX0, wantX1, wantX0, wantX1);
-      titleY += fitShift(titleBox.y0, titleBox.y1, wantY0, wantY1, wantY0, box.py0 - gap);
+      titleX = take(titleX, titleX + fitShift(titleBox.x0, titleBox.x1, wantX0, wantX1, wantX0, wantX1));
+      titleY = take(titleY, titleY + fitShift(titleBox.y0, titleBox.y1, wantY0, wantY1, wantY0, box.py0 - gap));
     }
     const yTitleBox = union(["yTitle"]);
     if (yTitleBox) {
-      yTitleX += fitShift(yTitleBox.x0, yTitleBox.x1, wantX0, wantX1, wantX0, tickLeft - gap);
+      yTitleX = take(yTitleX, yTitleX + fitShift(yTitleBox.x0, yTitleBox.x1, wantX0, wantX1, wantX0, tickLeft - gap));
     }
     const xTitleBox = union(["xTitle"]);
     if (xTitleBox) {
-      xTitleY += fitShift(xTitleBox.y0, xTitleBox.y1, wantY0, wantY1, tickBot + gap, wantY1);
+      xTitleY = take(xTitleY, xTitleY + fitShift(xTitleBox.y0, xTitleBox.y1, wantY0, wantY1, tickBot + gap, wantY1));
     }
     const plotRight = extras.colorbar ? cbarRight() + gap : box.px1 + gap;
     if (extras.colorbar) {
       const cbarBox = union(["cbar", "cbar-title"]);
       if (cbarBox) {
         const dx = fitShift(cbarBox.x0, cbarBox.x1, wantX0, wantX1, plotRight - (cbarBox.x1 - cbarBox.x0), wantX1);
-        cbarX += dx;
+        cbarX = take(cbarX, cbarX + dx);
         cbarTitleX += dx;
       }
       const zTitleBox = union(["cbar-title"]);
       if (zTitleBox) {
-        cbarTitleY += fitShift(zTitleBox.y0, zTitleBox.y1, wantY0, wantY1, box.py0, box.py1);
+        cbarTitleY = take(cbarTitleY, cbarTitleY + fitShift(zTitleBox.y0, zTitleBox.y1, wantY0, wantY1, box.py0, box.py1));
       }
     }
     if (extras.legendAt === "right" || extras.legendAt === "bottom") {
       const legendBox = union(["legend-"]);
       if (legendBox) {
         if (extras.legendAt === "right") {
-          legendX += fitShift(legendBox.x0, legendBox.x1, wantX0, wantX1, plotRight, wantX1);
+          legendX = take(legendX, legendX + fitShift(legendBox.x0, legendBox.x1, wantX0, wantX1, plotRight, wantX1));
         } else {
-          legendY += fitShift(legendBox.y0, legendBox.y1, wantY0, wantY1, tickBot + gap, wantY1);
+          legendY = take(legendY, legendY + fitShift(legendBox.y0, legendBox.y1, wantY0, wantY1, tickBot + gap, wantY1));
         }
       }
     }
     rects = build();
+    return residual;
+  };
+
+  wrapChrome();
+  for (let i = 0; i < 6; i++) {
+    wrapChrome();
+    if (applyPoseResiduals() < 0.4) break;
   }
 
   return {

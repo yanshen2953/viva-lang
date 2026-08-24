@@ -23,7 +23,7 @@ import { estimateBoardBands, measureChipWidth } from "./layout/board-chrome.js";
 import { figureCopyDefaults, figureCopyPlace, figureGapDefaults } from "./layout/figure-gap.js";
 import { packCopyLinesToColumns, packCopyLinesToPages, readableTypeColCount } from "./layout/copy-flow.js";
 import { figurePageReserves, packFigureCellsToPages } from "./layout/figure-page.js";
-import { punchColumnsAroundFigures } from "./layout/newspaper.js";
+import { hopFiguresPastCopy, punchColumnsAroundFigures } from "./layout/newspaper.js";
 import {
   linearMinorTicks,
   logMajorTicks,
@@ -46,10 +46,13 @@ import {
   clampChartInsets,
   ellipsizeToWidth,
   wrapTextLines,
+  getChromeGrammar,
   placePaperChrome,
+  setChromeGrammar,
   thinXTicks,
   thinYTicks,
   MIN_PLOT_FRAC,
+  type ChromeGrammar,
   type ChromeRect,
   type PaperChrome,
 } from "./layout/chrome-collide.js";
@@ -101,8 +104,12 @@ function policyPlotFloor(): { minFrac: number } {
   return { minFrac: activePolicies.plotFloor ?? MIN_PLOT_FRAC };
 }
 
-export function expandWidgets(artifact: Artifact, opts?: { policies?: StylePolicies }): Artifact {
+export function expandWidgets(
+  artifact: Artifact,
+  opts?: { policies?: StylePolicies; grammar?: Partial<ChromeGrammar> },
+): Artifact {
   activePolicies = opts?.policies ?? {};
+  setChromeGrammar(opts?.grammar ?? null);
   ensureBuiltinPlugins();
   const next = structuredClone(artifact);
   if (!next.scene) {
@@ -321,6 +328,25 @@ function reflowNewspaper(artifact: Artifact): void {
     topReserve: reserves.top,
     bottomReserve: reserves.bottom,
   });
+  const hopped = hopFiguresPastCopy(figures, packed.places, {
+    gap: reserves.pad,
+    lineH,
+    pageH,
+    topReserve: reserves.top,
+  });
+  for (let i = 0; i < hopped.length; i++) {
+    const next = hopped[i]!;
+    const prev = figures[i]!;
+    const dy = next.y0 - prev.y0;
+    if (Math.abs(dy) < 0.5) continue;
+    const fr = artifact.frames.find((frame) => {
+      const cx = numericPair(frame.props.cellX, [0, 0]);
+      const cy = numericPair(frame.props.cellY, [0, 0]);
+      return cx && cy && Math.abs(cx[0] - prev.x0) < 1 && Math.abs(cy[0] - prev.y0) < 1;
+    });
+    if (fr) fr.props.cellY = literal([next.y0, next.y1]);
+    shiftNodesInBox(scene, prev, dy);
+  }
   for (let i = 0; i < bodies.length; i++) {
     const place = packed.places[i];
     if (!place) continue;
@@ -344,6 +370,32 @@ function reflowNewspaper(artifact: Artifact): void {
     }
   }
   if (packed.bottom > extent.h) growSceneHeight(artifact, packed.bottom + reserves.bottom);
+}
+
+function shiftNodesInBox(
+  scene: NonNullable<Artifact["scene"]>,
+  box: { x0: number; y0: number; x1: number; y1: number },
+  dy: number,
+): void {
+  const bump = (expr: Expr | undefined): Expr | undefined => {
+    if (!expr || expr.kind !== "number") return expr;
+    return literal(expr.value + dy);
+  };
+  for (const layer of scene.layers) {
+    for (const item of layer.items) {
+      if (item.kind !== "node") continue;
+      const x = item.props.x?.kind === "number" ? item.props.x.value : Number.NaN;
+      const y = item.props.y?.kind === "number" ? item.props.y.value : Number.NaN;
+      const y1 = item.props.y1?.kind === "number" ? item.props.y1.value : Number.NaN;
+      const inside =
+        (Number.isFinite(x) && Number.isFinite(y) && x >= box.x0 - 1 && x <= box.x1 + 1 && y >= box.y0 - 1 && y <= box.y1 + 1) ||
+        (Number.isFinite(y1) && y1 >= box.y0 - 1 && y1 <= box.y1 + 1);
+      if (!inside) continue;
+      if (item.props.y) item.props.y = bump(item.props.y)!;
+      if (item.props.y1) item.props.y1 = bump(item.props.y1)!;
+      if (item.props.y2) item.props.y2 = bump(item.props.y2)!;
+    }
+  }
 }
 
 function isUnboundChart(widget: Artifact["widgets"][number]): boolean {
@@ -1309,6 +1361,14 @@ function numProp(props: Record<string, Expr>, name: string, fallback: number): n
   return fallback;
 }
 
+function numListProp(props: Record<string, Expr>, name: string): number[] {
+  const expr = props[name];
+  if (expr?.kind !== "array") return [];
+  return expr.items
+    .map((item) => (item.kind === "number" ? item.value : Number.NaN))
+    .filter((n) => Number.isFinite(n));
+}
+
 function boolProp(props: Record<string, Expr>, name: string, fallback: boolean): boolean {
   const expr = props[name];
   if (!expr) return fallback;
@@ -2108,6 +2168,7 @@ function expandLayoutBoard(
     const easeSec = Math.max(0, numProp(props, "ease", numProp(props, "playEase", 0.22)));
     const holdDefault = playFps > 0 ? Math.max(0.2, 1 / playFps - easeSec) : 1.2;
     const holdSec = Math.max(0.05, numProp(props, "hold", numProp(props, "playHold", holdDefault)));
+    const holds = numListProp(props, "holds");
     const fps = Math.max(1, numProp(props, "fps", 12));
     const beats = beatRects.length;
     if (!artifact.states.some((s) => s.name === "__beat")) {
@@ -2125,6 +2186,9 @@ function expandLayoutBoard(
             { key: "holdSec", value: literal(holdSec) },
             { key: "easeSec", value: literal(easeSec) },
             { key: "fps", value: literal(fps) },
+            ...(holds.length
+              ? [{ key: "holds", value: { kind: "array" as const, items: holds.map((h) => literal(h)), span } }]
+              : []),
           ],
           span,
         ),
@@ -2895,12 +2959,13 @@ function chromeLayoutOf(
   const scale = sceneScaleOf({ unit });
   const compact = isCompactPlot(box, unit);
   const toScene = (px: number) => px / Math.max(scale, 1e-6);
+  const tick = getChromeGrammar().tickFont;
   const yTicks = thinYTicks(
     axisTicks(props, "y").map((t) => ({
       label: t.label,
       y: domainMap(t.value, [box.ymin, box.ymax], [box.py0, box.py1], box.invertY, box.yScale),
     })),
-    8,
+    tick,
     3,
     toScene,
   );
@@ -2909,7 +2974,7 @@ function chromeLayoutOf(
       label: t.label,
       x: domainMap(t.value, [box.xmin, box.xmax], [box.px0, box.px1], false, box.xScale),
     })),
-    8,
+    tick,
     4,
     toScene,
   );
@@ -4085,6 +4150,22 @@ function expandColorbar(
       fill: seqStop(0),
       gradient: { kind: "array", items: [6, 5, 4, 3, 2, 1, 0].map(seqStop), span },
       gradientDir: literal("y"),
+    }),
+    node(`${frameName}_cbarSpine`, {
+      role: literal("axis"),
+      x1: literal(barX),
+      y1: literal(bot - h),
+      x2: literal(barX),
+      y2: literal(bot),
+      strokeWidth: literal(1.25),
+    }),
+    node(`${frameName}_cbarSpineR`, {
+      role: literal("axis"),
+      x1: literal(barX + barW),
+      y1: literal(bot - h),
+      x2: literal(barX + barW),
+      y2: literal(bot),
+      strokeWidth: literal(1),
     }),
   );
   const zTicks = colorbarTicks(z0, z1);

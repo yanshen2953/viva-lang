@@ -14,6 +14,7 @@ import {
   inlineCheckStripOf,
   paintInlineCheckStrip,
 } from "../../embed/inline-check.js";
+import { runBrowserVisual } from "../../check/browser-visual.js";
 
 export type DomainBridge = {
   pushToViva(path: string, value: unknown): void;
@@ -183,7 +184,15 @@ function createVivaInlineView(): DomainView {
           });
           const strip = inlineCheckStripOf(el);
           if (strip) {
-            paintInlineCheckStrip(strip, inlineCheckLines(compiled.diagnostics, compiled.error));
+            const notes = [...compiled.diagnostics];
+            if (compiled.ir) {
+              try {
+                notes.push(...runBrowserVisual(compiled.ir));
+              } catch {
+                /* browser visual is warn-only */
+              }
+            }
+            paintInlineCheckStrip(strip, inlineCheckLines(notes, compiled.error));
           }
         },
         dispose() {

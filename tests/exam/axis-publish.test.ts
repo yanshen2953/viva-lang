@@ -49,6 +49,30 @@ widget chart.vector
     expect(niceScaleNumber(3.2)).toBe(5);
   });
 
+  it("draws a colorbar spine like a third axis", () => {
+    const src = `artifact Heat
+data grid = [
+  { x: 0, y: 0, z: 1 }
+  { x: 1, y: 0, z: 3 }
+]
+scene
+  size: 320 200
+widget chart.heatmap
+  data: grid
+  xField: x
+  yField: y
+  valueField: z
+  zlim: 0 4
+  zLabel: Intensity
+`;
+    const result = compileSource(src, "heat.viva", { handbookIds: ["print-nature"] });
+    expect(result.error).toBeNull();
+    const names = result.ir!.scene.layers.flatMap((l) =>
+      l.items.filter((i) => i.kind === "node").map((i) => (i.kind === "node" ? i.name : "")),
+    );
+    expect(names.some((n) => n.includes("cbarSpine"))).toBe(true);
+  });
+
   it("draws a funnel stage as a trapezoid path", () => {
     const laid = layoutChartBar(
       {

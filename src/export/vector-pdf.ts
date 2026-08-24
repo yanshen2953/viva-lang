@@ -1,7 +1,7 @@
 import { PDFDocument, rgb, type PDFFont, type PDFPage, type RGB } from "pdf-lib";
 import { DEFAULT_SCENE_BACKGROUND } from "../style/defaults.js";
 import { flattenNodesFromIr, nodePainted, type FlatNode } from "./static-svg.js";
-import { embedPdfFonts, pdfSafeText, pdfTextWidth, pickPdfFont, type PdfTextFonts } from "./pdf-font.js";
+import { embedPdfFonts, pdfMissingGlyphs, pdfSafeText, pdfTextWidth, pickPdfFont, type PdfTextFonts } from "./pdf-font.js";
 import { evalSceneProps, mmToPx, pxToPdfPt, resolveSceneBox, scenePageCount } from "../space/scene-box.js";
 import type { VisualIR } from "../ir.js";
 
@@ -10,6 +10,8 @@ export type VectorPdfOptions = {
   scale?: number;
   /** Host CJK TTF/OTF. Also `VIVA_PDF_CJK_FONT`. Not a language keyword. */
   cjkFontPath?: string;
+  /** Filled with uncovered characters when the font substitutes `?`. */
+  missingGlyphs?: string[];
 };
 
 /**
@@ -41,7 +43,7 @@ export async function renderVectorPdfFromIr(
     for (const node of nodes) {
       if (!nodePainted(node.props)) continue;
       if (!nodeHitsSlice(node.props, originY, y1)) continue;
-      drawNode(page, fonts, node, pageH, scale, originY);
+      drawNode(page, fonts, node, pageH, scale, originY, opts.missingGlyphs);
     }
   }
 
@@ -55,6 +57,7 @@ function drawNode(
   pageH: number,
   scale: number,
   originY = 0,
+  missingGlyphs?: string[],
 ): void {
   const p = node.props;
   const opacity = p.opacity === undefined ? 1 : clamp01(Number(p.opacity) || 1);
@@ -122,6 +125,12 @@ function drawNode(
     const text = raw;
     const font = pickPdfFont(fonts, text);
     const drawn = pdfSafeText(font, text);
+    const gaps = pdfMissingGlyphs(font, text);
+    if (gaps.length && missingGlyphs) {
+      for (const ch of gaps) {
+        if (!missingGlyphs.includes(ch)) missingGlyphs.push(ch);
+      }
+    }
     const size = num(p.font ?? p.fontSize, 14) * scale;
     const x = num(p.x) * scale;
     // SVG text y is baseline; PDF drawText y is baseline too after flip

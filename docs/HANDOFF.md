@@ -41,9 +41,9 @@
 | 项 | 值 |
 | --- | --- |
 | 分支 | `cursor/style-handbook-hook-a8c1` |
-| HEAD | 四柱出版/时钟/repair 落地（接续 `35e7f51`） |
-| 工作树 | 本轮四柱已进编译器，见 §3 / §4 |
-| 测试 | 本轮本机 `npm test`：**297 passed** |
+| HEAD | 手册文法 / 逐拍 hold / repair 扩补 / 拖参环（接续 `79374f4`） |
+| 工作树 | 本轮剩余缺口已进编译器，见 §3 / §4 |
+| 测试 | 改完后再跑 `npm test` + `build:lib` |
 | `build:lib` | 通过 |
 | CI | `.github/workflows/ci.yml`：`npm ci` / `build:lib` / `npm test` / Atlas `--visual`。`dba0a84` 当时绿 |
 | `npm run build` | playground/runtime 严格 tsc 仍可能失败；日常用 `vite-node` + vitest |
@@ -64,9 +64,9 @@
 | 热图 | 格心刻度、中位步长铺格、短边 5% 缝、Y 第一行在顶、无笛卡尔虚线；色条按 `zlim` 刻（`0 4` → `4 3 2 1 0`）、短刻度线、顺序色 **一条** `linearGradient`（Runtime + 静态 SVG 共用 `gradientSpec`）；格子连续 `clamp(norm * 6, 0, 6)` | 不是 Nature CIE 色条 |
 | 轴 | 未加引号多词轴题拼成一句；线性轴键端点；`print-nature` 的 `maxMajorTicks` / `minorTicks` / `plotFloor` 进 expand；log/linear/time 和色条画次刻度 | 不是 Nature 轴文法 |
 | 矢量 | 场景三角箭头 + 绘图区比例尺 | 不是带单位换算的 quiver |
-| 排版 | chrome 用同一残差向量长 inset（标题/轴/图例/色条/`(a)` 一起，邻格同一步）；`page: a4` 有 `n / N`、subtitle 章节标、`→ n+1` 跳页；正文会绕 figure 格子过页 | 不是 InDesign |
-| 交互 | `__tip` / `__brush` / `__sel`；`layout.board play` 是 `__t` 时钟（hold+ease）；Runtime rAF 与导出同构采样；`__view` 记录 idle/brushing/selected/linked/playing | 不是剪辑时间轴 / 完整游戏状态机 |
-| Agent 面 | session 对 overflow 做确定性 repair；内联卡跑 browser visual（警告）；`viva.drag-param` 宿主胶水把 `state.param` 写回 `data.series` | visual 仍不挡成功；LLM 生成率未测 |
+| 排版 | chrome inset + 位姿同一残差循环；手册 typography 驱动折行/字号；色条有脊线；正文绕 figure，重叠则 hop | 不是 InDesign |
+| 交互 | play 是 hold+ease，可写 `holds:`；`__view` 有转移/守卫；导出可读 `__easeU` 采 220ms | 不是剪辑时间轴 / 完整游戏 SM |
+| Agent 面 | overflow / 空栏 / 轴确定性 repair；内联 + domain browser visual；`attachDragParamLoop`；离线 exam 种子编译率在 CI | visual 仍不挡成功；LLM 生成率未测 |
 
 最近相关提交（新 → 旧，便于 `git log`）：
 
@@ -91,34 +91,32 @@ ab659f7  色条刻在 zlim，不是三段色块端
 
 ### 4.1 出版级排版求解
 
-- 标题 / 轴 / 图例 / 色条 / `(a)` 已用同一残差向量长 inset（`src/layout/chrome-solve.ts`），邻格也在同一步。仍不是通用联立 typesetter
-- log/linear/time + 色条有次刻度；box 按类目间距定宽；violin 有内嵌箱线；漏斗聚合级画梯形；矢量有比例尺。观感仍粗
-- CJK：有系统全库时优先于随包子集；包内仍是子集，未覆盖的字仍可能 `?`
+- 标题 / 轴 / 图例 / 色条 / `(a)` 已用同一残差向量长 inset；`placePaperChrome` 位姿也是残差循环。手册 typography 进 chrome
+- 色条有左右脊线。CJK 缺字进导出 `missingGlyphs`。观感仍粗
 
 ### 4.2 时间轴 + 完整 linked view
 
-- `play` 是 hold+ease 时钟（`src/timeline/clock.ts`）；Runtime / simulate / 静态 SVG / `--beats` 同构采样；gif|mp4 用 `timeline.fps`，不是写死 2fps
-- 仍不是剪辑时间轴。`n`/`N` 可跳拍
-- `__view` 记录相位；跨页 `__sel` 仍在。不是完整游戏状态机
+- `play` 是 hold+ease 时钟；`holds:` 是逐拍插件属性。导出 `__easeU` 与 Runtime 同一套 220ms
+- `__view` 有转移/守卫和 page。仍不是完整游戏 SM / NLE
 
 ### 4.3 报纸 + 成品视频
 
-- 正文会绕 figure 格子过页；subtitle 做章节标；`→ n+1` 是跳页码。仍不是 InDesign
+- 正文会绕 figure 过页；重叠时 figure hop。subtitle 章节标；`→ n+1` 跳页。仍不是 InDesign
 - 成片仍是时钟采样，不是 NLE
 
 ### 4.4 Agent 闭环
 
 - visual QA **附着但不挡** IR 成功（未改）
 - 内联卡跑 IR 级 browser visual（警告，不引 resvg）
-- session compile 对 `chromeOverflow` 做确定性 source repair
-- `test:agent-exam` 仍要 `DEEPSEEK_API_KEY`；生成率未测
-- `registerDragParamPipeline` 是宿主胶水，不是语言关键字
+- session 对 overflow / 空栏绑 data / 补 xLabel·yLabel / 删手写 tick 做确定性 repair
+- 离线 `examples/exam/*.viva` 编译率在 CI；`test:agent-exam` 仍要 key
+- `attachDragParamLoop` 是宿主胶水，不是语言关键字
 
 **建议下一刀（不缩小北极星）：**
 
-1. 栏宽文法再紧一档（手册执行折行/字距，而不仅是 policies）
-2. 用 key 跑 `test:agent-exam` 测生成率
-3. 剪辑级成片（仍必须是插件属性）
+1. figure 与正文同一文档流（现在是 punch + hop，不是 InDesign）
+2. 用 key 跑 `test:agent-exam` 测 LLM 生成率
+3. 剪辑级成片仍必须是插件属性；不要加关键字
 
 ---
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { punchColumnsAroundFigures } from "../../src/layout/newspaper.js";
+import { hopFiguresPastCopy, punchColumnsAroundFigures } from "../../src/layout/newspaper.js";
 import { compileSource } from "../../src/pipeline.js";
 import { evaluate } from "../../src/eval.js";
 
@@ -13,6 +13,15 @@ describe("newspaper flow", () => {
     expect(cols.length).toBe(2);
     expect(cols[0]!.y1).toBeLessThanOrEqual(60);
     expect(cols[1]!.y0).toBeGreaterThanOrEqual(120);
+  });
+
+  it("hops a figure that sits on packed copy", () => {
+    const next = hopFiguresPastCopy(
+      [{ x0: 10, y0: 40, x1: 80, y1: 90 }],
+      [{ x: 12, y: 50 }],
+      { gap: 4, lineH: 6 },
+    );
+    expect(next[0]!.y0).toBeGreaterThan(50);
   });
 
   it("paints jump folio and chapter marks from subtitle", () => {

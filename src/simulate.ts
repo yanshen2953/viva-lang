@@ -1,6 +1,6 @@
 import { cloneValue, evaluate, execute, truthy, type Scope } from "./eval.js";
 import type { VisualIR } from "./ir.js";
-import { applyTimelineState } from "./timeline/clock.js";
+import { applyTimelineState, startOfBeat } from "./timeline/clock.js";
 import { applyViewState } from "./runtime/view-machine.js";
 
 export type SimWorld = {
@@ -56,8 +56,7 @@ export function simulate(ir: VisualIR, opts: SimulateOptions = {}): SimWorld {
   const n = opts.ticks ?? 0;
   for (let i = 0; i < n; i++) {
     if (ir.timeline) {
-      const period = ir.timeline.holdSec + ir.timeline.easeSec;
-      applyTimelineState(world.state, ir.timeline, (i + 1) * period);
+      applyTimelineState(world.state, ir.timeline, startOfBeat(ir.timeline, i + 1));
     }
     for (const tick of ir.ticks) {
       execute(tick.body, scopes());

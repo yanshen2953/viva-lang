@@ -1,11 +1,13 @@
 /** Host glue: drag a param, pipeline writes data back. No new keyword. */
 
 import type { VivaAgentHost } from "../host.js";
+import type { VivaSession } from "../session.js";
 import type { PipelineContext } from "./port.js";
 
 export const DRAG_PARAM_PIPELINE_ID = "viva.drag-param";
 
 export function registerDragParamPipeline(host: VivaAgentHost): void {
+  if (host.pipeline.list().some((d) => d.id === DRAG_PARAM_PIPELINE_ID)) return;
   host.pipeline.register({
     id: DRAG_PARAM_PIPELINE_ID,
     title: "Drag param → series",
@@ -22,5 +24,27 @@ export function registerDragParamPipeline(host: VivaAgentHost): void {
       ctx.session.setData("series", series);
       return { runId: "", status: "ok", values: { series } };
     },
+  });
+}
+
+/** Product loop: watch state.param and run the pipeline. Host glue, not a keyword. */
+export function attachDragParamLoop(
+  session: VivaSession,
+  host: VivaAgentHost,
+  opts?: { path?: string },
+): () => void {
+  registerDragParamPipeline(host);
+  const path = opts?.path ?? "param";
+  let last: unknown = undefined;
+  let running = false;
+  return session.watch(path, (value) => {
+    if (Object.is(value, last) || running) return;
+    last = value;
+    running = true;
+    void host.pipeline
+      .run(DRAG_PARAM_PIPELINE_ID, { sessionId: session.id })
+      .finally(() => {
+        running = false;
+      });
   });
 }

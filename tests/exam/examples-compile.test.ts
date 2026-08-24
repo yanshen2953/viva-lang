@@ -27,6 +27,23 @@ describe("example and agent-exam seed compile", () => {
     expect(failures).toEqual([]);
   });
 
+  it("compiles every examples/exam/*.viva seed (offline agent-exam rate)", () => {
+    const files = vivaFiles("examples/exam");
+    expect(files.length).toBe(20);
+    const failures: string[] = [];
+    for (const file of files) {
+      const src = readFileSync(file, "utf8");
+      const result = compileSource(src, path.basename(file), {
+        handbookIds: ["print-nature"],
+      });
+      if (result.error || !result.ir) {
+        failures.push(`${file}: ${result.error ?? "no ir"}`);
+      }
+    }
+    expect(failures).toEqual([]);
+    expect((files.length - failures.length) / files.length).toBe(1);
+  });
+
   it("compiles clean agent-exam seeds and keeps broken seeds failing", () => {
     const files = vivaFiles("tests/agent-exam/seeds");
     expect(files.length).toBeGreaterThan(0);
