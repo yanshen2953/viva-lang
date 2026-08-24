@@ -189,7 +189,7 @@ function createVivaInlineView(): DomainView {
               try {
                 notes.push(...runBrowserVisual(compiled.ir));
               } catch {
-                /* browser visual is warn-only */
+                /* browser visual may fail success; strip still paints */
               }
             }
             paintInlineCheckStrip(strip, inlineCheckLines(notes, compiled.error));

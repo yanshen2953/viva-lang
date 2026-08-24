@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Rebuild assets/fonts/VivaSansFallback.ttf from Droid Sans Fallback.
+"""Rebuild the leftover assets/fonts/VivaSansFallback.ttf subset.
 
-Keeps Latin / Greek / punctuation plus Han used by examples and a paper lexicon.
-No new language keywords — this is an export-fidelity asset.
+The package default is assets/fonts/VivaSansCJK.ttf (full Droid Sans Fallback).
+This script only refreshes the last-resort subset.
 """
 
 from __future__ import annotations

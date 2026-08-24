@@ -23,7 +23,7 @@ import { estimateBoardBands, measureChipWidth } from "./layout/board-chrome.js";
 import { figureCopyDefaults, figureCopyPlace, figureGapDefaults } from "./layout/figure-gap.js";
 import { packCopyLinesToColumns, packCopyLinesToPages, readableTypeColCount } from "./layout/copy-flow.js";
 import { figurePageReserves, packFigureCellsToPages } from "./layout/figure-page.js";
-import { hopFiguresPastCopy, punchColumnsAroundFigures } from "./layout/newspaper.js";
+import { composeNewspaper, newspaperMeasure } from "./layout/newspaper.js";
 import {
   linearMinorTicks,
   logMajorTicks,
@@ -321,64 +321,79 @@ function reflowNewspaper(artifact: Artifact): void {
     w,
   }));
   const reserves = figurePageReserves(unit);
-  const punched = punchColumnsAroundFigures(columns, figures, reserves.pad);
-  const packed = packCopyLinesToColumns(lines, punched.length ? punched : columns, {
-    lineH,
+  const columnRaw = stringProp(scene.props, ["column"]);
+  const measure = newspaperMeasure({
+    pageW: extent.w,
     pageH,
+    column: columnRaw === "single" || columnRaw === "double" ? columnRaw : undefined,
+    cols: xs.length,
+    bodyX: xs[0],
+    bodyW: w,
     topReserve: reserves.top,
     bottomReserve: reserves.bottom,
-  });
-  const hopped = hopFiguresPastCopy(figures, packed.places, {
     gap: reserves.pad,
-    lineH,
-    pageH,
-    topReserve: reserves.top,
   });
-  for (let i = 0; i < hopped.length; i++) {
-    const next = hopped[i]!;
-    const prev = figures[i]!;
-    const dy = next.y0 - prev.y0;
-    if (Math.abs(dy) < 0.5) continue;
-    const fr = artifact.frames.find((frame) => {
-      const cx = numericPair(frame.props.cellX, [0, 0]);
-      const cy = numericPair(frame.props.cellY, [0, 0]);
-      return cx && cy && Math.abs(cx[0] - prev.x0) < 1 && Math.abs(cy[0] - prev.y0) < 1;
-    });
-    if (fr) fr.props.cellY = literal([next.y0, next.y1]);
-    shiftNodesInBox(scene, prev, dy);
+  const boardSlotted = artifact.frames.some((frame) => /^(left|right)$/.test(frame.name));
+  const composed = composeNewspaper(lines, figures, columns, measure, { lineH });
+  if (!boardSlotted) {
+    for (let i = 0; i < composed.figures.length; i++) {
+      const next = composed.figures[i]!;
+      const prev = figures[i]!;
+      const dy = next.y0 - prev.y0;
+      const dx = next.x0 - prev.x0;
+      if (Math.abs(dy) < 0.5 && Math.abs(dx) < 0.5 && Math.abs(next.x1 - prev.x1) < 0.5) continue;
+      const fr = artifact.frames.find((frame) => {
+        const cx = numericPair(frame.props.cellX, [0, 0]);
+        const cy = numericPair(frame.props.cellY, [0, 0]);
+        return cx && cy && Math.abs(cx[0] - prev.x0) < 1 && Math.abs(cy[0] - prev.y0) < 1;
+      });
+      if (fr) {
+        fr.props.cellX = literal([next.x0, next.x1]);
+        fr.props.cellY = literal([next.y0, next.y1]);
+      }
+      shiftNodesInBox(scene, prev, dx, dy);
+    }
   }
   for (let i = 0; i < bodies.length; i++) {
-    const place = packed.places[i];
+    const place = composed.places[i];
     if (!place) continue;
     bodies[i]!.props.x = literal(place.x);
     bodies[i]!.props.y = literal(place.y);
+    if (bodies[i]!.props.w?.kind === "number") bodies[i]!.props.w = literal(measure.colW);
   }
-  if (packed.places.length > bodies.length) {
+  if (composed.places.length > bodies.length) {
     const layer = scene.layers.find((l) => l.items.some((it) => it.kind === "node" && /_docBody/.test(it.name)));
     const last = bodies[bodies.length - 1]!;
-    for (let i = bodies.length; i < packed.places.length; i++) {
-      const place = packed.places[i]!;
+    for (let i = bodies.length; i < composed.places.length; i++) {
+      const place = composed.places[i]!;
       layer?.items.push(
         node(`${last.name}_flow${i}`, {
           role: last.props.role ?? literal("label"),
           x: literal(place.x),
           y: literal(place.y),
-          w: last.props.w ?? literal(w),
+          w: last.props.w ?? literal(measure.colW),
           text: literal(place.text),
         }),
       );
     }
   }
-  if (packed.bottom > extent.h) growSceneHeight(artifact, packed.bottom + reserves.bottom);
+  if (composed.bottom > extent.h) growSceneHeight(artifact, composed.bottom + reserves.bottom);
 }
 
 function shiftNodesInBox(
   scene: NonNullable<Artifact["scene"]>,
   box: { x0: number; y0: number; x1: number; y1: number },
-  dy: number,
+  dxOrDy: number,
+  dyArg?: number,
 ): void {
-  const bump = (expr: Expr | undefined): Expr | undefined => {
-    if (!expr || expr.kind !== "number") return expr;
+  const dx = dyArg === undefined ? 0 : dxOrDy;
+  const dy = dyArg === undefined ? dxOrDy : dyArg;
+  const bumpX = (expr: Expr | undefined): Expr | undefined => {
+    if (!expr || expr.kind !== "number" || Math.abs(dx) < 1e-9) return expr;
+    return literal(expr.value + dx);
+  };
+  const bumpY = (expr: Expr | undefined): Expr | undefined => {
+    if (!expr || expr.kind !== "number" || Math.abs(dy) < 1e-9) return expr;
     return literal(expr.value + dy);
   };
   for (const layer of scene.layers) {
@@ -391,9 +406,12 @@ function shiftNodesInBox(
         (Number.isFinite(x) && Number.isFinite(y) && x >= box.x0 - 1 && x <= box.x1 + 1 && y >= box.y0 - 1 && y <= box.y1 + 1) ||
         (Number.isFinite(y1) && y1 >= box.y0 - 1 && y1 <= box.y1 + 1);
       if (!inside) continue;
-      if (item.props.y) item.props.y = bump(item.props.y)!;
-      if (item.props.y1) item.props.y1 = bump(item.props.y1)!;
-      if (item.props.y2) item.props.y2 = bump(item.props.y2)!;
+      if (item.props.x) item.props.x = bumpX(item.props.x)!;
+      if (item.props.x1) item.props.x1 = bumpX(item.props.x1)!;
+      if (item.props.x2) item.props.x2 = bumpX(item.props.x2)!;
+      if (item.props.y) item.props.y = bumpY(item.props.y)!;
+      if (item.props.y1) item.props.y1 = bumpY(item.props.y1)!;
+      if (item.props.y2) item.props.y2 = bumpY(item.props.y2)!;
     }
   }
 }
@@ -2169,6 +2187,11 @@ function expandLayoutBoard(
     const holdDefault = playFps > 0 ? Math.max(0.2, 1 / playFps - easeSec) : 1.2;
     const holdSec = Math.max(0.05, numProp(props, "hold", numProp(props, "playHold", holdDefault)));
     const holds = numListProp(props, "holds");
+    const ins = numListProp(props, "ins");
+    const outs = numListProp(props, "outs");
+    const order = numListProp(props, "order");
+    const cuts = numListProp(props, "cuts");
+    const tracks = numListProp(props, "tracks");
     const fps = Math.max(1, numProp(props, "fps", 12));
     const beats = beatRects.length;
     if (!artifact.states.some((s) => s.name === "__beat")) {
@@ -2188,6 +2211,21 @@ function expandLayoutBoard(
             { key: "fps", value: literal(fps) },
             ...(holds.length
               ? [{ key: "holds", value: { kind: "array" as const, items: holds.map((h) => literal(h)), span } }]
+              : []),
+            ...(ins.length
+              ? [{ key: "ins", value: { kind: "array" as const, items: ins.map((n) => literal(n)), span } }]
+              : []),
+            ...(outs.length
+              ? [{ key: "outs", value: { kind: "array" as const, items: outs.map((n) => literal(n)), span } }]
+              : []),
+            ...(order.length
+              ? [{ key: "order", value: { kind: "array" as const, items: order.map((n) => literal(n)), span } }]
+              : []),
+            ...(cuts.length
+              ? [{ key: "cuts", value: { kind: "array" as const, items: cuts.map((n) => literal(n)), span } }]
+              : []),
+            ...(tracks.length
+              ? [{ key: "tracks", value: { kind: "array" as const, items: tracks.map((n) => literal(n)), span } }]
               : []),
           ],
           span,

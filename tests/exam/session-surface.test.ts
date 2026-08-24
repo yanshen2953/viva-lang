@@ -6,25 +6,45 @@ import { createHttpWebhookPipeline } from "../../src/agent/pipeline/adapters/htt
 import { handleMcpTool } from "../../src/mcp/tools.js";
 
 const HELLO = `artifact "Session"
-data series = []
+data series = [{ x: 1, y: 2 }, { x: 2, y: 4 }]
 state n = 0
 scene
+  background: #ffffff
   layer a
     node t
       x: 10
       y: 10
+      w: 80
+      h: 40
+      fill: #111111
       text: n
+widget chart.scatter
+  data: series
+  xField: x
+  yField: y
+  xlim: 0 3
+  ylim: 0 5
 `;
 
 const PATCHED = `artifact "Session"
-data series = []
+data series = [{ x: 1, y: 2 }, { x: 2, y: 4 }]
 state n = 3
 scene
+  background: #ffffff
   layer a
     node t
       x: 10
       y: 10
+      w: 80
+      h: 40
+      fill: #111111
       text: n
+widget chart.scatter
+  data: series
+  xField: x
+  yField: y
+  xlim: 0 3
+  ylim: 0 5
 `;
 
 describe("HTTP session / pipeline / provenance", () => {

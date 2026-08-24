@@ -344,7 +344,7 @@ widget chart.scatter
     expect(visit.q1).toBe(12);
   });
 
-  it("lets a host CJK font win over the bundled subset", () => {
+  it("lets a host CJK font win over the bundled library", () => {
     const fallback = resolveCjkFontPath();
     expect(fallback).toBeTruthy();
     const host = join(tmpdir(), `viva-host-cjk-${process.pid}.ttf`);

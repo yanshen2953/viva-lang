@@ -56,7 +56,7 @@ export function createVivaInlineEmbed(opts: VivaInlineEmbedOptions) {
           try {
             diagnostics.push(...runBrowserVisual(ir as import("../ir.js").VisualIR));
           } catch {
-            /* browser visual is warn-only */
+            /* browser visual may fail success; strip still paints */
           }
         }
         paintInlineCheckStrip(strip, inlineCheckLines(diagnostics, error));

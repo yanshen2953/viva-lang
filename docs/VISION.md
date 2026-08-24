@@ -25,7 +25,7 @@
 | 语法 | 原语极小，新能力只加插件名 | 核还算小；widget 走 `registerWidget()` | 语言表面没涨关键字。不要为图种/槽位加关键字 |
 | 编译器 | 度量、避让、对齐、交互默认、导出保真全在编译/运行时 | band/log/linear + handbook 涂颜料/接管字号字距 + 图核默认交互 | handbook **仍不**执行图语法（避让、对齐、栏宽文法）；导出保真仍有缺口 |
 | 插件 | 宿主运行时注册：图种、排版、领域视图，agent 可发现 | 手册 / 领域视图 / 结构宏都可注册 | 还不是热加载 / 沙箱包；未知 widget 编译失败并列出已注册名 |
-| Agent | 内联写短意图 → 编译 → 交互卡 → 检查 → 补丁 | CLI / MCP / HTTP / SDK 能编能导；prompt 默认 slim；MCP/HTTP compile 附 raster visual QA（空栏看 figure cell）；结构层用 CSS px + 旋转感知盒子警告 chrome 出格 | 生成成功率未测；visual / chromeOverflow 不挡 IR 成功；内联卡无 raster；无自动修复 |
+| Agent | 内联写短意图 → 编译 → 交互卡 → 检查 → 补丁 | CLI / MCP / HTTP / SDK 能编能导；prompt 默认 slim；MCP/HTTP compile 附 raster visual QA（空栏看 figure cell）；结构层用 CSS px + 旋转感知盒子警告 chrome 出格 | visual 错误失败 compile success；LLM 生成率用 key 实测；chromeOverflow 仍是警告 |
 
 一句话：今天是 **World + Space + Paint** 粘在一起，脊柱已能同时展开三柱，但出版观感与 agent 闭环都还没齐。愿景是 **同一套极小原语**，三柱都是编译器展开，插件只换展开器。
 

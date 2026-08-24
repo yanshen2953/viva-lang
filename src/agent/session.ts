@@ -252,14 +252,14 @@ export function createSession(
 
     emit(kind === "patch" ? "patched" : "compiled", { sourceHash, irHash });
     notifyWatchers();
-    const checkWarnings = result.checkDiagnostics ?? [];
+    const checkNotes = result.checkDiagnostics ?? [];
     return {
-      ok: true,
-      diagnostics: checkWarnings,
+      ok: result.checkOk !== false && result.success !== false,
+      diagnostics: checkNotes,
       sourceHash,
       irHash,
       ir: result.ir,
-      error: null,
+      error: result.checkOk === false ? "visual or structural check failed" : null,
     };
   };
 

@@ -275,7 +275,12 @@ export class Runtime {
     }
     this.applyBinds();
     this.applyRules();
-    applyViewState(this.state, { playing: Boolean(spec) });
+    applyViewState(this.state, {
+      playing: Boolean(spec) && this.running,
+      paused: Boolean(spec) && !this.running,
+      hovering: Boolean(this.hoverId),
+      dragging: Boolean(this.drag),
+    });
     this.render();
     this.resolveCollisions();
     this.animFrame = requestAnimationFrame(this.loop);
@@ -704,7 +709,11 @@ export class Runtime {
         event.preventDefault();
         this.applyBinds();
         this.applyRules();
-        applyViewState(this.state, { playing: true });
+        applyViewState(this.state, {
+          playing: true,
+          hovering: Boolean(this.hoverId),
+          dragging: Boolean(this.drag),
+        });
         this.render();
         return;
       }

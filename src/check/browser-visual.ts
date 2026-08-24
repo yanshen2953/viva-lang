@@ -1,6 +1,6 @@
 /**
  * Browser-safe visual notes from IR geometry. No resvg / sharp.
- * Warn only — never flip compile success.
+ * Errors fail compile success; IR is still returned so agents can repair.
  */
 
 import type { VisualIR } from "../ir.js";
@@ -17,12 +17,13 @@ const CHROME_HINT =
 function note(
   code: string,
   message: string,
+  severity: CheckDiagnostic["severity"],
   hint?: string,
 ): CheckDiagnostic {
   return {
     code,
     message,
-    severity: "warn",
+    severity,
     layer: "visual",
     span: { line: 1, column: 1 },
     hint,
@@ -33,7 +34,14 @@ export function runBrowserVisual(ir: VisualIR): CheckDiagnostic[] {
   const out: CheckDiagnostic[] = [];
   const { nodes } = withIrStyleContext(ir, () => flattenNodesFromIr(ir));
   const cells = figureCellsFromIr(ir);
-  const marks = nodes.filter((n) => MARK_HINT.test(n.name) && !CHROME_HINT.test(n.name));
+  const marks = nodes.filter((n) => {
+    if (CHROME_HINT.test(n.name)) return false;
+    if (MARK_HINT.test(n.name)) return true;
+    const w = Number(n.props.w ?? 0);
+    const h = Number(n.props.h ?? 0);
+    const r = Number(n.props.r ?? 0);
+    return (w > 2 && h > 2) || r > 1;
+  });
   if (cells.length >= 2) {
     const empty = cells.filter((cell) => {
       const hits = marks.filter((n) => {
@@ -48,16 +56,17 @@ export function runBrowserVisual(ir: VisualIR): CheckDiagnostic[] {
         note(
           "check.visual.emptyPanel",
           `${empty.length} of ${cells.length} figure cells look empty (${empty.map((c) => c.name).join(", ")})`,
+          "error",
           "Bind a chart.* to that panel or drop the unused cell.",
         ),
       );
     }
-  }
-  if (!marks.length && nodes.length > 4) {
+  } else if (cells.length >= 1 && !marks.length) {
     out.push(
       note(
         "check.visual.blank",
-        "scene flattens to chrome without mark-sized geometry",
+        "figure cell flattens to chrome without mark-sized geometry",
+        "error",
         "Add chart.* marks or World nodes with w/h/r.",
       ),
     );

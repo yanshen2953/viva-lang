@@ -61,7 +61,8 @@ async function toolCompile(args: Record<string, unknown>) {
     visual: args.visual === false ? false : undefined,
     source,
   });
-  return textResult(JSON.stringify(attached, null, 2), !attached.ir);
+  const failed = !attached.ir || attached.success === false || attached.visualOk === false;
+  return textResult(JSON.stringify(attached, null, 2), failed);
 }
 
 async function toolCheck(args: Record<string, unknown>) {
@@ -296,7 +297,7 @@ export const MCP_TOOL_DEFINITIONS = [
   {
     name: "viva_compile",
     description:
-      "Compile Viva source to Visual IR JSON. Attaches structural + raster visual QA; visual:false skips the raster. Visual findings do not fail IR success (not a repair loop).",
+      "Compile Viva source to Visual IR JSON. Attaches structural + raster visual QA; visual:false skips the raster. Visual errors fail compile success (IR is still returned for repair).",
     inputSchema: {
       type: "object",
       properties: {

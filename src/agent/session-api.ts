@@ -127,6 +127,8 @@ export function createSessionFacade(host: VivaAgentHost) {
       const attached = await attachHotPathVisual(compiled, { source });
       const summary = summarizeCompile(session, attached, includeIr);
       summary.visualOk = attached.visualOk;
+      summary.ok = Boolean(attached.success ?? (compiled.ok && attached.visualOk !== false));
+      if (!summary.ok && !summary.error) summary.error = "visual or structural check failed";
       return summary;
     },
 
@@ -141,6 +143,8 @@ export function createSessionFacade(host: VivaAgentHost) {
       const attached = await attachHotPathVisual(patched, { source });
       const summary = summarizeCompile(session, attached, includeIr);
       summary.visualOk = attached.visualOk;
+      summary.ok = Boolean(attached.success ?? (patched.ok && attached.visualOk !== false));
+      if (!summary.ok && !summary.error) summary.error = "visual or structural check failed";
       return summary;
     },
 

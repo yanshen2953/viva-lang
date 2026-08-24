@@ -1,7 +1,5 @@
-# VivaSansFallback.ttf
+# CJK fonts
 
-Subset of [Droid Sans Fallback](https://android.googlesource.com/platform/frameworks/base/+/master/data/fonts/) (Apache 2.0).
+`VivaSansCJK.ttf` is the packaged full library (Droid Sans Fallback Full, Apache 2.0). PDF export prefers this file, then a host `VIVA_PDF_CJK_FONT` / `--cjk-font` / `cjkFontPath`, then system CJK fonts.
 
-Contains Basic Latin, Latin-1, Greek, general/CJK punctuation, and Han used by Viva examples plus a paper-report lexicon. Rebuild with `python3 scripts/subset-cjk-font.py` from `DroidSansFallbackFull.ttf` if the example corpus grows.
-
-Override at runtime with `VIVA_PDF_CJK_FONT`.
+`VivaSansFallback.ttf` is a leftover example-lexicon subset kept as last resort. Rebuild it with `python3 scripts/subset-cjk-font.py` only if you need a tiny fallback; do not ship it as the package default.

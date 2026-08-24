@@ -156,7 +156,7 @@ export async function runVisualChecks(
         out,
         "check.visual.emptyPanel",
         `${empty.length} of ${cells.length} figure cells look empty (${empty.map((c) => c.name).join(", ")})`,
-        "warn",
+        "error",
         "A layout.figure panel may have missing or off-frame marks.",
       );
     }

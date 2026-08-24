@@ -10,9 +10,9 @@
 
 | 轴 | 之前说法 | 实际 |
 | --- | --- | --- |
-| 1 内联活世界 | 齐 | **接口齐 / 产品未齐**：Runtime 能拖点 tick；图表默认有数据域 brush/高亮；内联卡有 browser visual 警告条；session 会确定性 repair。仍不是完整游戏状态机 |
-| 2 度量科学图 | 齐 | **骨架齐 / 出版未齐**：linear/log/band + chart.*（含 vector/funnel）能出图；手册 typography 驱动 chrome 折行；色条有脊线。仍不是 Nature 栏宽文法 |
-| 3 通用 Agent 接口 | 齐 | **接入齐 / 闭环未齐**：CLI/MCP/HTTP 能编能导；确定性 repair 进 session；离线 exam 种子编译率在 CI。LLM 生成率仍要 key |
+| 1 内联活世界 | 齐 | **接口齐 / 产品未齐**：Runtime 能拖点 tick；图表默认有数据域 brush/高亮；`__view` 覆盖 hover/drag/brush/play/pause/page；内联卡有 browser visual。仍不是 Unity 级游戏引擎 |
+| 2 度量科学图 | 齐 | **骨架齐 / 出版未齐**：linear/log/band + chart.*（含 vector/funnel）能出图；手册 typography 驱动 chrome 折行；色条有脊线；figure 与正文走同一栏宽 compose。仍不是 Nature 投稿成品 |
+| 3 通用 Agent 接口 | 齐 | **接入齐 / 闭环加严**：CLI/MCP/HTTP 能编能导；确定性 repair 进 session；visual 错误失败 compile success；离线 exam 种子编译率在 CI。LLM 生成率用 key 实测 |
 | 4 流水线 | 部分 | 仍部分：Port + webhook + `attachDragParamLoop`（`watch("param")` → pipeline）。无自动 watch 宿主默认开 |
 | 5 领域视图 | 部分 | 仍部分：槽位在，重领域插件刻意不做 |
 | 6 可追溯 | 部分 | 仍部分：bundle 能导出，宿主未填 promptDigest |
@@ -21,11 +21,11 @@
 
 ## 粗糙的根因（不是缺再一个 HTTP 路由）
 
-1. **图核语义仍缺出版层** — 标题/轴/图例/色条/`(a)` 用同一残差向量长 inset；`placePaperChrome` 位姿也是同一残差循环。手册 typography 驱动折行/字号。色条有左右脊线。仍不是 InDesign / Nature 栏宽文法。
-2. **默认交互还不是完整 linked view** — `__sel` 跨面板藏行并重算摘要。`layout.board play` 是 hold+ease 时钟，可写 `holds:` 逐拍。`__view` 有转移/守卫。静态导出可读 `__easeU` + `__easeFrom` 采 220ms 中点。仍不是剪辑轨 / 完整游戏 SM。
-3. **导出 ≠ 预览** — play 导出按时钟采 hold / playback 帧；`__sel` 几何可按 `__easeU` 插值。正文绕 figure 过页，重叠时 figure 会 hop。PDF 缺字进 `missingGlyphs`。仍不是报纸成品或 NLE。
-4. **Agent 闭环没产品化** — visual 仍不挡 IR 成功。内联卡 + domain 视图跑 browser visual。session 对 overflow / 空栏 / 轴做确定性 repair。`attachDragParamLoop` 是宿主胶水。LLM 生成率未测（要 key）；离线 20 个 exam 种子编译率在 CI。
-5. **手册开始执行图语法** — policies + typography 进 expand / chrome。仍不是完整栏宽避让。
+1. **图核语义仍缺出版层** — 标题/轴/图例/色条/`(a)` 用同一残差向量长 inset；`placePaperChrome` 位姿也是同一残差循环。手册 typography 驱动折行/字号。色条有左右脊线。栏宽 compose 会 snap / page-fit / hop+repack。观感仍粗，不是 Nature 投稿成品。
+2. **默认交互还不是完整 linked view** — `__sel` 跨面板藏行并重算摘要。`layout.board play` 是 hold+ease 时钟，可写 `holds:` / `ins:` / `outs:` / `order:` / `cuts:` / `tracks:` 剪辑轨。`__view` 有 hover/drag/brush/play/pause/page 转移。静态导出可读 `__easeU` + `__easeFrom` 采 220ms 中点。
+3. **导出 ≠ 预览** — play 导出按编辑轨采 hold / playback 帧；`__sel` 几何可按 `__easeU` 插值。正文与 figure 同一栏宽流。PDF 缺字进 `missingGlyphs`。包内 CJK 是全库。
+4. **Agent 闭环** — visual 错误失败 compile success（IR 仍返回以便 repair）。内联卡 + domain 视图跑 browser visual。session 对 overflow / 空栏 / 轴做确定性 repair。`attachDragParamLoop` 是宿主胶水。离线 20 个 exam 种子编译率在 CI。
+5. **手册开始执行图语法** — policies + typography 进 expand / chrome；newspaper 用栏宽度量。
 
 ## 本轮已补（相对「接口堆砌」）
 
@@ -45,11 +45,11 @@
 | `layout.board` | `safe`/`title`/`body`/`lower`/`hud`；题注 + `controls`/`bind` 芯片（选中亮、不另画绑定值）；不写 `w/h` 铺满场景；不写 `safe`/`titleH`/`lowerH` 时按题注折行和芯片估条带；`splits` / `beats` / `bleed` / `typeGrid`；`--beats` 出 PNG 序列，可选 ffmpeg 拼 GIF/MP4 幻灯 |
 | 图表对位 | `panel: a` 吃已有 frame |
 | 投稿尺寸 | `unit: mm` + `column: single\|double` |
-| Agent 热路径 | slim prompt 默认；MCP/HTTP compile 与 session compile/patch 附 raster visual QA（不挡成功） |
+| Agent 热路径 | slim prompt 默认；MCP/HTTP compile 与 session compile/patch 附 raster visual QA（错误失败 success，IR 仍返回） |
 | 旋转感知 chrome 盒 | 审查 / Runtime / 结构检查共用 CJK 字宽 + `rotate` AABB（mm 先 scale 到 CSS px）；`check.struct.chromeOverflow` 只警告 |
 | inset 封顶后回收 | `placePaperChrome` 把标题/轴题/图例往格内收，不推进刻度；互叠缝跟 `pad` 走 |
 | 绘图区下限 | `clampChartInsets` 按 `MIN_PLOT_FRAC`（0.22）和 8 场景单位保绘图区，不再按侧帽卡 38%/50%；`growInsetsForChrome` / 邻居按溢出整量让路 |
-| typeGrid 灌文 | 12 导轨仍画 `type0`…；`body:` 按可读 2–3 栏从上到下、从左到右灌槽，不是 InDesign |
+| typeGrid 灌文 | 12 导轨仍画 `type0`…；`body:` 按可读 2–3 栏灌槽，paged 时与 figure 走同一栏宽 compose |
 | 续页跑页眉 | 多页 `page:` 续页顶栏重复 figure `(continued)` 或 board 题注；recto 靠右、verso 靠左。仍不是章节标或跳页码 |
 | play 遮罩不抢指针 | 全部拍遮罩按名字 `_veil_` 设 `pointer-events: none`（不只是当前拍 `visible: false`）；暗着的拍也能刷选。字幕条右侧画 `__beat` 的 `n / N`。`paper-storyboard` 是 183×103 mm 分镜 + play + 同一套 `__sel`。storyboard/board 图不再写 `interactive: false` |
 | mm 跟手 tip | 紧凑/投稿图不再靠常驻角 HUD；`chartTip` 跟 `__event` 走，空字不画；HUD/brush/folio 不抢指针。paper-cjk / paper-column / paper-pages / paper-spread / paper-linked-pages / paper-board-linked / paper-storyboard / figure-grid / figure-span / box / violin / time-axis / brackets 默认可交互。绑了 board 槽的 figure 也会避页刀；场景拉高后 lower-third 跟到最后一页。`paper-board-linked` 是 board 安全框 + A4 页刀 + 跨页 `__sel`。`paper-storyboard` 是 16:9 mm 分镜 + play + 跨拍 `__sel` |
@@ -65,19 +65,19 @@
 
 ## 仍然很粗（按用户可见排序）
 
-1. PDF 优先系统 CJK 全库，否则随包子集。未覆盖的字仍可能 `?`，导出会记 `missingGlyphs`。不是全库打进 npm
+1. 包内默认 `VivaSansCJK.ttf` 全库；宿主路径仍可覆盖。未覆盖的字仍可能 `?`，导出会记 `missingGlyphs`
 2. 手册 typography 驱动 chrome 字号/折行；色条有脊线。观感仍粗，不是投稿成品
-3. 正文绕 figure 过页；重叠时 figure 会 hop。仍不是 InDesign 文档流
-4. play 可写逐拍 `holds:`；`__view` 有转移。`__sel` 几何导出可读 `__easeU`。仍不是 NLE
-5. session 会修 overflow / 空栏绑 data / 补轴题；内联 + domain 有 browser visual。LLM 生成率未测
+3. 正文与 figure 同一栏宽 compose（snap / page-fit / hop+repack）。不是 Adobe InDesign
+4. play 可写 `holds` / `ins` / `outs` / `order` / `cuts` / `tracks` 剪辑轨；`__view` 有 hover/drag/pause。不是桌面 NLE
+5. session 会修 overflow / 空栏绑 data / 补轴题；visual 错误失败 success。LLM 生成率用 key 实测
 6. `attachDragParamLoop` 要把 `watch("param")` 接到 pipeline；宿主须自己挂
 7. 小栏宽 mm 图跟手 `__tip`。inset 触底后仍可能省略或收回格内
-8. `typeGrid` 仍不是跨页报纸
+8. `typeGrid` 与 figure 共用栏宽度量，仍不是跨页报纸成品
 
 ## 下一刀（质量，不再铺接口）
 
-1. 更紧的栏宽文法（figure 与正文同一文档流，而不只是 punch + hop）
-2. 用 key 跑 `test:agent-exam` 测 LLM 生成率
-3. 剪辑级成片仍必须是插件属性；不要加关键字
+1. 栏宽 compose 的视觉密度（标题/图/文的投稿级间距）
+2. 剪辑轨仍必须是插件属性；不要加关键字
+3. 不要宣称 Nature 级或已超过 Claude Science
 
 对照真源：`docs/VISION.md`。

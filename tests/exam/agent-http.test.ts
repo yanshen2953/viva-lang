@@ -4,12 +4,23 @@ import { compileSource } from "../../src/pipeline.js";
 import { ffmpegAvailable } from "../../src/export/index.js";
 
 const HELLO = `artifact "Hi"
+data series = [{ x: 1, y: 2 }, { x: 2, y: 3 }]
 scene
+  background: #ffffff
   layer a
     node t
       x: 10
       y: 10
+      w: 80
+      h: 40
+      fill: #111111
       text: "ok"
+widget chart.scatter
+  data: series
+  xField: x
+  yField: y
+  xlim: 0 3
+  ylim: 0 4
 `;
 
 describe("agent HTTP server", () => {

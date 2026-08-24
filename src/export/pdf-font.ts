@@ -4,7 +4,8 @@ import { fileURLToPath } from "node:url";
 import { PDFDocument, StandardFonts, type PDFFont } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 
-const BUNDLED_NAME = "VivaSansFallback.ttf";
+const BUNDLED_FULL = "VivaSansCJK.ttf";
+const BUNDLED_SUBSET = "VivaSansFallback.ttf";
 
 const SYSTEM_CJK_CANDIDATES = [
   "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
@@ -18,7 +19,7 @@ const SYSTEM_CJK_CANDIDATES = [
 ];
 
 export type CjkFontResolveOpts = {
-  /** Host TTF/OTF. Wins over `VIVA_PDF_CJK_FONT` and the bundled subset. */
+  /** Host TTF/OTF. Wins over `VIVA_PDF_CJK_FONT` and the bundled library. */
   fontPath?: string;
 };
 
@@ -30,25 +31,36 @@ export type PdfTextFonts = {
 
 function bundledCjkCandidates(): string[] {
   const here = dirname(fileURLToPath(import.meta.url));
-  return [
-    join(process.cwd(), "assets/fonts", BUNDLED_NAME),
-    join(here, "../../assets/fonts", BUNDLED_NAME),
-    join(here, "../../../assets/fonts", BUNDLED_NAME),
-    join(here, "../assets/fonts", BUNDLED_NAME),
+  const names = [BUNDLED_FULL, BUNDLED_SUBSET];
+  const roots = [
+    join(process.cwd(), "assets/fonts"),
+    join(here, "../../assets/fonts"),
+    join(here, "../../../assets/fonts"),
+    join(here, "../assets/fonts"),
   ];
+  return names.flatMap((name) => roots.map((root) => join(root, name)));
+}
+
+/** Packaged full CJK library (not the leftover subset). */
+export function bundledCjkFontPath(): string | null {
+  for (const path of bundledCjkCandidates()) {
+    if (path.endsWith(BUNDLED_FULL) && existsSync(path)) return path;
+  }
+  return null;
 }
 
 /**
  * First readable CJK TTF: host path, then `VIVA_PDF_CJK_FONT`, then the
- * bundled subset, then system fonts. Missing files fall through. Not a
- * language keyword — export fidelity only.
+ * bundled full library, then system fonts, then the leftover subset.
+ * Missing files fall through. Not a language keyword — export fidelity only.
  */
 export function resolveCjkFontPath(opts?: CjkFontResolveOpts): string | null {
   const candidates = [
     opts?.fontPath,
     process.env.VIVA_PDF_CJK_FONT,
+    ...bundledCjkCandidates().filter((path) => path.endsWith(BUNDLED_FULL)),
     ...SYSTEM_CJK_CANDIDATES,
-    ...bundledCjkCandidates(),
+    ...bundledCjkCandidates().filter((path) => path.endsWith(BUNDLED_SUBSET)),
   ];
   for (const path of candidates) {
     if (path && existsSync(path)) return path;

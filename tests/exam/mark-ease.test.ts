@@ -100,6 +100,10 @@ widget chart.bar
 
   it("view machine guards brush → selected → linked", () => {
     expect(guardView("idle", "brush")).toBe("brushing");
+    expect(guardView("idle", "hover")).toBe("hover");
+    expect(guardView("hover", "drag")).toBe("dragging");
+    expect(guardView("playing", "pause")).toBe("paused");
+    expect(guardView("paused", "play")).toBe("playing");
     expect(guardView("brushing", "release")).toBe("selected");
     expect(guardView("selected", "link")).toBe("linked");
     const state: Record<string, unknown> = {

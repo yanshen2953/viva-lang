@@ -3,7 +3,7 @@
 > **用途：** 新开 Cloud Agent / 新 chat 时，先读本文 + `AGENTS.md`，再把文末「复制块」贴进首条消息。  
 > **仓库：** https://github.com/yanshen2953/viva-lang  
 > **真源分支：** `cursor/style-handbook-hook-a8c1`  
-> **主 PR：** https://github.com/yanshen2953/viva-lang/pull/9（**DRAFT，勿 merge，勿 mark ready**）  
+> **主 PR：** https://github.com/yanshen2953/viva-lang/pull/9（用户已要求：该 merge 就 merge）  
 > **对照：** `docs/VISION.md`（愿景 vs 现状）· `docs/GAPS.md`（诚实缺口）· `docs/DESIGN.md` / `docs/PLAN.md`（设计真源；PLAN §1 里「1–3 已齐」**过满**，以 GAPS 为准）
 
 ---
@@ -43,7 +43,7 @@
 | 分支 | `cursor/style-handbook-hook-a8c1` |
 | HEAD | 手册文法 / 逐拍 hold / repair 扩补 / 拖参环（接续 `79374f4`） |
 | 工作树 | 本轮剩余缺口已进编译器，见 §3 / §4 |
-| 测试 | 本轮本机 `npm test`：**306 passed** |
+| 测试 | 本轮本机 `npm test`：**311 passed** |
 | `build:lib` | 通过 |
 | CI | `.github/workflows/ci.yml`：`npm ci` / `build:lib` / `npm test` / Atlas `--visual`。`dba0a84` 当时绿 |
 | `npm run build` | playground/runtime 严格 tsc 仍可能失败；日常用 `vite-node` + vitest |
@@ -64,9 +64,9 @@
 | 热图 | 格心刻度、中位步长铺格、短边 5% 缝、Y 第一行在顶、无笛卡尔虚线；色条按 `zlim` 刻（`0 4` → `4 3 2 1 0`）、短刻度线、顺序色 **一条** `linearGradient`（Runtime + 静态 SVG 共用 `gradientSpec`）；格子连续 `clamp(norm * 6, 0, 6)` | 不是 Nature CIE 色条 |
 | 轴 | 未加引号多词轴题拼成一句；线性轴键端点；`print-nature` 的 `maxMajorTicks` / `minorTicks` / `plotFloor` 进 expand；log/linear/time 和色条画次刻度 | 不是 Nature 轴文法 |
 | 矢量 | 场景三角箭头 + 绘图区比例尺 | 不是带单位换算的 quiver |
-| 排版 | chrome inset + 位姿同一残差循环；手册 typography 驱动折行/字号；色条有脊线；正文绕 figure，重叠则 hop | 不是 InDesign |
-| 交互 | play 是 hold+ease，可写 `holds:`；`__view` 有转移/守卫；导出可读 `__easeU` 采 220ms | 不是剪辑时间轴 / 完整游戏 SM |
-| Agent 面 | overflow / 空栏 / 轴确定性 repair；内联 + domain browser visual；`attachDragParamLoop`；离线 exam 种子编译率在 CI | visual 仍不挡成功；LLM 生成率未测 |
+| 排版 | chrome inset + 位姿同一残差循环；手册 typography 驱动折行/字号；色条有脊线；figure 与正文同一栏宽 compose | 不是 Adobe InDesign / Nature 成品 |
+| 交互 | play 是 hold+ease 剪辑轨（`holds`/`ins`/`outs`/`order`/`cuts`/`tracks`）；`__view` 有 hover/drag/play/pause/page；导出可读 `__easeU` 采 220ms | 不是桌面 NLE / Unity |
+| Agent 面 | overflow / 空栏 / 轴确定性 repair；内联 + domain browser visual；visual 错误失败 success；`attachDragParamLoop`；离线 exam 种子编译率在 CI | LLM 生成率用 key 实测 |
 
 最近相关提交（新 → 旧，便于 `git log`）：
 
@@ -96,37 +96,32 @@ ab659f7  色条刻在 zlim，不是三段色块端
 
 ### 4.2 时间轴 + 完整 linked view
 
-- `play` 是 hold+ease 时钟；`holds:` 是逐拍插件属性。导出 `__easeU` 与 Runtime 同一套 220ms
-- `__view` 有转移/守卫和 page。仍不是完整游戏 SM / NLE
+- `play` 是 hold+ease 时钟；`holds:` / `ins:` / `outs:` / `order:` / `cuts:` / `tracks:` 是剪辑轨插件属性。导出 `__easeU` 与 Runtime 同一套 220ms
+- `__view` 有 hover/drag/brush/selected/linked/playing/paused/paging 转移和守卫
 
 ### 4.3 报纸 + 成品视频
 
-- 正文会绕 figure 过页；重叠时 figure hop。subtitle 章节标；`→ n+1` 跳页。仍不是 InDesign
-- 成片仍是时钟采样，不是 NLE
+- 正文与 figure 同一栏宽 compose（snap / page-fit / hop+repack）。subtitle 章节标；`→ n+1` 跳页
+- 成片按编辑轨采样 hold / playback 帧
 
 ### 4.4 Agent 闭环
 
-- visual QA **附着但不挡** IR 成功（未改）
-- 内联卡跑 IR 级 browser visual（警告，不引 resvg）
+- visual QA **错误失败 compile success**（IR 仍返回以便 repair）
+- 内联卡跑 IR 级 browser visual（不引 resvg）
 - session 对 overflow / 空栏绑 data / 补 xLabel·yLabel / 删手写 tick 做确定性 repair
-- 离线 `examples/exam/*.viva` 编译率在 CI；`test:agent-exam` 仍要 key
+- 离线 `examples/exam/*.viva` 编译率在 CI；`test:agent-exam` 用 key 测生成率
 - `attachDragParamLoop` 是宿主胶水，不是语言关键字
-
-**建议下一刀（不缩小北极星）：**
-
-1. figure 与正文同一文档流（现在是 punch + hop，不是 InDesign）
-2. 用 key 跑 `test:agent-exam` 测 LLM 生成率
-3. 剪辑级成片仍必须是插件属性；不要加关键字
+- 包内默认 `assets/fonts/VivaSansCJK.ttf` 全库
 
 ---
 
 ## 5. 硬约束（接续时不要破）
 
 - **不要**全局关掉词中折行
-- **不要**让 visual 检查失败 IR 成功（除非用户以后明确要求，且误报已降）
+- visual 错误**会**失败 IR success；IR 仍返回。不要把误报重新改回「只警告」
 - **不要**加关键字：`figure` / `panel` / `colorbar` / `safe` / `lowerThird`
 - **不要**把 play 遮罩写成 `role: hud`
-- **不要** merge PR #9，不要 mark ready（除非用户明说）
+- 用户已要求 merge PR #9；CI 绿后合并
 - `src/embed/web.ts` **不能** import `agent/index`（会把 resvg/sharp 打进浏览器）
 - Handbook 在 widget 之后；`print-nature` 的 `.*Title$` → `title` **不覆盖**节点上已写的 `role`
 - 共享 bbox：`src/layout/node-bbox.ts`；审查必须先 `scaleSceneGeom`；frame 映射过的属性不要再 scale
@@ -136,7 +131,7 @@ ab659f7  色条刻在 zlim，不是三段色块端
 - `fieldLooksCategorical` **只看字符串**；整数 visit/week/col 保持线性，除非 `xTickVals` / band cats
 - Atlas 柱图例在 **格内、绘图区右侧**（plot ~255，legend ~261）是投稿位置，不是「图例画进数据」
 - `styleSkip: true` 跳过手册上色
-- 热路径：`src/check/index.ts` 的 `attachHotPathVisual`；MCP/HTTP 附 raster；**不挡 IR 成功**。内联卡 structural + `runBrowserVisual`（`src/check/browser-visual.ts`，不引 resvg）
+- 热路径：`src/check/index.ts` 的 `attachHotPathVisual`；MCP/HTTP 附 raster；**visual 错误失败 success**。内联卡 structural + `runBrowserVisual`（`src/check/browser-visual.ts`，不引 resvg）
 - 时钟：`src/timeline/clock.ts`；repair：`src/repair/deterministic.ts`
 - 保持 `interactive: false` 的 exam / MCP / HTTP fixture **不要**擅自改成 live
 - Cloud 新建旁支：`cursor/<descriptive-name>-e94d`（本任务继续用已有 `cursor/style-handbook-hook-a8c1`）
@@ -150,7 +145,7 @@ src/
   parser.ts  compiler.ts  runtime.ts  pipeline.ts  widgets.ts  paint.ts
   style/           handbook、roles（hyphenated：mark-area）
   layout/          node-bbox、board-chrome、chrome collide
-  check/           structural / visual / vision；热路径不挡成功
+  check/           structural / visual / vision；热路径 visual 错误失败 success
   agent/           Host、http-server、session（web.ts 勿再进口）
   embed/           inline.ts、web.ts、inline-check.ts
   export/          svg / png / pdf；static-svg 的 linearGradient

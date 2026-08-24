@@ -45,14 +45,27 @@ export type {
   SelectionCombine,
 } from "./review/index.js";
 export { exportArtifact, renderSvgFromIr, renderVectorPdfFromIr } from "./export/index.js";
-export { applyTimelineState, sampleBeatAt, startOfBeat, holdOf, type TimelineSpec } from "./timeline/index.js";
+export {
+  applyTimelineState,
+  sampleBeatAt,
+  startOfBeat,
+  holdOf,
+  editTrackOf,
+  type TimelineSpec,
+  type EditClip,
+} from "./timeline/index.js";
 export { repairSource, planRepairs } from "./repair/index.js";
 export { registerDragParamPipeline, attachDragParamLoop, DRAG_PARAM_PIPELINE_ID } from "./agent/pipeline/drag-param.js";
 export { runBrowserVisual } from "./check/browser-visual.js";
 export { applyViewState, sampleView, guardView } from "./runtime/view-machine.js";
 export { setChromeGrammar, getChromeGrammar, grammarFromTypography } from "./layout/chrome-collide.js";
-export { hopFiguresPastCopy } from "./layout/newspaper.js";
-export { pdfMissingGlyphs } from "./export/pdf-font.js";
+export {
+  hopFiguresPastCopy,
+  composeNewspaper,
+  newspaperMeasure,
+  snapFigureToMeasure,
+} from "./layout/newspaper.js";
+export { pdfMissingGlyphs, bundledCjkFontPath, resolveCjkFontPath } from "./export/pdf-font.js";
 export {
   runArtifactChecks,
   runStructuralChecks,

@@ -4,6 +4,7 @@ import { compileSource } from "../../src/pipeline.js";
 import { simulate } from "../../src/simulate.js";
 import {
   applyTimelineState,
+  editTrackOf,
   holdFrameTimes,
   playbackFrameTimes,
   sampleBeatAt,
@@ -66,5 +67,24 @@ describe("beat clock", () => {
     expect(sampleBeatAt(uneven, 1.5).phase).toBe("hold");
     expect(holdFrameTimes(uneven)[1]).toBeCloseTo(1.4 + 0.2);
     expect(sampleBeatAt(uneven, 2.0).beat).toBe(2);
+  });
+
+  it("plays an edit-track playlist without a new keyword", () => {
+    const edited = {
+      beats: 3,
+      holdSec: 1,
+      easeSec: 0.2,
+      fps: 10,
+      order: [2, 0, 1],
+      ins: [0, 0, 0],
+      outs: [0.6, 1, 0.8],
+      tracks: [0, 1, 0],
+    };
+    const track = editTrackOf(edited);
+    expect(track.map((c) => c.beat)).toEqual([2, 0, 1]);
+    expect(track[0]!.duration).toBeCloseTo(0.8);
+    expect(sampleBeatAt(edited, 0.1).beat).toBe(2);
+    expect(sampleBeatAt(edited, 0.1).track).toBe(0);
+    expect(startOfBeat(edited, 0)).toBeGreaterThan(0);
   });
 });
