@@ -64,7 +64,7 @@
 | 热图 | 格心刻度、中位步长铺格、短边 5% 缝、Y 第一行在顶、无笛卡尔虚线；色条按 `zlim` 刻（`0 4` → `4 3 2 1 0`）、短刻度线、顺序色 **一条** `linearGradient`（Runtime + 静态 SVG 共用 `gradientSpec`）；格子连续 `clamp(norm * 6, 0, 6)` | 不是 Nature CIE 色条 |
 | 轴 | 未加引号多词轴题拼成一句；线性轴键 `xlim`/`ylim` 端点；柱/箱/小提琴少量整数类目刻在取值上；折线/散点/矢量整数 x 铺满域时刻在取样点（周次不插 5） | 不是完整轴文法 |
 | 矢量 | 箭头头是场景三角，杆停在箭颈 | 不是带比例尺的 quiver |
-| 排版 | `layout.figure` 估 inset / 跨栏 / 编译器画题注；`layout.board` 安全框 + 芯片 + `typeGrid` 2–3 栏灌文；`page: a4` PDF 切片 + `n / N` + verso/recto 页戳；figure 行避页刀 | 不是报纸 / InDesign / 章节标 |
+| 排版 | `layout.figure` 估 inset / 跨栏 / 编译器画题注；chrome 按盒子溢出整量让 inset，封顶是绘图区下限（约 22%），不再 38%/50% 侧帽；`layout.board` 安全框 + 芯片 + `typeGrid` 2–3 栏灌文；`page: a4` PDF 切片 + `n / N` + verso/recto 页戳；figure 行避页刀 | 不是报纸 / InDesign / 章节标 |
 | 交互 | 默认 `__tip` / `__brush` / `__sel` 藏行并重算摘要；220ms CSS + 几何插值；play 遮罩不抢指针，拍号 `n / N` | 不是时间轴；导出硬切 |
 | Agent 面 | CLI / MCP / HTTP / session / `createVivaInlineEmbed()`；MCP/HTTP 附 raster visual，**不挡 IR 成功**；内联卡只读 structural | 无自动修；生成率未测 |
 
@@ -91,7 +91,7 @@ ab659f7  色条刻在 zlim，不是三段色块端
 
 ### 4.1 出版级排版求解
 
-- inset 仍封顶约 38% / 再让到约半格；chrome 只互推 **一档**，不是通用 typesetter
+- inset 已按 chrome 溢出整量增长，封顶改成绘图区下限（约 22% 边长 / 8 场景单位），不再卡 38% 再让到 50%。仍不是通用 typesetter：折行行数、字号、栏宽文法都还是启发式
 - CJK 是随包子集，不是全库
 - 色条比「三段色块」好，仍不是 Nature
 - box / violin / funnel / quiver 观感仍粗
@@ -118,9 +118,9 @@ ab659f7  色条刻在 zlim，不是三段色块端
 
 **建议下一刀（不缩小北极星）：**
 
-1. chrome 碰撞求解突破 inset 封顶（真避让，不是再加一档魔法数）
-2. Runtime 时间轴：`play` / `__beat` 插值；导出不再是幻灯
-3. Agent 产品环：内联 raster、对 `chromeOverflow` 的确定性 repair、测 LLM 生成率。**在误报降下来之前，不要让 visual 挡 IR 成功**
+1. Runtime 时间轴：`play` / `__beat` 插值；导出不再是幻灯
+2. Agent 产品环：内联 raster、对 `chromeOverflow` 的确定性 repair、测 LLM 生成率。**在误报降下来之前，不要让 visual 挡 IR 成功**
+3. 出版求解的下一层：栏宽文法 / 色条 / box·violin 观感（inset 侧帽已去掉，还不是 InDesign）
 
 ---
 
