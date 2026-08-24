@@ -17,7 +17,7 @@ import {
   exportBeatSequence,
 } from "../../src/export/index.js";
 import { holdFrameTimes, playbackFrameTimes } from "../../src/timeline/clock.js";
-import { COLUMN_MM, evalSceneProps, mmToPx, resolveSceneBox } from "../../src/space/scene-box.js";
+import { COLUMN_MM, evalSceneProps, mmToPx, resolveSceneBox, scenePageCount } from "../../src/space/scene-box.js";
 import { compareSvgPdfPages, pdftoppmAvailable } from "../../src/check/visual-parity.js";
 import { listSelectableNodes } from "../../src/review/nodes.js";
 import { pdfUnmappedGlyphs } from "../../src/export/pdf-font.js";
@@ -38,6 +38,13 @@ import { writePage, readPage } from "../../src/runtime/view-machine.js";
 
 const PRINT = { handbookIds: ["print-nature"] } as const;
 const PX_PER_PT = 72 / 96;
+
+function dockerHost(): string {
+  if (process.env.DOCKER_HOST) return process.env.DOCKER_HOST;
+  if (existsSync("/tmp/docker.sock")) return "unix:///tmp/docker.sock";
+  if (existsSync("/var/run/docker.sock")) return "unix:///var/run/docker.sock";
+  return "";
+}
 
 function compileArrival() {
   const src = readFileSync("examples/arrival.viva", "utf8");
@@ -192,6 +199,81 @@ describe("arrival 8 — playground / embed / pack / docker files", () => {
     );
   });
 
+  it("two paged boards do not share one body or overflow the paper", () => {
+    const src = `artifact "TwoBoards"
+data rows = [{ t: 1, score: 12, arm: "对照" }, { t: 2, score: 18, arm: "处理" }]
+scene
+  unit: mm
+  page: a4
+  column: double
+  height: 400
+widget layout.board
+  title: "到站件"
+  beats: 4
+  play: true
+widget layout.figure
+  panel: body
+  cols: 2
+widget chart.scatter
+  panel: a
+  span: 1
+  data: rows
+  xField: t
+  yField: score
+widget chart.violin
+  panel: c
+  span: 2
+  data: rows
+  xField: arm
+  yField: score
+widget layout.board
+  title: "跨页"
+widget layout.figure
+  panel: body
+  cols: 1
+widget chart.box
+  panel: d
+  span: 2
+  data: rows
+  xField: arm
+  yField: score
+`;
+    const compiled = compileSource(src, "two-board.viva", PRINT);
+    expect(compiled.error, compiled.error ?? "").toBeNull();
+    const ir = compiled.ir!;
+    const box = resolveSceneBox(evalSceneProps(ir.scene.props, [ir.state, ir.data]));
+    expect(scenePageCount(box)).toBeGreaterThanOrEqual(2);
+    expect(ir.frames.some((f) => f.name === "board2_body")).toBe(true);
+    const body2 = ir.frames.find((f) => f.name === "board2_body")!;
+    const body2y = evaluate(body2.props.y!, [ir.state, ir.data]) as number[];
+    expect(body2y[0]!).toBeGreaterThan(200);
+    const d = ir.frames.find((f) => f.name === "d");
+    expect(d, "second-board panel d").toBeTruthy();
+    const x = evaluate(d!.props.x!, [ir.state, ir.data]) as number[];
+    const y = evaluate(d!.props.y!, [ir.state, ir.data]) as number[];
+    const cellX = evaluate(d!.props.cellX!, [ir.state, ir.data]) as number[];
+    expect(x[1]! - x[0]!).toBeLessThan(210);
+    expect(cellX[1]! - cellX[0]!).toBeLessThanOrEqual(COLUMN_MM.double + 2);
+    expect(y[0]!).toBeGreaterThan(body2y[0]! - 1);
+    const a = ir.frames.find((f) => f.name === "a");
+    expect(a).toBeTruthy();
+    const ay = evaluate(a!.props.y!, [ir.state, ir.data]) as number[];
+    expect(ay[0]!).toBeLessThan(200);
+  });
+
+  it.skipIf(!dockerHost())("Docker image serves health, embed, and CJK PDF", () => {
+    const env = { ...process.env, DOCKER_HOST: dockerHost() };
+    const image = execSync("docker images -q viva-lang-agent:local", { encoding: "utf8", env }).trim();
+    expect(image, "viva-lang-agent:local must be built").toBeTruthy();
+    const out = execSync(
+      "docker run --rm viva-lang-agent:local sh -c 'test -f assets/fonts/VivaSansCJK.ttf && test -f dist/embed/viva-embed.js && node dist/cli.js export examples/arrival.viva -f pdf --handbook print-nature -o /tmp/a.pdf && test -s /tmp/a.pdf && echo CJK_PDF_OK'",
+      { encoding: "utf8", env, timeout: 60_000 },
+    );
+    expect(out).toMatch(/CJK_PDF_OK/);
+    const health = execSync("curl -fsS http://127.0.0.1:8765/api/health || true", { encoding: "utf8" });
+    if (health) expect(health).toMatch(/viva-agent/);
+  }, 90_000);
+
   it("npm pack includes CLI, embed bundle, CJK font, and arrival fixture", () => {
     const listing = execSync("npm pack --dry-run --json", { encoding: "utf8" });
     const json = JSON.parse(listing) as { filename?: string; files?: { path: string }[] }[];
@@ -294,5 +376,30 @@ describe("arrival 10 — slim prompt + capabilities + loop", () => {
     expect(writePage(state, 2, 3)).toBe(2);
     expect(readPage(state)).toBe(2);
     expect(writePage(state, 9, 3)).toBe(3);
+  });
+
+  it("slim skeleton and live generated cards stack the second board off page 1", () => {
+    const start = SYSTEM_PROMPT_SLIM.indexOf('\nartifact "Name"');
+    const end = SYSTEM_PROMPT_SLIM.indexOf("\n\nUse the Capabilities");
+    const skeleton = SYSTEM_PROMPT_SLIM.slice(start, end).trim();
+    const generated = [
+      "/opt/cursor/artifacts/deepseek-arrival.viva",
+      "/opt/cursor/artifacts/agent-loop-live.viva",
+      "/opt/cursor/artifacts/h09-arrival.viva",
+    ].filter((p) => existsSync(p));
+    const sources = [skeleton, ...generated.map((p) => readFileSync(p, "utf8"))];
+    expect(sources.length).toBeGreaterThan(0);
+    for (const src of sources) {
+      const compiled = compileSource(src, "slim-card.viva", PRINT);
+      expect(compiled.error, compiled.error ?? "").toBeNull();
+      const ir = compiled.ir!;
+      expect(ir.frames.some((f) => f.name === "board2_body")).toBe(true);
+      const d = ir.frames.find((f) => f.name === "d");
+      expect(d, "generated/slim panel d").toBeTruthy();
+      const y = evaluate(d!.props.y!, [ir.state, ir.data]) as number[];
+      expect(y[0]!).toBeGreaterThan(200);
+      const cellX = evaluate(d!.props.cellX!, [ir.state, ir.data]) as number[];
+      expect(cellX[1]! - cellX[0]!).toBeLessThanOrEqual(COLUMN_MM.double + 2);
+    }
   });
 });

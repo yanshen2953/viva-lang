@@ -1470,6 +1470,61 @@ function panelNamesFromProps(props: Record<string, Expr>, count: number, index: 
   });
 }
 
+/** Charts after this figure, until the next figure or board, own its panel letters. */
+function figureOwnedPanelNames(artifact: Artifact, figureIndex: number): string[] {
+  let seen = 0;
+  let collecting = false;
+  const names: string[] = [];
+  for (const widget of artifact.widgets) {
+    if (widget.name === "layout.figure") {
+      if (collecting) break;
+      seen += 1;
+      collecting = seen === figureIndex;
+      continue;
+    }
+    if (!collecting) continue;
+    if (widget.name === "layout.board") break;
+    if (!widget.name.startsWith("chart.")) continue;
+    const panel = stringProp(widget.props, ["panel", "frame"]);
+    if (!panel || panel === "body" || panel === "left" || panel === "right") continue;
+    if (!names.includes(panel)) names.push(panel);
+  }
+  return names;
+}
+
+function inferFigureRows(
+  artifact: Artifact,
+  names: string[],
+  cols: number,
+  fallback: number,
+): number {
+  const spanOf = (name: string) => panelColSpan(artifact, name, cols);
+  const need = names.reduce((sum, name) => sum + spanOf(name), 0);
+  let rows = Math.max(1, fallback, Math.ceil(need / Math.max(cols, 1)));
+  while (rows < names.length + 2) {
+    const taken = Array.from({ length: rows }, () => Array.from({ length: cols }, () => false));
+    let ok = true;
+    for (const name of names) {
+      const span = spanOf(name);
+      let placed = false;
+      for (let r = 0; r < rows && !placed; r++) {
+        for (let c = 0; c <= cols - span && !placed; c++) {
+          if (taken[r]!.slice(c, c + span).some(Boolean)) continue;
+          for (let k = 0; k < span; k++) taken[r]![c + k] = true;
+          placed = true;
+        }
+      }
+      if (!placed) {
+        ok = false;
+        break;
+      }
+    }
+    if (ok) return rows;
+    rows += 1;
+  }
+  return rows;
+}
+
 function expandLayoutFigure(
   artifact: Artifact,
   props: Record<string, Expr>,
@@ -1477,7 +1532,7 @@ function expandLayoutFigure(
 ): void {
   const span = artifact.span;
   const id = stringProp(props, ["id"]) ?? (index > 1 ? `fig${index}` : "fig");
-  const box = resolveLayoutBox(artifact, props);
+  const box = resolveLayoutBox(artifact, bindFigureToBoardBody(artifact, props, index));
   const originX = box.x;
   const originY = box.y;
   const width = box.w;
@@ -1514,7 +1569,16 @@ function expandLayoutFigure(
   const gridW = width;
   const gridH = Math.max(copyBands.minGrid, height - titleH - headGap - capH - footGap);
   const cols = Math.max(1, Math.floor(numProp(props, "cols", 2)));
-  const rows = Math.max(1, Math.floor(numProp(props, "rows", 2)));
+  const figureCount = artifact.widgets.filter((w) => w.name === "layout.figure").length;
+  const owned = figureOwnedPanelNames(artifact, index);
+  const defaultRows = Math.max(1, Math.floor(numProp(props, "rows", 2)));
+  const multiFigure = figureCount >= 2 && owned.length > 0 && props.panels === undefined;
+  const names = multiFigure ? owned : panelNamesFromProps(props, cols * defaultRows, index);
+  const rows = multiFigure
+    ? props.rows !== undefined
+      ? defaultRows
+      : inferFigureRows(artifact, names, cols, 1)
+    : defaultRows;
   const gaps = figureGapDefaults({
     unit: sceneUnitOf(artifact),
     width,
@@ -1526,8 +1590,6 @@ function expandLayoutFigure(
   const explicitR = props.insetR !== undefined || props.plotPadR !== undefined;
   const explicitT = props.insetT !== undefined || props.plotPadT !== undefined;
   const explicitB = props.insetB !== undefined || props.plotPadB !== undefined;
-  const count = cols * rows;
-  const names = panelNamesFromProps(props, count, index);
   const innerW = gridW - margin * 2;
   const innerH = gridH - margin * 2;
   const cellW = (innerW - gutter * Math.max(0, cols - 1)) / cols;
@@ -1785,7 +1847,7 @@ function expandLayoutBoard(
 ): void {
   const span = artifact.span;
   const id = stringProp(props, ["id"]) ?? (index > 1 ? `board${index}` : "board");
-  const box = resolveLayoutBox(artifact, props);
+  const box = stackPagedBoards(artifact, props, index, resolveLayoutBox(artifact, props));
   const originX = box.x;
   const originY = box.y;
   const width = box.w;
@@ -1825,7 +1887,7 @@ function expandLayoutBoard(
   const hudW = toScene(bands.hudW);
   const chipH = toScene(bands.chipH);
   const chipWs = bands.chipWs.map((w) => toScene(w));
-  const prefix = stringProp(props, ["prefix"]) ?? "";
+  const prefix = stringProp(props, ["prefix"]) ?? (index > 1 ? `board${index}` : "");
   const nameOf = (slot: string) => (prefix ? `${prefix}_${slot}` : slot);
 
   const safeX0 = originX + safe;
@@ -3158,6 +3220,49 @@ function frameBoxOf(
   const h = ys[1] - ys[0];
   if (!(w > 0) || !(h > 0)) return null;
   return { x: xs[0], y: ys[0], w, h };
+}
+
+/** Second+ boards get their own slots and sit on the next page, not on top of board 1. */
+function stackPagedBoards(
+  artifact: Artifact,
+  props: Record<string, Expr>,
+  index: number,
+  box: { x: number; y: number; w: number; h: number },
+): { x: number; y: number; w: number; h: number } {
+  const boardCount = artifact.widgets.filter((w) => w.name === "layout.board").length;
+  if (boardCount < 2 || index < 1) return box;
+  if (props.y !== undefined || props.h !== undefined) return box;
+  if (stringProp(props, ["panel", "frame"])) return box;
+  const page = parsePage(stringProp(artifact.scene?.props ?? {}, ["page"]));
+  const unit = sceneUnitOf(artifact);
+  if (!page || (unit !== "mm" && unit !== "pt")) return box;
+  const y = (index - 1) * page.h;
+  const h = page.h;
+  growSceneHeight(artifact, y + h);
+  return { ...box, y, h };
+}
+
+/** Figure after the Nth board fills that board's body/left/right, not the first body twice. */
+function bindFigureToBoardBody(
+  artifact: Artifact,
+  props: Record<string, Expr>,
+  figureIndex: number,
+): Record<string, Expr> {
+  const bound = stringProp(props, ["panel", "frame"]);
+  if (bound !== "body" && bound !== "left" && bound !== "right") return props;
+  let seen = 0;
+  let boardsBefore = 0;
+  for (const widget of artifact.widgets) {
+    if (widget.name === "layout.figure") {
+      seen += 1;
+      if (seen === figureIndex) break;
+    }
+    if (widget.name === "layout.board") boardsBefore += 1;
+  }
+  if (boardsBefore <= 1) return props;
+  const slot = `board${boardsBefore}_${bound}`;
+  if (!artifact.frames.some((f) => f.name === slot)) return props;
+  return { ...props, panel: literal(slot) };
 }
 
 /** Scene fill when x/y/w/h omitted; `panel`/`frame` inherit a board slot. */
