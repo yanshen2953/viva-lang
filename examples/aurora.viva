@@ -1,0 +1,189 @@
+artifact "Aurora"
+
+state yaw = 0.72
+state pitch = 0.28
+state zoom = 1.18
+state mark = none
+state hint = "暗场科学台 · 拖轨道 · 点选投影"
+
+data bars = [
+  { cat: 1, val: 36, grp: "night" }
+  { cat: 2, val: 58, grp: "night" }
+  { cat: 3, val: 47, grp: "dawn" }
+  { cat: 4, val: 81, grp: "dawn" }
+  { cat: 5, val: 69, grp: "flare" }
+]
+
+data tide = [
+  { t: 0, v: 14, grp: "aurora" }
+  { t: 1, v: 22, grp: "aurora" }
+  { t: 2, v: 18, grp: "aurora" }
+  { t: 3, v: 31, grp: "aurora" }
+  { t: 4, v: 27, grp: "aurora" }
+  { t: 5, v: 39, grp: "aurora" }
+  { t: 6, v: 34, grp: "aurora" }
+  { t: 0, v: 10, grp: "baseline" }
+  { t: 1, v: 12, grp: "baseline" }
+  { t: 2, v: 11, grp: "baseline" }
+  { t: 3, v: 13, grp: "baseline" }
+  { t: 4, v: 12, grp: "baseline" }
+  { t: 5, v: 14, grp: "baseline" }
+  { t: 6, v: 13, grp: "baseline" }
+]
+
+data field = [
+  { ox: 1.2, oy: 1.8, ux: 1.1, uy: 1.6, grp: "inflow" }
+  { ox: 2.8, oy: 3.1, ux: -0.7, uy: 2.1, grp: "inflow" }
+  { ox: 4.4, oy: 1.4, ux: 1.4, uy: -1.0, grp: "shear" }
+  { ox: 6.0, oy: 4.2, ux: -1.2, uy: -1.4, grp: "shear" }
+  { ox: 7.4, oy: 2.6, ux: 0.5, uy: 2.0, grp: "curl" }
+  { ox: 8.6, oy: 5.0, ux: 1.6, uy: 0.7, grp: "curl" }
+]
+
+data pca = [
+  { id: "N1", x: -1.5, y: 0.8, z: 0.3, grp: "night" }
+  { id: "N2", x: -1.1, y: 0.5, z: 0.1, grp: "night" }
+  { id: "N3", x: -0.8, y: 1.0, z: 0.4, grp: "night" }
+  { id: "D1", x: 0.3, y: -0.4, z: 1.0, grp: "dawn" }
+  { id: "D2", x: 0.6, y: -0.7, z: 0.8, grp: "dawn" }
+  { id: "D3", x: 0.9, y: -0.2, z: 1.2, grp: "dawn" }
+  { id: "F1", x: 1.3, y: 0.8, z: -0.7, grp: "flare" }
+  { id: "F2", x: 1.6, y: 1.1, z: -0.9, grp: "flare" }
+  { id: "F3", x: 1.1, y: 0.4, z: -0.5, grp: "flare" }
+]
+
+scene
+  size: 1280 780
+  background: #070b14
+
+  layer atmosphere
+    node wash
+      role: atmosphere
+      x: 0
+      y: 0
+      w: 1280
+      h: 780
+      gradient: #070b14 #0b1220 #111827
+      gradientDir: y
+
+    node bloomL
+      role: atmosphere
+      x: 180
+      y: 120
+      r: 200
+      gradient: #1d4ed8 #22d3ee
+      blur: 46
+      opacity: 0.32
+      blend: screen
+
+    node bloomR
+      role: atmosphere
+      x: 1080
+      y: 560
+      r: 220
+      gradient: #be123c #f59e0b
+      blur: 52
+      opacity: 0.24
+      blend: screen
+
+  layer orbit
+    node pcaPlotBg
+      role: plot
+      panel: d
+      xlim: -2.5 2.5
+      ylim: -2.5 2.5
+      title: "PCA · ORBIT"
+      xLabel: PC1
+      yLabel: PC2
+
+    node pcaOrbit
+      role: chrome
+      panel: pcaPlotBg
+      opacity: 0.04
+      drag: true
+
+    for p in pca
+      node pcaPt as pcaPts
+        role: mark
+        frame: pcaPlotBg
+        x: (p.x * cos(yaw) - p.z * sin(yaw)) * zoom
+        y: (p.y * cos(pitch) - (p.x * sin(yaw) + p.z * cos(yaw)) * sin(pitch)) * zoom
+        r: 7
+        colorBy: grp
+        palette: categorical
+        glow: 9
+
+      if mark == p.id
+        node pcaRing as pcaPts
+          role: annotation
+          frame: pcaPlotBg
+          x: (p.x * cos(yaw) - p.z * sin(yaw)) * zoom
+          y: (p.y * cos(pitch) - (p.x * sin(yaw) + p.z * cos(yaw)) * sin(pitch)) * zoom
+          r: 13
+          opacity: 0.16
+          strokeWidth: 2
+          dash: 5 4
+
+widget layout.board
+  title: "极光台 · 暗场科学图板"
+  subtitle: "handbook dashboard · role / colorBy · 轨道仍是 World"
+  body: "数据只写 grp。色板、框线、网格由手册注入。三块图吃 figure 格子；PCA 投影走 plot frame，拖轨道改 yaw/pitch，点选高亮同一套 Runtime。"
+  caption: hint
+  splits: 2
+
+widget layout.figure
+  panel: right
+  cols: 2
+  rows: 2
+  plate: false
+
+widget chart.bar
+  panel: a
+  data: bars
+  xField: cat
+  yField: val
+  group: grp
+  xlim: 0 6
+  ylim: 0 100
+  xLabel: "bin"
+  yLabel: "flux"
+  title: "FLUX · GROUP"
+  barWidth: 0.52
+
+widget chart.line
+  panel: b
+  data: tide
+  xField: t
+  yField: v
+  group: grp
+  xlim: 0 6
+  ylim: 0 45
+  xLabel: "t"
+  yLabel: "index"
+  title: "AURORA INDEX"
+
+widget chart.vector
+  panel: c
+  data: field
+  xField: ox
+  yField: oy
+  uField: ux
+  vField: uy
+  group: grp
+  xlim: 0 10
+  ylim: 0 6
+  xLabel: x
+  yLabel: y
+  title: "FLOW FIELD"
+  legend: bottom
+
+event drag on pcaOrbit
+  yaw = yaw + __event.dx * 0.012
+  pitch = clamp(pitch - __event.dy * 0.012, -1.1, 1.1)
+
+event click on pcaPts
+  mark = p.id
+  hint = p.id
+
+tick 12
+  yaw = yaw + 0.035

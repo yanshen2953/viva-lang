@@ -18,7 +18,7 @@ export { compileSource } from "./pipeline.js";
 export type { CompileOptions as PipelineCompileOptions, PipelineCheckOptions } from "./pipeline.js";
 export { Runtime, nodeIgnoresPointer } from "./runtime.js";
 export { evaluate, execute } from "./eval.js";
-export { simulate, createSimWorld } from "./simulate.js";
+export { simulate, createSimWorld, stepSimWorld } from "./simulate.js";
 export { SYSTEM_PROMPT } from "./llm/system-prompt.js";
 export { SYSTEM_PROMPT_SLIM } from "./llm/system-prompt-slim.js";
 export { vivaCapabilities, formatCapabilities } from "./agent/capabilities.js";

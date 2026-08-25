@@ -1,0 +1,153 @@
+artifact "Nocturne"
+
+state selArm = "药物"
+state hint = "同一栏度量 · 单栏 89 mm · 跨栏 183 mm"
+
+data visits = [
+  { wk: 0, score: 38, arm: "对照" }
+  { wk: 2, score: 40, arm: "对照" }
+  { wk: 4, score: 41, arm: "对照" }
+  { wk: 6, score: 43, arm: "对照" }
+  { wk: 8, score: 44, arm: "对照" }
+  { wk: 10, score: 46, arm: "对照" }
+  { wk: 12, score: 47, arm: "对照" }
+  { wk: 0, score: 38, arm: "药物" }
+  { wk: 2, score: 46, arm: "药物" }
+  { wk: 4, score: 54, arm: "药物" }
+  { wk: 6, score: 61, arm: "药物" }
+  { wk: 8, score: 68, arm: "药物" }
+  { wk: 10, score: 74, arm: "药物" }
+  { wk: 12, score: 79, arm: "药物" }
+]
+
+data marks = [
+  { il6: 1.4, crp: 10, arm: "低" }
+  { il6: 1.9, crp: 14, arm: "低" }
+  { il6: 2.3, crp: 18, arm: "低" }
+  { il6: 2.8, crp: 22, arm: "低" }
+  { il6: 3.4, crp: 28, arm: "中" }
+  { il6: 4.1, crp: 36, arm: "中" }
+  { il6: 4.8, crp: 44, arm: "中" }
+  { il6: 5.6, crp: 54, arm: "中" }
+  { il6: 6.4, crp: 66, arm: "高" }
+  { il6: 7.6, crp: 80, arm: "高" }
+  { il6: 8.8, crp: 96, arm: "高" }
+  { il6: 10.2, crp: 114, arm: "高" }
+]
+
+data density = [
+  { arm: "对照", y: 12 } { arm: "对照", y: 14 } { arm: "对照", y: 13 }
+  { arm: "对照", y: 11 } { arm: "对照", y: 15 } { arm: "对照", y: 16 }
+  { arm: "对照", y: 10 } { arm: "对照", y: 17 } { arm: "对照", y: 12 }
+  { arm: "药物", y: 20 } { arm: "药物", y: 22 } { arm: "药物", y: 24 }
+  { arm: "药物", y: 21 } { arm: "药物", y: 26 } { arm: "药物", y: 23 }
+  { arm: "药物", y: 28 } { arm: "药物", y: 25 } { arm: "药物", y: 27 }
+]
+
+data heat = [
+  { col: 0, row: 0, v: 0.12 } { col: 1, row: 0, v: 0.28 } { col: 2, row: 0, v: 0.44 }
+  { col: 3, row: 0, v: 0.61 } { col: 4, row: 0, v: 0.78 } { col: 5, row: 0, v: 0.55 }
+  { col: 0, row: 1, v: 0.22 } { col: 1, row: 1, v: 0.48 } { col: 2, row: 1, v: 0.66 }
+  { col: 3, row: 1, v: 0.82 } { col: 4, row: 1, v: 0.71 } { col: 5, row: 1, v: 0.39 }
+  { col: 0, row: 2, v: 0.18 } { col: 1, row: 2, v: 0.36 } { col: 2, row: 2, v: 0.58 }
+  { col: 3, row: 2, v: 0.74 } { col: 4, row: 2, v: 0.88 } { col: 5, row: 2, v: 0.62 }
+  { col: 0, row: 3, v: 0.08 } { col: 1, row: 3, v: 0.19 } { col: 2, row: 3, v: 0.33 }
+  { col: 3, row: 3, v: 0.47 } { col: 4, row: 3, v: 0.54 } { col: 5, row: 3, v: 0.29 }
+]
+
+data pins = [
+  { id: "p1", x: 8, y: 18 }
+  { id: "p2", x: 14, y: 26 }
+]
+
+scene
+  unit: mm
+  page: a4
+  column: double
+  height: 240
+  background: #ffffff
+
+  layer world
+    for pin in pins
+      node pin as pins
+        x: pin.x
+        y: pin.y
+        r: 2.6
+        fill: #0072B2
+        stroke: #1a1a1a
+        strokeWidth: 0.28
+        drag: true
+        solid: true
+
+widget layout.board
+  title: "夜曲 · 虚拟队列投稿图"
+  subtitle: "Figure 1 · n=248 · print-nature · 中英混排"
+  body: "作者只写栏宽、页刀和意图。89 mm 单栏与 183 mm 跨栏落在同一 scene.column 上，格子、轴题、色标和页戳由编译器长出来。拖页边针脚，刷图，n/N 翻拍。"
+  caption: hint
+  beats: 4
+  play: true
+  playFps: 2
+  guides: false
+
+widget layout.figure
+  panel: body
+  cols: 2
+  rows: 2
+  title: "应答 · 标志物 · 模块 · 分布"
+  caption: "span 1 = 89 mm · 同一件里的四联图"
+
+widget chart.line
+  panel: a
+  data: visits
+  xField: wk
+  yField: score
+  group: arm
+  xlim: 0 12
+  ylim: 30 90
+  xLabel: "周"
+  yLabel: "应答"
+  title: "十二周应答"
+
+widget chart.scatter
+  panel: b
+  data: marks
+  xField: il6
+  yField: crp
+  group: arm
+  xlim: 0 12
+  ylim: 0 130
+  xLabel: "IL-6"
+  yLabel: "CRP"
+  title: "生物标志物"
+  r: 4.8
+
+widget chart.heatmap
+  panel: c
+  data: heat
+  xField: col
+  yField: row
+  valueField: v
+  xlim: -0.5 5.5
+  ylim: -0.5 3.5
+  zlim: 0 1
+  zLabel: "module"
+  xLabel: "条件"
+  yLabel: "模块"
+  title: "基因模块"
+
+widget chart.violin
+  panel: d
+  data: density
+  xField: arm
+  yField: y
+  ylim: 8 32
+  xLabel: "分组"
+  yLabel: "评分"
+  title: "密度轮廓"
+
+event drag on pins
+  pin.x = __event.x
+  pin.y = __event.y
+
+event click on pins
+  hint = pin.id

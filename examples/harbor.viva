@@ -1,0 +1,241 @@
+artifact "Harbor"
+
+state selected = none
+state pulse = 0
+state motto = "拖船 · 点码头 · 夜港还活着"
+
+data piers = [
+  { name: "北栈", x: 168, y: 210, r: 18, c1: "#38bdf8", c2: "#818cf8" }
+  { name: "中栈", x: 310, y: 168, r: 22, c1: "#f472b6", c2: "#fb7185" }
+  { name: "南栈", x: 250, y: 318, r: 16, c1: "#34d399", c2: "#22d3ee" }
+]
+
+data ships = [
+  { name: "晨光", x: 210, y: 430, hue: "#f8fafc" }
+  { name: "晚潮", x: 360, y: 470, hue: "#fde68a" }
+]
+
+data skyline = [
+  { x: 620, y: 268, w: 36, h: 140 }
+  { x: 664, y: 228, w: 44, h: 180 }
+  { x: 716, y: 248, w: 32, h: 160 }
+  { x: 756, y: 198, w: 52, h: 210 }
+  { x: 816, y: 238, w: 40, h: 170 }
+  { x: 864, y: 278, w: 28, h: 130 }
+  { x: 900, y: 218, w: 48, h: 190 }
+]
+
+data windows = [
+  { x: 676, y: 248 }
+  { x: 690, y: 268 }
+  { x: 770, y: 228 }
+  { x: 788, y: 258 }
+  { x: 828, y: 268 }
+  { x: 914, y: 248 }
+  { x: 930, y: 278 }
+]
+
+scene
+  size: 1080 620
+  background: #061018
+
+  layer sky
+    node dusk
+      x: 0
+      y: 0
+      w: 1080
+      h: 620
+      gradient: #061018 #0b1b2b #122033
+      gradientDir: y
+
+    node aurora
+      x: 220
+      y: 40
+      r: 160
+      gradient: #1d4ed8 #22d3ee
+      opacity: 0.28
+      blur: 40
+      blend: screen
+
+    node ember
+      x: 860
+      y: 80
+      r: 130
+      gradient: #be123c #f59e0b
+      opacity: 0.22
+      blur: 36
+      blend: screen
+
+  layer water
+    node bay
+      x: 36
+      y: 360
+      w: 540
+      h: 224
+      radius: 28
+      gradient: #082f49 #0c4a6e
+      opacity: 0.88
+      stroke: #155e75
+      strokeWidth: 1
+
+    node sheen
+      x: 80
+      y: 420
+      w: 420
+      h: 36
+      radius: 18
+      fill: #67e8f9
+      opacity: 0.08
+      blur: 8
+      blend: screen
+
+  layer city
+    node quay
+      x: 580
+      y: 408
+      w: 464
+      h: 176
+      radius: 20
+      gradient: #0f172a #1e293b
+      stroke: #334155
+      strokeWidth: 1
+
+    for tower in skyline
+      node tower as towers
+        x: tower.x
+        y: tower.y
+        w: tower.w
+        h: tower.h
+        radius: 6
+        gradient: #0f172a #1e293b
+        stroke: #334155
+        strokeWidth: 1
+
+    for lamp in windows
+      node lamp as lamps
+        x: lamp.x
+        y: lamp.y
+        r: 3.2
+        fill: #fde68a
+        glow: 8
+        glowColor: #f59e0b
+
+  layer fleet
+    for pier in piers
+      node pier as piers
+        x: pier.x
+        y: pier.y
+        r: pier.r
+        gradient: pier.c1 pier.c2
+        glow: 20
+        glowColor: pier.c1
+        stroke: #f8fafc
+        strokeWidth: 1.4
+        hoverFill: #f8fafc
+        shadow: 0 16 28
+        shadowColor: #020617
+
+      node pierName as pierNames
+        x: pier.x
+        y: pier.y + pier.r + 18
+        text: pier.name
+        font: 13
+        fontWeight: 600
+        letterSpacing: 1.4
+        fill: #cbd5e1
+        align: center
+
+    for ship in ships
+      node ship as ships
+        x: ship.x
+        y: ship.y
+        w: 54
+        h: 18
+        radius: 9
+        fill: ship.hue
+        stroke: #0f172a
+        strokeWidth: 1
+        drag: true
+        shadow: 0 10 18
+        shadowColor: #082f49
+
+      node shipName as shipNames
+        x: ship.x + 27
+        y: ship.y - 14
+        text: ship.name
+        font: 12
+        fill: #e2e8f0
+        align: center
+
+  layer type
+    node title
+      x: 48
+      y: 52
+      text: "夜港"
+      font: 40
+      fontWeight: 700
+      letterSpacing: 2
+      fill: #f8fafc
+
+    node english
+      x: 156
+      y: 52
+      text: "HARBOR"
+      font: 16
+      fontWeight: 600
+      letterSpacing: 4
+      fill: #67e8f9
+
+    node line
+      x: 48
+      y: 78
+      text: motto
+      font: 14
+      fill: #94a3b8
+      letterSpacing: 0.6
+
+    node hint
+      x: 48
+      y: 580
+      text: "同一套 Runtime：点、拖、发光、排版。没有 HTML。"
+      font: 13
+      fill: #64748b
+
+    if selected != none
+      node detail
+        x: 620
+        y: 460
+        text: selected.name
+        font: 28
+        fontWeight: 700
+        fill: #67e8f9
+        glow: 12
+        glowColor: #22d3ee
+
+      node detailBody
+        x: 620
+        y: 498
+        text: "栈桥已点亮 · 船还在水上"
+        font: 14
+        fill: #94a3b8
+
+event click on piers
+  selected = pier
+  motto = pier.name
+
+event drag on ships
+  ship.x = __event.x - 27
+  ship.y = __event.y - 9
+  if ship.x < 50
+    ship.x = 50
+  if ship.x > 500
+    ship.x = 500
+  if ship.y < 380
+    ship.y = 380
+  if ship.y > 540
+    ship.y = 540
+
+tick 10
+  pulse = pulse + 0.03
+  for pier in piers
+    pier.r = 16 + (pulse * 6) % 8

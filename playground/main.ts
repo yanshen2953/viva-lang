@@ -15,11 +15,17 @@ import figureAtlas from "../examples/figure-atlas.viva?raw";
 import scienceStudio from "../examples/science-studio.viva?raw";
 import twin from "../examples/twin.viva?raw";
 import arrival from "../examples/arrival.viva?raw";
+import aurora from "../examples/aurora.viva?raw";
+import harbor from "../examples/harbor.viva?raw";
+import nocturne from "../examples/nocturne.viva?raw";
 import printNature from "../docs/handbooks/print-nature.md?raw";
 import dashboardHandbook from "../docs/handbooks/dashboard.md?raw";
 import "./style.css";
 
 const examples: Record<string, string> = {
+  Harbor: harbor,
+  Aurora: aurora,
+  Nocturne: nocturne,
   Hello: hello,
   Scatter: scatter,
   Charts: charts,
@@ -37,6 +43,9 @@ const examples: Record<string, string> = {
 
 /** Suggested handbook when opening an example (default preset: print-nature). */
 const handbookSuggestions: Record<string, string> = {
+  Harbor: "dashboard",
+  Aurora: "dashboard",
+  Nocturne: "print-nature",
   Atlas: "print-nature",
   Studio: "print-nature",
   Paper: "print-nature",
@@ -290,4 +299,4 @@ function run(): void {
   }
 }
 
-load("Atlas");
+load("Harbor");

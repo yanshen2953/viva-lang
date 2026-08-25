@@ -32,8 +32,7 @@ export function createSimWorld(ir: VisualIR): SimWorld {
   };
 }
 
-export function simulate(ir: VisualIR, opts: SimulateOptions = {}): SimWorld {
-  const world = createSimWorld(ir);
+export function stepSimWorld(ir: VisualIR, world: SimWorld, opts: SimulateOptions = {}): SimWorld {
   const scopes = (): Scope[] => [world.state, world.data];
 
   const applyBinds = () => {
@@ -79,4 +78,8 @@ export function simulate(ir: VisualIR, opts: SimulateOptions = {}): SimWorld {
   }
 
   return world;
+}
+
+export function simulate(ir: VisualIR, opts: SimulateOptions = {}): SimWorld {
+  return stepSimWorld(ir, createSimWorld(ir), opts);
 }
