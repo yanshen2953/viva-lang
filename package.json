@@ -68,6 +68,7 @@
     "test:agent-exam:smoke": "vite-node scripts/run-agent-exam.ts --track smoke",
     "test:agent-exam:all": "vite-node scripts/run-agent-exam.ts --track all",
     "demo:review": "vite-node scripts/demo-review-brief.ts",
+    "gallery": "vite-node --config vitest.config.ts scripts/export-gallery.mts",
     "preview": "vite preview"
   },
   "keywords": [
@@ -80,7 +81,7 @@
     "embed",
     "agent"
   ],
-  "license": "MIT",
+  "license": "GPL-3.0-or-later",
   "engines": {
     "node": ">=18"
   },
