@@ -56,6 +56,7 @@
     "viva.models.schema.json",
     "README.md",
     "README.en.md",
+    "AUTHORS",
     "LICENSE"
   ],
   "scripts": {
@@ -83,6 +84,20 @@
     "agent"
   ],
   "license": "GPL-3.0-or-later",
+  "author": {
+    "name": "闫燊",
+    "url": "https://github.com/yanshen2953"
+  },
+  "contributors": [
+    {
+      "name": "Qianlvdouhua",
+      "url": "https://github.com/Qianlvdouhua"
+    },
+    {
+      "name": "TheNanoWhale",
+      "url": "https://github.com/TheNanoWhale"
+    }
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/yanshen2953/viva-lang.git"

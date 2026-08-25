@@ -33,6 +33,12 @@ describe("showcase examples", () => {
     const en = readFileSync("README.en.md", "utf8");
     expect(zh).toMatch(/\[English\]\(\.\/README\.en\.md\)/);
     expect(en).toMatch(/\[中文\]\(\.\/README\.md\)/);
+    const authors = readFileSync("AUTHORS", "utf8");
+    expect(authors).toMatch(/yanshen2953/);
+    expect(authors).toMatch(/Qianlvdouhua/);
+    expect(authors).toMatch(/TheNanoWhale/);
+    expect(zh).toMatch(/Qianlvdouhua/);
+    expect(en).toMatch(/TheNanoWhale/);
     expect(zh).not.toMatch(/不是.{0,8}而是/);
     expect(en).not.toMatch(/not a .+ but /i);
     for (const md of [zh, en]) {

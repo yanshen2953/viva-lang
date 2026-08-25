@@ -140,8 +140,18 @@ viva mcp
 
 ---
 
+## 作者
+
+| 名字 | GitHub |
+| --- | --- |
+| 闫燊 | [yanshen2953](https://github.com/yanshen2953) |
+| Qianlvdouhua | [Qianlvdouhua](https://github.com/Qianlvdouhua) |
+| TheNanoWhale | [TheNanoWhale](https://github.com/TheNanoWhale) |
+
+完整名单见 [`AUTHORS`](./AUTHORS)。
+
 ## 许可证
 
-[GPL-3.0-or-later](./LICENSE)。可以商用，可以改。改过的版本要保留原作者署名，并且继续用 GPL。
+[GPL-3.0-or-later](./LICENSE)。可以商用，可以改。改过的版本要保留上面这些人的署名，并且继续用 GPL。
 
-Copyright (C) 2026 Viva Language Contributors
+Copyright (C) 2026 闫燊 (yanshen2953), Qianlvdouhua, TheNanoWhale

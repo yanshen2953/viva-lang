@@ -140,8 +140,18 @@ Language notes: [`docs/LANGUAGE.md`](./docs/LANGUAGE.md). Hosting: [`docs/DEPLOY
 
 ---
 
+## Authors
+
+| Name | GitHub |
+| --- | --- |
+| 闫燊 | [yanshen2953](https://github.com/yanshen2953) |
+| Qianlvdouhua | [Qianlvdouhua](https://github.com/Qianlvdouhua) |
+| TheNanoWhale | [TheNanoWhale](https://github.com/TheNanoWhale) |
+
+The full list is in [`AUTHORS`](./AUTHORS).
+
 ## License
 
-[GPL-3.0-or-later](./LICENSE). Commercial use is allowed. Keep the copyright notice. Modified versions must stay under the GPL.
+[GPL-3.0-or-later](./LICENSE). Commercial use is allowed. Keep the names above. Modified versions must stay under the GPL.
 
-Copyright (C) 2026 Viva Language Contributors
+Copyright (C) 2026 闫燊 (yanshen2953), Qianlvdouhua, TheNanoWhale
