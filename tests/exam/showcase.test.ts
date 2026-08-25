@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { compileSource } from "../../src/pipeline.js";
 import { exportBeatAnimation, ffmpegAvailable } from "../../src/export/index.js";
 import { createSimWorld, stepSimWorld } from "../../src/simulate.js";
@@ -26,6 +26,26 @@ describe("showcase examples", () => {
     expect(harbor.ir.events.some((e) => e.type === "drag" && e.target === "ships")).toBe(true);
     expect(harbor.ir.events.some((e) => e.type === "click" && e.target === "piers")).toBe(true);
     expect(harbor.src).toMatch(/夜港|HARBOR/);
+  });
+
+  it("README uses markdown images GitHub can render and ships an npm tarball", () => {
+    const md = readFileSync("README.md", "utf8");
+    expect(md).toMatch(/!\[.*\]\(\.\/docs\/gallery\/harbor\.png\)/);
+    expect(md).toMatch(/!\[.*\]\(\.\/docs\/gallery\/nocturne\.png\)/);
+    expect(md).toMatch(/!\[.*\]\(\.\/docs\/gallery\/aurora\.png\)/);
+    expect(md).toMatch(/!\[.*\]\(\.\/docs\/gallery\/harbor\.gif\)/);
+    expect(md).toContain("packages/viva-lang-0.1.0.tgz");
+    expect(md).toMatch(/npm install -g \.\/packages\/viva-lang-0\.1\.0\.tgz/);
+    expect(md.indexOf("npm install -g")).toBeLessThan(md.indexOf("docker compose"));
+    for (const file of [
+      "docs/gallery/harbor.png",
+      "docs/gallery/nocturne.png",
+      "docs/gallery/aurora.png",
+      "docs/gallery/harbor.gif",
+      "packages/viva-lang-0.1.0.tgz",
+    ]) {
+      expect(existsSync(file), file).toBe(true);
+    }
   });
 
   it("playground mounts the three showcase cards", () => {

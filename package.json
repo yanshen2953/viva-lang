@@ -82,6 +82,14 @@
     "agent"
   ],
   "license": "GPL-3.0-or-later",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yanshen2953/viva-lang.git"
+  },
+  "homepage": "https://github.com/yanshen2953/viva-lang",
+  "bugs": {
+    "url": "https://github.com/yanshen2953/viva-lang/issues"
+  },
   "engines": {
     "node": ">=18"
   },
