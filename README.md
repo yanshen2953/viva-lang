@@ -1,14 +1,16 @@
 # Viva
 
-一门给 Agent 写的交互视觉语言：源码极小，编译器长出图表、栏宽、页刀和可点可拖的世界。
+[English](./README.en.md)
 
-![夜港 Harbor：点栈桥、拖船](./docs/gallery/harbor.png)
+Viva 是一门很小的可视化语言。写一份 `.viva`，编译器生成可点击的图，也可以导出 PNG、PDF、gif、mp4。
 
-![夜曲 Nocturne：print-nature 四联投稿图](./docs/gallery/nocturne.png)
+![夜港](./docs/gallery/harbor.png)
 
-![极光台 Aurora：暗场科学图板](./docs/gallery/aurora.png)
+![夜曲](./docs/gallery/nocturne.png)
 
-动图（同一份源码采的交互，不是海报）：
+![极光台](./docs/gallery/aurora.png)
+
+点栈桥、拖船、转轨道：
 
 ![夜港交互](./docs/gallery/harbor.gif)
 
@@ -16,20 +18,18 @@
 
 ![夜曲拖针脚](./docs/gallery/nocturne-hand.gif)
 
-源码：[`examples/harbor.viva`](./examples/harbor.viva) · [`examples/nocturne.viva`](./examples/nocturne.viva) · [`examples/aurora.viva`](./examples/aurora.viva)
+对应源码：[`examples/harbor.viva`](./examples/harbor.viva)、[`examples/nocturne.viva`](./examples/nocturne.viva)、[`examples/aurora.viva`](./examples/aurora.viva)。
 
 ---
 
 ## 安装
 
-这是一门语言，先装编译器和 `viva` 命令。**不要只跑 Docker。**
+先装编译器和 `viva` 命令。需要 Node.js 18 或更高。
 
-### 1. npm 安装包（Win / macOS / Linux）
+### npm 包（Windows / macOS / Linux）
 
-仓库里有现成的 npm 包，下载后全局安装即可：
-
-- 安装包：[packages/viva-lang-0.1.0.tgz](./packages/viva-lang-0.1.0.tgz)
-- 校验：[packages/SHA256SUMS](./packages/SHA256SUMS)
+- 包：[packages/viva-lang-0.1.0.tgz](./packages/viva-lang-0.1.0.tgz)
+- 校验和：[packages/SHA256SUMS](./packages/SHA256SUMS)
 
 ```bash
 npm install -g ./packages/viva-lang-0.1.0.tgz
@@ -37,21 +37,19 @@ viva version
 viva export examples/harbor.viva -f png --handbook dashboard -o harbor.png
 ```
 
-发布到 npm 之后也可以：
+如果已经发到 npm：
 
 ```bash
 npm install -g viva-lang
 ```
 
-需要 Node.js ≥ 18。
-
-### 2. 一键脚本
+### 安装脚本
 
 Linux / macOS：
 
 ```bash
 bash install/one-click.sh
-# 或本机已 clone：
+# 已经 clone 过仓库的话：
 bash install/install.sh
 export PATH="$HOME/.local/bin:$PATH"
 viva version
@@ -63,14 +61,13 @@ Windows：
 powershell -ExecutionPolicy Bypass -File install\install.ps1
 ```
 
-脚本说明见 [`install/README.md`](./install/README.md)。自己打完整发布包：
+说明在 [`install/README.md`](./install/README.md)。重新打包：
 
 ```bash
 npm run pack:release
-# → release/viva-lang-*.tgz + 安装脚本 + Docker 附件
 ```
 
-### 3. 从源码装（开发语言本身）
+### 从源码装
 
 ```bash
 git clone https://github.com/yanshen2953/viva-lang.git
@@ -81,17 +78,17 @@ npm install -g .
 viva version
 ```
 
-本地 playground（改语言、看例子）：
+本地改语言、看例子：
 
 ```bash
 npm run dev
 ```
 
-打开 http://localhost:5173 ，默认就是夜港。
+浏览器打开 http://localhost:5173
 
-### 4. Docker（可选，给服务器）
+### Docker
 
-只有要挂 HTTP Agent 桥的时候才用：
+给已经装好 Docker、要在服务器上开 HTTP 接口的人：
 
 ```bash
 docker compose up -d --build
@@ -100,7 +97,7 @@ curl http://localhost:8765/api/health
 
 ---
 
-## 语言长什么样
+## 最短例子
 
 ```viva
 artifact "Hello Viva"
@@ -131,20 +128,20 @@ viva serve --port 8765
 viva mcp
 ```
 
-| 入口 | 做什么 |
+| 命令 | 用途 |
 | --- | --- |
-| `viva` | 编译、检查、导出 SVG/PNG/PDF/gif/mp4 |
+| `viva` | 编译、检查、导出 |
 | `viva mcp` | Cursor / Claude Desktop 的 MCP |
-| `viva serve` | Agent HTTP |
+| `viva serve` | HTTP 接口 |
 | `import from "viva-lang"` | Node SDK |
-| `import from "viva-lang/embed"` | 浏览器内嵌 |
+| `import from "viva-lang/embed"` | 网页里嵌一份图 |
 
-语法：[`docs/LANGUAGE.md`](./docs/LANGUAGE.md) · 接入：[`docs/DEPLOY.md`](./docs/DEPLOY.md) · 设计：[`docs/DESIGN.md`](./docs/DESIGN.md)
+语法见 [`docs/LANGUAGE.md`](./docs/LANGUAGE.md)，接入见 [`docs/DEPLOY.md`](./docs/DEPLOY.md)。
 
 ---
 
-## 许可
+## 许可证
 
-[GPL-3.0-or-later](./LICENSE)。可商用、可改、可再分发；必须保留署名；衍生作品必须用同样的 GPL 开源。
+[GPL-3.0-or-later](./LICENSE)。可以商用，可以改。改过的版本要保留原作者署名，并且继续用 GPL。
 
 Copyright (C) 2026 Viva Language Contributors

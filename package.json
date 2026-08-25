@@ -55,6 +55,7 @@
     "viva.models.json.example",
     "viva.models.schema.json",
     "README.md",
+    "README.en.md",
     "LICENSE"
   ],
   "scripts": {

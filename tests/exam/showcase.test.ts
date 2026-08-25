@@ -28,15 +28,22 @@ describe("showcase examples", () => {
     expect(harbor.src).toMatch(/夜港|HARBOR/);
   });
 
-  it("README uses markdown images GitHub can render and ships an npm tarball", () => {
-    const md = readFileSync("README.md", "utf8");
-    expect(md).toMatch(/!\[.*\]\(\.\/docs\/gallery\/harbor\.png\)/);
-    expect(md).toMatch(/!\[.*\]\(\.\/docs\/gallery\/nocturne\.png\)/);
-    expect(md).toMatch(/!\[.*\]\(\.\/docs\/gallery\/aurora\.png\)/);
-    expect(md).toMatch(/!\[.*\]\(\.\/docs\/gallery\/harbor\.gif\)/);
-    expect(md).toContain("packages/viva-lang-0.1.0.tgz");
-    expect(md).toMatch(/npm install -g \.\/packages\/viva-lang-0\.1\.0\.tgz/);
-    expect(md.indexOf("npm install -g")).toBeLessThan(md.indexOf("docker compose"));
+  it("Chinese and English READMEs use markdown images and ship an npm tarball", () => {
+    const zh = readFileSync("README.md", "utf8");
+    const en = readFileSync("README.en.md", "utf8");
+    expect(zh).toMatch(/\[English\]\(\.\/README\.en\.md\)/);
+    expect(en).toMatch(/\[中文\]\(\.\/README\.md\)/);
+    expect(zh).not.toMatch(/不是.{0,8}而是/);
+    expect(en).not.toMatch(/not a .+ but /i);
+    for (const md of [zh, en]) {
+      expect(md).toMatch(/!\[.*\]\(\.\/docs\/gallery\/harbor\.png\)/);
+      expect(md).toMatch(/!\[.*\]\(\.\/docs\/gallery\/nocturne\.png\)/);
+      expect(md).toMatch(/!\[.*\]\(\.\/docs\/gallery\/aurora\.png\)/);
+      expect(md).toMatch(/!\[.*\]\(\.\/docs\/gallery\/harbor\.gif\)/);
+      expect(md).toContain("packages/viva-lang-0.1.0.tgz");
+      expect(md).toMatch(/npm install -g \.\/packages\/viva-lang-0\.1\.0\.tgz/);
+      expect(md.indexOf("npm install -g")).toBeLessThan(md.indexOf("docker compose"));
+    }
     for (const file of [
       "docs/gallery/harbor.png",
       "docs/gallery/nocturne.png",
