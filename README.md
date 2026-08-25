@@ -1,101 +1,154 @@
-# Viva
+<p align="center">
+  <img src="docs/gallery/harbor.gif" alt="夜港 · 点栈桥、拖船、灯还在呼吸" width="920" />
+</p>
 
-面向大模型的交互视觉语言：模型只写意图，编译器和运行时把一份很小的 DSL 变成可点击、可演化的 Artifact。
+<h1 align="center">Viva</h1>
 
-> 不是新的前端框架，而是一种 LLM-native Interactive Visual Language。
+<p align="center">
+  <strong>模型只写意图，编译器长出可点击的世界。</strong><br />
+  同一份极小 DSL：论文图、暗场仪表、夜港交互、分镜拍钟。
+</p>
 
-## 为什么
+<p align="center">
+  <a href="LICENSE"><img alt="License: GPL-3.0-or-later" src="https://img.shields.io/badge/license-GPL--3.0--or--later-blue.svg" /></a>
+  <a href="https://github.com/yanshen2953/viva-lang"><img alt="GitHub" src="https://img.shields.io/badge/github-public-24292f.svg" /></a>
+  <img alt="Node" src="https://img.shields.io/badge/node-%3E%3D18-3c873a.svg" />
+</p>
 
-HTML / React 表达力强，但 token 贵、细节多、生成不稳定。Vega 一类可视化 DSL 擅长数据映射，却很难描述世界状态、长时间演化和对象之间的行为依赖。
+<p align="center">
+  <a href="#画廊">画廊</a> ·
+  <a href="#三十秒">三十秒</a> ·
+  <a href="#同一份源码">源码</a> ·
+  <a href="#许可">许可</a>
+</p>
 
-Viva 的语言表面刻意很小，复杂的布局、事件、动画、场景图都留给确定性编译器。
+Viva 不是又一个前端框架。它是一门 **LLM-native** 的交互视觉语言：状态、事件、图表、栏宽、页刀都留给确定性编译器。Agent 写短意图，Runtime 负责点、拖、刷、翻拍。
 
-## 快速开始
+仓库已经公开：<https://github.com/yanshen2953/viva-lang>
+
+---
+
+## 画廊
+
+下面不是海报。每一段都是**同一份 `.viva` 源码**编出来的：静帧是 `viva export -f png`，视频是 Clock 拍钟或 Runtime 点/拖/tick 采帧后再交给 ffmpeg。
+
+<table>
+  <tr>
+    <td align="center" width="50%">
+      <a href="examples/harbor.viva"><img src="docs/gallery/harbor.gif" alt="夜港交互" /></a>
+      <br />
+      <strong>Harbor · 夜港</strong><br />
+      <sub>点栈桥、拖船、灯呼吸 · 交互 mp4：<a href="docs/gallery/harbor.mp4">harbor.mp4</a></sub>
+    </td>
+    <td align="center" width="50%">
+      <a href="examples/aurora.viva"><img src="docs/gallery/aurora.gif" alt="极光台轨道" /></a>
+      <br />
+      <strong>Aurora · 极光台</strong><br />
+      <sub>轨道自转、点选投影 · 交互 mp4：<a href="docs/gallery/aurora.mp4">aurora.mp4</a></sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <a href="examples/nocturne.viva"><img src="docs/gallery/nocturne.gif" alt="夜曲投稿图拍钟" /></a>
+      <br />
+      <strong>Nocturne · 夜曲</strong><br />
+      <sub>print-nature 四联图 · Clock 拍钟 <a href="docs/gallery/nocturne.mp4">nocturne.mp4</a></sub>
+    </td>
+    <td align="center">
+      <a href="examples/storyboard.viva"><img src="docs/gallery/reel.gif" alt="分镜拍钟" /></a>
+      <br />
+      <strong>Reel · 分镜</strong><br />
+      <sub>四拍 hold+ease，与 Runtime 同一套 Clock · <a href="docs/gallery/reel.mp4">reel.mp4</a></sub>
+    </td>
+  </tr>
+</table>
+
+<p align="center">
+  <img src="docs/gallery/nocturne-hand.gif" alt="夜曲：拖页边针脚" width="640" /><br />
+  <sub>Nocturne 不只会播拍：页边针脚也能拖。源码在 <a href="examples/nocturne.viva">examples/nocturne.viva</a> · <a href="docs/gallery/nocturne-hand.mp4">nocturne-hand.mp4</a></sub>
+</p>
+
+Playground 打开即可点：`Harbor` / `Aurora` / `Nocturne`。
+
+```bash
+npm run gallery          # 重导出 docs/gallery 静帧 + gif/mp4
+```
+
+---
+
+## 三十秒
 
 ```bash
 npm install
-npm test
 npm run dev
 ```
 
-浏览器打开 [http://localhost:5173](http://localhost:5173)，左侧改 `.viva` 源码，右侧立即渲染。
-
-### 安装 CLI（Win / Mac / Linux）
+浏览器打开 [http://localhost:5173](http://localhost:5173)。默认就是夜港：点栈桥、拖船。
 
 ```bash
-npm install -g .
-# 或一键: bash install/one-click.sh
-# Docker: docker compose up -d --build
+npx viva export examples/harbor.viva -f png --handbook dashboard -o harbor.png
+npx viva export examples/nocturne.viva --beats -f mp4 --handbook print-nature -o nocturne.mp4
 ```
 
-部署与其它 Agent 接入：[`docs/DEPLOY.md`](docs/DEPLOY.md)
+CLI / Docker / Agent 接入见 [`docs/DEPLOY.md`](docs/DEPLOY.md)。  
+圈选审查 → agent 修图：Playground「审查模式」或 [`docs/hosts/review.md`](docs/hosts/review.md)。
 
-```bash
-viva version
-viva export examples/charts.viva -f pdf -o charts.pdf   # 矢量 PDF（几何 1:1）
-viva export examples/hello.viva -f pdf-raster -o r.pdf # 栅格 PDF 回退
-viva serve --port 8765           # agent HTTP 内嵌桥
-```
+---
 
-网页 Agent 内嵌：`import { createVivaWebEmbed } from "viva-lang/embed"` — 见 [`docs/hosts/web-embed.md`](docs/hosts/web-embed.md)。  
-Bash 接口：[`docs/hosts/bash.md`](docs/hosts/bash.md)。  
-**审查圈选 → agent 修图**：Playground「审查模式」或 [`docs/hosts/review.md`](docs/hosts/review.md)。
-
-## 最小例子
+## 同一份源码
 
 ```viva
-artifact "Hello Viva"
+artifact "Harbor"
 
-state count = 0
+state selected = none
+
+data piers = [
+  { name: "北栈", x: 168, y: 210, r: 18, c1: "#38bdf8", c2: "#818cf8" }
+]
 
 scene
-  size: 880 480
-  background: #0b1220
-  layer main
-    node counter
-      x: 440
-      y: 240
-      text: count
-      font: 72
-      fill: #f8fafc
-      align: center
+  size: 1080 620
+  background: #061018
 
-event click on counter
-  count = count + 1
+  layer fleet
+    for pier in piers
+      node pier as piers
+        x: pier.x
+        y: pier.y
+        r: pier.r
+        gradient: pier.c1 pier.c2
+        glow: 20
+
+event click on piers
+  selected = pier
 ```
 
-## 设计原则
+作者只写世界是什么、点了以后怎么变。渐变、光晕、栏宽、轴题、页戳、拍钟都是编译器的事。
 
-- **小语言，大运行时**：只描述世界是什么、状态如何变。
-- **视觉完备 + 交互完备**：Scene、State、Event、Rule、Bind、Tick、Animate。
-- **LLM 友好**：默认值强、语义优先、少参数、错误可定位。
+完整语法：[`docs/LANGUAGE.md`](docs/LANGUAGE.md) · 设计：[`docs/DESIGN.md`](docs/DESIGN.md)
 
-完整设计见 [LLM_Native_Interactive_Artifact_Language_Design.md](./LLM_Native_Interactive_Artifact_Language_Design.md)，语法速查见 [docs/LANGUAGE.md](./docs/LANGUAGE.md)。
+---
 
-给模型用的 System Prompt 在 `src/llm/system-prompt.ts`。
+## 设计
 
-## 仓库结构
+- **小语言，大运行时**：不把图表种类和安全框加成关键字。
+- **三柱同一套原语**：游戏式交互、论文图、分镜排版。
+- **手册按需加载**：`print-nature` 投稿，`dashboard` 暗场。不选就是纯语法。
+- **导出保真**：SVG / 矢量 PDF / PNG，以及与 Runtime 共用 Clock 的 gif/mp4。
 
 ```
-src/          词法、语法、IR、编译器、运行时、agent、review、export
-examples/     可运行的 .viva 示例
-playground/   本地交互演练场（含审查模式）
-docs/         语言、架构、Host 集成（hosts/）、测试说明
-tests/        确定性 corpus + agent-exam
-scripts/      CLI 演示与 UI 检查脚本
-install/      Win/Mac/Linux 安装脚本
+src/          词法、IR、编译器、运行时、agent、导出
+examples/     可运行展示件（Harbor / Aurora / Nocturne 是画廊）
+playground/   本地演练场
+docs/gallery/ 画廊静帧与交互视频
 ```
 
-### Host 集成文档
-
-| 文档 | 用途 |
-| --- | --- |
-| [`docs/hosts/minimal-host.md`](docs/hosts/minimal-host.md) | Session / Host 最小接入 |
-| [`docs/DEPLOY.md`](docs/DEPLOY.md) | 一键部署 + HTTP/CLI/SDK 接入 |
-| [`docs/hosts/web-embed.md`](docs/hosts/web-embed.md) | iframe / postMessage |
-| [`docs/hosts/bash.md`](docs/hosts/bash.md) | `viva` CLI |
-| [`docs/hosts/review.md`](docs/hosts/review.md) | 圈选标注 → `agentBrief` |
+---
 
 ## 许可
 
-MIT
+**[GPL-3.0-or-later](LICENSE)**。
+
+可商用、可修改、可再分发。必须保留署名（版权声明），衍生作品必须以 **同样的 GPL** 开源——这就是「署名 + 继承」。把 Viva 嵌进专有闭源产品而不公开相应源码，是不允许的。
+
+Copyright (C) 2026 Viva Language Contributors
