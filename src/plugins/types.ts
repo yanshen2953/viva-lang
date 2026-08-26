@@ -9,6 +9,13 @@ export type WidgetExpandContext = {
 
 export type WidgetPlugin = {
   name: string;
+  /** Expand-phase dependencies (widget names). Missing names are ignored. */
+  after?: string[];
+  /**
+   * Compile hooks allowed to mutate this plugin's layers/frames.
+   * Empty (default) means none. `["*"]` allows every registered hook.
+   */
+  allowHooks?: string[];
   expand(ctx: WidgetExpandContext): void;
 };
 

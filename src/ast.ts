@@ -54,6 +54,8 @@ export type LayerDecl = {
   props: Record<string, Expr>;
   items: SceneItem[];
   span: Span;
+  /** Widget that created this layer. Unset means a core / author layer. */
+  owner?: string;
 };
 
 export type SceneDecl = {
@@ -66,6 +68,8 @@ export type FrameDecl = {
   name: string;
   props: Record<string, Expr>;
   span: Span;
+  /** Widget that created this frame. Unset means a core / author frame. */
+  owner?: string;
 };
 
 export type Artifact = {

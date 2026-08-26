@@ -1,4 +1,4 @@
-import type { Artifact } from "../ast.js";
+import type { Artifact, FrameDecl, LayerDecl } from "../ast.js";
 import type { CompileHook, WidgetPlugin } from "./types.js";
 
 const widgets = new Map<string, WidgetPlugin>();
@@ -38,11 +38,54 @@ export function listCompileHooks(): string[] {
   return [...compileHooks.keys()];
 }
 
-export function runCompileHooks(artifact: Artifact): void {
-  for (const hook of orderCompileHooks()) hook.run(artifact);
+export function hookMayTouchOwner(owner: string | undefined, hookName: string): boolean {
+  if (!owner) return true;
+  const plugin = widgets.get(owner);
+  if (!plugin) return true;
+  const allow = plugin.allowHooks ?? [];
+  if (allow.includes("*")) return true;
+  return allow.includes(hookName);
 }
 
-function orderCompileHooks(): CompileHook[] {
+export function runCompileHooks(artifact: Artifact): void {
+  for (const hook of orderCompileHooks()) {
+    const snap = snapshotProtected(artifact, hook.name);
+    hook.run(artifact);
+    restoreProtected(artifact, snap);
+  }
+}
+
+function snapshotProtected(
+  artifact: Artifact,
+  hookName: string,
+): { layers: LayerDecl[]; frames: FrameDecl[] } {
+  const layers = (artifact.scene?.layers ?? [])
+    .filter((layer) => layer.owner && !hookMayTouchOwner(layer.owner, hookName))
+    .map((layer) => structuredClone(layer));
+  const frames = artifact.frames
+    .filter((frame) => frame.owner && !hookMayTouchOwner(frame.owner, hookName))
+    .map((frame) => structuredClone(frame));
+  return { layers, frames };
+}
+
+function restoreProtected(
+  artifact: Artifact,
+  snap: { layers: LayerDecl[]; frames: FrameDecl[] },
+): void {
+  if (!artifact.scene) return;
+  for (const layer of snap.layers) {
+    const i = artifact.scene.layers.findIndex((item) => item.name === layer.name);
+    if (i >= 0) artifact.scene.layers[i] = structuredClone(layer);
+    else artifact.scene.layers.push(structuredClone(layer));
+  }
+  for (const frame of snap.frames) {
+    const i = artifact.frames.findIndex((item) => item.name === frame.name);
+    if (i >= 0) artifact.frames[i] = structuredClone(frame);
+    else artifact.frames.push(structuredClone(frame));
+  }
+}
+
+export function orderCompileHooks(): CompileHook[] {
   const all = [...compileHooks.values()];
   const done = new Set<string>();
   const out: CompileHook[] = [];

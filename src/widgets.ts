@@ -4,6 +4,7 @@ import {
   literal,
   type Artifact,
   type Expr,
+  type FrameDecl,
   type LayerDecl,
   type SceneItem,
   type Statement,
@@ -77,9 +78,13 @@ export {
   unregisterWidget,
 };
 
+const ALLOW_ALL_HOOKS = ["*"];
+
 setWidgetBuiltinSeed(() => {
   registerWidget({
     name: "timeline",
+    after: ["layout.board", "layout.figure"],
+    allowHooks: ALLOW_ALL_HOOKS,
     expand: (ctx) => expandTimeline(ctx.artifact, ctx.props),
   });
   for (const name of [
@@ -94,15 +99,20 @@ setWidgetBuiltinSeed(() => {
   ] as const) {
     registerWidget({
       name,
+      after: ["layout.board", "layout.figure"],
+      allowHooks: ALLOW_ALL_HOOKS,
       expand: (ctx) => expandChart(ctx.artifact, name, ctx.props, ctx.index),
     });
   }
   registerWidget({
     name: "layout.figure",
+    after: ["layout.board"],
+    allowHooks: ALLOW_ALL_HOOKS,
     expand: (ctx) => expandLayoutFigure(ctx.artifact, ctx.props, ctx.index),
   });
   registerWidget({
     name: "layout.board",
+    allowHooks: ALLOW_ALL_HOOKS,
     expand: (ctx) => expandLayoutBoard(ctx.artifact, ctx.props, ctx.index),
   });
   registerCompileHook({ name: "world-lift", run: liftFramedWorldLayers });
@@ -150,22 +160,13 @@ export function expandWidgets(
 
   promotePanelFrames(next);
   implicitFigureIfNeeded(next);
-  const widgets = [...next.widgets];
-  const layoutRank = (name: string) => {
-    if (name === "layout.board") return 0;
-    if (name === "layout.figure") return 1;
-    return 2;
-  };
-  const layout = widgets
-    .filter((w) => w.name.startsWith("layout."))
-    .sort((a, b) => layoutRank(a.name) - layoutRank(b.name));
-  const rest = widgets.filter((w) => !w.name.startsWith("layout."));
+  const widgets = orderWidgetDecls(next.widgets);
 
   let chartIndex = 0;
   let figureIndex = 0;
   let boardIndex = 0;
   let layoutIndex = 0;
-  for (const widget of [...layout, ...rest]) {
+  for (const widget of widgets) {
     const plugin = getWidget(widget.name);
     if (!plugin) {
       throw new VivaError([
@@ -192,15 +193,67 @@ export function expandWidgets(
       layoutIndex += 1;
       index = layoutIndex;
     }
+    const beforeLayers = new Set(next.scene?.layers ?? []);
+    const beforeFrames = new Set(next.frames);
     plugin.expand({
       artifact: next,
       name: widget.name,
       props: widget.props,
       index,
     });
+    stampOwner(next, plugin.name, beforeLayers, beforeFrames);
   }
   runCompileHooks(next);
   return next;
+}
+
+function widgetExpandAfter(name: string): string[] {
+  const plugin = getWidget(name);
+  if (plugin?.after) return plugin.after;
+  if (name === "layout.figure") return ["layout.board"];
+  if (name.startsWith("layout.")) return [];
+  return ["layout.board", "layout.figure"];
+}
+
+/** Source-stable topological order. `after` is a declared widget dependency. */
+export function orderWidgetDecls<T extends { name: string }>(decls: T[]): T[] {
+  const present = new Set(decls.map((d) => d.name));
+  const done = new Set<string>();
+  const out: T[] = [];
+  const pending = [...decls];
+  let guard = 0;
+  while (pending.length && guard++ < decls.length + 8) {
+    let progressed = false;
+    for (let i = 0; i < pending.length; i++) {
+      const widget = pending[i]!;
+      const deps = widgetExpandAfter(widget.name).filter((name) => present.has(name));
+      if (!deps.every((name) => done.has(name))) continue;
+      out.push(widget);
+      pending.splice(i, 1);
+      done.add(widget.name);
+      progressed = true;
+      break;
+    }
+    if (!progressed) break;
+  }
+  out.push(...pending);
+  return out;
+}
+
+function stampOwner(
+  artifact: Artifact,
+  owner: string,
+  beforeLayers: Set<LayerDecl>,
+  beforeFrames: Set<FrameDecl>,
+): void {
+  if (artifact.scene) {
+    for (const layer of artifact.scene.layers) {
+      if (!beforeLayers.has(layer) && !layer.owner) layer.owner = owner;
+    }
+  }
+  for (const frame of artifact.frames) {
+    if (!beforeFrames.has(frame) && !frame.owner) frame.owner = owner;
+  }
 }
 
 /**
@@ -908,6 +961,7 @@ function expandChart(
             x: titleX,
             y: chrome ? literal(chrome.titleY + i * chrome.titleLineH) : titleYExpr,
             text: literal(line),
+            font: chromeFontLiteral("titleFont"),
           }),
         )
       : []),
@@ -1761,6 +1815,7 @@ function expandLayoutFigure(
           x: literal(cellX0 + 6),
           y: literal(cellY0 + 14),
           text: literal(`(${raw})`),
+          font: chromeFontLiteral("panelFont"),
         }),
       );
     }
@@ -3688,6 +3743,7 @@ function expandAxisTicks(
           x: literal(sx),
           y: literal(sy),
           text: literal(tick.label),
+          font: chromeFontLiteral("tickFont"),
           align: literal("center"),
         }),
         node(`${frameName}_xtickMark_${i}`, {
@@ -3709,6 +3765,7 @@ function expandAxisTicks(
           x: literal(tick.value),
           y: binary("-", ylimLow(props), yPad, span),
           text: literal(tick.label),
+          font: chromeFontLiteral("tickFont"),
           align: literal("center"),
         }),
         node(`${frameName}_xtickMark_${i}`, {
@@ -3735,6 +3792,7 @@ function expandAxisTicks(
           x: literal(sx),
           y: literal(sy),
           text: literal(tick.label),
+          font: chromeFontLiteral("tickFont"),
           align: literal("right"),
         }),
         node(`${frameName}_ytickMark_${i}`, {
@@ -3756,6 +3814,7 @@ function expandAxisTicks(
           x: binary("-", xlimLow(props), xPad, span),
           y: literal(tick.value),
           text: literal(tick.label),
+          font: chromeFontLiteral("tickFont"),
           align: literal("right"),
         }),
         node(`${frameName}_ytickMark_${i}`, {
@@ -3912,6 +3971,7 @@ function expandSeriesLegend(
           x: literal(swatchX + 14),
           y: literal(swatchY + j * legendLineH),
           text: literal(line),
+          font: chromeFontLiteral("legendFont"),
         }),
       );
     }
@@ -4061,6 +4121,7 @@ function expandAxisTitles(
           ? literal(chrome.xTitleY + i * axisLine)
           : binary("+", y1, literal((compact ? 22 : 32) + i * axisLine), span),
         text: literal(line),
+        font: chromeFontLiteral("axisFont"),
         align: literal("center"),
       }),
     );
@@ -4076,6 +4137,7 @@ function expandAxisTitles(
           x: literal(left - (yLines.length - 1 - i) * axisLine),
           y: midY,
           text: literal(line),
+          font: chromeFontLiteral("axisFont"),
           align: literal("center"),
           rotate: literal(-90),
         }),
@@ -4442,6 +4504,7 @@ function expandColorbar(
           x: literal(barX + labelDx),
           y: literal(tick.y + labelDy + li * labelLh),
           text: literal(line),
+          font: chromeFontLiteral("tickFont"),
         }),
       );
     }
@@ -4473,6 +4536,7 @@ function expandColorbar(
           x: literal(chrome.cbarTitleX - (n - 1 - i) * titleStep),
           y: literal(chrome.cbarTitleY),
           text: literal(line),
+          font: chromeFontLiteral("axisFont"),
           align: literal("center"),
           rotate: literal(-90),
         }),
@@ -6210,6 +6274,10 @@ function collectSelStmts(
 function objectNumber(obj: Extract<Expr, { kind: "object" }>, key: string): number {
   const v = objectField(obj, key);
   return v?.kind === "number" ? v.value : 0;
+}
+
+function chromeFontLiteral(kind: keyof ChromeGrammar): Expr {
+  return literal(getChromeGrammar()[kind]);
 }
 
 function node(name: string, props: Record<string, Expr>): SceneItem {
