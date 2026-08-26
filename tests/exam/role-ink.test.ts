@@ -1,5 +1,5 @@
 /**
- * R2-A: per-role SVG vs PDF ink IoU. Whole-page 0.55 is a floor, not a
+ * R2-A: per-role SVG vs PDF ink IoU. Whole-page 0.60 is a floor, not a
  * substitute for axis titles / colorbar / violin / dash / rotate.
  */
 import { describe, expect, it } from "vitest";

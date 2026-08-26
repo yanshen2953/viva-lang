@@ -38,6 +38,10 @@ import { writePage, readPage } from "../../src/runtime/view-machine.js";
 
 const PRINT = { handbookIds: ["print-nature"] } as const;
 const PX_PER_PT = 72 / 96;
+/** R5-C: one notch from 0.55 after measuring arrival page 1 at 0.713. */
+const ARRIVAL_MIN_INK_IOU = 0.6;
+const ARRIVAL_MIN_SIDECAR = 0.85;
+const ARRIVAL_MAX_MSE = 0.45;
 
 function dockerHost(): string {
   if (process.env.DOCKER_HOST) return process.env.DOCKER_HOST;
@@ -133,9 +137,16 @@ describe("arrival 3 — SVG↔PDF ink + mm spacing", () => {
     const report = await compareSvgPdfPages(ir, { width: 640 });
     expect(report.pdfRaster).toBe("pdftoppm");
     expect(report.idEqual, `painted=${report.paintedIds.length} sidecar=${report.sidecarIds.length}`).toBe(true);
-    expect(report.sidecarOverlap).toBeGreaterThan(0.85);
-    expect(report.minInkIou, JSON.stringify(report.pages)).toBeGreaterThan(0.55);
-    expect(report.maxMse).toBeLessThan(0.45);
+    expect(report.sidecarOverlap).toBeGreaterThan(ARRIVAL_MIN_SIDECAR);
+    expect(report.minInkIou, JSON.stringify(report.pages)).toBeGreaterThan(ARRIVAL_MIN_INK_IOU);
+    expect(report.maxMse).toBeLessThan(ARRIVAL_MAX_MSE);
+  }, 60_000);
+
+  it("names page 1 when the ink floor is pushed past the measured 0.713", async () => {
+    const { ir } = compileArrival();
+    const report = await compareSvgPdfPages(ir, { width: 640 });
+    const named = report.pages.filter((p) => p.inkIou <= 0.72).map((p) => p.page);
+    expect(named, JSON.stringify(report.pages)).toEqual([1]);
   }, 60_000);
 });
 
@@ -436,9 +447,9 @@ describe("arrival 10 — slim prompt + capabilities + loop", () => {
         const report = await compareSvgPdfPages(ir, { width: 640 });
         expect(report.pdfRaster, name).toBe("pdftoppm");
         expect(report.idEqual, name).toBe(true);
-        expect(report.sidecarOverlap, name).toBeGreaterThan(0.85);
-        expect(report.minInkIou, `${name} ${JSON.stringify(report.pages)}`).toBeGreaterThan(0.55);
-        expect(report.maxMse, name).toBeLessThan(0.45);
+        expect(report.sidecarOverlap, name).toBeGreaterThan(ARRIVAL_MIN_SIDECAR);
+        expect(report.minInkIou, `${name} ${JSON.stringify(report.pages)}`).toBeGreaterThan(ARRIVAL_MIN_INK_IOU);
+        expect(report.maxMse, name).toBeLessThan(ARRIVAL_MAX_MSE);
       }
     }
   }, 120_000);
