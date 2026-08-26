@@ -10,6 +10,10 @@ const nodeExportStubs = [
     find: /(?:^|\/)export\/pdf-font(?:\.(?:js|ts))?$/,
     replacement: path.resolve(__dirname, "src/export/pdf-font.browser.ts"),
   },
+  {
+    find: /(?:^|.*\/)bundled-fonts(?:\.(?:js|ts))?$/,
+    replacement: path.resolve(__dirname, "src/metrics/bundled-fonts.browser.ts"),
+  },
 ];
 
 export default defineConfig({

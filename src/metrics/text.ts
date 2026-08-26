@@ -5,9 +5,12 @@
  * advances are unitsPerEm, so this matches the bundled PDF CJK font.
  */
 
-import { readFileSync } from "node:fs";
-import fontkit from "@pdf-lib/fontkit";
-import { BUNDLED_CJK_FAMILY, BUNDLED_LATIN_FAMILY, bundledLatinFontPath } from "./bundled-fonts.js";
+import {
+  BUNDLED_CJK_FAMILY,
+  BUNDLED_LATIN_FAMILY,
+  bundledLatinFontPath,
+  readBundledLatinFace,
+} from "./bundled-fonts.js";
 
 export const LATIN_FONT_STACK = `${BUNDLED_LATIN_FAMILY}, Helvetica, Arial, ${BUNDLED_CJK_FAMILY}, sans-serif`;
 
@@ -446,22 +449,10 @@ export function helveticaAdvanceEm(ch: string, bold = false): number {
   return (bold ? HELVETICA_BOLD_ADVANCE[ch] : HELVETICA_ADVANCE[ch]) ?? 556;
 }
 
-type AdvanceFont = { unitsPerEm: number; layout: (text: string) => { advanceWidth: number } };
-const faceCache = new Map<string, AdvanceFont | null>();
 const advanceCache = new Map<string, number>();
 
-function latinFace(bold: boolean): AdvanceFont | null {
-  const path = bundledLatinFontPath(bold);
-  if (!path) return null;
-  if (faceCache.has(path)) return faceCache.get(path)!;
-  try {
-    const font = fontkit.create(readFileSync(path)) as AdvanceFont;
-    faceCache.set(path, font);
-    return font;
-  } catch {
-    faceCache.set(path, null);
-    return null;
-  }
+function latinFace(bold: boolean) {
+  return readBundledLatinFace(bold);
 }
 
 function latinAdvancePx(ch: string, size: number, bold: boolean): number {
