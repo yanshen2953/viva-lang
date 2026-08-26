@@ -160,7 +160,7 @@ export function attachCjkToUnicode(pdf: PDFDocument, font: PDFFont, text: string
   for (const ch of chars) {
     try {
       const encoded = font.encodeText(ch);
-      const cid = [...encoded].map((b) => b.toString(16).padStart(2, "0")).join("");
+      const cid = [...encoded.asBytes()].map((b) => b.toString(16).padStart(2, "0")).join("");
       const cp = ch.codePointAt(0)!;
       const uni = cp.toString(16).toUpperCase().padStart(cp > 0xffff ? 8 : 4, "0");
       pairs.push(`<${cid.toUpperCase()}> <${uni}>`);

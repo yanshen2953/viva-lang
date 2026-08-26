@@ -96,7 +96,8 @@ export function propsToBBox(p: Record<string, unknown>): NodeBBox {
     const text = String(p.text ?? p.label ?? "");
     const font = num(p.font ?? p.fontSize, 14);
     const tracking = num(p.letterSpacing ?? p.tracking, 0);
-    const weight = p.fontWeight ?? p.weight ?? 400;
+    const rawWeight = p.fontWeight ?? p.weight;
+    const weight = typeof rawWeight === "number" || typeof rawWeight === "string" ? rawWeight : 400;
     const measured = estimateTextWidthPx(text, font, tracking, weight);
     const w = text ? measured : Math.max(measured, font * 2);
     const { ascent, height: h } = textInkExtent(font);
