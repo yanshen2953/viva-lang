@@ -1,6 +1,7 @@
 /** Box-based paper chrome: measure, detect overlap, nudge, grow insets. */
 
 import { measureText } from "../metrics/text.js";
+import { textInkExtent } from "./node-bbox.js";
 
 export type PlotBox = {
   px0: number;
@@ -291,8 +292,13 @@ export function wrapTextLines(
   return out;
 }
 
-export function estimateTextWidthPx(text: string, font: number, tracking = 0): number {
-  return measureText(text, font, tracking);
+export function estimateTextWidthPx(
+  text: string,
+  font: number,
+  tracking = 0,
+  fontWeight: number | string = 400,
+): number {
+  return measureText(text, font, tracking, fontWeight);
 }
 
 export function rectsOverlap(a: ChromeRect, b: ChromeRect, gap = 2): boolean {
@@ -433,6 +439,9 @@ export function placePaperChrome(
       : null;
 
   const build = (): ChromeRect[] => {
+    const tickInk = textInkExtent(tickFont());
+    const axisInk = textInkExtent(axisFont());
+    const titleInk = textInkExtent(titleFont());
     const rects: ChromeRect[] = [];
     if (panel) rects.push(panel);
     if (titleLines.length) {
@@ -440,9 +449,9 @@ export function placePaperChrome(
       rects.push({
         id: "title",
         x: titleX,
-        y: titleY - toScene(titleFont() * 0.75),
+        y: titleY - toScene(titleInk.ascent),
         w: lineW,
-        h: titleLineH * titleLines.length,
+        h: titleInk.height + (titleLines.length - 1) * titleLineH,
       });
     }
     for (const [i, tick] of yTicks.entries()) {
@@ -450,9 +459,9 @@ export function placePaperChrome(
       rects.push({
         id: `ytick-${i}`,
         x: yTickX - tw,
-        y: tick.y - toScene(tickFont() * 0.5),
+        y: tick.y - toScene(tickInk.ascent),
         w: tw,
-        h: toScene(tickFont()),
+        h: toScene(tickInk.height),
       });
     }
     for (const [i, tick] of xTicks.entries()) {
@@ -460,9 +469,9 @@ export function placePaperChrome(
       rects.push({
         id: `xtick-${i}`,
         x: tick.x - tw / 2,
-        y: xTickY - toScene(tickFont() * 0.75),
+        y: xTickY - toScene(tickInk.ascent),
         w: tw,
-        h: toScene(tickFont()),
+        h: toScene(tickInk.height),
       });
     }
     if (yTitleLines.length) {
@@ -470,9 +479,9 @@ export function placePaperChrome(
       const n = yTitleLines.length;
       rects.push({
         id: "yTitle",
-        x: yTitleX - toScene(axisFont() * 0.85) - (n - 1) * axisLineH,
+        x: yTitleX - toScene(axisInk.ascent) - (n - 1) * axisLineH,
         y: (box.py0 + box.py1) / 2 - tw / 2,
-        w: toScene(axisFont() * 1.4) + (n - 1) * axisLineH,
+        w: toScene(axisInk.height) + (n - 1) * axisLineH,
         h: tw,
       });
     }
@@ -482,9 +491,9 @@ export function placePaperChrome(
       rects.push({
         id: "xTitle",
         x: (box.px0 + box.px1) / 2 - tw / 2,
-        y: xTitleY - toScene(axisFont() * 0.75),
+        y: xTitleY - toScene(axisInk.ascent),
         w: tw,
-        h: toScene(axisFont()) + (n - 1) * axisLineH,
+        h: toScene(axisInk.height) + (n - 1) * axisLineH,
       });
     }
     if (extras.colorbar) {
@@ -708,6 +717,11 @@ export function placePaperChrome(
     wrapChrome();
     if (applyPoseResiduals() < 0.4) break;
   }
+
+  const axisInk = textInkExtent(axisFont());
+  const tickInk = textInkExtent(tickFont());
+  yTitleX = Math.max(yTitleX, toScene(axisInk.ascent) + toScene(1));
+  xTitleY = Math.max(xTitleY, xTickY + toScene(tickInk.height) - toScene(tickInk.ascent) + toScene(axisInk.ascent) + gap);
 
   return {
     chrome: {

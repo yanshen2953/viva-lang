@@ -190,9 +190,191 @@ const HELVETICA_ADVANCE: Record<string, number> = {
   ÿ: 500,
 };
 
+/** Helvetica Bold Regular advances, Adobe AFM / WinAnsi, 1000 units/em. */
+const HELVETICA_BOLD_ADVANCE: Record<string, number> = {
+  " ": 278,
+  "!": 333,
+  '"': 474,
+  "#": 556,
+  $: 556,
+  "%": 889,
+  "&": 722,
+  "'": 238,
+  "(": 333,
+  ")": 333,
+  "*": 389,
+  "+": 584,
+  ",": 278,
+  "-": 333,
+  ".": 278,
+  "/": 278,
+  "0": 556,
+  "1": 556,
+  "2": 556,
+  "3": 556,
+  "4": 556,
+  "5": 556,
+  "6": 556,
+  "7": 556,
+  "8": 556,
+  "9": 556,
+  ":": 333,
+  ";": 333,
+  "<": 584,
+  "=": 584,
+  ">": 584,
+  "?": 611,
+  "@": 975,
+  A: 722,
+  B: 722,
+  C: 722,
+  D: 722,
+  E: 667,
+  F: 611,
+  G: 778,
+  H: 722,
+  I: 278,
+  J: 556,
+  K: 722,
+  L: 611,
+  M: 833,
+  N: 722,
+  O: 778,
+  P: 667,
+  Q: 778,
+  R: 722,
+  S: 667,
+  T: 611,
+  U: 722,
+  V: 667,
+  W: 944,
+  X: 667,
+  Y: 667,
+  Z: 611,
+  "[": 333,
+  "\\": 278,
+  "]": 333,
+  "^": 584,
+  _: 556,
+  "`": 333,
+  a: 556,
+  b: 611,
+  c: 556,
+  d: 611,
+  e: 556,
+  f: 333,
+  g: 611,
+  h: 611,
+  i: 278,
+  j: 278,
+  k: 556,
+  l: 278,
+  m: 889,
+  n: 611,
+  o: 611,
+  p: 611,
+  q: 611,
+  r: 389,
+  s: 556,
+  t: 333,
+  u: 611,
+  v: 556,
+  w: 778,
+  x: 556,
+  y: 556,
+  z: 500,
+  "{": 389,
+  "|": 280,
+  "}": 389,
+  "~": 584,
+  "\u00a0": 278,
+  "¡": 333,
+  "¢": 556,
+  "£": 556,
+  "¤": 556,
+  "¥": 556,
+  "§": 556,
+  "¨": 333,
+  "©": 737,
+  ª: 370,
+  "«": 556,
+  "¬": 584,
+  "®": 737,
+  "¯": 333,
+  "°": 400,
+  "±": 584,
+  "´": 333,
+  µ: 611,
+  "¶": 556,
+  "·": 278,
+  "¸": 333,
+  "º": 365,
+  "»": 556,
+  "¿": 611,
+  À: 722,
+  Á: 722,
+  Â: 722,
+  Ã: 722,
+  Ä: 722,
+  Å: 722,
+  Æ: 1000,
+  Ç: 722,
+  È: 667,
+  É: 667,
+  Ê: 667,
+  Ë: 667,
+  Ì: 278,
+  Í: 278,
+  Î: 278,
+  Ï: 278,
+  Ñ: 722,
+  Ò: 778,
+  Ó: 778,
+  Ô: 778,
+  Õ: 778,
+  Ö: 778,
+  "×": 584,
+  Ø: 778,
+  Ù: 722,
+  Ú: 722,
+  Û: 722,
+  Ü: 722,
+  ß: 611,
+  à: 556,
+  á: 556,
+  â: 556,
+  ã: 556,
+  ä: 556,
+  å: 556,
+  æ: 889,
+  ç: 556,
+  è: 556,
+  é: 556,
+  ê: 556,
+  ë: 556,
+  ì: 278,
+  í: 278,
+  î: 278,
+  ï: 278,
+  ñ: 611,
+  ò: 611,
+  ó: 611,
+  ô: 611,
+  õ: 611,
+  ö: 611,
+  "÷": 584,
+  ø: 611,
+  ù: 611,
+  ú: 611,
+  û: 611,
+  ü: 611,
+  ÿ: 556,
+};
+
 export type MeasureTextOpts = {
   fontSize: number;
   letterSpacing?: number;
+  fontWeight?: number | string;
 };
 
 let measureImpl: (text: string, opts: MeasureTextOpts) => number = defaultMeasureText;
@@ -214,22 +396,39 @@ export function isWideScript(ch: string): boolean {
   );
 }
 
-export function helveticaAdvanceEm(ch: string): number {
-  return HELVETICA_ADVANCE[ch] ?? 556;
+export function isBoldWeight(weight?: number | string): boolean {
+  if (weight === undefined || weight === null) return false;
+  if (typeof weight === "string") {
+    const named = weight.toLowerCase();
+    if (named === "bold" || named === "semibold" || named === "bolder") return true;
+    const n = Number(weight);
+    return Number.isFinite(n) && n >= 600;
+  }
+  return weight >= 600;
+}
+
+export function helveticaAdvanceEm(ch: string, bold = false): number {
+  return (bold ? HELVETICA_BOLD_ADVANCE[ch] : HELVETICA_ADVANCE[ch]) ?? 556;
 }
 
 export function defaultMeasureText(text: string, opts: MeasureTextOpts): number {
   const size = opts.fontSize;
   const tracking = opts.letterSpacing ?? 0;
+  const bold = isBoldWeight(opts.fontWeight);
   if (!text) return Math.max(size * 0.4, 0);
   let w = 0;
   for (const ch of text) {
-    w += isWideScript(ch) ? size : (helveticaAdvanceEm(ch) / HELVETICA_EM) * size;
+    w += isWideScript(ch) ? size : (helveticaAdvanceEm(ch, bold) / HELVETICA_EM) * size;
     w += tracking;
   }
   return Math.max(size * 0.4, w);
 }
 
-export function measureText(text: string, fontSize: number, letterSpacing = 0): number {
-  return measureImpl(text, { fontSize, letterSpacing });
+export function measureText(
+  text: string,
+  fontSize: number,
+  letterSpacing = 0,
+  fontWeight: number | string = 400,
+): number {
+  return measureImpl(text, { fontSize, letterSpacing, fontWeight });
 }

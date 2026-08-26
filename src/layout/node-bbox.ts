@@ -5,6 +5,19 @@ import { pathBBox } from "../paint/path.js";
 
 export type NodeBBox = { x: number; y: number; w: number; h: number };
 
+/** Helvetica AFM FontBBox top/bottom in em. Chrome getBBox reports these as integers at paper sizes. */
+const TEXT_ASCENT_EM = 0.931;
+const TEXT_DESCENT_EM = 0.225;
+
+export function textInkExtent(font: number): { ascent: number; height: number } {
+  const ascent = font * TEXT_ASCENT_EM;
+  const height = font * (TEXT_ASCENT_EM + TEXT_DESCENT_EM);
+  if (Number.isInteger(font) && font > 0 && font <= 32) {
+    return { ascent: Math.round(ascent), height: Math.round(height) };
+  }
+  return { ascent, height };
+}
+
 function num(v: unknown, fallback = 0): number {
   if (typeof v === "number" && Number.isFinite(v)) return v;
   const n = Number(v);
@@ -83,8 +96,10 @@ export function propsToBBox(p: Record<string, unknown>): NodeBBox {
     const text = String(p.text ?? p.label ?? "");
     const font = num(p.font ?? p.fontSize, 14);
     const tracking = num(p.letterSpacing ?? p.tracking, 0);
-    const w = Math.max(estimateTextWidthPx(text, font, tracking), font * 2);
-    const h = font * 1.4;
+    const weight = p.fontWeight ?? p.weight ?? 400;
+    const measured = estimateTextWidthPx(text, font, tracking, weight);
+    const w = text ? measured : Math.max(measured, font * 2);
+    const { ascent, height: h } = textInkExtent(font);
     const align = String(p.align ?? "start");
     const left =
       align === "center" || align === "middle"
@@ -92,7 +107,7 @@ export function propsToBBox(p: Record<string, unknown>): NodeBBox {
         : align === "right" || align === "end"
           ? x - w
           : x;
-    const top = y - font * 0.85;
+    const top = y - ascent;
     const rotate = num(p.rotate ?? p.rotation, 0);
     if (Math.abs(rotate) < 0.5) return { x: left, y: top, w, h };
     const corners = [
@@ -104,4 +119,14 @@ export function propsToBBox(p: Record<string, unknown>): NodeBBox {
     return aabbOf(corners);
   }
   return { x: x - 4, y: y - 4, w: 8, h: 8 };
+}
+
+/** Inclusive hit. `pad` grows or shrinks the box (negative = inset). */
+export function pointHitsBox(
+  px: number,
+  py: number,
+  box: NodeBBox,
+  pad = 0,
+): boolean {
+  return px >= box.x - pad && px <= box.x + box.w + pad && py >= box.y - pad && py <= box.y + box.h + pad;
 }
