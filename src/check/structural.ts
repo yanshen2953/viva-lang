@@ -1,5 +1,5 @@
 import type { VisualIR } from "../ir.js";
-import { flattenNodesFromIr } from "../export/static-svg.js";
+import { flattenNodesFromIr, nodePainted } from "../export/static-svg.js";
 import { bboxIntersects, type BBox } from "../review/geometry.js";
 import { listSelectableNodes } from "../review/nodes.js";
 import type { SelectedNode } from "../review/types.js";
@@ -14,6 +14,19 @@ const CHROME_HINT =
 const PAPER_CHROME_TEXT =
   /(_title(?:_\d+)?|_xTitle|_yTitle|_legLbl_|_lab_|cbarTitle|cbarLbl|_zTitle)/i;
 const CHROME_OVERFLOW_PX = 1.5;
+/** Journal figure floor. Nature-class captions are ≥ 5 pt. */
+const MIN_FONT_PT = 5;
+const PX_TO_PT = 72 / 96;
+
+/** True overlap, not a shared edge. */
+function boxesOverlapSolid(a: BBox, b: BBox, slop = 0.75): boolean {
+  return (
+    a.x + slop < b.x + b.w &&
+    a.x + a.w - slop > b.x &&
+    a.y + slop < b.y + b.h &&
+    a.y + a.h - slop > b.y
+  );
+}
 
 function push(
   out: CheckDiagnostic[],
@@ -245,7 +258,7 @@ export function runStructuralChecks(ir: VisualIR, opts: CheckOptions = {}): Chec
         out,
         "check.struct.chromeOverflow",
         `chrome '${n.name}' overflows scene by ${sceneOverflow.toFixed(1)}px`,
-        "warn",
+        "error",
         "Grow plot insets or shorten the title/axis/legend; compiler already wraps and nudges chrome.",
       );
       continue;
@@ -258,8 +271,63 @@ export function runStructuralChecks(ir: VisualIR, opts: CheckOptions = {}): Chec
         out,
         "check.struct.chromeOverflow",
         `chrome '${n.name}' overflows panel '${cell.name}' by ${cellOverflow.toFixed(1)}px`,
-        "warn",
+        "error",
         "Let the compiler size insets (omit inset*/areaX) or wrap the caption.",
+      );
+    }
+  }
+
+  for (const node of flatNodes) {
+    if (!nodePainted(node.props)) continue;
+    if (node.props.text === undefined && node.props.label === undefined) continue;
+    const font = Number(node.props.font ?? node.props.fontSize ?? 14);
+    if (!Number.isFinite(font)) continue;
+    const pt = font * PX_TO_PT;
+    if (pt + 1e-6 < MIN_FONT_PT) {
+      push(
+        out,
+        "check.struct.minFont",
+        `text '${node.name}' is ${pt.toFixed(2)} pt, below the ${MIN_FONT_PT} pt journal floor`,
+        "error",
+        "Stop shrinking chrome below 5 pt; wrap or grow insets instead.",
+      );
+    }
+  }
+
+  const ticks = selectable.filter((n) => /_(x|y)tick_\d+$/i.test(n.name));
+  const frameOf = (name: string) => name.replace(/_(x|y)tick_\d+$/i, "").replace(/_(x|y)Title.*$/, "");
+  for (let i = 0; i < ticks.length; i++) {
+    for (let j = i + 1; j < ticks.length; j++) {
+      const a = ticks[i]!;
+      const b = ticks[j]!;
+      if (frameOf(a.name) !== frameOf(b.name)) continue;
+      const aAxis = /_xtick_/.test(a.name) ? "x" : "y";
+      const bAxis = /_xtick_/.test(b.name) ? "x" : "y";
+      if (aAxis !== bAxis) continue;
+      if (!boxesOverlapSolid(a.bbox, b.bbox)) continue;
+      push(
+        out,
+        "check.struct.tickOverlap",
+        `tick labels '${a.name}' and '${b.name}' intersect`,
+        "error",
+        "Thin ticks or grow the plot so labels do not collide.",
+      );
+    }
+  }
+  const titles = selectable.filter((n) => /_(x|y)Title/.test(n.name));
+  for (const title of titles) {
+    const axis = /_xTitle/.test(title.name) ? "x" : "y";
+    for (const tick of ticks) {
+      const tickAxis = /_xtick_/.test(tick.name) ? "x" : "y";
+      if (axis !== tickAxis) continue;
+      if (frameOf(title.name) !== frameOf(tick.name)) continue;
+      if (!boxesOverlapSolid(title.bbox, tick.bbox)) continue;
+      push(
+        out,
+        "check.struct.tickOverlap",
+        `axis title '${title.name}' intersects tick '${tick.name}'`,
+        "error",
+        "Keep axis titles outside the tick band.",
       );
     }
   }
