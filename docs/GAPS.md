@@ -4,7 +4,20 @@
 
 前序清单把 PLAN §1 的 1–3 标成「齐」，**过满**。接口在，产品观感仍粗。本文以用户可见质量为准。
 
-评估：2026-08-24。分支 `cursor/style-handbook-hook-a8c1`。接续说明：`docs/HANDOFF.md`。
+评估：2026-08-26。分支 `cursor/roadmap-r1-f1b5`（基于 `main` `a469dff`）。接续说明：`docs/HANDOFF.md`。
+
+## 2026-08-26 复评：四道门已过，但过的是地板
+
+`npx vitest run` 50 文件 375 测试全绿，含真浏览器与 live LLM：
+
+| 门 | 证据 | 阈值 |
+| --- | --- | --- |
+| 眼睛 | `arrival 3`：`pdftoppm` 栅格化真 PDF，与 SVG 叠 ink mask | `minInkIou > 0.55`，`maxMse < 0.45` |
+| 手 | `browser-arrival`：真 Puppeteer 一会话 brush → World 拖 → `n`/`N` → 跳页 → 暗拍再刷 | 状态不断 |
+| 导出 | `arrival 4`/`arrival 7`：PDF 有 rotate/dash/clip/fill；painted id 对齐 Runtime / SVG / sidecar / review | `sidecarOverlap > 0.85` |
+| agent | `browser-generated-arrival`：live 生成件在真浏览器过同一套；不灌 `LANGUAGE.md` | 禁用 `simulate()` |
+
+所以下表里 2026-08-24 那版「四门全否」已经不成立。但 `0.55` 的 ink IoU 是**地板不是画质**：它只证明 SVG 与 PDF 画的是同一张图，没有证明间距达到投稿水平。
 
 ## 总判断
 
@@ -82,17 +95,45 @@
 
 | 门 | 地板（CI 锁住） | 到站？ |
 | --- | --- | --- |
-| 眼睛 | 89 / 183 mm 的 SVG 与矢量 PDF 同宽；paper-cjk 用 cmap 验字；`examples/arrival.viva` 同时有 89/183 / CJK | **否**。仍无屏幕 / PDF 并排 SSIM；Atlas 仍是 1360 px |
-| 手 | 四件默认可刷；翻拍后 `__sel` 还在；暗拍遮罩不抢指针；mm 碰撞用 scene units；mark 上可起刷 | **否**。仍是 `simulate` + 纯函数，不是 Runtime 指针连打四件；没有 Runtime 跳页 |
-| 导出 | painted `data-viva-id` 对 flatten；beat PNG 取 hold 中点；gif/mp4 跟完整 Clock playback；PDF 有 rotate/dash/path/clip | **否**。PDF 无节点 ID sidecar；隐藏节点契约未定；无每页 ink-mask |
-| agent | MCP 编译 + slim prompt + 确定性 repair | **否**。没有短意图 LLM → 卡上可玩 |
+| 眼睛 | 89 / 183 mm 的 SVG 与矢量 PDF 同宽；`arrival 3` 用 `pdftoppm` 栅格化真 PDF 每页与 SVG 叠 ink mask | **地板过**。`minInkIou > 0.55` 只说明同构，不说明投稿间距 |
+| 手 | `browser-arrival`：真浏览器一会话 brush → World 拖 → `n`/`N` → 跳页 → 暗拍再刷，`__sel`/`__beat`/`__page` 逐步断言 | **过**。禁用 `simulate()` |
+| 导出 | painted `data-viva-id` 对 flatten / SVG / PDF sidecar / review；beat PNG 取 hold 中点；gif/mp4 跟完整 Clock playback；PDF 有 rotate/dash/path/clip | **地板过**。painted/logical 契约仍靠测试侧 `nodePainted()` 过滤 |
+| agent | `browser-generated-arrival`：live 短意图生成件在真浏览器过同一套；slim prompt 不含 `LANGUAGE.md` | **过** |
 
-world-hand 那一轮只跑了几何单测，**没有**过这四道门。
+## 十个工作包结账（对 `ARRIVAL_AUDIT.md` §到站需要的十个工作包）
 
-## 下一刀（质量，不再铺接口）
+| 包 | 状态 | 依据 / 缺口 |
+| --- | --- | --- |
+| P0-A 统一字体度量 | **部分** | `measureText` 已是 Helvetica AFM + CJK 1 em，`0.58 * font` 已清。缺验收第 2 条：没有任何测试把预测 bbox 对浏览器 `getBBox()` 或 PDF 真宽卡硬阈值 |
+| P0-B PDF paint 保真 | **基本齐** | rotate/dash/clip/fill/gradient + 每页 ink IoU + cmap 验字。filter / blend 的矢量降级策略仍未写明 |
+| P0-C 规范到站件 | **齐** | `examples/arrival.viva`，四门只吃它 |
+| P0-D Runtime 世界坐标 | **齐** | `__event.x/y` 在 mm 场景是 mm；mark 上可起刷；collide 带 phase |
+| P0-E 浏览器构建与发布 | **齐** | `npm run build` 绿；npm pack / Docker smoke 在 `arrival 8` |
+| P1-F 真浏览器考试 | **齐** | `browser-arrival.test.ts` |
+| P1-G Runtime 页面导航 | **齐** | `writePage`/`readPage`，浏览器考试断言跳页 |
+| P1-H 关闭 agent 环 | **齐** | `agent-loop` + `browser-generated-arrival` |
+| P1-I 插件生命周期 | **齐** | `registerCompileHook({ after })`，外部 widget 不改 core，见 `arrival 9` |
+| P2-J ID / 隐藏节点契约 | **部分** | sidecar 有 `{id,page,bboxPt}`；但 logical vs painted 未定义，测试仍需过滤 `nodePainted()` |
 
-1. P0 已开工：Helvetica AFM + CJK em 共用尺；PDF rotate/dash/path/clip；mm 手单位；browser barrel；`examples/arrival.viva`
-2. 下一刀仍是 SVG↔PDF 每页视觉差、真实浏览器 Runtime 考试、Runtime 跳页、关闭 agent 环
-3. 不要加关键字；不要宣称 Nature 级或已超过 Claude Science
+## 还差多少（按用户可见排序）
+
+到站门已过，剩下的是**画质与语义**，不是接口：
+
+1. **投稿间距没有验收尺**。ink IoU 0.55 能通过一张明显偏松的图。要把阈值往 0.9 推，并给 rotated 轴题、连续色条、violin 轮廓单独 fixture。
+2. **预测 bbox 没有对过真渲染**。布局用 Helvetica AFM，Runtime 用浏览器字体栈，两者从未卡过误差阈值。这是 P0-A 唯一没做的验收项，也是「间距像印的」不能验收的根因。
+3. **logical / painted 契约未定**。`visible: false`、`opacity: 0`、ease 中间态属于哪一集没写死，测试靠过滤兜住。
+4. **linked view 不完整**。`__sel` 能跨面板藏行重算摘要，仍不是完整联动选择，无动画过渡。
+5. **排版不是栏宽重排器**。`typeGrid` 与 figure 共用度量，仍不是跨页报纸成品。
+6. **play 不是 NLE**。有 `holds`/`ins`/`outs`/`order`/`cuts`/`tracks`，没有音轨和转场。
+7. **世界手不是物理引擎**。能握、能顶、能滑墙、能套索，不是刚体栈。
+8. **filter / blend 在 PDF 的降级没写明**。
+9. **`attachDragParamLoop` 要宿主自己挂**，没有默认 watch。
+
+## 下一刀
+
+1. 先补 P0-A 的验收尺：浏览器 `getBBox()` 对预测 bbox，设硬阈值。没有这把尺，画质改动无法判断是进步还是回退。
+2. 再把 ink IoU 阈值分角色抬高（轴题 / 色条 / 轮廓各自 fixture），逐步逼近 0.9。
+3. 定义 logical / painted，删掉测试侧过滤。
+4. 不要加关键字；不要宣称 Nature 级或已超过 Claude Science。
 
 完整工作包与退出条件：[`ARRIVAL_AUDIT.md`](./ARRIVAL_AUDIT.md)。
