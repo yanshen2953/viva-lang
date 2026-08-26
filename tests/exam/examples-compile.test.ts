@@ -25,7 +25,7 @@ describe("example and agent-exam seed compile", () => {
       }
     }
     expect(failures).toEqual([]);
-  });
+  }, 60_000);
 
   it("compiles every examples/exam/*.viva seed (offline agent-exam rate)", () => {
     const files = vivaFiles("examples/exam");

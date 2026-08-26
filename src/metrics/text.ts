@@ -448,6 +448,7 @@ export function helveticaAdvanceEm(ch: string, bold = false): number {
 
 type AdvanceFont = { unitsPerEm: number; layout: (text: string) => { advanceWidth: number } };
 const faceCache = new Map<string, AdvanceFont | null>();
+const advanceCache = new Map<string, number>();
 
 function latinFace(bold: boolean): AdvanceFont | null {
   const path = bundledLatinFontPath(bold);
@@ -465,7 +466,16 @@ function latinFace(bold: boolean): AdvanceFont | null {
 
 function latinAdvancePx(ch: string, size: number, bold: boolean): number {
   const face = latinFace(bold);
-  if (face) return (face.layout(ch).advanceWidth / Math.max(face.unitsPerEm, 1)) * size;
+  if (face) {
+    const path = bundledLatinFontPath(bold) ?? "";
+    const key = `${path}:${ch}`;
+    let em = advanceCache.get(key);
+    if (em === undefined) {
+      em = face.layout(ch).advanceWidth / Math.max(face.unitsPerEm, 1);
+      advanceCache.set(key, em);
+    }
+    return em * size;
+  }
   return (helveticaAdvanceEm(ch, bold) / HELVETICA_EM) * size;
 }
 

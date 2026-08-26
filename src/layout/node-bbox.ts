@@ -2,6 +2,7 @@
 
 import { estimateTextWidthPx } from "./chrome-collide.js";
 import { pathBBox } from "../paint/path.js";
+import { isWideScript } from "../metrics/text.js";
 
 export type NodeBBox = { x: number; y: number; w: number; h: number };
 
@@ -9,9 +10,14 @@ export type NodeBBox = { x: number; y: number; w: number; h: number };
 const TEXT_ASCENT_EM = 0.931;
 const TEXT_DESCENT_EM = 0.225;
 
-export function textInkExtent(font: number): { ascent: number; height: number } {
-  const ascent = font * TEXT_ASCENT_EM;
-  const height = font * (TEXT_ASCENT_EM + TEXT_DESCENT_EM);
+export function textInkExtent(font: number, text = ""): { ascent: number; height: number } {
+  const wide = [...text].some((ch) => isWideScript(ch));
+  // CJK getBBox is a taller em than Helvetica AFM. Latin stays on the AFM
+  // integers that match Chrome + Liberation at paper sizes.
+  const ascentEm = wide ? 1 : TEXT_ASCENT_EM;
+  const heightEm = wide ? 11 / 9 : TEXT_ASCENT_EM + TEXT_DESCENT_EM;
+  const ascent = font * ascentEm;
+  const height = font * heightEm;
   if (Number.isInteger(font) && font > 0 && font <= 32) {
     return { ascent: Math.round(ascent), height: Math.round(height) };
   }
@@ -100,7 +106,7 @@ export function propsToBBox(p: Record<string, unknown>): NodeBBox {
     const weight = typeof rawWeight === "number" || typeof rawWeight === "string" ? rawWeight : 400;
     const measured = estimateTextWidthPx(text, font, tracking, weight);
     const w = text ? measured : Math.max(measured, font * 2);
-    const { ascent, height: h } = textInkExtent(font);
+    const { ascent, height: h } = textInkExtent(font, text);
     const align = String(p.align ?? "start");
     const left =
       align === "center" || align === "middle"

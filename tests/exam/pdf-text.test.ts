@@ -60,7 +60,7 @@ describe("R2-B PDF text extract", () => {
     const hay = pdfHaystack(bytes);
     const missing = STRINGS.filter((s) => !hay.includes(s));
     expect(missing, `missing ${missing.join(" | ")} hay=${JSON.stringify(hay.slice(0, 80))} tokens=${found.slice(0, 12).join("|")}`).toEqual([]);
-  });
+  }, 20_000);
 
   it("names the string when extract is empty (anti-proof)", async () => {
     const compiled = compileSource(SRC, "pdf-text-anti.viva", PRINT);

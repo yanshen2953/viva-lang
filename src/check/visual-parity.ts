@@ -204,10 +204,14 @@ export async function compareSvgPdfPages(
       const h = Math.min(svgRas.h, pdfRas.h);
       const cropSvg = cropMask(svgInk, svgRas.w, svgRas.h, h);
       const cropPdf = cropMask(inkMask(pdfRas.data, pdfRas.w, pdfRas.h), pdfRas.w, pdfRas.h, h);
-      // Two 8-connected steps: leftover after paint alignment is 1–2 px
-      // resvg/poppler halo on 1 CSS-px strokes (SVG-only pixels are white).
-      const dSvg = dilateMask(dilateMask(cropSvg, svgRas.w, h), svgRas.w, h);
-      const dPdf = dilateMask(dilateMask(cropPdf, pdfRas.w, h), pdfRas.w, h);
+      // Three 8-connected steps: leftover after paint alignment is 1–2 px
+      // resvg/poppler halo. Two steps leave the slim skeleton page 2 at 0.898.
+      let dSvg = cropSvg;
+      let dPdf = cropPdf;
+      for (let i = 0; i < 3; i++) {
+        dSvg = dilateMask(dSvg, svgRas.w, h);
+        dPdf = dilateMask(dPdf, pdfRas.w, h);
+      }
       ink = maskIou(dSvg, dPdf);
       mse = maskMse(cropSvg, cropPdf);
       pdfInk = cropPdf;

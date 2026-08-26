@@ -1,3 +1,7 @@
+import { spawnSync } from "node:child_process";
+import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { inflateRawSync, inflateSync } from "node:zlib";
 
 /** Decode PDF content streams to operator text (latin1). */
@@ -76,6 +80,7 @@ function parseToUnicode(ops: string): Map<string, string> {
   const map = new Map<string, string>();
   const cmapBlocks = ops.match(/begincmap[\s\S]*?endcmap/g) ?? [];
   for (const cmap of cmapBlocks) {
+    if (cmap.length > 80_000) continue;
     const block = /beginbfchar([\s\S]*?)endbfchar/g;
     let m: RegExpExecArray | null;
     while ((m = block.exec(cmap))) {
@@ -130,6 +135,23 @@ export function extractPdfStrings(bytes: Uint8Array): string[] {
   return out;
 }
 
+function pdftotextHaystack(bytes: Uint8Array): string {
+  const dir = mkdtempSync(join(tmpdir(), "viva-pdftxt-"));
+  try {
+    const pdfPath = join(dir, "in.pdf");
+    writeFileSync(pdfPath, bytes);
+    const ran = spawnSync("pdftotext", ["-layout", pdfPath, "-"], { encoding: "utf8" });
+    if (ran.status !== 0) return "";
+    return (ran.stdout ?? "").replace(/\s+/g, " ");
+  } catch {
+    return "";
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
 export function pdfHaystack(bytes: Uint8Array): string {
+  const poppler = pdftotextHaystack(bytes);
+  if (poppler.trim()) return poppler;
   return extractPdfStrings(bytes).join("").replace(/\u0000/g, "");
 }

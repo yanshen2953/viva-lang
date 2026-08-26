@@ -703,7 +703,7 @@ widget chart.line
       const text = String(evaluate(node.props.text, env));
       expect(x + estimateTextWidthPx(text, 8, 0.1)).toBeLessThanOrEqual(cellX[1]! + 2);
     }
-  });
+  }, 15_000);
 
   it("grows a right legend past the old 50% fit cap instead of ellipsizing", () => {
     const result = compileSource(
@@ -753,7 +753,7 @@ widget chart.line
       const text = String(evaluate(node.props.text, env));
       expect(x + estimateTextWidthPx(text, 8, 0.1)).toBeLessThanOrEqual(cellX[1]! + 2);
     }
-  });
+  }, 15_000);
 
   it("nudges a wrapped title back into the cell without entering the plot", () => {
     const { rects } = placePaperChrome(

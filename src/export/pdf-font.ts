@@ -95,9 +95,8 @@ export async function embedPdfFonts(
   if (!path) return { latin, latinBold, rich: latin, hasCjk: false };
   try {
     const bytes = readFileSync(path);
-    // pdf-lib's TTF subset drops most CJK glyf entries; poppler then paints
-    // only a few characters (extract still works via ToUnicode). Embed the
-    // full face so the raster matches the SVG.
+    // Subsetting this TTF drops most CJK outlines (poppler paints a few
+    // glyphs). Keep the full face. Extract uses pdftotext, not a merged cmap.
     const rich = await pdf.embedFont(bytes, { subset: false });
     return { latin, latinBold, rich, hasCjk: true };
   } catch {
