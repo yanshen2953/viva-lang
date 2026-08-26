@@ -104,7 +104,7 @@
 
 | 包 | 状态 | 依据 / 缺口 |
 | --- | --- | --- |
-| P0-A 统一字体度量 | **部分** | `measureText` 已是 Helvetica AFM + CJK 1 em，`0.58 * font` 已清。缺验收第 2 条：没有任何测试把预测 bbox 对浏览器 `getBBox()` 或 PDF 真宽卡硬阈值 |
+| P0-A 统一字体度量 | **基本齐** | `measureText` 是 Helvetica AFM + CJK 1 em。`tests/exam/text-ruler.test.ts` 把布局尺对浏览器 `getComputedTextLength()` 和 PDF 真宽卡 2% 硬阈值。仍缺节点级 `getBBox()` 对盒（`EXAM_PLAN.md` R1-B） |
 | P0-B PDF paint 保真 | **基本齐** | rotate/dash/clip/fill/gradient + 每页 ink IoU + cmap 验字。filter / blend 的矢量降级策略仍未写明 |
 | P0-C 规范到站件 | **齐** | `examples/arrival.viva`，四门只吃它 |
 | P0-D Runtime 世界坐标 | **齐** | `__event.x/y` 在 mm 场景是 mm；mark 上可起刷；collide 带 phase |
@@ -131,9 +131,10 @@
 
 ## 下一刀
 
-1. 先补 P0-A 的验收尺：浏览器 `getBBox()` 对预测 bbox，设硬阈值。没有这把尺，画质改动无法判断是进步还是回退。
-2. 再把 ink IoU 阈值分角色抬高（轴题 / 色条 / 轮廓各自 fixture），逐步逼近 0.9。
-3. 定义 logical / painted，删掉测试侧过滤。
-4. 不要加关键字；不要宣称 Nature 级或已超过 Claude Science。
+分组路线、每轮阈值和验收判据见 [`EXAM_PLAN.md`](./EXAM_PLAN.md)。
+
+R1-A（三把尺互测）已完成：`tests/exam/text-ruler.test.ts`。它抓到的第一个真缺陷是 PDF 整串用一种字体，`夜港 HARBOR` 里的 Latin 被 CJK 字体加宽，与布局和浏览器差 20.6%；改成按字体分段绘制后降到 0.9%。P0-A 的验收第 2 条由此闭合。
+
+余下按 `EXAM_PLAN.md` 的 R1-B / R1-C 起步，不要加关键字，不要宣称 Nature 级或已超过 Claude Science。
 
 完整工作包与退出条件：[`ARRIVAL_AUDIT.md`](./ARRIVAL_AUDIT.md)。
