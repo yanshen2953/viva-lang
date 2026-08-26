@@ -15,11 +15,11 @@ import { DEFAULT_SCENE_BACKGROUND } from "../style/defaults.js";
 import { flattenNodesFromIr, nodePainted, type FlatNode } from "./static-svg.js";
 import {
   embedPdfFonts,
-  pdfSafeText,
+  pdfTextRuns,
   pdfTextWidth,
   pdfUnmappedGlyphs,
-  pickPdfFont,
   type PdfTextFonts,
+  type PdfTextRun,
 } from "./pdf-font.js";
 import { evalSceneProps, mmToPx, pxToPdfPt, resolveSceneBox, scenePageCount } from "../space/scene-box.js";
 import { propsToBBox } from "../layout/node-bbox.js";
@@ -259,8 +259,7 @@ function drawTextNode(
   const p = node.props;
   const raw = str(p.text ?? p.label ?? node.name, "");
   if (!raw) return;
-  const font = pickPdfFont(fonts, raw);
-  const drawn = pdfSafeText(font, raw);
+  const runs = pdfTextRuns(fonts, raw);
   const gaps = pdfUnmappedGlyphs(raw, { fontPath: opts.cjkFontPath });
   if (gaps.length && opts.missingGlyphs) {
     for (const ch of gaps) {
@@ -273,21 +272,24 @@ function drawTextNode(
   const fill = parseColor(str(p.fill ?? p.color, "#e2e8f0")) ?? rgb(0.9, 0.92, 0.94);
   const align = str(p.align, "start");
   const tracking = num(p.letterSpacing ?? p.tracking, 0) * scale;
-  const width = textWidth(font, drawn, size, tracking);
+  const width = runsWidth(runs, size, tracking);
   let drawX = x;
   if (align === "center" || align === "middle") drawX = x - width / 2;
   else if (align === "right" || align === "end") drawX = x - width;
   const rotate = num(p.rotate ?? p.rotation, 0);
   const paint = (tx: number, ty: number) => {
-    if (Math.abs(tracking) > 1e-6) {
-      let cx = tx;
-      for (const ch of drawn) {
-        page.drawText(ch, { x: cx, y: ty, size, font, color: fill, opacity });
-        cx += pdfTextWidth(font, ch, size) + tracking;
+    let cx = tx;
+    for (const run of runs) {
+      if (Math.abs(tracking) > 1e-6) {
+        for (const ch of run.text) {
+          page.drawText(ch, { x: cx, y: ty, size, font: run.font, color: fill, opacity });
+          cx += pdfTextWidth(run.font, ch, size) + tracking;
+        }
+        continue;
       }
-      return;
+      page.drawText(run.text, { x: cx, y: ty, size, font: run.font, color: fill, opacity });
+      cx += pdfTextWidth(run.font, run.text, size);
     }
-    page.drawText(drawn, { x: tx, y: ty, size, font, color: fill, opacity });
   };
   if (Math.abs(rotate) < 0.05) {
     paint(drawX, y);
@@ -305,13 +307,14 @@ function drawTextNode(
   page.pushOperators(popGraphicsState());
 }
 
-function textWidth(font: PDFFont, text: string, size: number, tracking: number): number {
-  if (!text) return 0;
+function runsWidth(runs: PdfTextRun[], size: number, tracking: number): number {
   let w = 0;
   let n = 0;
-  for (const ch of text) {
-    w += pdfTextWidth(font, ch, size);
-    n += 1;
+  for (const run of runs) {
+    for (const ch of run.text) {
+      w += pdfTextWidth(run.font, ch, size);
+      n += 1;
+    }
   }
   return w + Math.max(0, n) * tracking;
 }

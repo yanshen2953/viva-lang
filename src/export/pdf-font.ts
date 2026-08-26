@@ -90,6 +90,26 @@ export function pickPdfFont(fonts: PdfTextFonts, text: string): PDFFont {
   return /[^\u0000-\u00FF]/.test(text) && fonts.hasCjk ? fonts.rich : fonts.latin;
 }
 
+export type PdfTextRun = { text: string; font: PDFFont };
+
+/**
+ * Split mixed text so Latin-1 keeps Helvetica and wide script uses the CJK
+ * face. Drawing one run per face keeps PDF advances equal to the layout and
+ * browser rulers; one face for the whole string widened Latin inside CJK.
+ */
+export function pdfTextRuns(fonts: PdfTextFonts, text: string): PdfTextRun[] {
+  if (!text) return [];
+  if (!fonts.hasCjk) return [{ text: pdfSafeText(fonts.latin, text), font: fonts.latin }];
+  const runs: PdfTextRun[] = [];
+  for (const ch of text) {
+    const font = /[^\u0000-\u00FF]/.test(ch) ? fonts.rich : fonts.latin;
+    const last = runs[runs.length - 1];
+    if (last && last.font === font) last.text += ch;
+    else runs.push({ text: ch, font });
+  }
+  return runs.map((run) => ({ text: pdfSafeText(run.font, run.text), font: run.font }));
+}
+
 /** Helvetica throws on CJK; never let measurement crash export. */
 export function pdfTextWidth(font: PDFFont, text: string, size: number): number {
   try {
