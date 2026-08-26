@@ -8,7 +8,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { compileSource } from "../../src/pipeline.js";
-import { flattenNodesFromIr, nodePainted, renderSvgFromIr } from "../../src/export/static-svg.js";
+import { paintedNodesFromIr, renderSvgFromIr } from "../../src/export/static-svg.js";
 import { exportArtifact, exportBeatSequence } from "../../src/export/index.js";
 import { evaluate } from "../../src/eval.js";
 import {
@@ -176,8 +176,7 @@ describe("four gates — export", () => {
   it("data-viva-id in static SVG matches flatten (the Runtime id scheme)", () => {
     for (const file of ["paper-column.viva", "paper-cjk.viva", "paper-storyboard.viva", "figure-atlas.viva"]) {
       const { ir } = compile(file);
-      const { nodes } = flattenNodesFromIr(ir);
-      const painted = nodes.filter((n) => nodePainted(n.props));
+      const painted = paintedNodesFromIr(ir);
       const ids = svgIds(renderSvgFromIr(ir));
       expect(painted.length).toBeGreaterThan(0);
       for (const node of painted) expect(ids.has(node.id), `${file} ${node.id}`).toBe(true);

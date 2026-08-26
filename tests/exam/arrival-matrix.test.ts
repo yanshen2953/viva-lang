@@ -10,7 +10,7 @@ import { inflateRawSync, inflateSync } from "node:zlib";
 import { PDFDocument } from "pdf-lib";
 import { compileSource } from "../../src/pipeline.js";
 import { evaluate } from "../../src/eval.js";
-import { flattenNodesFromIr, nodePainted, renderSvgFromIr } from "../../src/export/static-svg.js";
+import { paintedNodesFromIr, renderSvgFromIr } from "../../src/export/static-svg.js";
 import {
   exportArtifact,
   exportBeatPlayback,
@@ -172,8 +172,7 @@ describe("arrival 6 — gif/mp4 clock playback", () => {
 describe("arrival 7 — logical / painted / sidecar / review IDs", () => {
   it("Runtime flatten, static SVG, PDF sidecar, and review share painted ids", async () => {
     const { src, ir } = compileArrival();
-    const { nodes } = flattenNodesFromIr(ir);
-    const painted = nodes.filter((n) => nodePainted(n.props)).map((n) => n.id).sort();
+    const painted = paintedNodesFromIr(ir).map((n) => n.id).sort();
     const svg = renderSvgFromIr(ir);
     const svgIds = [...svg.matchAll(/data-viva-id="([^"]+)"/g)].map((m) => m[1]!).sort();
     expect(svgIds).toEqual(painted);
@@ -408,8 +407,7 @@ describe("arrival 10 — slim prompt + capabilities + loop", () => {
       expect(ir.timeline?.beats).toBe(4);
       expect(holdFrameTimes(ir.timeline!).length).toBe(4);
       expect(playbackFrameTimes(ir.timeline!).length).toBeGreaterThan(4);
-      const { nodes } = flattenNodesFromIr(ir);
-      const painted = nodes.filter((n) => nodePainted(n.props)).map((n) => n.id).sort();
+      const painted = paintedNodesFromIr(ir).map((n) => n.id).sort();
       const svg = renderSvgFromIr(ir);
       const svgIds = [...svg.matchAll(/data-viva-id="([^"]+)"/g)].map((m) => m[1]!).sort();
       expect(svgIds, name).toEqual(painted);

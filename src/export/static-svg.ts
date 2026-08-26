@@ -175,11 +175,22 @@ function flattenItems(
   }
 }
 
+/**
+ * Painted vs logical contract (R5-A):
+ * - `visible: false` → logical only
+ * - `opacity` < 0.01 → logical only (includes opacity: 0)
+ * - ease mid-state with opacity ≥ 0.01 → painted
+ * Runtime, static SVG, review, and PDF sidecar all use this. Hidden nodes stay in IR.
+ */
 export function nodePainted(props: Record<string, unknown>): boolean {
   if (props.visible !== undefined && !Boolean(props.visible)) return false;
   const opacity = props.opacity === undefined ? 1 : Number(props.opacity);
   if (Number.isFinite(opacity) && opacity < 0.01) return false;
   return true;
+}
+
+export function paintedNodesFromIr(ir: VisualIR): FlatNode[] {
+  return flattenNodesFromIr(ir).nodes.filter((n) => nodePainted(n.props));
 }
 
 function nodeToSvg(node: FlatNode, defsXml: string[] = []): string {

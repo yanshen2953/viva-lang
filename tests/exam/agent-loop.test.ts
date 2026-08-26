@@ -4,7 +4,7 @@ import { compileSource } from "../../src/pipeline.js";
 import { runAgentLoop, productSystemPrompt } from "../../src/agent/orchestrator.js";
 import { COLUMN_MM } from "../../src/space/scene-box.js";
 import { evaluate } from "../../src/eval.js";
-import { flattenNodesFromIr, nodePainted, renderSvgFromIr } from "../../src/export/static-svg.js";
+import { paintedNodesFromIr, renderSvgFromIr } from "../../src/export/static-svg.js";
 import { exportArtifact } from "../../src/export/index.js";
 import { holdFrameTimes, playbackFrameTimes } from "../../src/timeline/clock.js";
 import { listSelectableNodes } from "../../src/review/nodes.js";
@@ -137,7 +137,7 @@ describe("agent loop", () => {
       expect(playbackFrameTimes(ir.timeline!).length).toBeGreaterThan(holdFrameTimes(ir.timeline!).length);
       const pdf = await exportArtifact(result.source, "pdf", PRINT, "agent-arrival.viva");
       expect(pdf.vector).toBe(true);
-      const painted = flattenNodesFromIr(ir).nodes.filter((n) => nodePainted(n.props)).map((n) => n.id).sort();
+      const painted = paintedNodesFromIr(ir).map((n) => n.id).sort();
       const svgIds = [...renderSvgFromIr(ir).matchAll(/data-viva-id="([^"]+)"/g)].map((m) => m[1]!).sort();
       expect(svgIds).toEqual(painted);
       expect([...new Set((pdf.sidecar ?? []).map((n) => n.id))].sort()).toEqual(painted);
