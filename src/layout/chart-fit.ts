@@ -297,6 +297,27 @@ export function insetPlotSlot(slot: FitRect): FitRect {
   };
 }
 
+/**
+ * Panel slots that author `role: panel` / `role: plot` nodes ask for.
+ * A figure must still cut those cells even when no chart claims them.
+ */
+export function authorPanelSlotNames(artifact: Artifact): string[] {
+  const names: string[] = [];
+  for (const layer of artifact.scene?.layers ?? []) {
+    if (layer.name.startsWith("__")) continue;
+    const nodes: Extract<SceneItem, { kind: "node" }>[] = [];
+    walkAuthorNodes(layer.items, nodes);
+    for (const node of nodes) {
+      const role = roleOf(node);
+      if (role !== "panel" && role !== "plot") continue;
+      const slot = slotNameOf(node);
+      if (!slot || names.includes(slot)) continue;
+      names.push(slot);
+    }
+  }
+  return names;
+}
+
 export function slotHasAuthorPlot(artifact: Artifact, slotName: string): boolean {
   for (const layer of artifact.scene?.layers ?? []) {
     if (layer.name.startsWith("__")) continue;

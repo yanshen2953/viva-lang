@@ -39,6 +39,7 @@ import {
 import { solveChartInsets, solveFigureInsets } from "./layout/chrome-solve.js";
 import type { StylePolicies } from "./style/types.js";
 import {
+  authorPanelSlotNames,
   chartHostBox,
   fillAuthorSlotNodes,
   PLOT_SLOT_INSET,
@@ -1470,7 +1471,13 @@ function panelNamesFromProps(props: Record<string, Expr>, count: number, index: 
   });
 }
 
-/** Charts after this figure, until the next figure or board, own its panel letters. */
+const BOARD_SLOT_NAMES = new Set(["body", "left", "right"]);
+
+/**
+ * Charts after this figure, until the next figure or board, own its panel
+ * letters. Author `role: panel` / `role: plot` nodes count too, so a cell
+ * held by a hand-drawn plot is still cut.
+ */
 function figureOwnedPanelNames(artifact: Artifact, figureIndex: number): string[] {
   let seen = 0;
   let collecting = false;
@@ -1486,8 +1493,14 @@ function figureOwnedPanelNames(artifact: Artifact, figureIndex: number): string[
     if (widget.name === "layout.board") break;
     if (!widget.name.startsWith("chart.")) continue;
     const panel = stringProp(widget.props, ["panel", "frame"]);
-    if (!panel || panel === "body" || panel === "left" || panel === "right") continue;
+    if (!panel || BOARD_SLOT_NAMES.has(panel)) continue;
     if (!names.includes(panel)) names.push(panel);
+  }
+  if (!names.length) return names;
+  for (const slot of authorPanelSlotNames(artifact)) {
+    if (BOARD_SLOT_NAMES.has(slot) || names.includes(slot)) continue;
+    if (artifact.frames.some((frame) => frame.name === slot)) continue;
+    names.push(slot);
   }
   return names;
 }
