@@ -128,6 +128,7 @@ function drawNode(
   const opacity = clamp01(Number.isFinite(rawOpacity) ? rawOpacity : 1);
   const tag = inferTag(p);
   const dash = dashArray(p, scale);
+  const sw = (px: number) => px * scale;
 
   if (tag === "circle") {
     const cx = num(p.x) * scale;
@@ -154,7 +155,7 @@ function drawNode(
       color: spec ? undefined : (fill ?? undefined),
       opacity,
       borderColor: p.stroke ? parseColor(String(p.stroke)) ?? undefined : undefined,
-      borderWidth: p.strokeWidth ? num(p.strokeWidth) * scale : undefined,
+      borderWidth: p.strokeWidth ? sw(num(p.strokeWidth)) : undefined,
       borderOpacity: opacity,
       borderDashArray: dash,
     });
@@ -171,27 +172,20 @@ function drawNode(
     const fill = parseColor(str(p.fill ?? p.color, "#1e293b"));
     const stroke = p.stroke ? parseColor(String(p.stroke)) : null;
     if (radius > 0) {
-      withSceneCtm(page, pageH, scale, originY, () => {
-        if (spec) {
-          fillGradient(
-            page,
-            spec.colors,
-            spec.vertical,
-            x * scale,
-            flipY(sy(y + h, originY, scale), pageH),
-            w * scale,
-            h * scale,
-            opacity,
-          );
-        }
-        drawSceneSvgPath(page, roundedRectPath(x, y, w, h, radius), pageH, scale, originY, {
-          color: spec ? undefined : (fill ?? undefined),
-          opacity,
-          borderColor: stroke ?? undefined,
-          borderWidth: p.strokeWidth ? num(p.strokeWidth) : undefined,
-          borderOpacity: opacity,
-          borderDashArray: dashArray(p, 1),
-        });
+      // drawSvgPath already flips Y and applies `scale`. Nesting that under
+      // withSceneCtm double-flips rounded swatches off the plot (arrival
+      // legends landed mid-panel and tanked page-1 ink).
+      if (spec) {
+        const pdfY = pageH - sy(y, originY, scale) - h * scale;
+        fillGradient(page, spec.colors, spec.vertical, x * scale, pdfY, w * scale, h * scale, opacity);
+      }
+      drawSceneSvgPath(page, roundedRectPath(x, y, w, h, radius), pageH, scale, originY, {
+        color: spec ? undefined : (fill ?? undefined),
+        opacity,
+        borderColor: stroke ?? undefined,
+        borderWidth: p.strokeWidth ? num(p.strokeWidth) : undefined,
+        borderOpacity: opacity,
+        borderDashArray: dashArray(p, 1),
       });
       return;
     }
@@ -207,7 +201,7 @@ function drawNode(
       color: spec ? undefined : (fill ?? undefined),
       opacity,
       borderColor: stroke ?? undefined,
-      borderWidth: p.strokeWidth ? num(p.strokeWidth) * scale : undefined,
+      borderWidth: p.strokeWidth ? sw(num(p.strokeWidth)) : undefined,
       borderOpacity: opacity,
       borderDashArray: dash,
     });
@@ -223,7 +217,7 @@ function drawNode(
     page.drawLine({
       start: { x: x1, y: y1 },
       end: { x: x2, y: y2 },
-      thickness: num(p.strokeWidth, 2) * scale,
+      thickness: sw(num(p.strokeWidth, 2)),
       color: stroke,
       opacity,
       dashArray: dash,
@@ -267,7 +261,9 @@ function drawTextNode(
   const p = node.props;
   const raw = str(p.text ?? p.label ?? node.name, "");
   if (!raw) return;
-  const runs = pdfTextRuns(fonts, raw);
+  const rawWeight = p.fontWeight ?? p.weight;
+  const weight = typeof rawWeight === "number" || typeof rawWeight === "string" ? rawWeight : 400;
+  const runs = pdfTextRuns(fonts, raw, weight);
   const gaps = pdfUnmappedGlyphs(raw, { fontPath: opts.cjkFontPath });
   if (gaps.length && opts.missingGlyphs) {
     for (const ch of gaps) {
@@ -348,21 +344,6 @@ function drawSceneSvgPath(
     scale,
     ...opts,
   });
-}
-
-function withSceneCtm(
-  page: PDFPage,
-  pageH: number,
-  scale: number,
-  originY: number,
-  fn: () => void,
-): void {
-  page.pushOperators(
-    pushGraphicsState(),
-    concatTransformationMatrix(scale, 0, 0, -scale, 0, pageH + originY * scale),
-  );
-  fn();
-  page.pushOperators(popGraphicsState());
 }
 
 function fillGradient(

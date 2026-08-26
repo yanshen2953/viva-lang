@@ -1,5 +1,5 @@
 export type CjkFontResolveOpts = { fontPath?: string };
-export type PdfTextFonts = { latin: never; rich: never; hasCjk: boolean };
+export type PdfTextFonts = { latin: never; latinBold: never; rich: never; hasCjk: boolean };
 
 export function bundledCjkFontPath(): string | null {
   return null;
@@ -32,3 +32,11 @@ export function pdfMissingGlyphs(_font: unknown, _text: string): string[] {
 export function pdfUnmappedGlyphs(_text: string, _opts?: CjkFontResolveOpts): string[] {
   return [];
 }
+
+export type PdfTextRun = { text: string; font: never };
+
+export function pdfTextRuns(_fonts: PdfTextFonts, text: string): PdfTextRun[] {
+  return text ? [{ text, font: undefined as never }] : [];
+}
+
+export function attachCjkToUnicode(): void {}

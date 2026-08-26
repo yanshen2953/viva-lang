@@ -3,7 +3,7 @@ import { inflateRawSync, inflateSync } from "node:zlib";
 import { PDFDocument } from "pdf-lib";
 import { compileSource } from "../../src/pipeline.js";
 import { flattenNodesFromIr } from "../../src/export/static-svg.js";
-import { renderVectorPdfFromIr } from "../../src/export/vector-pdf.js";
+import { renderVectorPdfFromIr, renderVectorPdfPackageFromIr } from "../../src/export/vector-pdf.js";
 import { exportArtifact } from "../../src/export/index.js";
 import { propsToBBox } from "../../src/layout/node-bbox.js";
 
@@ -126,6 +126,31 @@ scene
     expect(plate).toBeTruthy();
     const box = propsToBBox(plate!.props);
     expect(box.h).toBeGreaterThan(1000);
+  });
+
+  it("places a rounded swatch at the scene y, not a double-flipped mid-page", async () => {
+    const ir = compile(
+      `artifact "Round"
+scene
+  size: 200 160
+  background: #ffffff
+  layer ink
+    node swatch
+      x: 40
+      y: 80
+      w: 20
+      h: 20
+      radius: 2
+      fill: #0072B2
+      stroke: #111111
+`,
+      "round-swatch.viva",
+    );
+    const pack = await renderVectorPdfPackageFromIr(ir);
+    const hit = pack.sidecar.find((n) => n.name === "swatch");
+    expect(hit, "sidecar missing swatch").toBeTruthy();
+    expect(hit!.bboxPt.y).toBeCloseTo(80, 5);
+    expect(hit!.bboxPt.x).toBeCloseTo(40, 5);
   });
 
   it("keeps 时间 / 心率 as mapped CJK, not missingGlyphs false green", async () => {

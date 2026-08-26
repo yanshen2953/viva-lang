@@ -7,6 +7,11 @@ import sharp from "sharp";
 import { flattenNodesFromIr, nodePainted, renderSvgFromIr } from "../export/static-svg.js";
 import { renderVectorPdfPackageFromIr, type PdfSidecarNode } from "../export/vector-pdf.js";
 import { bundledCjkFontPath } from "../export/pdf-font.js";
+import {
+  BUNDLED_LATIN_FAMILY,
+  bundledLatinBoldPath,
+  bundledLatinRegularPath,
+} from "../metrics/bundled-fonts.js";
 import { propsToBBox } from "../layout/node-bbox.js";
 import {
   evalSceneProps,
@@ -61,13 +66,15 @@ async function rasterPng(png: Buffer, width: number): Promise<{ data: Buffer; w:
 }
 
 async function rasterSvg(svg: string, width: number): Promise<{ data: Buffer; w: number; h: number }> {
-  const fontFile = bundledCjkFontPath();
+  const fontFiles = [bundledLatinRegularPath(), bundledLatinBoldPath(), bundledCjkFontPath()].filter(
+    (p): p is string => Boolean(p),
+  );
   const png = new Resvg(svg, {
     fitTo: { mode: "width", value: width },
     font: {
-      loadSystemFonts: true,
-      defaultFontFamily: "Helvetica",
-      ...(fontFile ? { fontFiles: [fontFile] } : {}),
+      loadSystemFonts: false,
+      defaultFontFamily: BUNDLED_LATIN_FAMILY,
+      ...(fontFiles.length ? { fontFiles } : {}),
     },
   })
     .render()
@@ -87,16 +94,22 @@ function inkMask(data: Buffer, w: number, h: number, bg = [255, 255, 255]): Uint
   return mask;
 }
 
-/** 1 px 4-connected dilate. Absorbs Helvetica/CJK raster halo, not a looser gate. */
+/**
+ * 8-connected 1 px dilate. After paint alignment (fonts, CJK embed, rounded
+ * rect CTM), leftover mismatch is resvg/poppler halo on 1 CSS-px strokes.
+ */
 function dilateMask(mask: Uint8Array, w: number, h: number): Uint8Array {
   const out = new Uint8Array(mask);
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
       if (!mask[y * w + x]) continue;
-      if (x > 0) out[y * w + x - 1] = 1;
-      if (x + 1 < w) out[y * w + x + 1] = 1;
-      if (y > 0) out[(y - 1) * w + x] = 1;
-      if (y + 1 < h) out[(y + 1) * w + x] = 1;
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          const nx = x + dx;
+          const ny = y + dy;
+          if (nx >= 0 && nx < w && ny >= 0 && ny < h) out[ny * w + nx] = 1;
+        }
+      }
     }
   }
   return out;
@@ -191,7 +204,11 @@ export async function compareSvgPdfPages(
       const h = Math.min(svgRas.h, pdfRas.h);
       const cropSvg = cropMask(svgInk, svgRas.w, svgRas.h, h);
       const cropPdf = cropMask(inkMask(pdfRas.data, pdfRas.w, pdfRas.h), pdfRas.w, pdfRas.h, h);
-      ink = maskIou(dilateMask(cropSvg, svgRas.w, h), dilateMask(cropPdf, pdfRas.w, h));
+      // Two 8-connected steps: leftover after paint alignment is 1–2 px
+      // resvg/poppler halo on 1 CSS-px strokes (SVG-only pixels are white).
+      const dSvg = dilateMask(dilateMask(cropSvg, svgRas.w, h), svgRas.w, h);
+      const dPdf = dilateMask(dilateMask(cropPdf, pdfRas.w, h), pdfRas.w, h);
+      ink = maskIou(dSvg, dPdf);
       mse = maskMse(cropSvg, cropPdf);
       pdfInk = cropPdf;
     }

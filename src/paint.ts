@@ -3,7 +3,7 @@
  * Keeps the DSL surface tiny — richness lives in runtime attribute mapping.
  */
 
-import { LATIN_FONT_STACK } from "./metrics/text.js";
+import { svgFontStack, svgFontWeightAttr } from "./metrics/text.js";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 
@@ -256,8 +256,9 @@ export function applyTransform(
 
 export function applyTypography(el: SVGTextElement, props: Record<string, unknown>): void {
   el.setAttribute("font-size", String(num(props.font ?? props.fontSize, 16)));
-  el.setAttribute("font-family", str(props.fontFamily, LATIN_FONT_STACK));
-  if (props.fontWeight !== undefined) el.setAttribute("font-weight", String(props.fontWeight));
+  el.setAttribute("font-family", svgFontStack(props.fontFamily));
+  const svgWeight = svgFontWeightAttr(props.fontWeight);
+  if (svgWeight !== undefined) el.setAttribute("font-weight", svgWeight);
   else el.removeAttribute("font-weight");
   if (props.fontStyle !== undefined) el.setAttribute("font-style", String(props.fontStyle));
   else el.removeAttribute("font-style");

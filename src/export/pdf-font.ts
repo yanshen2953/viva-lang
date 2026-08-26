@@ -4,6 +4,8 @@ import { fileURLToPath } from "node:url";
 import { PDFDocument, PDFName, StandardFonts, type PDFFont, type PDFRef } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 import { missingGlyphsInFont } from "../metrics/glyphs.js";
+import { bundledLatinFontPath } from "../metrics/bundled-fonts.js";
+import { isBoldWeight } from "../metrics/text.js";
 
 const BUNDLED_FULL = "VivaSansCJK.ttf";
 const BUNDLED_SUBSET = "VivaSansFallback.ttf";
@@ -26,6 +28,7 @@ export type CjkFontResolveOpts = {
 
 export type PdfTextFonts = {
   latin: PDFFont;
+  latinBold: PDFFont;
   rich: PDFFont;
   hasCjk: boolean;
 };
@@ -69,25 +72,42 @@ export function resolveCjkFontPath(opts?: CjkFontResolveOpts): string | null {
   return null;
 }
 
+async function embedLatinFace(pdf: PDFDocument, bold: boolean): Promise<PDFFont> {
+  const path = bundledLatinFontPath(bold);
+  if (path) {
+    try {
+      return await pdf.embedFont(readFileSync(path), { subset: true });
+    } catch {
+      /* fall through to standard face */
+    }
+  }
+  return pdf.embedFont(bold ? StandardFonts.HelveticaBold : StandardFonts.Helvetica);
+}
+
 export async function embedPdfFonts(
   pdf: PDFDocument,
   opts?: CjkFontResolveOpts,
 ): Promise<PdfTextFonts> {
   pdf.registerFontkit(fontkit);
-  const latin = await pdf.embedFont(StandardFonts.Helvetica);
+  const latin = await embedLatinFace(pdf, false);
+  const latinBold = await embedLatinFace(pdf, true);
   const path = resolveCjkFontPath(opts);
-  if (!path) return { latin, rich: latin, hasCjk: false };
+  if (!path) return { latin, latinBold, rich: latin, hasCjk: false };
   try {
     const bytes = readFileSync(path);
-    const rich = await pdf.embedFont(bytes, { subset: true });
-    return { latin, rich, hasCjk: true };
+    // pdf-lib's TTF subset drops most CJK glyf entries; poppler then paints
+    // only a few characters (extract still works via ToUnicode). Embed the
+    // full face so the raster matches the SVG.
+    const rich = await pdf.embedFont(bytes, { subset: false });
+    return { latin, latinBold, rich, hasCjk: true };
   } catch {
-    return { latin, rich: latin, hasCjk: false };
+    return { latin, latinBold, rich: latin, hasCjk: false };
   }
 }
 
-export function pickPdfFont(fonts: PdfTextFonts, text: string): PDFFont {
-  return /[^\u0000-\u00FF]/.test(text) && fonts.hasCjk ? fonts.rich : fonts.latin;
+export function pickPdfFont(fonts: PdfTextFonts, text: string, weight?: number | string): PDFFont {
+  if (/[^\u0000-\u00FF]/.test(text) && fonts.hasCjk) return fonts.rich;
+  return isBoldWeight(weight) ? fonts.latinBold : fonts.latin;
 }
 
 export type PdfTextRun = { text: string; font: PDFFont };
@@ -97,12 +117,13 @@ export type PdfTextRun = { text: string; font: PDFFont };
  * face. Drawing one run per face keeps PDF advances equal to the layout and
  * browser rulers; one face for the whole string widened Latin inside CJK.
  */
-export function pdfTextRuns(fonts: PdfTextFonts, text: string): PdfTextRun[] {
+export function pdfTextRuns(fonts: PdfTextFonts, text: string, weight?: number | string): PdfTextRun[] {
   if (!text) return [];
-  if (!fonts.hasCjk) return [{ text: pdfSafeText(fonts.latin, text), font: fonts.latin }];
+  const latin = isBoldWeight(weight) ? fonts.latinBold : fonts.latin;
+  if (!fonts.hasCjk) return [{ text: pdfSafeText(latin, text), font: latin }];
   const runs: PdfTextRun[] = [];
   for (const ch of text) {
-    const font = /[^\u0000-\u00FF]/.test(ch) ? fonts.rich : fonts.latin;
+    const font = /[^\u0000-\u00FF]/.test(ch) ? fonts.rich : latin;
     const last = runs[runs.length - 1];
     if (last && last.font === font) last.text += ch;
     else runs.push({ text: ch, font });

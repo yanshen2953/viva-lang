@@ -1,11 +1,46 @@
 /**
  * Shared text measure for layout, structural QA, SVG defaults, and PDF.
- * Latin uses Helvetica AFM (same as vector PDF StandardFonts.Helvetica).
+ * Latin uses the bundled Liberation Sans TTF (same file PDF embeds).
  * CJK / fullwidth / kana / hangul use 1 em — Droid Sans Fallback CJK
  * advances are unitsPerEm, so this matches the bundled PDF CJK font.
  */
 
-export const LATIN_FONT_STACK = "Helvetica, Arial, sans-serif";
+import { readFileSync } from "node:fs";
+import fontkit from "@pdf-lib/fontkit";
+import { BUNDLED_CJK_FAMILY, BUNDLED_LATIN_FAMILY, bundledLatinFontPath } from "./bundled-fonts.js";
+
+export const LATIN_FONT_STACK = `${BUNDLED_LATIN_FAMILY}, Helvetica, Arial, ${BUNDLED_CJK_FAMILY}, sans-serif`;
+
+/** Same split PDF uses: non-Latin-1 goes to the CJK face. */
+export function isCjkRunChar(ch: string): boolean {
+  return /[^\u0000-\u00FF]/.test(ch);
+}
+
+export type ScriptRun = { text: string; wide: boolean };
+
+export function scriptRuns(text: string): ScriptRun[] {
+  const runs: ScriptRun[] = [];
+  for (const ch of text) {
+    const wide = isCjkRunChar(ch);
+    const last = runs[runs.length - 1];
+    if (last && last.wide === wide) last.text += ch;
+    else runs.push({ wide, text: ch });
+  }
+  return runs;
+}
+
+/** Handbook stacks often omit the bundled CJK family name resvg needs. */
+export function svgFontStack(requested?: unknown): string {
+  const stack = typeof requested === "string" && requested.trim() ? requested.trim() : LATIN_FONT_STACK;
+  if (stack.includes(BUNDLED_CJK_FAMILY)) return stack;
+  return `${stack}, ${BUNDLED_CJK_FAMILY}`;
+}
+
+/** PDF treats weight ≥ 600 as Bold; resvg only maps 700 onto the Bold TTF. */
+export function svgFontWeightAttr(weight?: unknown): string | undefined {
+  if (weight === undefined || weight === null || weight === "") return undefined;
+  return isBoldWeight(weight as number | string) ? "700" : String(weight);
+}
 
 const HELVETICA_EM = 1000;
 
@@ -411,6 +446,29 @@ export function helveticaAdvanceEm(ch: string, bold = false): number {
   return (bold ? HELVETICA_BOLD_ADVANCE[ch] : HELVETICA_ADVANCE[ch]) ?? 556;
 }
 
+type AdvanceFont = { unitsPerEm: number; layout: (text: string) => { advanceWidth: number } };
+const faceCache = new Map<string, AdvanceFont | null>();
+
+function latinFace(bold: boolean): AdvanceFont | null {
+  const path = bundledLatinFontPath(bold);
+  if (!path) return null;
+  if (faceCache.has(path)) return faceCache.get(path)!;
+  try {
+    const font = fontkit.create(readFileSync(path)) as AdvanceFont;
+    faceCache.set(path, font);
+    return font;
+  } catch {
+    faceCache.set(path, null);
+    return null;
+  }
+}
+
+function latinAdvancePx(ch: string, size: number, bold: boolean): number {
+  const face = latinFace(bold);
+  if (face) return (face.layout(ch).advanceWidth / Math.max(face.unitsPerEm, 1)) * size;
+  return (helveticaAdvanceEm(ch, bold) / HELVETICA_EM) * size;
+}
+
 export function defaultMeasureText(text: string, opts: MeasureTextOpts): number {
   const size = opts.fontSize;
   const tracking = opts.letterSpacing ?? 0;
@@ -418,7 +476,7 @@ export function defaultMeasureText(text: string, opts: MeasureTextOpts): number 
   if (!text) return Math.max(size * 0.4, 0);
   let w = 0;
   for (const ch of text) {
-    w += isWideScript(ch) ? size : (helveticaAdvanceEm(ch, bold) / HELVETICA_EM) * size;
+    w += isWideScript(ch) ? size : latinAdvancePx(ch, size, bold);
     w += tracking;
   }
   return Math.max(size * 0.4, w);

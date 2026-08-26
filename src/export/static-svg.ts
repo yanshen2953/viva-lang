@@ -12,7 +12,11 @@ import {
 } from "../space.js";
 import { evalSceneProps, resolveSceneBox, scaleSceneGeom, sceneScaleOf } from "../space/scene-box.js";
 import { cssId, gradientSpec } from "../paint.js";
-import { LATIN_FONT_STACK } from "../metrics/text.js";
+import {
+  BUNDLED_CJK_FAMILY,
+  BUNDLED_LATIN_FAMILY,
+} from "../metrics/bundled-fonts.js";
+import { scriptRuns, svgFontStack, svgFontWeightAttr } from "../metrics/text.js";
 import { applyTimelineState, timelineFromState } from "../timeline/clock.js";
 import { isSummaryMark, pickGeom, sampleGeomEase, samplePathEase, MARK_EASE_MS } from "../runtime/mark-ease.js";
 
@@ -206,11 +210,12 @@ function nodeToSvg(node: FlatNode, defsXml: string[] = []): string {
     return `<rect ${common} x="${num(p.x)}" y="${num(p.y)}" width="${num(p.w ?? p.width, 80)}" height="${num(p.h ?? p.height, 24)}" rx="${num(p.radius)}" fill="${esc(fillOf("#1e293b"))}"${strokeAttrs(p)} />`;
   }
   if (tag === "text") {
-    const text = esc(str(p.text ?? p.label ?? node.name, ""));
+    const rawText = str(p.text ?? p.label ?? node.name, "");
     const fill = esc(str(p.fill ?? p.color, "#e2e8f0"));
     const size = num(p.font ?? p.fontSize, 14);
-    const family = esc(str(p.fontFamily, LATIN_FONT_STACK));
-    const weight = p.fontWeight !== undefined ? ` font-weight="${esc(String(p.fontWeight))}"` : "";
+    const family = esc(svgFontStack(p.fontFamily));
+    const weightVal = svgFontWeightAttr(p.fontWeight);
+    const weight = weightVal !== undefined ? ` font-weight="${esc(weightVal)}"` : "";
     const tracking =
       p.letterSpacing !== undefined ? ` letter-spacing="${esc(String(p.letterSpacing))}"` : "";
     const rotate = num(p.rotate ?? p.rotation, 0);
@@ -223,7 +228,17 @@ function nodeToSvg(node: FlatNode, defsXml: string[] = []): string {
         : str(p.align, "start") === "right"
           ? "end"
           : "start";
-    return `<text ${common} x="${num(p.x)}" y="${num(p.y)}" fill="${fill}" font-size="${size}" font-family="${family}"${weight}${tracking} text-anchor="${anchor}"${transform}>${text}</text>`;
+    const runs = scriptRuns(rawText);
+    const inner =
+      runs.length <= 1
+        ? esc(rawText)
+        : runs
+            .map((run) => {
+              const face = run.wide ? BUNDLED_CJK_FAMILY : BUNDLED_LATIN_FAMILY;
+              return `<tspan font-family="${esc(face)}">${esc(run.text)}</tspan>`;
+            })
+            .join("");
+    return `<text ${common} x="${num(p.x)}" y="${num(p.y)}" fill="${fill}" font-size="${size}" font-family="${family}"${weight}${tracking} text-anchor="${anchor}"${transform}>${inner}</text>`;
   }
   if (tag === "line") {
     const cap = p.strokeLinecap ? ` stroke-linecap="${esc(String(p.strokeLinecap))}"` : "";
