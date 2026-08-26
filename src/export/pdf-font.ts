@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { PDFDocument, StandardFonts, type PDFFont } from "pdf-lib";
+import { PDFDocument, PDFName, StandardFonts, type PDFFont, type PDFRef } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 import { missingGlyphsInFont } from "../metrics/glyphs.js";
 
@@ -147,4 +147,54 @@ export function pdfMissingGlyphs(font: PDFFont, text: string): string[] {
  */
 export function pdfUnmappedGlyphs(text: string, opts?: CjkFontResolveOpts): string[] {
   return missingGlyphsInFont(resolveCjkFontPath(opts), text);
+}
+
+/**
+ * Write a ToUnicode CMap so extractors can recover CJK from subset CIDs.
+ * Call after every `drawText`, before `pdf.save()`.
+ */
+export function attachCjkToUnicode(pdf: PDFDocument, font: PDFFont, text: string): void {
+  const chars = [...new Set([...text])].filter((ch) => (ch.codePointAt(0) ?? 0) > 0xff);
+  if (!chars.length) return;
+  const pairs: string[] = [];
+  for (const ch of chars) {
+    try {
+      const encoded = font.encodeText(ch);
+      const cid = [...encoded].map((b) => b.toString(16).padStart(2, "0")).join("");
+      const cp = ch.codePointAt(0)!;
+      const uni = cp.toString(16).toUpperCase().padStart(cp > 0xffff ? 8 : 4, "0");
+      pairs.push(`<${cid.toUpperCase()}> <${uni}>`);
+    } catch {
+      /* unmapped */
+    }
+  }
+  if (!pairs.length) return;
+  const chunks: string[] = [];
+  for (let i = 0; i < pairs.length; i += 100) {
+    const slice = pairs.slice(i, i + 100);
+    chunks.push(`${slice.length} beginbfchar\n${slice.join("\n")}\nendbfchar`);
+  }
+  const cmap = `/CIDInit /ProcSet findresource begin
+12 dict begin
+begincmap
+/CIDSystemInfo << /Registry (Adobe) /Ordering (UCS) /Supplement 0 >> def
+/CMapName /Adobe-Identity-UCS def
+/CMapType 2 def
+1 begincodespacerange
+<0000> <FFFF>
+endcodespacerange
+${chunks.join("\n")}
+endcmap
+CMapName currentdict /CMap defineresource pop
+end
+end`;
+  const ref = (font as PDFFont & { ref?: PDFRef }).ref;
+  if (!ref) return;
+  const dict = pdf.context.lookup(ref);
+  if (!dict || !("set" in dict)) return;
+  const stream = pdf.context.stream(cmap);
+  (dict as { set: (n: ReturnType<typeof PDFName.of>, v: unknown) => void }).set(
+    PDFName.of("ToUnicode"),
+    stream,
+  );
 }

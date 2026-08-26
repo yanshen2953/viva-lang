@@ -248,3 +248,72 @@ export function sidecarOverlap(
   }
   return worst;
 }
+
+export type RoleInkReport = {
+  role: string;
+  names: string[];
+  inkIou: number;
+};
+
+function hideUnmatched(ir: VisualIR, match: RegExp): VisualIR {
+  const next = structuredClone(ir);
+  const walk = (items: typeof next.scene.layers[number]["items"]): void => {
+    for (const item of items) {
+      if (item.kind === "node") {
+        if (!match.test(item.name)) {
+          item.props.visible = { kind: "boolean", value: false, span: { line: 1, column: 1 } };
+        }
+        continue;
+      }
+      walk(item.body);
+    }
+  };
+  for (const layer of next.scene.layers) walk(layer.items);
+  return next;
+}
+
+/** Per-role SVG vs PDF ink IoU on an IR that only paints that role. */
+export async function compareRoleInk(
+  ir: VisualIR,
+  roles: { role: string; match: RegExp }[],
+  opts: { width?: number } = {},
+): Promise<RoleInkReport[]> {
+  const width = opts.width ?? 480;
+  const { nodes } = flattenNodesFromIr(ir);
+  const out: RoleInkReport[] = [];
+  for (const { role, match } of roles) {
+    const names = nodes.filter((n) => match.test(n.name)).map((n) => n.name);
+    if (!names.length) {
+      out.push({ role, names, inkIou: 0 });
+      continue;
+    }
+    const isolated = hideUnmatched(ir, match);
+    const report = await compareSvgPdfPages(isolated, { width });
+    out.push({ role, names, inkIou: report.minInkIou });
+  }
+  return out;
+}
+
+/** Ink IoU between two PDF/SVG page rasters. Low means the pages are not copies. */
+export async function comparePagePairInk(
+  ir: VisualIR,
+  opts: { width?: number } = {},
+): Promise<{ pageIou: number; pages: number }> {
+  const width = opts.width ?? 360;
+  const report = await compareSvgPdfPages(ir, { width });
+  const { scene } = flattenNodesFromIr(ir);
+  const box = resolveSceneBox(evalSceneProps(ir.scene.props, [ir.state, ir.data]));
+  const pages = scenePageCount(box);
+  if (pages < 2) return { pageIou: 1, pages };
+  const fullSvg = renderSvgFromIr(ir);
+  const sliceH = box.page ? mmToPx(box.page.h) : scene.height;
+  const a = await rasterSvg(sliceSvg(fullSvg, 0, sliceH, scene.width), width);
+  const b = await rasterSvg(sliceSvg(fullSvg, sliceH, sliceH, scene.width), width);
+  const h = Math.min(a.h, b.h);
+  const iou = maskIou(
+    cropMask(inkMask(a.data, a.w, a.h), a.w, a.h, h),
+    cropMask(inkMask(b.data, b.w, b.h), b.w, b.h, h),
+  );
+  void report;
+  return { pageIou: iou, pages };
+}

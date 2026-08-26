@@ -14,6 +14,7 @@ import {
 import { DEFAULT_SCENE_BACKGROUND } from "../style/defaults.js";
 import { flattenNodesFromIr, nodePainted, type FlatNode } from "./static-svg.js";
 import {
+  attachCjkToUnicode,
   embedPdfFonts,
   pdfTextRuns,
   pdfTextWidth,
@@ -101,6 +102,13 @@ export async function renderVectorPdfPackageFromIr(
       });
     }
     page.pushOperators(popGraphicsState());
+  }
+
+  if (fonts.hasCjk) {
+    const corpus = nodes
+      .map((n) => String(n.props.text ?? n.props.label ?? ""))
+      .join("");
+    attachCjkToUnicode(pdf, fonts.rich, corpus);
   }
 
   return { bytes: await pdf.save(), sidecar };
