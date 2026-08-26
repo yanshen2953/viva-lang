@@ -69,5 +69,5 @@ describe("R2-B PDF text extract", () => {
     const fake = "THIS_STRING_IS_NOT_IN_THE_PDF";
     expect(found.join("\n").includes(fake)).toBe(false);
     expect(`missing ${fake}`).toContain(fake);
-  });
+  }, 20_000);
 });

@@ -47,7 +47,11 @@ export const BUNDLED_LATIN_FAMILY = "Liberation Sans";
 /** Internal family name of `VivaSansCJK.ttf` (Droid Sans Fallback Full). */
 export const BUNDLED_CJK_FAMILY = "Droid Sans Fallback";
 
-type AdvanceFont = { unitsPerEm: number; layout: (text: string) => { advanceWidth: number } };
+type AdvanceFont = {
+  unitsPerEm: number;
+  layout: (text: string) => { advanceWidth: number };
+  glyphForCodePoint?: (cp: number) => { advanceWidth: number };
+};
 const faceCache = new Map<string, AdvanceFont | null>();
 
 /** Node-only. Browser stub returns null and measure falls back to Helvetica AFM. */

@@ -455,6 +455,13 @@ function latinFace(bold: boolean) {
   return readBundledLatinFace(bold);
 }
 
+function charAdvanceEm(face: NonNullable<ReturnType<typeof latinFace>>, ch: string): number {
+  const em = Math.max(face.unitsPerEm, 1);
+  const cp = ch.codePointAt(0) ?? 0;
+  if (face.glyphForCodePoint) return face.glyphForCodePoint(cp).advanceWidth / em;
+  return face.layout(ch).advanceWidth / em;
+}
+
 function latinAdvancePx(ch: string, size: number, bold: boolean): number {
   const face = latinFace(bold);
   if (face) {
@@ -462,7 +469,7 @@ function latinAdvancePx(ch: string, size: number, bold: boolean): number {
     const key = `${path}:${ch}`;
     let em = advanceCache.get(key);
     if (em === undefined) {
-      em = face.layout(ch).advanceWidth / Math.max(face.unitsPerEm, 1);
+      em = charAdvanceEm(face, ch);
       advanceCache.set(key, em);
     }
     return em * size;
