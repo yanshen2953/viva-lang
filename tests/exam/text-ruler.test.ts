@@ -9,6 +9,7 @@ import { PDFDocument } from "pdf-lib";
 import puppeteer, { type Browser, type Page } from "puppeteer-core";
 import { LATIN_FONT_STACK, measureText } from "../../src/metrics/text.js";
 import { embedPdfFonts, pdfTextRuns, pdfTextWidth, type PdfTextFonts } from "../../src/export/pdf-font.js";
+import { injectBundledCjkFace, withCjkFallback } from "./load-cjk-face.js";
 
 /** Worst relative error allowed between any two rulers. */
 const TOLERANCE = 0.02;
@@ -58,13 +59,15 @@ describe("R1-A text ruler", () => {
     });
     page = await browser.newPage();
     await page.setContent("<html><body><svg id='s' width='900' height='200'></svg></body></html>");
+    await injectBundledCjkFace(page);
+    const stack = withCjkFallback(LATIN_FONT_STACK);
     browserWidths = await page.evaluate(
-      (items: { text: string; size: number }[], stack: string) => {
+      (items: { text: string; size: number }[], faceStack: string) => {
         const svg = document.getElementById("s") as unknown as SVGSVGElement;
         const out: number[] = [];
         for (const item of items) {
           const t = document.createElementNS("http://www.w3.org/2000/svg", "text");
-          t.setAttribute("font-family", stack);
+          t.setAttribute("font-family", faceStack);
           t.setAttribute("font-size", String(item.size));
           t.textContent = item.text;
           svg.appendChild(t);
@@ -74,7 +77,7 @@ describe("R1-A text ruler", () => {
         return out;
       },
       CORPUS,
-      LATIN_FONT_STACK,
+      stack,
     );
     resolvedFont = await page.evaluate((stack: string) => {
       const probe = document.createElement("span");

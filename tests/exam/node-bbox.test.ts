@@ -9,6 +9,7 @@ import puppeteer, { type Browser, type Page } from "puppeteer-core";
 import { compileSource } from "../../src/pipeline.js";
 import { flattenNodesFromIr, renderSvgFromIr } from "../../src/export/static-svg.js";
 import { propsToBBox, type NodeBBox } from "../../src/layout/node-bbox.js";
+import { CJK_FACE, injectBundledCjkFace } from "./load-cjk-face.js";
 
 const TOLERANCE = 0.03;
 
@@ -86,6 +87,14 @@ describe("R1-B node bbox", () => {
     });
     page = await browser.newPage();
     await page.setContent(`<html><body style="margin:0">${svg}</body></html>`);
+    await injectBundledCjkFace(page);
+    await page.evaluate((face: string) => {
+      for (const el of document.querySelectorAll("text")) {
+        const fam = el.getAttribute("font-family") ?? "";
+        if (!fam.includes(face)) el.setAttribute("font-family", fam ? `${fam}, ${face}` : face);
+      }
+    }, CJK_FACE);
+    await page.evaluate(() => document.fonts.ready);
     const measured = await page.evaluate((names: string[]) => {
       const root = document.querySelector("svg") as SVGSVGElement | null;
       const ctm = root?.getScreenCTM();
