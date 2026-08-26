@@ -22,7 +22,8 @@ export default defineConfig({
       fileName: (format) => (format === "es" ? "viva-embed.js" : "viva-embed.iife.js"),
     },
     outDir: path.resolve(__dirname, "dist/embed"),
-    emptyOutDir: true,
+    // tsc already emitted CLI modules here (inline-styles, web). Do not wipe them.
+    emptyOutDir: false,
     rollupOptions: {
       external: [],
     },
