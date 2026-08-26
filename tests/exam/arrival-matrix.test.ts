@@ -38,10 +38,10 @@ import { writePage, readPage } from "../../src/runtime/view-machine.js";
 
 const PRINT = { handbookIds: ["print-nature"] } as const;
 const PX_PER_PT = 72 / 96;
-/** R5-C: one notch from 0.55 after measuring arrival page 1 at 0.713. */
-const ARRIVAL_MIN_INK_IOU = 0.6;
-const ARRIVAL_MIN_SIDECAR = 0.85;
-const ARRIVAL_MAX_MSE = 0.45;
+/** R5-C: ratchet targets after paint alignment. Arrival page 1 measured 0.916. */
+const ARRIVAL_MIN_INK_IOU = 0.9;
+const ARRIVAL_MIN_SIDECAR = 0.95;
+const ARRIVAL_MAX_MSE = 0.15;
 
 function dockerHost(): string {
   if (process.env.DOCKER_HOST) return process.env.DOCKER_HOST;

@@ -12,7 +12,7 @@ import { embedPdfFonts, pdfTextRuns, pdfTextWidth, type PdfTextFonts } from "../
 import { injectBundledCjkFace, withCjkFallback } from "./load-cjk-face.js";
 
 /** Worst relative error allowed between any two rulers. */
-const TOLERANCE = 0.02;
+const TOLERANCE = 0.01;
 
 const CORPUS: { text: string; size: number }[] = [
   { text: "Response", size: 9 },

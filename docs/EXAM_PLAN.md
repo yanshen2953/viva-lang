@@ -25,10 +25,10 @@ expect(err).toBeLessThan(0.02);      // 度量退化立刻红
 
 | 项 | 现值 | 目标 |
 | --- | --- | --- |
-| 三尺互差 | 2% | 1% |
-| 每页 ink IoU | 0.60 | 0.90 |
-| sidecar 重叠 | 0.85 | 0.95 |
-| 页面 MSE | 0.45 | 0.15 |
+| 三尺互差 | 1% | 1% |
+| 每页 ink IoU | 0.90 | 0.90 |
+| sidecar 重叠 | 0.95 | 0.95 |
+| 页面 MSE | 0.15 | 0.15 |
 
 ---
 
@@ -88,7 +88,7 @@ R4-A 和 R4-B 不依赖前面几轮，可以和 R2 并行开工。R4-C 要等 R2
 | --- | --- | --- | --- |
 | R5-A | logical / painted 契约 | 定义 `visible:false` / `opacity:0` / ease 中间态归属；删掉测试侧 `nodePainted()` 过滤仍绿 | **已完成** `paintedNodesFromIr()` |
 | R5-B | 干净环境安装 | npm tgz / 脚本 / Docker 三条路各自在干净环境装完可用；容器不依赖宿主字体也能出 CJK PDF | **已完成** `tests/exam/release-contract.test.ts` |
-| R5-C | 棘轮收紧 | 把上表阈值推到目标值，每次只紧一档 | **已紧一档** ink IoU 0.55→0.60（arrival 第1页实测 0.713；sidecar/MSE 维持） |
+| R5-C | 棘轮收紧 | 把上表阈值推到目标值，每次只紧一档 | **已到目标** 三尺 1% / ink 0.90 / sidecar 0.95 / MSE 0.15（arrival 第1页 ink 实测 0.916） |
 
 ---
 
