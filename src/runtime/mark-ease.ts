@@ -166,9 +166,14 @@ export function sampleGeomEase(
   return { values, running: { t0, from, to } };
 }
 
+/** Play veils are clock-driven every frame. A CSS 220ms ease on top strobes. */
+export function paintIsClockDriven(name: string): boolean {
+  return name.includes("_veil_");
+}
+
 /** Write CSS opacity/transform so the 220ms ease actually runs. SVG attr alone does not. */
-export function applyMarkPaintCss(el: MarkPaintEl, paint: MarkPaint): void {
-  el.style.transition = paint.transition;
+export function applyMarkPaintCss(el: MarkPaintEl, paint: MarkPaint, instant = false): void {
+  el.style.transition = instant ? "none" : paint.transition;
   el.style.transformBox = "fill-box";
   el.style.transformOrigin = "center";
   el.style.transform = paint.transform;

@@ -117,6 +117,7 @@ setWidgetBuiltinSeed(() => {
   });
   registerCompileHook({ name: "world-lift", run: liftFramedWorldLayers });
   registerCompileHook({ name: "play-lift", after: ["world-lift"], run: liftPlayLayers });
+  registerCompileHook({ name: "play-veils", after: ["slot-fill"], run: stripVacantPlayVeils });
   registerCompileHook({ name: "folio", after: ["play-lift"], run: paintPageFolio });
   registerCompileHook({
     name: "slot-fill",
@@ -603,6 +604,39 @@ function liftPlayLayers(artifact: Artifact): void {
   const play = layers.filter((layer) => /_play$/.test(layer.name));
   if (!play.length) return;
   artifact.scene!.layers = [...layers.filter((layer) => !/_play$/.test(layer.name)), ...play];
+}
+
+function frameNameOf(expr: Expr | undefined): string | null {
+  if (!expr) return null;
+  if (expr.kind === "string") return expr.value;
+  if (expr.kind === "ident") return expr.path.join(".");
+  return null;
+}
+
+function collectUsedFrames(items: SceneItem[], into: Set<string>): void {
+  for (const item of items) {
+    if (item.kind === "node") {
+      const name = frameNameOf(item.props.frame);
+      if (name) into.add(name);
+      continue;
+    }
+    collectUsedFrames(item.body, into);
+  }
+}
+
+/**
+ * Beat veils cover the board body. If no chart sits in beat0.., those black
+ * rects just strobe on top of a figure that already owns panel: body.
+ * Clock state (__t / __beat / __veilN) stays; only the paint goes away.
+ */
+function stripVacantPlayVeils(artifact: Artifact): void {
+  const used = new Set<string>();
+  for (const layer of artifact.scene?.layers ?? []) collectUsedFrames(layer.items, used);
+  if ([...used].some((name) => /^beat\d+$/.test(name))) return;
+  for (const layer of artifact.scene?.layers ?? []) {
+    if (!/_play$/.test(layer.name)) continue;
+    layer.items = layer.items.filter((item) => !(item.kind === "node" && item.name.includes("_veil_")));
+  }
 }
 
 function expandTimeline(artifact: Artifact, props: Record<string, Expr>): void {

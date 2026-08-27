@@ -6,6 +6,7 @@ import { evaluate } from "../../src/eval.js";
 import {
   applyMarkPaintCss,
   isSummaryMark,
+  paintIsClockDriven,
   lerpPathD,
   MARK_EASE_MS,
   markPaintState,
@@ -136,6 +137,11 @@ widget chart.bar
     expect(style.transition).toMatch(/opacity/);
     applyMarkPaintCss(el, hidden);
     expect(style.opacity).toBe("0");
+    expect(paintIsClockDriven("board_veil_2")).toBe(true);
+    expect(paintIsClockDriven("mark")).toBe(false);
+    applyMarkPaintCss(el, shown, true);
+    expect(style.transition).toBe("none");
+    expect(style.opacity).toBe("0.55");
   });
 
   it("lets dimmed play veils pass pointer through to the shot underneath", () => {

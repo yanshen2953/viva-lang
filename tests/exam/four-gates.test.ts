@@ -61,7 +61,9 @@ describe("four gates — arrival fixture", () => {
     expect(box.height).toBeGreaterThan(mmToPx(297));
     const svg = renderSvgFromIr(ir);
     expect(svg).toMatch(/时间|心率|到站/);
+    expect(svg).not.toMatch(/_veil_/);
     expect(ir.timeline?.beats).toBe(4);
+    expect(ir.state).toHaveProperty("__veil0");
     expect(ir.events.some((e) => e.type === "drag" && e.target === "tokens")).toBe(true);
     const { pdf, size } = await pdfPageSize(src, "arrival.viva");
     expect(size.width).toBeCloseTo(box.width * PX_PER_PT, 0);

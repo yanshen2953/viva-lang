@@ -32,6 +32,7 @@ import { STYLE_META_PROPS } from "./style/types.js";
 import {
   applyMarkPaintCss,
   isSummaryMark,
+  paintIsClockDriven,
   markPaintState,
   pickGeom,
   sampleGeomEase,
@@ -600,7 +601,7 @@ export class Runtime {
         ? 1
         : num(p.scale, 1);
     const paint = markPaintState(visible, opacity, scale);
-    applyMarkPaintCss(el, paint);
+    applyMarkPaintCss(el, paint, paintIsClockDriven(node.name));
     if (nodeIgnoresPointer(node.name, p.role)) el.style.pointerEvents = "none";
     const prevHide = this.hideTimers.get(node.id);
     if (prevHide) window.clearTimeout(prevHide);
