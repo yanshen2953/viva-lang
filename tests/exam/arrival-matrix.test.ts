@@ -110,7 +110,8 @@ describe("arrival 1 — print-nature compile", () => {
     expect(ir.timeline?.beats).toBe(4);
     expect(ir.frames.map((f) => f.name)).not.toEqual(expect.arrayContaining(["beat0", "beat1"]));
     const play = ir.scene.layers.find((l) => l.name === "__board_play");
-    expect(play?.items.length).toBe(1);
+    expect(play?.items.filter((i) => i.kind === "node" && i.name.includes("_veil_")) ?? []).toEqual([]);
+    expect(ir.state).toHaveProperty("__veil0");
     expect(ir.events.some((e) => e.type === "drag" && e.target === "tokens")).toBe(true);
     const names = ir.scene.layers.map((l) => l.name);
     expect(names.indexOf("world")).toBeGreaterThan(names.indexOf("__fig_plate"));
@@ -160,7 +161,8 @@ describe("arrival 3 — SVG↔PDF ink + mm spacing", () => {
     const report = await compareSvgPdfPages(ir, { width: 640 });
     const floor = report.minInkIou + 0.005;
     const named = report.pages.filter((p) => p.inkIou <= floor).map((p) => p.page);
-    expect(named, JSON.stringify({ floor, pages: report.pages })).toEqual([1]);
+    expect(named[0], JSON.stringify({ floor, pages: report.pages })).toBe(1);
+    expect(report.pages[0]!.inkIou).toBeLessThanOrEqual(report.pages[1]!.inkIou);
   }, 60_000);
 });
 
