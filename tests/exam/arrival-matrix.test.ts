@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { execSync } from "node:child_process";
 import { readFileSync, existsSync } from "node:fs";
 import path from "node:path";
-import { inflateRawSync, inflateSync } from "node:zlib";
+import { pdfOperators } from "./pdf-ops.js";
 import { PDFDocument } from "pdf-lib";
 import { compileSource } from "../../src/pipeline.js";
 import { evaluate } from "../../src/eval.js";
@@ -82,24 +82,6 @@ function plotWidthMm(ir: ReturnType<typeof compileArrival>["ir"], name: string):
   expect(frame, `missing frame ${name}`).toBeTruthy();
   const x = evaluate(frame!.props.x!, [ir.state, ir.data]) as number[];
   return x[1]! - x[0]!;
-}
-
-function pdfOperators(bytes: Uint8Array): string {
-  const raw = new TextDecoder("latin1").decode(bytes);
-  const chunks = [...raw.matchAll(/stream\r?\n([\s\S]*?)\r?\nendstream/g)];
-  let out = "";
-  for (const chunk of chunks) {
-    const buf = Buffer.from(chunk[1]!, "latin1");
-    for (const inflate of [inflateSync, inflateRawSync]) {
-      try {
-        out += inflate(buf).toString("latin1");
-        break;
-      } catch {
-        /* try the other wrapper */
-      }
-    }
-  }
-  return out;
 }
 
 describe("arrival 1 — print-nature compile", () => {

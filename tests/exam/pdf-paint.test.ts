@@ -1,29 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { inflateRawSync, inflateSync } from "node:zlib";
 import { PDFDocument } from "pdf-lib";
+import { pdfOperators } from "./pdf-ops.js";
 import { compileSource } from "../../src/pipeline.js";
 import { flattenNodesFromIr } from "../../src/export/static-svg.js";
 import { renderVectorPdfFromIr, renderVectorPdfPackageFromIr } from "../../src/export/vector-pdf.js";
 import { exportArtifact } from "../../src/export/index.js";
 import { propsToBBox } from "../../src/layout/node-bbox.js";
-
-function pdfOperators(bytes: Uint8Array): string {
-  const raw = new TextDecoder("latin1").decode(bytes);
-  const chunks = [...raw.matchAll(/stream\r?\n([\s\S]*?)\r?\nendstream/g)];
-  let out = "";
-  for (const chunk of chunks) {
-    const buf = Buffer.from(chunk[1]!, "latin1");
-    for (const inflate of [inflateSync, inflateRawSync]) {
-      try {
-        out += inflate(buf).toString("latin1");
-        break;
-      } catch {
-        /* try the other wrapper */
-      }
-    }
-  }
-  return out;
-}
 
 const PRINT = { handbookIds: ["print-nature"] } as const;
 

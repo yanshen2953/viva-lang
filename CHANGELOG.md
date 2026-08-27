@@ -35,6 +35,7 @@
 - `install/install.sh` / `install.ps1` 改为 `npm run build`（不再只 `build:lib`），`viva serve` 才能带上 embed。
 - CI Node 22，与镜像一致；继续安装 ffmpeg + poppler。
 - Playground 浏览器包不再打进 Node 字体路径。
+- 考试抽 PDF 操作符按 `/Length` 切片，避免 `endstream` 里的 `stream` 把流切空（CI 曾因此红）。
 
 ### 不做
 
