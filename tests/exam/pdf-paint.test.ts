@@ -1,3 +1,4 @@
+import { deflateSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
 import { PDFDocument } from "pdf-lib";
 import { pdfOperators } from "./pdf-ops.js";
@@ -141,5 +142,31 @@ scene
     expect(pdf.missingGlyphs ?? []).toEqual([]);
     const raw = new TextDecoder("latin1").decode(pdf.bytes);
     expect(raw.includes("Time") || raw.length > 1000).toBe(true);
+  });
+
+  it("still reads cm when /Length sits on the same line as >>", async () => {
+    const opsText = "q\n1 0 0 1 10 10 cm\nQ\n";
+    const payload = deflateSync(Buffer.from(opsText));
+    const pdf = Buffer.concat([
+      Buffer.from(
+        `%PDF-1.4
+1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj
+2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj
+3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 20 20] /Contents 4 0 R >>\nendobj
+4 0 obj\n<< /Filter /FlateDecode /Length ${payload.length} >>\nstream\n`,
+      ),
+      payload,
+      Buffer.from(`
+endstream
+endobj
+trailer
+<< /Root 1 0 R /Size 5 >>
+startxref
+0
+%%EOF
+`),
+    ]);
+    const ops = await pdfOperators(pdf);
+    expect(ops).toMatch(/\bcm\b/);
   });
 });
