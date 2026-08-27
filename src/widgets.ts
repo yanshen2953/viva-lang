@@ -2048,8 +2048,8 @@ function expandLayoutBoard(
   }
 
   const beats = Math.max(0, Math.floor(numProp(props, "beats", 0) || numProp(props, "shots", 0)));
-  // Board beats own Clock + veil. When a figure claims panel: body, it owns
-  // the drawing slot — do not slice beat0… columns over the same body.
+  // Board beats own Clock. When a figure claims panel: body, it owns
+  // the drawing slot — do not slice beat0… columns or paint a body veil.
   const figureOwnsBody = artifact.widgets.some((widget) => {
     if (widget.name !== "layout.figure") return false;
     const slot = stringProp(widget.props, ["panel", "frame"]);
@@ -2453,18 +2453,10 @@ function expandLayoutBoard(
         artifact.states.push({ name, value: literal(i === 0 ? 0 : 1), span });
       }
     }
+    // figure panel: body already owns the plate. A full-page #000 veil
+    // on __veil0 just strobes over the chart (playFps: 2 + 220ms ease).
     const veilItems: SceneItem[] = figureOwnsBody
-      ? [
-          node(`${id}_veil_0`, {
-            role: literal("chrome"),
-            x: literal(safeX0),
-            y: literal(titleY1),
-            w: literal(safeX1 - safeX0),
-            h: literal(Math.max(1, lowerY0 - titleY1)),
-            fill: literal("#000000"),
-            opacity: binary("*", ident("__veil0"), literal(0.55), span),
-          }),
-        ]
+      ? []
       : beatRects.map((rect, i) =>
           node(`${id}_veil_${i}`, {
             role: literal("chrome"),
