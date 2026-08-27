@@ -21,7 +21,7 @@ Dependency refresh on pod start is `npm install` (see environment update script)
 | Multimodal check | `npx vite-node src/cli.ts -- check file.viva --vision` (see `viva.models.json.example`) |
 | Model slots | `npx vite-node src/cli.ts -- models` |
 | Prune artifact screenshots | `node scripts/cleanup-artifacts.mjs` |
-| Deploy smoke (not release-gated) | `docker compose up -d --build` or `bash install/one-click.sh`; current Dockerfile omits `assets`, so audit CJK/export before claiming release-ready |
+| Deploy smoke (not release-gated) | `docker compose up -d --build` or `bash install/one-click.sh`. Image copies `assets/` (Liberation + CJK) and installs `poppler-utils` + `ffmpeg` for `check --visual` and beat gif/mp4 |
 | Agent HTTP API | `viva serve --host 0.0.0.0 --port 8765` — see `docs/DEPLOY.md` |
 | MCP (Cursor) | `viva mcp` or `viva-mcp` — tools include `viva_session` / `viva_pipeline`; see `docs/hosts/mcp.md` |
 | Provenance CLI | `npx vite-node src/cli.ts -- provenance examples/hello.viva` |

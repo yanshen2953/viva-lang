@@ -6,7 +6,7 @@ import { handleMcpTool, mcpToolSchemas } from "./tools.js";
 export async function runVivaMcpServer(): Promise<void> {
   const server = new McpServer({
     name: "viva-lang",
-    version: "0.1.0",
+    version: "0.2.0",
   });
 
   server.registerTool(

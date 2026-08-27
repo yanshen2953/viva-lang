@@ -10,6 +10,21 @@ npm run build
 
 echo "==> npm pack"
 npm pack --pack-destination release
+mkdir -p packages
+rm -f packages/viva-lang-*.tgz
+cp -f release/viva-lang-*.tgz packages/
+python3 - <<'PY'
+from hashlib import sha256
+from pathlib import Path
+root = Path("packages")
+lines = []
+for p in sorted(root.glob("viva-lang-*.tgz")):
+    digest = sha256(p.read_bytes()).hexdigest()
+    lines.append(f"{digest}  packages/{p.name}\n")
+text = "".join(lines)
+(root / "SHA256SUMS").write_text(text, encoding="utf8")
+print(text, end="")
+PY
 
 cp -f install/install.sh install/install.ps1 install/one-click.sh release/
 cp -f Dockerfile docker-compose.yml release/

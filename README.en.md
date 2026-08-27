@@ -28,11 +28,11 @@ Install the compiler and the `viva` command. Node.js 18 or newer is required.
 
 ### npm package (Windows / macOS / Linux)
 
-- Package: [packages/viva-lang-0.1.0.tgz](./packages/viva-lang-0.1.0.tgz)
+- Package: [packages/viva-lang-0.2.0.tgz](./packages/viva-lang-0.2.0.tgz)
 - Checksum: [packages/SHA256SUMS](./packages/SHA256SUMS)
 
 ```bash
-npm install -g ./packages/viva-lang-0.1.0.tgz
+npm install -g ./packages/viva-lang-0.2.0.tgz
 viva version
 viva export examples/harbor.viva -f png --handbook dashboard -o harbor.png
 ```
@@ -73,7 +73,7 @@ npm run pack:release
 git clone https://github.com/yanshen2953/viva-lang.git
 cd viva-lang
 npm install
-npm run build:lib
+npm run build
 npm install -g .
 viva version
 ```

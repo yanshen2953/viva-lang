@@ -466,7 +466,7 @@ async function readVersion(): Promise<string> {
 function openApiSpec(): Record<string, unknown> {
   return {
     openapi: "3.1.0",
-    info: { title: "Viva Agent HTTP Bridge", version: "0.1.0" },
+    info: { title: "Viva Agent HTTP Bridge", version: "0.2.0" },
     paths: {
       "/api/health": { get: { summary: "Liveness" } },
       "/api/version": { get: { summary: "Package version string" } },

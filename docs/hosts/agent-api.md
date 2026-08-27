@@ -9,7 +9,7 @@ OpenAPI sketch: `GET /api/openapi.json`
 ### `GET /api/health`
 
 ```json
-{ "ok": true, "service": "viva-agent", "version": "viva-lang 0.1.0" }
+{ "ok": true, "service": "viva-agent", "version": "viva-lang 0.2.0" }
 ```
 
 ### `GET /api/prompt`

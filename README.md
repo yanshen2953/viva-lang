@@ -28,11 +28,11 @@ Viva 是一门很小的可视化语言。写一份 `.viva`，编译器生成可�
 
 ### npm 包（Windows / macOS / Linux）
 
-- 包：[packages/viva-lang-0.1.0.tgz](./packages/viva-lang-0.1.0.tgz)
+- 包：[packages/viva-lang-0.2.0.tgz](./packages/viva-lang-0.2.0.tgz)
 - 校验和：[packages/SHA256SUMS](./packages/SHA256SUMS)
 
 ```bash
-npm install -g ./packages/viva-lang-0.1.0.tgz
+npm install -g ./packages/viva-lang-0.2.0.tgz
 viva version
 viva export examples/harbor.viva -f png --handbook dashboard -o harbor.png
 ```
@@ -73,7 +73,7 @@ npm run pack:release
 git clone https://github.com/yanshen2953/viva-lang.git
 cd viva-lang
 npm install
-npm run build:lib
+npm run build
 npm install -g .
 viva version
 ```

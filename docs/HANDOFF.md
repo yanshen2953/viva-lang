@@ -2,9 +2,9 @@
 
 > **用途：** 新开 Cloud Agent / 新 chat 时，先读本文 + `AGENTS.md`，再把文末「复制块」贴进首条消息。  
 > **仓库：** https://github.com/yanshen2953/viva-lang  
-> **真源分支：** `cursor/style-handbook-hook-a8c1`  
-> **主 PR：** https://github.com/yanshen2953/viva-lang/pull/9（用户已要求：该 merge 就 merge）  
-> **对照：** `docs/VISION.md`（愿景 vs 现状）· `docs/GAPS.md`（诚实缺口）· `docs/DESIGN.md` / `docs/PLAN.md`（设计真源；PLAN §1 里「1–3 已齐」**过满**，以 GAPS 为准）
+> **真源分支：** `main`（2026-08-27 起：验收棘轮 + 0.2.0 安装包）  
+> **修改说明：** [`CHANGELOG.md`](../CHANGELOG.md)  
+> **对照：** `docs/VISION.md`（愿景 vs 现状）· `docs/GAPS.md`（诚实缺口）· `docs/EXAM_PLAN.md`（验收棘轮）· `docs/DESIGN.md` / `docs/PLAN.md`
 
 ---
 
@@ -36,20 +36,17 @@
 
 ---
 
-## 2. 快照（2026-08-24）
+## 2. 快照（2026-08-27）
 
 | 项 | 值 |
 | --- | --- |
-| 分支 | `cursor/style-handbook-hook-a8c1` |
-| HEAD | 手册文法 / 逐拍 hold / repair 扩补 / 拖参环（接续 `79374f4`） |
-| 工作树 | 本轮剩余缺口已进编译器，见 §3 / §4 |
-| 测试 | 本轮本机 `npm test`：**311 passed** |
-| `build:lib` | 通过 |
-| CI | `.github/workflows/ci.yml`：`npm ci` / `build:lib` / `npm test` / Atlas `--visual`。`dba0a84` 当时绿 |
-| `npm run build` | playground/runtime 严格 tsc 仍可能失败；日常用 `vite-node` + vitest |
+| 分支 | `main` |
+| 版本 | **0.2.0**（`packages/viva-lang-0.2.0.tgz`） |
+| 验收 | 三尺 1% / ink 0.90 / sidecar 0.95 / MSE 0.15，四道门同一份 Arrival |
+| 交互 | figure 占 `panel: body` 时不画空拍黑幕；故事板 `beatN` 仍有 veil |
+| Docker | 复制 `assets/`，装 `poppler-utils` + `ffmpeg` |
+| CI | Node 22，`npm ci` / `npm run build` / `npm test` / visual check |
 | 用户语言 | **中文回复**；GPU 只用 `cuda:0` |
-
-其它开放 PR（#8…#1）较旧。**以 #9 分支为真源**；不要无计划大合并。
 
 ---
 

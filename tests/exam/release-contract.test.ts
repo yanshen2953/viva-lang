@@ -80,9 +80,11 @@ describe("R5-B clean install", () => {
     expect(readFileSync(font!).length).toBeGreaterThan(1_000_000);
     const docker = readFileSync("Dockerfile", "utf8");
     expect(docker).toMatch(/COPY assets \.\/assets/);
+    expect(docker).toMatch(/poppler-utils/);
+    expect(docker).toMatch(/ffmpeg/);
     expect(existsSync("install/pack-release.sh")).toBe(true);
     const sums = readFileSync("packages/SHA256SUMS", "utf8");
-    expect(sums).toMatch(/viva-lang-0\.1\.0\.tgz/);
+    expect(sums).toMatch(/viva-lang-0\.2\.0\.tgz/);
   });
 
   it("names the missing font when the path is empty (anti-proof)", () => {

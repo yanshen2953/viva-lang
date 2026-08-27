@@ -20,14 +20,14 @@ try {
   if ((Test-Path ".\package.json") -and (Select-String -Path ".\package.json" -Pattern '"name": "viva-lang"' -Quiet)) {
     Write-Host "Using local checkout…"
     npm install --omit=dev
-    npm run build:lib
+    npm run build
     npm install -g --prefix $Prefix .
   } else {
     Write-Host "Fetching $Repo …"
     git clone --depth 1 $Repo (Join-Path $Tmp "viva-lang")
     Set-Location (Join-Path $Tmp "viva-lang")
     npm install --omit=dev
-    npm run build:lib
+    npm run build
     npm install -g --prefix $Prefix .
   }
 } finally {

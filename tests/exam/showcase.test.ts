@@ -46,8 +46,8 @@ describe("showcase examples", () => {
       expect(md).toMatch(/!\[.*\]\(\.\/docs\/gallery\/nocturne\.png\)/);
       expect(md).toMatch(/!\[.*\]\(\.\/docs\/gallery\/aurora\.png\)/);
       expect(md).toMatch(/!\[.*\]\(\.\/docs\/gallery\/harbor\.gif\)/);
-      expect(md).toContain("packages/viva-lang-0.1.0.tgz");
-      expect(md).toMatch(/npm install -g \.\/packages\/viva-lang-0\.1\.0\.tgz/);
+      expect(md).toContain("packages/viva-lang-0.2.0.tgz");
+      expect(md).toMatch(/npm install -g \.\/packages\/viva-lang-0\.2\.0\.tgz/);
       expect(md.indexOf("npm install -g")).toBeLessThan(md.indexOf("docker compose"));
     }
     for (const file of [
@@ -55,7 +55,7 @@ describe("showcase examples", () => {
       "docs/gallery/nocturne.png",
       "docs/gallery/aurora.png",
       "docs/gallery/harbor.gif",
-      "packages/viva-lang-0.1.0.tgz",
+      "packages/viva-lang-0.2.0.tgz",
     ]) {
       expect(existsSync(file), file).toBe(true);
     }

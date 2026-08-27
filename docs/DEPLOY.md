@@ -159,7 +159,8 @@ curl -s http://localhost:8765/api/export \
 
 ## 生产注意
 
-- Node **≥ 18**；导出 PDF/PNG 依赖原生模块 `@resvg/resvg-js`、`sharp`（已打进 npm 包）。
+- Node **≥ 18**（CI / Docker 用 22）；导出 PDF/PNG 依赖原生模块 `@resvg/resvg-js`、`sharp`（已打进 npm 包）。
+- 镜像和仓库 `assets/` 带 Liberation Sans + 整字 CJK。`viva check --visual` 需要 `poppler-utils`；beat gif/mp4 需要 `ffmpeg`（Docker 已装）。
 - `viva serve --host 0.0.0.0` 无内置鉴权，请用反向代理或内网。
 - 密钥走环境变量，勿提交 `viva.models.json`。
 

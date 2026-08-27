@@ -20,7 +20,7 @@ if command -v npm >/dev/null 2>&1; then
   if [[ -f "./package.json" ]] && grep -q '"name": "viva-lang"' ./package.json 2>/dev/null; then
     echo "Using local checkout…"
     npm install --omit=dev
-    npm run build:lib
+    npm run build
     # link globally into user prefix
     npm install -g --prefix "$PREFIX" .
   else
@@ -29,7 +29,7 @@ if command -v npm >/dev/null 2>&1; then
       git clone --depth 1 "$REPO_URL" "$TMP/viva-lang"
     cd "$TMP/viva-lang"
     npm install --omit=dev
-    npm run build:lib
+    npm run build
     npm install -g --prefix "$PREFIX" .
   fi
 else
@@ -42,6 +42,13 @@ if ! command -v viva >/dev/null 2>&1; then
   echo ""
   echo "Add to your shell rc:"
   echo "  export PATH=\"$BIN_DIR:\$PATH\""
+fi
+
+if ! command -v pdftoppm >/dev/null 2>&1 || ! command -v pdftotext >/dev/null 2>&1; then
+  echo "Note: viva check --visual uses poppler-utils (pdftoppm / pdftotext)." >&2
+fi
+if ! command -v ffmpeg >/dev/null 2>&1; then
+  echo "Note: beat gif/mp4 export uses ffmpeg; tests skip that path without it." >&2
 fi
 
 echo ""

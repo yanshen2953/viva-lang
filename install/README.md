@@ -9,7 +9,7 @@ Viva ships as an **npm package** with a `viva` binary, browser embed bundles, an
 ```bash
 npm install -g viva-lang
 # from a release folder:
-npm install -g ./release/viva-lang-0.1.0.tgz
+npm install -g ./release/viva-lang-0.2.0.tgz
 viva version
 ```
 
