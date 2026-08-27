@@ -61,7 +61,7 @@ scene
       "paint.viva",
     );
     const bytes = await renderVectorPdfFromIr(ir);
-    const ops = pdfOperators(bytes);
+    const ops = await pdfOperators(bytes);
     expect(ops).toMatch(/\bcm\b/);
     expect(ops).toMatch(/\s[d]\n|\sd\s/);
     expect(ops).toMatch(/\bc\b/);

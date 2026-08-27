@@ -152,7 +152,7 @@ describe("arrival 4 — PDF glyph / rotate / dash / clip / fill / tracking", () 
   it("writes rotate, dash, clip, filled path, and has no unmapped CJK", async () => {
     const { src, ir } = compileArrival();
     const pdf = await exportArtifact(src, "pdf", PRINT, "arrival.viva");
-    const ops = pdfOperators(pdf.bytes);
+    const ops = await pdfOperators(pdf.bytes);
     expect(ops).toMatch(/cm/);
     expect(ops).toMatch(/\bd\b|\[\s*\d/);
     expect(ops).toMatch(/W\s+n|W\*/);
@@ -427,7 +427,7 @@ describe("arrival 10 — slim prompt + capabilities + loop", () => {
       expect(pdf.missingGlyphs ?? []).toEqual([]);
       const side = [...new Set((pdf.sidecar ?? []).map((n) => n.id))].sort();
       expect(side, name).toEqual(painted);
-      const ops = pdfOperators(pdf.bytes);
+      const ops = await pdfOperators(pdf.bytes);
       expect(svg, name).toMatch(/rotate\(/);
       expect(svg, name).toMatch(/letter-spacing/);
       expect(svg, name).toMatch(/stroke-dasharray/);
